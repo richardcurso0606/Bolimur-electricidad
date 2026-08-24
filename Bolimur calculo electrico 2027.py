@@ -376,7 +376,7 @@ with pestanas[1]:
         <div class="resultado-destacado">
             ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación Analítica:</b> La sección teórica necesaria por caída de tensión es de <b>{s_cdt_lga:.2f} mm²</b> y por calentamiento exige un mínimo de <b>{s_cal_lga} mm²</b> (para $I_b = {ib_di:.2f}\text{{ A}}$). Adicionalmente, el REBT exige una sección mínima por normativa de <b>{min_reg_lga} mm²</b>. Por tanto, la sección comercial normalizada inmediatamente superior que satisface simultáneamente todos los criterios es <b>{s_optima_lga} mm²</b>. Protección general asociada: Magnetotérmico de {prot_lga} A.
+            <b>Justificación Analítica:</b> La sección teórica necesaria por caída de tensión es de <b>{s_cdt_lga:.2f} mm²</b> y por calentamiento exige un mínimo de <b>{s_cal_lga} mm²</b> (para $I_b = {ib_lga:.2f}\text{{ A}}$). Adicionalmente, el REBT exige una sección mínima por normativa de <b>{min_reg_lga} mm²</b>. Por tanto, la sección comercial normalizada inmediatamente superior que satisface simultáneamente todos los criterios es <b>{s_optima_lga} mm²</b>. Protección general asociada: Magnetotérmico de {prot_lga} A.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -804,7 +804,7 @@ Documento técnico redactado y verificado para BOLIMUR INSTALACIONES INTEGRALES.
         label="📥 Descargar Informe Técnico Formal (.txt)",
         data=texto_informe,
         file_name=f"Informe_MTD_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
-        mime="text/plain"
+        mime="application/json"
     )
 
 # =========================================================================
