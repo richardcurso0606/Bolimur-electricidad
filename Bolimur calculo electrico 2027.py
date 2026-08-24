@@ -636,18 +636,18 @@ with pestanas[1]:
         st.markdown("---")
         st.subheader("📋 Memoria de Justificación Técnica y Criterio de Selección (LGA)")
         
-        # JUSTIFICACIÓN TÉCNICA LIMPIA CON MARKDOWN NATIVO (SIN HTML RARO)
+        # JUSTIFICACIÓN TÉCNICA LGA LIMPIA EN MARKDOWN PLANO (SIN ERRORES)
         st.markdown(f"""
-        **1. Cálculo de la Intensidad de Diseño ($I_b$):**  
+        **1. Cálculo de la Intensidad de Diseño (Ib):**  
         Para una red trifásica, la corriente se calcula mediante la fórmula:  
-        $$I_b = \\frac{{P}}{{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{lga_pot:,.2f}}}{{\\sqrt{3} \\cdot 400 \\cdot {lga_cos}}} = **{ib_lga:.2f}\\text{ A}$$
+        **Ib = P / ( sqrt(3) x V x cos phi )** = {lga_pot:,.2f} / ( 1.732 x 400 x {lga_cos} ) = **{ib_lga:.2f} A**
 
-        **2. Criterio de Calentamiento ($I_z \\ge I_b$):**  
+        **2. Criterio de Calentamiento (Intensidad Admisible Iz >= Ib):**  
         El conductor debe soportar al menos la corriente de diseño. Según tablas para **{lga_mat.upper()}** en tubo (**{lga_aisl}**), se requiere una sección térmica mínima de **{s_cal_lga} mm²**.
 
-        **3. Criterio de Caída de Tensión ($\\Delta U \\le {dv_pct_lga}\\%$):**  
+        **3. Criterio de Caída de Tensión (CDT <= {dv_pct_lga}%):**  
         Aplicando la fórmula analítica trifásica de caída de tensión:  
-        $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta U \\cdot V}} = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga} \\cdot 400}} = **{s_cdt_lga:.2f}\\text{{ mm²}}$$
+        **S = ( P x L ) / ( gamma x Delta V x V )** = ( {lga_pot:,.2f} x {lga_long} ) / ( {gamma_lga} x {dv_max_lga} x 400 ) = **{s_cdt_lga:.2f} mm²**
 
         **4. Lógica de Descarte y Selección de la Sección Óptima:**  
         * Se **descartan** las secciones comerciales inferiores que no cumplan con el límite de caída de tensión del {dv_pct_lga}% o el mínimo reglamentario de **{min_reg_lga} mm²** (exigido por ITC-BT-14).  
@@ -717,18 +717,18 @@ with pestanas[2]:
         st.markdown("---")
         st.subheader("📋 Memoria de Justificación Técnica y Criterio de Selección (DI)")
         
-        # JUSTIFICACIÓN TÉCNICA LIMPIA CON MARKDOWN NATIVO (SIN HTML RARO)
+        # JUSTIFICACIÓN TÉCNICA DI LIMPIA EN MARKDOWN PLANO (SIN ERRORES)
         st.markdown(f"""
-        **1. Cálculo de la Intensidad de Diseño ($I_b$ monofásica):**  
+        **1. Cálculo de la Intensidad de Diseño (Ib monofásica):**  
         Para una derivación monofásica, la corriente se calcula mediante la fórmula:  
-        $$I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}} = \\frac{{{di_pot}}}{{230 \\cdot {di_cos}}} = **{ib_di:.2f}\\text{ A}$$
+        **Ib = P / ( V x cos phi )** = {di_pot} / ( 230 x {di_cos} ) = **{ib_di:.2f} A**
 
-        **2. Criterio de Calentamiento ($I_z \\ge I_b$):**  
+        **2. Criterio de Calentamiento (Intensidad Admisible Iz >= Ib):**  
         El conductor debe soportar al menos la corriente de diseño. Según tablas para **{di_mat.upper()}** en tubo (**{di_aisl}**), se requiere una sección térmica mínima de **{s_cal_di} mm²**.
 
-        **3. Criterio de Caída de Tensión ($\\Delta U \\le {dv_pct_di}\\%$):**  
+        **3. Criterio de Caída de Tensión (CDT <= {dv_pct_di}%):**  
         Aplicando la fórmula analítica monofásica de caída de tensión:  
-        $$S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta U \\cdot V}} = \\frac{{2 \\cdot {di_pot} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di} \\cdot 230}} = **{s_cdt_di:.2f}\\text{{ mm²}}$$
+        **S = ( 2 x P x L ) / ( gamma x Delta V x V )** = ( 2 x {di_pot} x {di_long} ) / ( {gamma_di} x {dv_max_di} x 230 ) = **{s_cdt_di:.2f} mm²**
 
         **4. Lógica de Descarte y Selección de la Sección Óptima:**  
         * Se **descartan** las secciones comerciales inferiores que no alcancen el valor analítico de caída de tensión requerido o el mínimo reglamentario de **{min_reg_di} mm²** (exigido por ITC-BT-15 para viviendas).  
