@@ -602,10 +602,10 @@ with pestanas[0]:
     pot_garaje_por_sup = sup_garaje * 20.0
     if pot_garaje_por_sup < 3450.0 and sup_garaje > 0:
         pot_garaje_adjudicada = 3450.0
-        aviso_garaje = f"⚠️ El garaje no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>."
+        aviso_garaje = f"⚠️ No alcanza el mínimo legal (se aplica suelo de 3.450 W)"
     else:
         pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
-        aviso_garaje = f"✅ Garaje calculado por superficie: <b>{int(pot_garaje_adjudicada):,} W</b>."
+        aviso_garaje = f"✅ Calculado por superficie"
 
     fsim_ve = 1.0 if "Sin" in opcion_irve else 0.1
     pot_total_irve = int(round(plazas_garaje * 0.1 * 3680 * fsim_ve))
@@ -613,9 +613,9 @@ with pestanas[0]:
 
     st.markdown(f"""
     <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-        <b>Justificación Técnica del Cálculo IRVE y Garaje:</b><br>
-        • {aviso_garaje}<br>
-        • Potencia total IRVE resultante: <b>{pot_total_irve:,} W</b><br>
+        <b>Justificación Técnica Detallada del Cálculo IRVE y Garaje:</b><br>
+        • <b>Garaje (ITC-BT-10):</b> {sup_garaje:,.1f} m² x 20 W/m² = <b>{int(pot_garaje_por_sup):,} W</b> ({aviso_garaje} -> <b>{int(pot_garaje_adjudicada):,} W</b>)<br>
+        • <b>IRVE (ITC-BT-52):</b> {plazas_garaje} plazas x 3.680 W x 10% (0.1) x [Factor {fsim_ve}] = <b>{pot_total_irve:,} W</b><br>
         • <b>Suma Parcial P4 / P5:</b> {int(pot_garaje_adjudicada):,} W (Garaje) + {pot_total_irve:,} W (IRVE) = <b>{pot_total_garaje_irve:,} W</b>
     </div>
     """, unsafe_allow_html=True)
@@ -719,7 +719,7 @@ with pestanas[1]:
         3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_lga} mm²</b><br>
         4. **Sección Mínima Reglamentaria:** <b>{min_reg_lga} mm²</b> ({lga_mat.upper()})<br>
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
-        """)
+        """, unsafe_allow_html=True)
 
         st.markdown("---")
         st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - LGA")
@@ -833,7 +833,7 @@ with pestanas[2]:
         3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_di} mm²</b><br>
         4. **Sección Mínima Reglamentaria:** <b>{min_reg_di} mm²</b> ({di_mat.upper()})<br>
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
-        """)
+        """, unsafe_allow_html=True)
 
         st.markdown("---")
         st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - DI")
@@ -983,7 +983,8 @@ TITULAR: {st.session_state.cliente_actual['nombre']} - BOLIMUR INSTALACIONES INT
          ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
          ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4: Lavadora y termo
          └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y cocina
-=========================================================================================="""
+==========================================================================================
+"""
     st.markdown(f'<div class="esquema-simbolos">{esquema_simbolos_txt}</div>', unsafe_allow_html=True)
     st.download_button("📥 Descargar Esquema (.txt)", data=esquema_simbolos_txt, file_name="Esquema_Simbolos.txt", mime="text/plain")
 
