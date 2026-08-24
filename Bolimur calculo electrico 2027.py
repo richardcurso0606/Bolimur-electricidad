@@ -88,7 +88,7 @@ if 'servicios_generales' not in st.session_state:
 if 'locales' not in st.session_state:
     st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
 
-# --- MENÚ LATERAL (SIDEBAR): CORPORATIVO Y GESTIÓN DE PROYECTOS ---
+# --- MENÚ LATERAL (SIDEBAR) ---
 st.sidebar.markdown("""
     <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4b4b; margin-bottom: 15px;">
         <h3 style="color: white; margin: 0; font-size: 16px;">⚡ BOLIMUR</h3>
@@ -223,7 +223,7 @@ with pestanas[0]:
     st.success(f"### ⚡ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,} W")
 
 # =========================================================================
-# PESTAÑA 2: LGA (CON SECCIÓN DESTACADA Y NOTORIA)
+# PESTAÑA 2: LGA
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -275,13 +275,12 @@ with pestanas[1]:
     st.markdown("---")
     st.subheader("📐 Desglose detallado de Fórmulas y Resultados - LGA")
     st.markdown(f"""
-    1. **Intensidad de Diseño (Ib):** $I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{lga_pot:.1f}}}{{\\sqrt{{3}} \\cdot 400 \\cdot {lga_cos}}} =$ **{ib_lga:.2f} A**
-    2. **Sección por Caída de Tensión ($\\Delta V \\le {dv_pct_lga}\\%$):** $S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}} = \\frac{{{lga_pot:.1f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} =$ **{s_cdt_lga:.2f} mm²** (Real: **{dv_real_lga_pct:.3f}%**)
-    3. **Sección por Calentamiento ($I_z \\ge I_b$):** Mínimo requerido = **{s_cal_lga} mm²** (Método {METODOS_INSTALACION[metodo_lga_key]['ref']})
+    1. **Intensidad de Diseño (Ib):** Ib = Potencia / (Raíz de 3 * V * cos phi) = {lga_pot:.1f} / (1.732 * 400 * {lga_cos}) = **{ib_lga:.2f} A**
+    2. **Sección por Caída de Tensión (Delta V <= {dv_pct_lga}%):** S = (P * L) / (gamma * Delta V * V) = ({lga_pot:.1f} * {lga_long}) / ({gamma_lga} * {dv_max_lga:.2f} * 400) = **{s_cdt_lga:.2f} mm²** (Real: **{dv_real_lga_pct:.3f}%**)
+    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_lga} mm²** (Método {METODOS_INSTALACION[metodo_lga_key]['ref']})
     4. **Corriente de Cortocircuito (Icc final):** **{icc_fin_lga:.2f} kA**
     """)
 
-    # RECUADRO NOTORIO Y GRANDE PARA LA SECCIÓN A ADOPTAR EN LGA
     st.markdown(f"""
         <div class="resultado-destacado">
             ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
@@ -290,7 +289,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON SECCIÓN DESTACADA Y NOTORIA)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -341,9 +340,9 @@ with pestanas[2]:
     st.markdown("---")
     st.subheader("📐 Desglose detallado de Fórmulas y Resultados - DI")
     st.markdown(f"""
-    1. **Intensidad de Diseño (Ib monofásica):** $I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}} = \\frac{{{di_pot}}}{{230 \\cdot {di_cos}}} =$ **{ib_di:.2f} A**
-    2. **Sección por Caída de Tensión ($\\Delta V \\le {dv_pct_di}\\%$):** $S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}} = \\frac{{2 \\cdot {di_pot} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di:.2f} \\cdot 230}} =$ **{s_cdt_di:.2f} mm²** (Real: **{dv_real_di_pct:.3f}%**)
-    3. **Sección por Calentamiento ($I_z \\ge I_b$):** Mínimo requerido = **{s_cal_di} mm²** (Método {METODOS_INSTALACION[metodo_di_key]['ref']})
+    1. **Intensidad de Diseño (Ib monofásica):** Ib = Potencia / (V * cos phi) = {di_pot} / (230 * {di_cos}) = **{ib_di:.2f} A**
+    2. **Sección por Caída de Tensión (Delta V <= {dv_pct_di}%):** S = (2 * P * L) / (gamma * Delta V * V) = (2 * {di_pot} * {di_long}) / ({gamma_di} * {dv_max_di:.2f} * 230) = **{s_cdt_di:.2f} mm²** (Real: **{dv_real_di_pct:.3f}%**)
+    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_di} mm²** (Método {METODOS_INSTALACION[metodo_di_key]['ref']})
     4. **Corriente de Cortocircuito (Icc final):** **{icc_fin_di:.2f} kA**
     """)
 
@@ -361,7 +360,6 @@ with pestanas[2]:
     else:
         st.warning(f"⚠️ **Atención:** Supera el límite recomendado de {limite_global_conjunto}%.")
 
-    # RECUADRO NOTORIO Y GRANDE PARA LA SECCIÓN A ADOPTAR EN DI
     st.markdown(f"""
         <div class="resultado-destacado">
             🔌 SECCIÓN A ADOPTAR (DI): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
@@ -370,7 +368,7 @@ with pestanas[2]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 4: TABLA GUÍA HORIZONTAL ESTILO PLC MADRID
+# PESTAÑA 4: TABLA GUÍA ESTILO PLC MADRID
 # =========================================================================
 with pestanas[3]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
@@ -389,11 +387,11 @@ with pestanas[3]:
     st.dataframe(tabla_plc_data, use_container_width=True)
 
 # =========================================================================
-# PESTAÑA 5: CÁLCULO RÁPIDO (CON FÓRMULAS VISIBLES Y JUSTIFICADAS)
+# PESTAÑA 5: CÁLCULO RÁPIDO (SIN SÍMBOLOS RAROS)
 # =========================================================================
 with pestanas[4]:
-    st.title("🧮 Ventana de Cálculo Rápido (Justificación con Fórmulas)")
-    st.write("Calcula cualquier tramo eligiendo libremente el método de instalación reglamentario visualizando todas las fórmulas matemáticas aplicadas.")
+    st.title("🧮 Ventana de Cálculo Rápido (Justificación Analítica)")
+    st.write("Calcula cualquier tramo eligiendo libremente el método de instalación reglamentario visualizando las fórmulas y cálculos desarrollados paso a paso.")
 
     rc1, rc2 = st.columns(2)
     with rc1:
@@ -448,30 +446,29 @@ with pestanas[4]:
 
     st.markdown(f"""
     <div class="formula-box">
-        <b>1. Intensidad de Diseño ($I_b$):</b><br>
-        Fórmula: $I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}}$ (Monofásica) o $I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}}$ (Trifásica)<br>
-        Cálculo: $\\frac{{{val_pot_q:.1f}}}{{{v_nominal_q} \\cdot {cos_q if modo_carga=='Por Potencia (W)' else '0.9'}}} =$ <b>{ib_q:.2f} A</b>
+        <b>1. Intensidad de Diseño (Ib):</b><br>
+        Fórmula: Ib = Potencia / (V * cos phi) [Monofásica] o Ib = Potencia / (Raíz(3) * V * cos phi) [Trifásica]<br>
+        Cálculo: {val_pot_q:.1f} / ({v_nominal_q} * {cos_q if modo_carga=='Por Potencia (W)' else '0.9'}) = <b>{ib_q:.2f} A</b>
     </div>
 
     <div class="formula-box">
-        <b>2. Sección por Caída de Tensión ($\\Delta V$):</b><br>
-        Fórmula: $S = \\frac{{m \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$ (donde $m = 2$ para monofásica y $1$ para trifásica)<br>
-        Cálculo: $\\frac{{2 \\cdot {val_pot_q:.1f} \\cdot {long_q}}}{{{gamma_q} \\cdot {dv_max_q:.2f} \\cdot {v_nominal_q}}} =$ <b>{s_cdt_q:.2f} mm²</b>
+        <b>2. Sección por Caída de Tensión (Delta V):</b><br>
+        Fórmula: S = (m * P * L) / (gamma * Delta V * V) (donde m = 2 para monofásica y 1 para trifásica)<br>
+        Cálculo: (2 * {val_pot_q:.1f} * {long_q}) / ({gamma_q} * {dv_max_q:.2f} * {v_nominal_q}) = <b>{s_cdt_q:.2f} mm²</b>
     </div>
 
     <div class="formula-box">
-        <b>3. Comprobación por Calentamiento ($I_z \\ge I_b$):</b><br>
+        <b>3. Comprobación por Calentamiento (Iz >= Ib):</b><br>
         Se requiere un conductor con admisibilidad superior a {ib_q:.2f} A bajo el método {METODOS_INSTALACION[metodo_q_key]['ref']}. Sección mínima admisible: <b>{s_cal_q} mm²</b>
     </div>
 
     <div class="formula-box">
         <b>4. Corriente de Cortocircuito (Icc final):</b><br>
-        Fórmula: $I_{{cc}} = \\frac{{V}}{{Z_{{total}}}}$<br>
+        Fórmula: Icc = V / Z_total<br>
         Cálculo: <b>{icc_fin_q:.2f} kA</b>
     </div>
     """, unsafe_allow_html=True)
 
-    # RECUADRO NOTORIO Y GRANDE PARA EL CÁLCULO RÁPIDO
     st.markdown(f"""
         <div class="resultado-destacado">
             🧮 SECCIÓN ÓPTIMA SELECCIONADA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
@@ -576,7 +573,7 @@ with pestanas[5]:
         st.success("✅ **Configuración Elevada (ITC-BT-25):** Incluye circuitos adicionales y C4 desdoblado para instalaciones de altas prestaciones.")
 
 # =========================================================================
-# PESTAÑA 7: INFORME TÉCNICO MTD (CON DESCARGA DIRECTA DE INFORME)
+# PESTAÑA 7: INFORME TÉCNICO MTD
 # =========================================================================
 with pestanas[6]:
     st.markdown("""
