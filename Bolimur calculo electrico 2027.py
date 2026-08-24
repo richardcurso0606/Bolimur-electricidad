@@ -715,7 +715,7 @@ with pestanas[1]:
         st.subheader("📐 Desglose detallado de Fórmulas y Resultados - LGA")
         st.markdown(f"""
         1. **Intensidad de Diseño (Ib):** Ib = <b>{ib_lga:.2f} A</b><br>
-        2. **Sección por Caída de Tensión:** S = <b>{s_cdt_lga:.2f} mm²</b> (Real: <b>{dv_real_lga_pct:.3f}%</b>)<br>
+        2. **Sección por Caída de Tensión:** S = <b style="font-size: 20px; color: #ff4b4b;">{s_cdt_lga:.2f} mm²</b> (Real: <b>{dv_real_lga_pct:.3f}%</b>)<br>
         3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_lga} mm²</b><br>
         4. **Sección Mínima Reglamentaria:** <b>{min_reg_lga} mm²</b> ({lga_mat.upper()})<br>
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
@@ -829,7 +829,7 @@ with pestanas[2]:
         st.subheader("📐 Desglose detallado de Fórmulas y Resultados - DI")
         st.markdown(f"""
         1. **Intensidad de Diseño (Ib monofásica):** Ib = <b>{ib_di:.2f} A</b><br>
-        2. **Sección por Caída de Tensión:** S = <b>{s_cdt_di:.2f} mm²</b> (Real: <b>{dv_real_di_pct:.3f}%</b>)<br>
+        2. **Sección por Caída de Tensión:** S = <b style="font-size: 20px; color: #ff4b4b;">{s_cdt_di:.2f} mm²</b> (Real: <b>{dv_real_di_pct:.3f}%</b>)<br>
         3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_di} mm²</b><br>
         4. **Sección Mínima Reglamentaria:** <b>{min_reg_di} mm²</b> ({di_mat.upper()})<br>
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
