@@ -109,7 +109,7 @@ if 'nombre_proyecto' not in st.session_state:
 if 'grupos_viviendas' not in st.session_state:
     st.session_state.grupos_viviendas = [{"nombre": "Viviendas Básicas", "qty": 16, "pot": 5750, "nocturna": False}]
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor Principal Tracción", "potencia": 4000, "factor": 1.30, "qty": 1}]
+    st.session_state.servicios_generales = [{"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1}]
 if 'locales' not in st.session_state:
     st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
 
@@ -182,7 +182,7 @@ with pestanas[0]:
         if st.button("🔄 Resetear Cargas"):
             st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Local 1", "superficie": 40, "qty": 1}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor Principal", "potencia": 4000, "factor": 1.30, "qty": 1}]
+            st.session_state.servicios_generales = [{"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1}]
             st.rerun()
 
     # 1. VIVIENDAS (TABLA COMPLETA OFICIAL)
@@ -290,26 +290,29 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
-    # 3. SERVICIOS GENERALES (INCLUYENDO LA TABLA ITC AEM 1 Y SELECTOR DE K)
+    # 3. SERVICIOS GENERALES (CON CLASIFICACIÓN NTE-ITA Y SELECTOR DE K)
     col_h_serv, col_pop_serv = st.columns([4, 1])
     with col_h_serv:
         st.subheader("3. Servicios Generales (P3)")
     with col_pop_serv:
-        with st.popover("📖 Tabla ITC AEM 1 y Coeficientes K"):
-            st.markdown("### Tabla Guía ITC AEM 1 (Ascensores) y REBT")
-            st.write("Clasificación orientativa de potencias nominales de motores de ascensores según la normativa de aparatos elevadores (ITC AEM 1):")
-            
-            tabla_aem1_md = (
-                "| Tipo de Ascensor / Carga | Velocidad Habitual | Potencia Nominal Aprox. | Coeficiente Eléctrico (K) |\n"
-                "| :--- | :---: | :---: | :---: |\n"
-                "| Unifamiliar / Reducido (300 kg) | 0.4 m/s | 2.2 kW - 3.0 kW | K = 1.30 |\n"
-                "| Plurifamiliar estándar (450-630 kg) | 1.0 m/s | 4.0 kW - 5.5 kW | K = 1.30 (Principal) |\n"
-                "| Alta capacidad / Fincas grandes (800+ kg) | 1.0 - 1.6 m/s | 7.5 kW - 11.0 kW | K = 1.30 |\n"
-                "| Ascensor secundario / Montacargas | 0.6 m/s | 3.0 kW - 4.5 kW | K = 1.15 |\n"
+        with st.popover("📖 Clasificación NTE-ITA (Ascensores)"):
+            st.markdown("### Tabla Oficial NTE-ITA (Instalaciones de Transporte)")
+            tabla_ita_md = (
+                "| Código | Capacidad y Velocidad | Potencia Estimada Aprox. |\n"
+                "| :--- | :--- | :---: |\n"
+                "| **ITA-01** | Carga 5 personas / Vel. 0.63 m/s | ~ 2.2 kW |\n"
+                "| **ITA-02** | Carga 5 personas / Vel. 1.00 m/s | ~ 3.0 kW |\n"
+                "| **ITA-03** | Carga 8 personas / Vel. 1.00 m/s | ~ 4.0 kW |\n"
+                "| **ITA-04** | Carga 8 personas / Vel. 1.60 m/s | ~ 5.5 kW |\n"
+                "| **ITA-05** | Carga 13 personas / Vel. 1.60 m/s | ~ 7.5 kW |\n"
+                "| **ITA-06** | Carga 13 personas / Vel. 2.50 m/s | ~ 9.0 kW |\n"
+                "| **ITA-07** | Carga 21 personas / Vel. 2.50 m/s | ~ 11.0 kW |\n"
+                "| **ITA-08** | Carga 21 personas / Vel. 3.50 m/s | ~ 15.0 kW |\n"
+                "| **ITA-09 a 11** | Montacamillas 24 pers. (1.0 - 2.5 m/s) | ~ 12.0 - 18.0 kW |\n"
             )
-            st.markdown(tabla_aem1_md)
+            st.markdown(tabla_ita_md)
 
-    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 2000, "factor": 1.25, "qty": 1})
+    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Ascensor ITA-03", "potencia": 4000, "factor": 1.30, "qty": 1})
     pot_total_servicios = 0
 
     opciones_factores_k = {
@@ -353,7 +356,7 @@ with pestanas[0]:
 
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-            <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente corrector aplicado <b>K = {factor:.2f}</b> (ITC-BT-10 / ITC AEM 1).<br>
+            <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente <b>K = {factor:.2f}</b> (Clasificación NTE-ITA / ITC-BT-10).<br>
             Cálculo: {serv['potencia']} W x {serv['qty']} ud(s) x {factor:.2f} = <b>{p_parcial_serv:,} W</b>
         </div>
         """, unsafe_allow_html=True)
