@@ -237,7 +237,7 @@ if 'cliente_actual' not in st.session_state:
         "nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", "direccion": "Rincón de Seca", "municipio": "Murcia", "provincia": "Murcia", "cp": "30009", "telefono": "682195295", "email": "richard@bolimur.com"
     }
 
-# --- MENÚ LATERAL (SIDEBAR CON LOGOTIPO, LECTOR PDF Y CLIENTES) ---
+# --- MENÚ LATERAL ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", use_container_width=True)
@@ -352,9 +352,7 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Error al leer el archivo: {e}")
 
-    st.markdown("---")
-
-# --- PESTAÑAS PRINCIPALES (TODAS TUS PESTAÑAS ORIGINALES RESTAURADAS) ---
+# --- PESTAÑAS PRINCIPALES ---
 pestanas = st.tabs([
     "🏢 Previsión de Cargas (Pt)", 
     "⚡ Línea General (LGA)", 
@@ -369,7 +367,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS
+# PESTAÑA 1: PREVISIÓN DE CARGAS (CON RESETEO A CERO)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -378,13 +376,13 @@ with pestanas[0]:
     with col_t1:
         st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE con su justificación analítica y reglamentaria.")
     with col_b1:
-        if st.button("🔄 Resetear Cargas"):
-            st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Local 1", "superficie": 40, "qty": 1}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1}]
+        if st.button("🔄 Resetear a Cero"):
+            st.session_state.grupos_viviendas = []
+            st.session_state.locales = []
+            st.session_state.servicios_generales = []
             st.rerun()
 
-    # 1. VIVIENDAS (TABLA COMPLETA OFICIAL)
+    # 1. VIVIENDAS
     col_h_viv, col_pop_viv = st.columns([4, 1])
     with col_h_viv:
         st.subheader("1. Viviendas del Edificio (P1)")
@@ -398,10 +396,13 @@ with pestanas[0]:
             st.markdown(tabla_aux_md)
 
     if st.button("➕ Añadir Grupo de Viviendas"):
-        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 4, "pot": 9200, "nocturna": False})
+        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 1, "pot": 5750, "nocturna": False})
 
     total_viviendas_edificio = 0
     pot_total_viviendas = 0
+
+    if not st.session_state.grupos_viviendas:
+        st.info("ℹ️ No hay grupos de viviendas añadidos. Pulsa en '➕ Añadir Grupo de Viviendas' para empezar.")
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
@@ -411,7 +412,8 @@ with pestanas[0]:
         with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna #{idx+1}", value=viv["nocturna"], key=f"viv_noc_{idx}")
         with c5:
             if st.button("🗑️", key=f"del_viv_{idx}"):
-                if len(st.session_state.grupos_viviendas) > 1: st.session_state.grupos_viviendas.pop(idx); st.rerun()
+                st.session_state.grupos_viviendas.pop(idx)
+                st.rerun()
 
         total_viviendas_edificio += viv["qty"]
         qty_g = viv["qty"]
@@ -420,10 +422,10 @@ with pestanas[0]:
 
         if noct:
             cs_grupo = float(qty_g)
-            just_str = f"Tarifa Nocturna activada: Coeficiente K = 1.0 (suma total de potencia sin reducir)."
+            just_str = f"Tarifa Nocturna activada: Coeficiente K = 1.0."
         else:
             cs_grupo = get_coef_simultaneidad(qty_g)
-            just_str = f"Aplicación ITC-BT-10 para {qty_g} viviendas: Coeficiente de simultaneidad K = {cs_grupo:.2f}."
+            just_str = f"Aplicación ITC-BT-10 para {qty_g} viviendas: Coeficiente K = {cs_grupo:.2f}."
 
         pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
         pot_total_viviendas += pot_parcial_g
@@ -448,8 +450,13 @@ with pestanas[0]:
             st.write("• Potencia mínima por superficie: 100 W por cada m².")
             st.write("• Suelo reglamentario absoluto: Ningún local se calculará por debajo de 3.450 W.")
 
-    if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 40, "qty": 1})
+    if st.button("➕ Añadir local"): 
+        st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 0.0, "qty": 1})
+    
     pot_total_locales = 0
+
+    if not st.session_state.locales:
+        st.info("ℹ️ No hay locales comerciales añadidos. Pulsa en '➕ Añadir local' para empezar.")
 
     for idx, loc in enumerate(st.session_state.locales):
         c1, c2, c3, c4 = st.columns([3, 3, 2, 1])
@@ -457,20 +464,26 @@ with pestanas[0]:
         with c2: loc["superficie"] = st.number_input(f"Superficie m² #{idx+1}", min_value=0.0, value=float(loc["superficie"]), key=f"loc_sup_{idx}")
         with c3: loc["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(loc["qty"]), key=f"loc_qty_{idx}")
         with c4:
-            if st.button("🗑️", key=f"del_loc_{idx}"): st.session_state.locales.pop(idx); st.rerun()
+            if st.button("🗑️", key=f"del_loc_{idx}"): 
+                st.session_state.locales.pop(idx)
+                st.rerun()
 
         sup_val = loc["superficie"]
         cant_loc = loc["qty"]
         pot_por_superficie = sup_val * 100.0
 
-        if pot_por_superficie < 3450.0:
+        if sup_val == 0:
+            pot_unidad_local = 0.0
+            estado_minimo = "⚠️ <b>Sin superficie definida.</b>"
+            accion_minimo = "👉 Introduce los metros cuadrados del local."
+        elif pot_por_superficie < 3450.0:
             pot_unidad_local = 3450.0
-            estado_minimo = f"⚠️ <b>NO ALCANZA EL MÍNIMO REGLAMENTARIO:</b> La superficie introducida ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W) es inferior al suelo normativo de la ITC-BT-10."
-            accion_minimo = f"👉 <b>Se aplica obligatoriamente el mínimo legal de 3.450 W</b> para este local."
+            estado_minimo = f"⚠️ <b>NO ALCANZA EL MÍNIMO:</b> ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W) es inferior al suelo normativo."
+            accion_minimo = "👉 <b>Se aplica el mínimo legal de 3.450 W</b>."
         else:
             pot_unidad_local = pot_por_superficie
-            estado_minimo = f"✅ <b>CUMPLE EL MÍNIMO:</b> La superficie introducida ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W) supera el umbral mínimo exigido."
-            accion_minimo = f"👉 Se toma el valor calculado por superficie ({pot_por_superficie:,.0f} W)."
+            estado_minimo = f"✅ <b>CUMPLE EL MÍNIMO:</b> ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W)."
+            accion_minimo = "👉 Se toma el valor calculado por superficie."
 
         pot_parcial_local = pot_unidad_local * cant_loc
         pot_total_locales += pot_parcial_local
@@ -478,11 +491,9 @@ with pestanas[0]:
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
             <b>Análisis Normativo Local #{idx+1} ({loc['nombre']}):</b><br>
-            • Criterio ITC-BT-10: Mínimo 100 W por cada metro cuadrado.<br>
-            • Suelo reglamentario obligatorio por local: <b>3.450 W</b>.<br>
             • Estado actual: {estado_minimo}<br>
             • {accion_minimo}<br>
-            • Total Parcial Local: {cant_loc} local(es) x {pot_unidad_local:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
+            • Total Parcial Local: {cant_loc} x {pot_unidad_local:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
         </div>
         """, unsafe_allow_html=True)
 
@@ -507,12 +518,16 @@ with pestanas[0]:
                 "| **ITA-06** | Carga 13 personas / Vel. 2.50 m/s | ~ 9.0 kW |\n"
                 "| **ITA-07** | Carga 21 personas / Vel. 2.50 m/s | ~ 11.0 kW |\n"
                 "| **ITA-08** | Carga 21 personas / Vel. 3.50 m/s | ~ 15.0 kW |\n"
-                "| **ITA-09 a 11** | Montacamillas 24 pers. (1.0 - 2.5 m/s) | ~ 12.0 - 18.0 kW |\n"
             )
             st.markdown(tabla_ita_md)
 
-    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Ascensor ITA-03", "potencia": 4000, "factor": 1.30, "qty": 1})
+    if st.button("➕ Añadir servicio"): 
+        st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 0, "factor": 1.30, "qty": 1})
+    
     pot_total_servicios = 0
+
+    if not st.session_state.servicios_generales:
+        st.info("ℹ️ No hay servicios generales añadidos. Pulsa en '➕ Añadir servicio' para empezar.")
 
     opciones_factores_k = {
         "Ascensor Principal (K = 1.30)": 1.30,
@@ -547,14 +562,16 @@ with pestanas[0]:
             serv["factor"] = factor
 
         with c5:
-            if st.button("🗑️", key=f"del_serv_{idx}"): st.session_state.servicios_generales.pop(idx); st.rerun()
+            if st.button("🗑️", key=f"del_serv_{idx}"): 
+                st.session_state.servicios_generales.pop(idx)
+                st.rerun()
 
         p_parcial_serv = int(serv["potencia"] * serv["qty"] * factor)
         pot_total_servicios += p_parcial_serv
 
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-            <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente <b>K = {factor:.2f}</b> (Clasificación NTE-ITA / ITC-BT-10).<br>
+            <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente <b>K = {factor:.2f}</b>.<br>
             Cálculo: {serv['potencia']} W x {serv['qty']} ud(s) x {factor:.2f} = <b>{p_parcial_serv:,} W</b>
         </div>
         """, unsafe_allow_html=True)
@@ -569,22 +586,21 @@ with pestanas[0]:
     with col_pop_irve:
         with st.popover("📖 Explicación Técnica IRVE"):
             st.markdown("### Criterios Técnicos ITC-BT-52 e ITC-BT-10")
-            st.write("1. **Garaje (ITC-BT-10):** Se asignan 20 W por cada m² de superficie, estableciendo un suelo mínimo obligatorio de 3.450 W.")
-            st.write("2. **Preinstalación Vehículo Eléctrico (ITC-BT-52):** Cada plaza de garaje en edificios nuevos debe contemplar una previsión mínima de potencia de 3.680 W (afectada por un coeficiente base del 10% o 0.1).")
-            st.write("3. **Efecto del SPL (Sistema de Protección de Línea):** Si el edificio instala un gestor dinámico de recarga (SPL), la potencia simultánea destinada a la recarga se reduce en un 90%.")
+            st.write("1. **Garaje (ITC-BT-10):** Se asignan 20 W por cada m² de superficie, con un suelo mínimo de 3.450 W.")
+            st.write("2. **Preinstalación Vehículo Eléctrico (ITC-BT-52):** Cada plaza de garaje contempla 3.680 W (afectada por un coeficiente base del 10% o 0.1).")
 
     gc1, gc2, gc3 = st.columns(3)
-    with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300)
-    with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=25)
+    with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=0.0)
+    with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=0)
     with gc3: opcion_irve = st.selectbox("Sistema de Recarga IRVE (ITC-BT-52)", ["Sin SPL [Factor = 1.0]", "Con Sistema de Protección de Línea - SPL (Reducción 90% / Factor = 0.1)"])
 
     pot_garaje_por_sup = sup_garaje * 20.0
     if pot_garaje_por_sup < 3450.0 and sup_garaje > 0:
         pot_garaje_adjudicada = 3450.0
-        aviso_garaje = f"⚠️ El garaje por superficie ({sup_garaje} m² x 20 W/m² = {pot_garaje_por_sup:.0f} W) no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>."
+        aviso_garaje = f"⚠️ El garaje no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>."
     else:
         pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
-        aviso_garaje = f"✅ Garaje calculado por superficie: {sup_garaje} m² x 20 W/m² = <b>{int(pot_garaje_adjudicada):,} W</b>."
+        aviso_garaje = f"✅ Garaje calculado por superficie: <b>{int(pot_garaje_adjudicada):,} W</b>."
 
     fsim_ve = 1.0 if "Sin" in opcion_irve else 0.1
     pot_total_irve = int(round(plazas_garaje * 0.1 * 3680 * fsim_ve))
@@ -594,8 +610,6 @@ with pestanas[0]:
     <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
         <b>Justificación Técnica del Cálculo IRVE y Garaje:</b><br>
         • {aviso_garaje}<br>
-        • Preinstalación IRVE (ITC-BT-52): {plazas_garaje} plazas x 10% x 3.680 W = {int(plazas_garaje * 0.1 * 3680):,} W de base teórica.<br>
-        • Modo de recarga seleccionado: {"Sin SPL (Factor K = 1.0)" if fsim_ve == 1.0 else "Con SPL / Gestión dinámica (Factor K = 0.1, reducción del 90%)"}.<br>
         • Potencia total IRVE resultante: <b>{pot_total_irve:,} W</b><br>
         • <b>Suma Parcial P4 / P5:</b> {int(pot_garaje_adjudicada):,} W (Garaje) + {pot_total_irve:,} W (IRVE) = <b>{pot_total_garaje_irve:,} W</b>
     </div>
@@ -622,7 +636,7 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (CON TODA TU TABLA COMPARATIVA ORIGINAL)
+# PESTAÑA 2: LGA
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -632,7 +646,7 @@ with pestanas[1]:
         with st.popover("❓ 📖 Ventana de Ayuda: Explicación de Métodos de Instalación (B1, B2...)"):
             st.markdown("### Guía Técnica de Métodos de Instalación (UNE-HD 60364-5-52)")
             st.write("""
-            * **Método B1 (Habitual en Viviendas):** Cables unipolares en tubo empotrado en paredes aislantes. Disipa peor el calor.
+            * **Método B1 (Habitual en Viviendas):** Cables unipolares en tubo empotrado en paredes aislantes.
             * **Método B2:** En tubo superficial.
             * **Método C:** Multiconductor fijado a pared.
             * **Método D:** Enterrado bajo tubo.
@@ -689,8 +703,8 @@ with pestanas[1]:
     st.subheader("📐 Desglose detallado de Fórmulas y Resultados - LGA")
     st.markdown(f"""
     1. **Intensidad de Diseño (Ib):** Ib = Potencia / (Raíz de 3 * V * cos phi) = {lga_pot:.1f} / (1.732 * 400 * {lga_cos}) = **{ib_lga:.2f} A**
-    2. **Sección por Caída de Tensión (Delta V <= {dv_pct_lga}%):** S = (P * L) / (gamma * Delta V * V) = ({lga_pot:.1f} * {lga_long}) / ({gamma_lga} * {dv_max_lga:.2f} * 400) = **{s_cdt_lga:.2f} mm²** (Real: **{dv_real_lga_pct:.3f}%**)
-    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_lga} mm²** (Admisibilidad bajo método {METODOS_INSTALACION[metodo_lga_key]['ref']})
+    2. **Sección por Caída de Tensión (Delta V <= {dv_pct_lga}%):** S = (P * L) / (gamma * Delta V * V) = **{s_cdt_lga:.2f} mm²** (Real: **{dv_real_lga_pct:.3f}%**)
+    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_lga} mm²**
     4. **Sección Mínima Reglamentaria (ITC-BT-14):** **{min_reg_lga} mm²** ({lga_mat.upper()})
     5. **Corriente de Cortocircuito (Icc final):** **{icc_fin_lga:.2f} kA**
     """)
@@ -700,13 +714,13 @@ with pestanas[1]:
     tabla_comparativa_lga = []
     for sec in SECCIONES_COMERCIALES:
         iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
-        cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No (Calentamiento insuficiente)"
+        cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No"
         
         dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400)
         dv_sec_pct = (dv_sec_v / 400) * 100
-        cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}% > {dv_pct_lga}%)"
+        cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}%)"
         
-        cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No (Mín. {min_reg_lga}mm²)"
+        cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No"
         
         estado = "❌ DESCARTADA"
         if sec >= s_bruta_lga:
@@ -727,13 +741,13 @@ with pestanas[1]:
         <div class="resultado-destacado">
             ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación Analítica:</b> S por caída de tensión = <b>{s_cdt_lga:.2f} mm²</b>, calentamiento mínimo = <b>{s_cal_lga} mm²</b>, mínimo normativo = <b>{min_reg_lga} mm²</b>. S seleccionada = <b>{s_optima_lga} mm²</b>. Protección: {prot_lga} A.
+            <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_lga:.2f} mm²</b>, calentamiento = <b>{s_cal_lga} mm²</b>, mínimo = <b>{min_reg_lga} mm²</b>. S óptima = <b>{s_optima_lga} mm²</b>. Protección: {prot_lga} A.
             </span>
         </div>
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON TODA TU TABLA COMPARATIVA ORIGINAL)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -797,11 +811,11 @@ with pestanas[2]:
     st.markdown("---")
     st.subheader("📐 Desglose detallado de Fórmulas y Resultados - DI")
     st.markdown(f"""
-    1. **Intensidad de Diseño (Ib monofásica):** Ib = Potencia / (V * cos phi) = {di_pot} / (230 * {di_cos}) = **{ib_di:.2f} A**
-    2. **Sección por Caída de Tensión (Delta V <= {dv_pct_di}%):** S = (2 * P * L) / (gamma * Delta V * V) = **{s_cdt_di:.2f} mm²** (Real: **{dv_real_di_pct:.3f}%**)
-    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_di} mm²**
-    4. **Sección Mínima Reglamentaria (ITC-BT-15):** **{min_reg_di} mm²** ({di_mat.upper()})
-    5. **Corriente de Cortocircuito (Icc final):** **{icc_fin_di:.2f} kA**
+    1. **Intensidad de Diseño (Ib monofásica):** Ib = <b>{ib_di:.2f} A</b><br>
+    2. **Sección por Caída de Tensión:** S = <b>{s_cdt_di:.2f} mm²</b> (Real: <b>{dv_real_di_pct:.3f}%</b>)<br>
+    3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_di} mm²</b><br>
+    4. **Sección Mínima Reglamentaria:** <b>{min_reg_di} mm²</b> ({di_mat.upper()})<br>
+    5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
     """)
 
     st.markdown("---")
@@ -850,7 +864,7 @@ with pestanas[2]:
         <div class="resultado-destacado">
             🔌 SECCIÓN A ADOPTAR (DI): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_di:.2f} mm²</b>, calentamiento = <b>{s_cal_di} mm²</b>, mínimo ITC-BT-15 = <b>{min_reg_di} mm²</b>. S óptima = <b>{s_optima_di} mm²</b>. PIA: {prot_di} A.
+            <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_di:.2f} mm²</b>, calentamiento = <b>{s_cal_di} mm²</b>, mínimo = <b>{min_reg_di} mm²</b>. S óptima = <b>{s_optima_di} mm²</b>. PIA: {prot_di} A.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -860,15 +874,13 @@ with pestanas[2]:
 # =========================================================================
 with pestanas[3]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta horizontal rápida para Derivaciones Individuales con conductores de cobre bajo tubo empotrado (método B1, cos phi = 1, gamma = 48):")
+    st.write("Consulta horizontal rápida para Derivaciones Individuales con conductores de cobre bajo tubo empotrado:")
 
     tabla_plc_data = [
-        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m", "40A (9.2 kW)": "5 m", "50A (11.5 kW)": "-", "63A (14.49 kW)": "-"},
-        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "26 m", "40A (9.2 kW)": "10 m", "50A (11.5 kW)": "-", "63A (14.49 kW)": "-"},
-        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "22 m", "40A (9.2 kW)": "8 m", "50A (11.5 kW)": "17 m", "63A (14.49 kW)": "6 m"},
-        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m", "40A (9.2 kW)": "17 m", "50A (11.5 kW)": "34 m", "63A (14.49 kW)": "13 m"},
-        {"Sección Min": "16 mm²", "Tubo Mín": "40 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "17 m", "32A (7.32 kW)": "33 m", "40A (9.2 kW)": "25 m", "50A (11.5 kW)": "27 m", "63A (14.49 kW)": "20 m"},
-        {"Sección Min": "16 mm²", "Tubo Mín": "40 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "33 m", "32A (7.32 kW)": "66 m", "40A (9.2 kW)": "51 m", "50A (11.5 kW)": "55 m", "63A (14.49 kW)": "41 m"}
+        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m"},
+        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "26 m"},
+        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "22 m"},
+        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m"}
     ]
     st.dataframe(tabla_plc_data, use_container_width=True)
 
@@ -877,38 +889,32 @@ with pestanas[3]:
 # =========================================================================
 with pestanas[4]:
     st.title("🧮 Ventana de Cálculo Rápido (Justificación Analítica)")
-    st.write("Calcula cualquier tramo eligiendo libremente el método de instalación reglamentario visualizando las fórmulas y cálculos desarrollados paso a paso.")
-
     rc1, rc2 = st.columns(2)
     with rc1:
-        modo_carga = st.radio("Modo de entrada de corriente:", ["Por Potencia (W)", "Por Intensidad Directa (A)"], key="mod_q")
+        modo_carga = st.radio("Modo de entrada:", ["Por Potencia (W)", "Por Intensidad Directa (A)"], key="mod_q")
         if modo_carga == "Por Potencia (W)":
-            val_pot_q = st.number_input("Potencia de diseño (W)", value=5000.0, key="vp_q")
-            tipo_red_q = st.selectbox("Tipo de red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q1")
+            val_pot_q = st.number_input("Potencia (W)", value=5000.0, key="vp_q")
+            tipo_red_q = st.selectbox("Red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q1")
             cos_q = st.slider("Coseno phi", 0.7, 1.0, 0.9, key="cos_q")
             ib_q = val_pot_q / (230 * cos_q) if "Monofásica" in tipo_red_q else val_pot_q / (math.sqrt(3) * 400 * cos_q)
         else:
-            ib_q = st.number_input("Intensidad de diseño Ib (A)", value=25.0, key="ib_q1")
-            tipo_red_q = st.selectbox("Tipo de red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q2")
+            ib_q = st.number_input("Intensidad Ib (A)", value=25.0, key="ib_q1")
+            tipo_red_q = st.selectbox("Red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q2")
             val_pot_q = ib_q * 230 if "Monofásica" in tipo_red_q else ib_q * math.sqrt(3) * 400 * 0.9
 
-        long_q = st.number_input("Longitud del tramo (m)", value=20.0, key="l_q")
+        long_q = st.number_input("Longitud (m)", value=20.0, key="l_q")
 
     with rc2:
-        metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), key="met_q")
+        metodo_q_key = st.selectbox("Método:", list(METODOS_INSTALACION.keys()), key="met_q")
         mat_q = st.selectbox("Material", ["cobre", "aluminio"], key="m_q")
         ais_q = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
-        cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%)", value=3.0, key="cdt_q")
-        icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, key="icc_orig_q")
+        cdt_lim_q = st.number_input("CDT máx (%)", value=3.0, key="cdt_q")
+        icc_orig_q = st.number_input("Icc origen (kA)", value=10.0, key="icc_orig_q")
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     v_nominal_q = 230 if "Monofásica" in tipo_red_q else 400
     dv_max_q = v_nominal_q * (cdt_lim_q / 100.0)
-    
-    if "Monofásica" in tipo_red_q:
-        s_cdt_q = (2 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q)
-    else:
-        s_cdt_q = (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q)
+    s_cdt_q = (2 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q) if "Monofásica" in tipo_red_q else (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q)
 
     s_cal_q = 1.5
     for sec, iz_val in IZ_COBRE_TUBO.items():
@@ -918,30 +924,14 @@ with pestanas[4]:
 
     s_opt_q = seleccionar_seccion_optima(max(s_cdt_q, s_cal_q))
     r_q = (0.018 * long_q) / s_opt_q
-    
-    if "Monofásica" in tipo_red_q:
-        z_tot_q = (v_nominal_q / (icc_orig_q * 1000)) + (2 * r_q)
-    else:
-        z_tot_q = (v_nominal_q / (icc_orig_q * 1000)) + r_q
-        
+    z_tot_q = (v_nominal_q / (icc_orig_q * 1000)) + (2 * r_q) if "Monofásica" in tipo_red_q else (v_nominal_q / (icc_orig_q * 1000)) + r_q
     icc_fin_q = v_nominal_q / z_tot_q / 1000 if z_tot_q > 0 else 0
     prot_q = seleccionar_proteccion(ib_q)
 
-    st.markdown("---")
-    st.subheader("📋 Justificación Analítica y Fórmulas Aplicadas")
-    st.markdown(f"""
-    <div class="formula-box">
-        <b>1. Intensidad de Diseño (Ib):</b> Ib = <b>{ib_q:.2f} A</b><br>
-        <b>2. Sección por Caída de Tensión:</b> S = <b>{s_cdt_q:.2f} mm²</b><br>
-        <b>3. Comprobación por Calentamiento:</b> Mínimo <b>{s_cal_q} mm²</b><br>
-        <b>4. Corriente de Cortocircuito final:</b> Icc = <b>{icc_fin_q:.2f} kA</b>
-    </div>
-    """, unsafe_allow_html=True)
-
     st.markdown(f"""
         <div class="resultado-destacado">
-            🧮 SECCIÓN ÓPTIMA SELECCIONADA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">Protección recomendada: {prot_q} A | Icc final: {icc_fin_q:.2f} kA</span>
+            🧮 SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">Protección: {prot_q} A | Icc final: {icc_fin_q:.2f} kA</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -950,57 +940,26 @@ with pestanas[4]:
 # =========================================================================
 with pestanas[5]:
     st.title("📐 Esquema Unifilar con Símbolos Gráficos Reglamentarios")
-    tipo_electrificacion_simbolos = st.radio("Grado de Electrificación para el Esquema Gráfico:", [
-        "Grado Básico (ITC-BT-25 - 5 Circuitos)",
-        "Grado Básico con C4 Desdoblado",
-        "Grado Elevado (12 Circuitos)"
-    ], key="tipo_elec_simb")
-
-    if "Básico" in tipo_electrificacion_simbolos and "Desdoblado" not in tipo_electrificacion_simbolos:
-        esquema_simbolos_txt = """
+    tipo_electrificacion_simbolos = st.radio("Grado de Electrificación:", ["Grado Básico (ITC-BT-25 - 5 Circuitos)", "Grado Elevado"])
+    
+    esquema_simbolos_txt = f"""
 ==========================================================================================
-PROYECTO: """ + st.session_state.nombre_proyecto + """
-GRADO DE ELECTRIFICACIÓN: BÁSICO (ITC-BT-25) - BOLIMUR INSTALACIONES INTEGRALES
+PROYECTO: {st.session_state.nombre_proyecto}
+TITULAR: {st.session_state.cliente_actual['nombre']} - BOLIMUR INSTALACIONES INTEGRALES
 ==========================================================================================
-
    [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
    10 mm² Cu               25 A                     Transitorias +           40 A, 30 mA
-   (F + N + TT)          (2 Polos)                  Permanentes (Bobina)     [ 30 mA ]
      │                      │                             │                    │
      └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──
                                                                                  │
-         ┌───────────────────────────────────────────────────────────────────────┘
-         │
          ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
          ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
          ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
-         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4: Lavadora, lavavajillas y termo
-         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
-=========================================================================================="""
-    else:
-        esquema_simbolos_txt = """
-==========================================================================================
-PROYECTO: """ + st.session_state.nombre_proyecto + """
-GRADO DE ELECTRIFICACIÓN: ELEVADO / OTROS - BOLIMUR INSTALACIONES INTEGRALES
-==========================================================================================
-
-   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
-   16 mm² Cu               40 A                     Transitorias +           63 A, 30 mA
-   (F + N + TT)          (2 Polos)                  Permanentes              [ 30 mA ]
-     │                      │                             │                    │
-     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──
-                                                                                 │
-         ┌───────────────────────────────────────────────────────────────────────┘
-         │
-         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación principal
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: Tomas de corriente generales
-         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y horno
          ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4: Lavadora y termo
-         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: Baños y cocina (húmedas)
+         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y cocina
 =========================================================================================="""
-
     st.markdown(f'<div class="esquema-simbolos">{esquema_simbolos_txt}</div>', unsafe_allow_html=True)
-    st.download_button("📥 Descargar Esquema con Símbolos (.txt)", data=esquema_simbolos_txt, file_name="Esquema_Simbolos.txt", mime="text/plain")
+    st.download_button("📥 Descargar Esquema (.txt)", data=esquema_simbolos_txt, file_name="Esquema_Simbolos.txt", mime="text/plain")
 
 # =========================================================================
 # PESTAÑA 7: ASISTENTE DE BOLETINES
@@ -1019,10 +978,6 @@ with pestanas[6]:
         <p><b>Proyecto:</b> {st.session_state.nombre_proyecto} | <b>Potencia Total:</b> {pt_total:,} W</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    if st.button("📥 Descargar Boletín Oficial (.txt)"):
-        b_txt = f"CERTIFICADO DE INSTALACIÓN ELÉCTRICA\nTitular: {st.session_state.cliente_actual['nombre']}\nEmpresa: {perfil_guardado['empresa']}\nPotencia: {pt_total:,} W"
-        st.download_button("💾 Guardar Boletín", data=b_txt, file_name="Boletin_Oficial.txt", mime="text/plain")
 
 # =========================================================================
 # PESTAÑA 8: MTD OFICIAL CARM
@@ -1036,15 +991,12 @@ with pestanas[7]:
         <hr style="border: 1px solid #000;">
         <h4>1. TITULAR</h4>
         <p>{st.session_state.cliente_actual['nombre']} - NIF: {st.session_state.cliente_actual['nif']}</p>
-        <p>Dirección: {st.session_state.cliente_actual['direccion']}, {st.session_state.cliente_actual['municipio']} ({st.session_state.cliente_actual['provincia']})</p>
         <hr>
         <h4>2. INSTALADOR HABILITADO</h4>
         <p>{perfil_guardado['empresa']} - Nº Inscripción CARM: {perfil_guardado['num_inscripcion']}</p>
-        <p>Instalador: {perfil_guardado['nombre']} (Carné: {perfil_guardado['carnet']})</p>
         <hr>
         <h4>3. DATOS TÉCNICOS</h4>
         <p>Potencia Total Prevista: <b>{pt_total:,} W</b> ({pt_total/1000:,.2f} kW)</p>
-        <p>LGA: {s_optima_lga} mm² Cu | DI: {s_optima_di} mm² Cu</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1052,57 +1004,10 @@ with pestanas[7]:
 # PESTAÑA 9: INFORME TÉCNICO MTD
 # =========================================================================
 with pestanas[8]:
-    st.markdown("""
-        <div class="bolimur-header">
-            <h1 style="color: #ff4b4b; margin: 0; font-size: 26px;">BOLIMUR INSTALACIONES INTEGRALES</h1>
-            <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: bold; color: #555;">MEMORIA TÉCNICA DE DISEÑO (MTD) - INSTALACIÓN ELÉCTRICA</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    texto_informe = f"""==================================================
-BOLIMUR INSTALACIONES INTEGRALES
-MEMORIA TÉCNICA DE DISEÑO (MTD) - INSTALACIÓN ELÉCTRICA
-==================================================
-Nombre del Proyecto: {st.session_state.nombre_proyecto}
-Normativa: REBT (Real Decreto 842/2002)
-
-1. RESUMEN DE PREVISIÓN DE CARGAS (ITC-BT-10)
-- Potencia Total Prevista (Pt): {pt_total:,} W
-- Viviendas asociadas: {total_viviendas_edificio} unidades
-- Potencia Locales Comerciales (P2): {int(pot_total_locales):,} W
-- Potencia Servicios Generales (P3): {pot_total_servicios:,} W
-- Potencia Garaje e IRVE: {int(pot_garaje_adjudicada) + pot_total_irve:,} W
-
-2. LÍNEA GENERAL DE ALIMENTACIÓN - LGA (ITC-BT-14)
-- Conductor seleccionado: {s_optima_lga} mm2 de {lga_mat.upper()} ({lga_aisl})
-- Caída de Tensión real estimada: {dv_real_lga_pct:.3f}% (Límite: {dv_pct_lga}%)
-- Protección General: Magnetotérmico de {prot_lga} A
-
-3. DERIVACIÓN INDIVIDUAL - DI (ITC-BT-15)
-- Conductor seleccionado: {s_optima_di} mm2 de {di_mat.upper()} ({di_aisl})
-- Caída de Tensión real estimada: {dv_real_di_pct:.3f}% (Límite: {dv_pct_di}%)
-- Protección PIA asociado: {prot_di} A + Diferencial 30 mA
-==================================================
-"""
-
-    st.markdown(f"""
-    ---
-    #### 1. RESUMEN DE PREVISIÓN DE CARGAS (ITC-BT-10)
-    - **Potencia Total Prevista (Pt):** `{pt_total:,} W`
-    - **Viviendas asociadas:** `{total_viviendas_edificio}` unidades
-
-    ---
-    #### 2. DIMENSIONAMIENTO DE LA LGA (ITC-BT-14)
-    - **Conductor seleccionado:** **`{s_optima_lga} mm²` de {lga_mat.upper()}**
-    - **Caída de Tensión real:** `{dv_real_lga_pct:.3f}%`
-
-    ---
-    #### 3. DIMENSIONAMIENTO DE LA DI (ITC-BT-15)
-    - **Conductor seleccionado:** **`{s_optima_di} mm²` de {di_mat.upper()}**
-    - **Caída de Tensión real:** `{dv_real_di_pct:.3f}%`
-    """)
-
-    st.download_button("📥 Descargar Informe Técnico Formal (.txt)", data=texto_informe, file_name="Informe_MTD.txt", mime="text/plain")
+    st.title("📄 Informe Técnico Formal MTD")
+    informe_txt = f"PROYECTO: {st.session_state.nombre_proyecto}\nPt: {pt_total:,} W"
+    st.text(informe_txt)
+    st.download_button("📥 Descargar Informe Técnico", data=informe_txt, file_name="Informe_MTD.txt", mime="text/plain")
 
 # =========================================================================
 # PESTAÑA 10: SIMULADOR DE CONSUMO
