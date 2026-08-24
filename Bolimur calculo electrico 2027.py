@@ -32,14 +32,17 @@ st.markdown("""
         margin: 10px 0;
         color: #333333;
     }
-    .unifilar-box {
-        background-color: #ffffff;
-        border: 2px solid #333333;
-        padding: 20px;
+    .esquema-grafico {
+        background-color: #fcfcfc;
+        border: 2px solid #222222;
+        padding: 25px;
         border-radius: 8px;
-        font-family: monospace;
-        color: #111111;
-        white-space: pre-wrap;
+        font-family: 'Courier New', Courier, monospace;
+        color: #000000;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -56,7 +59,6 @@ def get_coef_simultaneidad(num):
     if num <= 21: return COEF_SIMULTANEIDAD_VIVIENDAS.get(num, 15.3)
     return float(round(15.3 + (num - 21) * 0.5, 1))
 
-# --- MÉTODOS DE INSTALACIÓN Y CONDUCTIVIDADES (UNE-HD 60364-5-52) ---
 METODOS_INSTALACION = {
     "B1 (Bajo tubo empotrado en pared aislante - Habitual Viviendas)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas / empotrado"},
     "B2 (Bajo tubo en superficie / canal protectora)": {"ref": "B2", "desc": "Cables unipolares en tubo montado en superficie"},
@@ -472,7 +474,7 @@ with pestanas[4]:
     </div>
 
     <div class="formula-box">
-        <b>4. Corriente de Cortocircuito (Icc final):</b><br>
+        <b>4. Corriente de Cortocircuito (Icc final):<</b><br>
         Fórmula: Icc = V / Z_total<br>
         Cálculo: <b>{icc_fin_q:.2f} kA</b>
     </div>
@@ -486,123 +488,109 @@ with pestanas[4]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 6: ESQUEMAS UNIFILARES GRÁFICOS Y TÉCNICOS (CON Nº DE HILOS)
+# PESTAÑA 6: ESQUEMAS UNIFILARES EN FORMATO GRÁFICO (ESTILO PLANO TÉCNICO)
 # =========================================================================
 with pestanas[5]:
-    st.title("📐 Esquema Unifilar Técnico y Cuadro de Protecciones (REBT - ITC-BT-25)")
-    st.write("Generación automática de plano unifilar normalizado en España indicando número exacto de hilos (Fase + Neutro + Tierra), calibres, secciones y tubos:")
+    st.title("📐 Esquema Unifilar Gráfico (Estilo Plano Técnico REBT)")
+    st.write("Representación unifilar esquemática estructurada con símbolos de magnetotérmicos, protecciones y trazado de hilos por circuito:")
 
-    tipo_electrificacion_unifilar = st.radio("Grado de Electrificación de la Vivienda para el Plano:", [
-        "Grado Básico (P <= 5.750 W - 5 Circuitos Básicos)",
-        "Grado Básico con C4 Desdoblado (Lavadora / Termo / Lavavajillas)",
-        "Grado Elevado (P > 9.200 W - 12 Circuitos Reglamentarios)"
-    ], key="tipo_elec_uni")
+    tipo_electrificacion_grafica = st.radio("Grado de Electrificación para el Esquema Gráfico:", [
+        "Grado Básico (ITC-BT-25 - 5 Circuitos)",
+        "Grado Básico con C4 Desdoblado",
+        "Grado Elevado (12 Circuitos)"
+    ], key="tipo_elec_graf")
 
-    if "Básico" in tipo_electrificacion_unifilar and "Desdoblado" not in tipo_electrificacion_unifilar:
-        plano_texto = """====================================================================
-BOLIMUR INSTALACIONES INTEGRALES - PLANO ESQUEMA UNIFILAR (ITC-BT-25)
+    if "Básico" in tipo_electrificacion_grafica and "Desdoblado" not in tipo_electrificacion_grafica:
+        esquema_dibujo = """
+==========================================================================================
 PROYECTO: """ + st.session_state.nombre_proyecto + """
---------------------------------------------------------------------
-  [ ORÍGEN: DERIVACIÓN INDIVIDUAL (DI) ]
-  Hilos: 2 Fases/Unipolares de 10 mm² Cu + 1 Neutro de 10 mm² Cu + 1 TT de 10 mm²
-  Tubo corrugado protector: M32
-    │
-    ▼
-  [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ]
-  Polaridad: 2 Polos | Calibre: 25 A | Poder de corte: 6 kA
-    │
-    ▼
-  [ PROTECTOR DE SOBRETENSIONES ]
-  Transitorias (Tipo 2) + Permanentes (Bobina de disparo)
-    │
-    ▼
-  [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ]
-  Polaridad: 2 Polos | Sensibilidad: 30 mA | Calibre: 40 A
-    │
-    ├─► [ C1 - ILUMINACIÓN ]
-    │     Número de Hilos: 3 hilos (1 Fase + 1 Neutro + 1 Tierra)
-    │     Sección: 1.5 mm² Cu | PIA: 10 A (Curva C) | Tubo: M16
-    │
-    ├─► [ C2 - TOMAS GENERALES ]
-    │     Número de Hilos: 3 hilos (1 Fase + 1 Neutro + 1 Tierra)
-    │     Sección: 2.5 mm² Cu | PIA: 16 A (Curva C) | Tubo: M20
-    │
-    ├─► [ C3 - COCINA Y HORNO ]
-    │     Número de Hilos: 3 hilos (1 Fase + 1 Neutro + 1 Tierra)
-    │     Sección: 6.0 mm² Cu | PIA: 25 A (Curva C) | Tubo: M25
-    │
-    ├─► [ C4 - LAVADORA, LAVAVAJILLAS Y TERMO ]
-    │     Número de Hilos: 3 hilos (1 Fase + 1 Neutro + 1 Tierra)
-    │     Sección: 4.0 mm² Cu | PIA: 20 A (Curva C) | Tubo: M20
-    │
-    └─► [ C5 - BAÑOS Y COCINA (ZONAS HÚMEDAS) ]
-          Número de Hilos: 3 hilos (1 Fase + 1 Neutro + 1 Tierra)
-          Sección: 2.5 mm² Cu | PIA: 16 A (Curva C) | Tubo: M20
-===================================================================="""
-    elif "Desdoblado" in tipo_electrificacion_unifilar:
-        plano_texto = """====================================================================
-BOLIMUR INSTALACIONES INTEGRALES - PLANO ESQUEMA UNIFILAR (ITC-BT-25)
-PROYECTO: """ + st.session_state.nombre_proyecto + """ (Con C4 Desdoblado)
---------------------------------------------------------------------
-  [ ORÍGEN: DERIVACIÓN INDIVIDUAL (DI) ]
-  Hilos: 10 mm² Cu (Fases + Neutro + TT) | Tubo: M32
-    │
-    ▼
-  [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ] --- 25 A (2 Polos)
-    │
-    ▼
-  [ PROTECTOR DE SOBRETENSIONES ] (Transitorias + Permanentes)
-    │
-    ▼
-  [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ] --- 40 A, 30 mA
-    │
-    ├─► [ C1 - ILUMINACIÓN ] -> 3 hilos (1.5 mm² Cu) | PIA: 10 A | Tubo: M16
-    ├─► [ C2 - TOMAS GENERALES ] -> 3 hilos (2.5 mm² Cu) | PIA: 16 A | Tubo: M20
-    ├─► [ C3 - COCINA Y HORNO ] -> 3 hilos (6.0 mm² Cu) | PIA: 25 A | Tubo: M25
-    ├─► [ C4-A - LAVADORA Y TERMO ] -> 3 hilos (4.0 mm² Cu) | PIA: 20 A | Tubo: M20
-    ├─► [ C4-B - LAVAVAJILLAS ] -> 3 hilos (2.5 mm² Cu) | PIA: 16 A | Tubo: M20
-    └─► [ C5 - BAÑOS Y COCINA (Zonas húmedas) ] -> 3 hilos (2.5 mm² Cu) | PIA: 16 A | Tubo: M20
-===================================================================="""
-    else:
-        plano_texto = """====================================================================
-BOLIMUR INSTALACIONES INTEGRALES - PLANO ESQUEMA UNIFILAR (ITC-BT-25)
-PROYECTO: """ + st.session_state.nombre_proyecto + """ (Grado Elevado)
---------------------------------------------------------------------
-  [ ORÍGEN: DERIVACIÓN INDIVIDUAL (DI) ]
-  Hilos: 16 mm² Cu (Fases + Neutro + TT) | Tubo: M40
-    │
-    ▼
-  [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ] --- 40 A / 50 A (2 Polos)
-    │
-    ▼
-  [ PROTECTOR DE SOBRETENSIONES ] (Transitorias + Permanentes)
-    │
-    ▼
-  [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ] --- 63 A, 30 mA
-    │
-    ├─► [ C1 - ILUMINACIÓN (1º) ] -> 3 hilos (1.5 mm² Cu) | 10 A | M16
-    ├─► [ C2 - TOMAS GENERALES (1º) ] -> 3 hilos (2.5 mm² Cu) | 16 A | M20
-    ├─► [ C3 - COCINA Y HORNO ] -> 3 hilos (6.0 mm² Cu) | 25 A | M25
-    ├─► [ C4-A - LAVADORA Y TERMO ] -> 3 hilos (4.0 mm² Cu) | 20 A | M20
-    ├─► [ C4-B - LAVAVAJILLAS ] -> 3 hilos (2.5 mm² Cu) | 16 A | M20
-    ├─► [ C5 - BAÑOS Y COCINA (Húmedas) ] -> 3 hilos (2.5 mm² Cu) | 16 A | M20
-    ├─► [ C6 - ILUMINACIÓN (2º Circuito) ] -> 3 hilos (1.5 mm² Cu) | 10 A | M16
-    ├─► [ C7 - TOMAS ADICIONALES ] -> 3 hilos (2.5 mm² Cu) | 16 A | M20
-    ├─► [ C8 - CALEFACCIÓN / CLIMA ] -> 3 hilos (6.0 mm² Cu) | 25 A | M25
-    ├─► [ C9 - AIRE ACONDICIONADO ] -> 3 hilos (4.0 mm² Cu) | 20 A | M20
-    ├─► [ C10 - SECADORA ] -> 3 hilos (2.5 mm² Cu) | 16 A | M20
-    ├─► [ C11 - DOMÓTICA / ALARMA ] -> 3 hilos (1.5 mm² Cu) | 10 A | M16
-    └─► [ C12 / C13 - CIRCUITOS ESPECIALES ] -> 3 hilos (6.0 mm² Cu) | 25 A | M25
-===================================================================="""
+GRADO DE ELECTRIFICACIÓN: BÁSICO (ITC-BT-25) - BOLIMUR INSTALACIONES INTEGRALES
+==========================================================================================
 
-    st.markdown(f'<div class="unifilar-box">{plano_texto}</div>', unsafe_allow_html=True)
+   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
+    10 mm²                 25 A                     Transitorias +           40 A
+   (F+N+TT)              (2 Polos)                  Permanentes (Bobina)     30 mA
+     │                      │                             │                    │
+     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
+                                                                                 │
+         ┌───────────────────────────────────────────────────────────────────────┘
+         │
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
+         │
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
+         │
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
+         │
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4: Lavadora, lavavajillas y termo
+         │
+         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
+=========================================================================================="""
+    elif "Desdoblado" in tipo_electrificacion_grafica:
+        esquema_dibujo = """
+==========================================================================================
+PROYECTO: """ + st.session_state.nombre_proyecto + """
+GRADO DE ELECTRIFICACIÓN: BÁSICO CON C4 DESDOBLADO - BOLIMUR INSTALACIONES INTEGRALES
+==========================================================================================
+
+   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
+    10 mm²                 25 A                     Transitorias +           40 A
+   (F+N+TT)              (2 Polos)                  Permanentes              30 mA
+     │                      │                             │                    │
+     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
+                                                                                 │
+         ┌───────────────────────────────────────────────────────────────────────┘
+         │
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
+         │
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
+         │
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
+         │
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4-A: Lavadora y Termo
+         │
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C4-B: Lavavajillas independiente
+         │
+         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
+=========================================================================================="""
+    else:
+        esquema_dibujo = """
+==========================================================================================
+PROYECTO: """ + st.session_state.nombre_proyecto + """
+GRADO DE ELECTRIFICACIÓN: ELEVADO (12 CIRCUITOS) - BOLIMUR INSTALACIONES INTEGRALES
+==========================================================================================
+
+   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
+    16 mm²                 40 A                     Transitorias +           63 A
+   (F+N+TT)              (2 Polos)                  Permanentes              30 mA
+     │                      │                             │                    │
+     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
+                                                                                 │
+         ┌───────────────────────────────────────────────────────────────────────┘
+         │
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación principal
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: Tomas de corriente generales
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y horno
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4-A: Lavadora y termo
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C4-B: Lavavajillas
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: Baños y cocina (húmedas)
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C6: Iluminación adicional
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C7: Tomas de corriente adicionales
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C8: Calefacción / Climatización
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C9: Aire acondicionado
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C10: Secadora independiente
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C11: Automatización / Domótica / Alarma
+         └─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C12: Circuitos especiales (Hidromasaje)
+=========================================================================================="""
+
+    # Mostrar esquema en caja gráfica tipo plano
+    st.markdown(f'<div class="esquema-grafico">{esquema_dibujo}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
     st.download_button(
-        label="📥 Descargar Plano Unifilar y Cuadro (TXT / CAD)",
-        data=plano_texto,
-        file_name=f"Esquema_Unifilar_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
+        label="📥 Descargar Plano Unifilar Gráfico (.txt)",
+        data=esquema_dibujo,
+        file_name=f"Plano_Esquema_Grafico_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
         mime="text/plain"
     )
 
@@ -675,7 +663,7 @@ Documento técnico redactado y verificado para BOLIMUR INSTALACIONES INTEGRALES.
     - **Método de Instalación:** {METODOS_INSTALACION[metodo_di_key]['ref']}
     - **Potencia / Longitud de cálculo:** `{di_pot} W` / `{di_long} m`
     - **Conductor seleccionado:** **`{s_optima_di} mm²` de {di_mat.upper()}** ({di_aisl})
-    - **Caída de Tensión real estimada:** `{dv_real_di_pct:.3f}%` (Límite admisible: `{dv_pct_di}%`)
+    - **Caída de Tension real estimada:** `{dv_real_di_pct:.3f}%` (Límite admisible: `{dv_pct_di}%`)
     - **Verificación Tramo Más Desfavorable (LGA + DI):** `{cdt_acumulada_pct:.3f}%` (Límite global: `1.5%`) -> **CUMPLE**
     - **Protección PIA asociado:** `{prot_di} A` + Diferencial `30 mA`
 
