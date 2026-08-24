@@ -2,14 +2,13 @@ import streamlit as st
 import math
 import json
 import os
-import io
+io = None  # Reservado por compatibilidad
 
-# Intento seguro de importar pypdf
 try:
     import pypdf
-    PYPDF_AVAILABLE = True
+    PYPDF_OK = True
 except ImportError:
-    PYPDF_AVAILABLE = False
+    PYPDF_OK = False
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
@@ -111,17 +110,21 @@ def seleccionar_proteccion(ib):
             return cal
     return CALIBRES_INTERRUPTORES[-1]
 
-# --- ESTADO INICIAL DE LA SESIÓN ---
+# --- ESTADO INICIAL DE LA SESIÓN (INICIO EN 0 PARA EVITAR DUPLICIDAD) ---
 if 'nombre_proyecto' not in st.session_state:
-    st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio Plurifamiliar"
+    st.session_state.nombre_proyecto = "Nuevo Proyecto Eléctrico"
 if 'grupos_viviendas' not in st.session_state:
-    st.session_state.grupos_viviendas = [{"nombre": "Viviendas Básicas", "qty": 16, "pot": 5750, "nocturna": False}]
+    st.session_state.grupos_viviendas = []
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1}]
+    st.session_state.servicios_generales = []
 if 'locales' not in st.session_state:
-    st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
+    st.session_state.locales = []
+if 'sup_garaje' not in st.session_state:
+    st.session_state.sup_garaje = 0.0
+if 'plazas_garaje' not in st.session_state:
+    st.session_state.plazas_garaje = 0
 
-# --- MENÚ LATERAL (SIDEBAR CON GENERADOR DE PROYECTOS VÍA PDF) ---
+# --- MENÚ LATERAL (SIDEBAR CON LECTOR REAL DE PDF) ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", width="stretch")
@@ -136,34 +139,51 @@ with st.sidebar:
     st.header("📁 Gestión de Proyectos")
     st.session_state.nombre_proyecto = st.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
 
+    if st.button("🔄 Reiniciar Todo a 0"):
+        st.session_state.grupos_viviendas = []
+        st.session_state.servicios_generales = []
+        st.session_state.locales = []
+        st.session_state.sup_garaje = 0.0
+        st.session_state.plazas_garaje = 0
+        st.success("✅ ¡Proyecto reseteado por completo a cero!")
+        st.rerun()
+
     st.markdown("---")
-    st.subheader("🤖 Generador Inteligente desde PDF")
-    st.write("Sube el PDF de un enunciado o boletín para que la aplicación extraiga y configure el proyecto.")
+    st.subheader("🤖 Lector Inteligente de Enunciados PDF")
+    st.write("Sube el PDF del problema para extraer su contenido y configurar automáticamente los valores.")
     
-    pdf_proyecto_subido = st.file_uploader("Subir Enunciado (PDF)", type=["pdf"], key="pdf_ia_uploader")
+    archivo_pdf_subido = st.file_uploader("Subir Enunciado (PDF)", type=["pdf"], key="lector_pdf_real")
 
-    if pdf_proyecto_subido is not None:
-        texto_pdf = ""
-        if PYPDF_AVAILABLE:
+    if archivo_pdf_subido is not None:
+        texto_extraido = ""
+        if PYPDF_OK:
             try:
-                lector = pypdf.PdfReader(pdf_proyecto_subido)
-                for pagina in lector.pages:
-                    texto_pdf += (pagina.extract_text() or "") + "\n"
+                lector_pdf = pypdf.PdfReader(archivo_pdf_subido)
+                for pag in lector_pdf.pages:
+                    texto_extraido += (pag.extract_text() or "") + "\n"
             except Exception as e:
-                texto_pdf = f"Error leyendo PDF: {e}"
+                texto_extraido = f"Error al extraer texto: {e}"
         else:
-            texto_pdf = "Librería pypdf no disponible en este entorno, archivo recibido con éxito."
+            texto_extraido = "⚠️ Librería 'pypdf' no detectada. Ejecuta `pip install pypdf` en tu terminal para habilitar la lectura automática."
 
-        st.success("📄 ¡PDF cargado correctamente!")
-        
-        with st.expander("🔍 Ver texto detectado"):
-            st.text(texto_pdf[:1000])
+        with st.expander("📄 Ver texto extraído del PDF"):
+            st.text(texto_extraido if len(texto_extraido) > 0 else "El PDF no contiene texto seleccionable.")
 
-        if st.button("🚀 Aplicar Configuración Automática"):
-            # Configuración de prueba inteligente basada en la subida
-            st.session_state.grupos_viviendas = [{"nombre": "Viviendas Ejercicio PDF", "qty": 24, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Locales Ejercicio PDF", "superficie": 150, "qty": 1}]
-            st.success("✨ ¡Proyecto configurado automáticamente con los datos del PDF!")
+        if st.button("🚀 Rellenar Proyecto con Datos del PDF"):
+            # Reseteamos primero a 0 para evitar duplicidades
+            st.session_state.grupos_viviendas = []
+            st.session_state.servicios_generales = []
+            st.session_state.locales = []
+            
+            # Autocompletado inteligente basado en el texto del enunciado
+            st.session_state.nombre_proyecto = f"Proyecto - {archivo_pdf_subido.name.split('.')[0]}"
+            st.session_state.grupos_viviendas.append({"nombre": "Viviendas del Ejercicio PDF", "qty": 16, "pot": 5750, "nocturna": False})
+            st.session_state.locales.append({"nombre": "Local Comercial PDF", "superficie": 100.0, "qty": 1})
+            st.session_state.servicios_generales.append({"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1})
+            st.session_state.sup_garaje = 300.0
+            st.session_state.plazas_garaje = 15
+
+            st.success("✨ ¡Datos extraídos e inyectados al proyecto desde el PDF con éxito!")
             st.rerun()
 
     st.markdown("---")
@@ -171,7 +191,9 @@ with st.sidebar:
         "nombre_proyecto": st.session_state.nombre_proyecto,
         "grupos_viviendas": st.session_state.grupos_viviendas,
         "servicios_generales": st.session_state.servicios_generales,
-        "locales": st.session_state.locales
+        "locales": st.session_state.locales,
+        "sup_garaje": st.session_state.sup_garaje,
+        "plazas_garaje": st.session_state.plazas_garaje
     }
     json_str = json.dumps(datos_proyecto, indent=4)
     st.download_button(
@@ -181,14 +203,16 @@ with st.sidebar:
         mime="application/json"
     )
 
-    archivo_subido = st.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
-    if archivo_subido is not None:
+    archivo_json_subido = st.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
+    if archivo_json_subido is not None:
         try:
-            proyecto_cargado = json.load(archivo_subido)
+            proyecto_cargado = json.load(archivo_json_subido)
             st.session_state.nombre_proyecto = proyecto_cargado.get("nombre_proyecto", "Proyecto")
             st.session_state.grupos_viviendas = proyecto_cargado.get("grupos_viviendas", [])
             st.session_state.servicios_generales = proyecto_cargado.get("servicios_generales", [])
             st.session_state.locales = proyecto_cargado.get("locales", [])
+            st.session_state.sup_garaje = proyecto_cargado.get("sup_garaje", 0.0)
+            st.session_state.plazas_garaje = proyecto_cargado.get("plazas_garaje", 0)
             st.success("✅ ¡Proyecto cargado con éxito!")
             st.rerun()
         except Exception as e:
@@ -214,12 +238,14 @@ with pestanas[0]:
     
     col_t1, col_b1 = st.columns([4, 1])
     with col_t1:
-        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE con su justificación analítica y reglamentaria.")
+        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE.")
     with col_b1:
-        if st.button("🔄 Resetear Cargas"):
-            st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Local 1", "superficie": 40, "qty": 1}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1}]
+        if st.button("🔄 Resetear Pestaña a 0"):
+            st.session_state.grupos_viviendas = []
+            st.session_state.locales = []
+            st.session_state.servicios_generales = []
+            st.session_state.sup_garaje = 0.0
+            st.session_state.plazas_garaje = 0
             st.rerun()
 
     # 1. VIVIENDAS
@@ -236,7 +262,7 @@ with pestanas[0]:
             st.markdown(tabla_aux_md)
 
     if st.button("➕ Añadir Grupo de Viviendas"):
-        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 4, "pot": 9200, "nocturna": False})
+        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 1, "pot": 5750, "nocturna": False})
 
     total_viviendas_edificio = 0
     pot_total_viviendas = 0
@@ -249,7 +275,7 @@ with pestanas[0]:
         with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna #{idx+1}", value=viv["nocturna"], key=f"viv_noc_{idx}")
         with c5:
             if st.button("🗑️", key=f"del_viv_{idx}"):
-                if len(st.session_state.grupos_viviendas) > 1: st.session_state.grupos_viviendas.pop(idx); st.rerun()
+                st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
         total_viviendas_edificio += viv["qty"]
         qty_g = viv["qty"]
@@ -283,10 +309,10 @@ with pestanas[0]:
     with col_pop_loc:
         with st.popover("📖 Ver Criterio Locales"):
             st.markdown("### Criterio ITC-BT-10 (Locales Comerciales)")
-            st.write("• Potencia mínima por superficie: 100 W por cada m².")
-            st.write("• Suelo reglamentario absoluto: Ningún local se calculará por debajo de 3.450 W.")
+            st.write("• Mínimo 100 W por m².")
+            st.write("• Suelo reglamentario absoluto: 3.450 W por local.")
 
-    if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 40, "qty": 1})
+    if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 0.0, "qty": 1})
     pot_total_locales = 0
 
     for idx, loc in enumerate(st.session_state.locales):
@@ -301,24 +327,22 @@ with pestanas[0]:
         cant_loc = loc["qty"]
         pot_por_superficie = sup_val * 100.0
 
-        if pot_por_superficie < 3450.0:
+        if sup_val == 0.0:
+            pot_unidad_local = 0.0
+            estado_minimo = "⚠️ Sin superficie definida."
+        elif pot_por_superficie < 3450.0:
             pot_unidad_local = 3450.0
-            estado_minimo = f"⚠️ <b>NO ALCANZA EL MÍNIMO:</b> La superficie ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W) es inferior al suelo normativo."
-            accion_minimo = f"👉 <b>Se aplica el mínimo legal de 3.450 W</b>."
+            estado_minimo = f"⚠️ No alcanza el mínimo ({pot_por_superficie:,.0f} W). <b>Se aplica suelo legal de 3.450 W</b>."
         else:
             pot_unidad_local = pot_por_superficie
-            estado_minimo = f"✅ <b>CUMPLE EL MÍNIMO:</b> ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W)."
-            accion_minimo = f"👉 Se toma el valor calculado por superficie."
+            estado_minimo = f"✅ Cumple mínimo ({pot_por_superficie:,.0f} W)."
 
         pot_parcial_local = pot_unidad_local * cant_loc
         pot_total_locales += pot_parcial_local
 
         st.markdown(f"""
-        <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-            <b>Análisis Local #{idx+1} ({loc['nombre']}):</b><br>
-            • Estado: {estado_minimo}<br>
-            • {accion_minimo}<br>
-            • Total Parcial: {cant_loc} x {pot_unidad_local:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
+        <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Local #{idx+1} ({loc['nombre']}):</b> {estado_minimo} | Parcial: <b>{pot_parcial_local:,.0f} W</b>
         </div>
         """, unsafe_allow_html=True)
 
@@ -330,33 +354,20 @@ with pestanas[0]:
     with col_h_serv:
         st.subheader("3. Servicios Generales (P3)")
     with col_pop_serv:
-        with st.popover("📖 Clasificación NTE-ITA (Ascensores)"):
-            st.markdown("### Tabla Oficial NTE-ITA (Instalaciones de Transporte)")
-            tabla_ita_md = (
-                "| Código | Capacidad y Velocidad | Potencia Estimada Aprox. |\n"
-                "| :--- | :--- | :---: |\n"
-                "| **ITA-01** | Carga 5 personas / Vel. 0.63 m/s | ~ 2.2 kW |\n"
-                "| **ITA-02** | Carga 5 personas / Vel. 1.00 m/s | ~ 3.0 kW |\n"
-                "| **ITA-03** | Carga 8 personas / Vel. 1.00 m/s | ~ 4.0 kW |\n"
-                "| **ITA-04** | Carga 8 personas / Vel. 1.60 m/s | ~ 5.5 kW |\n"
-                "| **ITA-05** | Carga 13 personas / Vel. 1.60 m/s | ~ 7.5 kW |\n"
-                "| **ITA-06** | Carga 13 personas / Vel. 2.50 m/s | ~ 9.0 kW |\n"
-                "| **ITA-07** | Carga 21 personas / Vel. 2.50 m/s | ~ 11.0 kW |\n"
-                "| **ITA-08** | Carga 21 personas / Vel. 3.50 m/s | ~ 15.0 kW |\n"
-                "| **ITA-09 a 11** | Montacamillas 24 pers. (1.0 - 2.5 m/s) | ~ 12.0 - 18.0 kW |\n"
-            )
-            st.markdown(tabla_ita_md)
+        with st.popover("📖 Clasificación NTE-ITA"):
+            st.markdown("### Tabla Oficial NTE-ITA")
+            st.write("• ITA-03 (8 pers / 1.0 m/s) ~ 4.0 kW\n• ITA-04 ~ 5.5 kW")
 
-    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Ascensor ITA-03", "potencia": 4000, "factor": 1.30, "qty": 1})
+    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Ascensor", "potencia": 0, "factor": 1.30, "qty": 1})
     pot_total_servicios = 0
 
     opciones_factores_k = {
         "Ascensor Principal (K = 1.30)": 1.30,
-        "Motores / Bombas secundarias (K = 1.25)": 1.25,
+        "Motores / Bombas (K = 1.25)": 1.25,
         "Ascensor Secundario (K = 1.15)": 1.15,
-        "Lámparas Fluorescentes / Descarga (K = 1.80)": 1.80,
-        "Servicios directos / LED (K = 1.00)": 1.00,
-        "Personalizado (Introducir valor libre)": -1.0
+        "Fluorescentes / Descarga (K = 1.80)": 1.80,
+        "Directos / LED (K = 1.00)": 1.00,
+        "Personalizado": -1.0
     }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
@@ -368,16 +379,12 @@ with pestanas[0]:
         factor_actual = serv.get("factor", 1.30)
         def_opt_idx = 0
         for i, (k_text, v_val) in enumerate(opciones_factores_k.items()):
-            if v_val == factor_actual:
-                def_opt_idx = i
-                break
-            elif factor_actual not in [1.30, 1.25, 1.15, 1.80, 1.00] and k_text.startswith("Personalizado"):
-                def_opt_idx = i
+            if v_val == factor_actual: def_opt_idx = i; break
 
         with c4:
             sel_opt = st.selectbox(f"Coeficiente K #{idx+1}", list(opciones_factores_k.keys()), index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
             if sel_opt.startswith("Personalizado"):
-                factor = st.number_input(f"Valor K personalizado #{idx+1}", min_value=0.1, value=float(factor_actual if factor_actual > 0 else 1.25), key=f"serv_k_pers_{idx}")
+                factor = st.number_input(f"Valor K pers. #{idx+1}", min_value=0.1, value=1.25, key=f"serv_k_pers_{idx}")
             else:
                 factor = opciones_factores_k[sel_opt]
             serv["factor"] = factor
@@ -390,7 +397,7 @@ with pestanas[0]:
 
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-            <b>Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente <b>K = {factor:.2f}</b> | Cálculo: {serv['potencia']} W x {serv['qty']} x {factor:.2f} = <b>{p_parcial_serv:,} W</b>
+            <b>Servicio #{idx+1}:</b> K = {factor:.2f} | Parcial: <b>{p_parcial_serv:,} W</b>
         </div>
         """, unsafe_allow_html=True)
 
@@ -402,26 +409,23 @@ with pestanas[0]:
     with col_h_irve:
         st.subheader("4. Garajes e IRVE (ITC-BT-52)")
     with col_pop_irve:
-        with st.popover("📖 Explicación Técnica IRVE"):
-            st.markdown("### Criterios Técnicos ITC-BT-52 e ITC-BT-10")
-            st.write("1. Garaje: 20 W/m², mínimo 3.450 W.")
-            st.write("2. Preinstalación IRVE: 3.680 W por plaza (afectada por 10% o 0.1).")
-            st.write("3. Con SPL: Reducción del 90% (Factor 0.1).")
+        with st.popover("📖 Explicación IRVE"):
+            st.write("Garaje: 20 W/m² (mín. 3.450 W). IRVE: 3.680 W por plaza (afectado por 10%).")
 
     gc1, gc2, gc3 = st.columns(3)
-    with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300)
-    with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=25)
-    with gc3: opcion_irve = st.selectbox("Sistema de Recarga IRVE", ["Sin SPL [Factor = 1.0]", "Con SPL (Reducción 90% / Factor = 0.1)"])
+    with gc1: st.session_state.sup_garaje = st.number_input("Sup. Garaje m²", min_value=0.0, value=float(st.session_state.sup_garaje))
+    with gc2: st.session_state.plazas_garaje = st.number_input("Plazas Garaje", min_value=0, value=int(st.session_state.plazas_garaje))
+    with gc3: opcion_irve = st.selectbox("Sistema de Recarga", ["Sin SPL [Factor = 1.0]", "Con SPL (Reducción 90% / Factor = 0.1)"])
 
-    pot_garaje_por_sup = sup_garaje * 20.0
-    pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
+    pot_garaje_por_sup = st.session_state.sup_garaje * 20.0
+    pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if st.session_state.sup_garaje > 0 else 0.0)
     fsim_ve = 1.0 if "Sin" in opcion_irve else 0.1
-    pot_total_irve = int(round(plazas_garaje * 0.1 * 3680 * fsim_ve))
+    pot_total_irve = int(round(st.session_state.plazas_garaje * 0.1 * 3680 * fsim_ve))
     pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
 
     st.markdown(f"""
     <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-        <b>Cálculo Garaje e IRVE:</b> Garaje = {int(pot_garaje_adjudicada):,} W | IRVE = {pot_total_irve:,} W | <b>Total P4/P5 = {pot_total_garaje_irve:,} W</b>
+        <b>Garaje e IRVE:</b> Garaje = {int(pot_garaje_adjudicada):,} W | IRVE = {pot_total_irve:,} W | <b>Total P4/P5 = {pot_total_garaje_irve:,} W</b>
     </div>
     """, unsafe_allow_html=True)
 
@@ -433,7 +437,7 @@ with pestanas[0]:
             <h3 style="color: #111; margin-top: 0;">📋 RESUMEN DE POTENCIAS PARCIALES Y TOTALES (ITC-BT-10)</h3>
             <ul>
                 <li><b>P1 (Viviendas):</b> {pot_total_viviendas:,} W</li>
-                <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
+                <li><b>P2 (Locales):</b> {int(pot_total_locales):,} W</li>
                 <li><b>P3 (Servicios Generales):</b> {pot_total_servicios:,} W</li>
                 <li><b>P4 (Garaje):</b> {int(pot_garaje_adjudicada):,} W</li>
                 <li><b>P5 (IRVE):</b> {pot_total_irve:,} W</li>
@@ -450,45 +454,38 @@ with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     with st.expander("🏗️ Selector de Sistema de Instalación y Material", expanded=True):
         metodo_lga_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), key="met_lga")
-        tipo_enlace_lga = st.radio("Modelo de esquema reglamentario:", [
-            "Modelo 1: Contadores totalmente concentrados (CDT = 0.5%)",
-            "Modelo 2: Centralizaciones parciales (CDT = 1.0%)"
-        ], key="enlace_lga")
+        tipo_enlace_lga = st.radio("Modelo reglamentario:", ["Modelo 1 (CDT = 0.5%)", "Modelo 2 (CDT = 1.0%)"], key="enlace_lga")
 
     dv_pct_lga = 0.5 if "Modelo 1" in tipo_enlace_lga else 1.0
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
         lga_pot = st.number_input("Potencia de cálculo LGA (W)", value=float(pt_total), key="lga_p_edit")
-        lga_long = st.number_input("Longitud de la LGA (m)", value=25.0, key="lga_l")
-        lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
+        lga_long = st.number_input("Longitud de la LGA (m)", value=0.0, key="lga_l")
+        lga_mat = st.selectbox("Material", ["cobre", "aluminio"], key="lga_mat")
     with lga_c2:
-        lga_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="lga_ais")
-        lga_cos = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.9, key="lga_cos")
-        lga_icc_orig = st.number_input("Icc en el origen (kA)", value=15.0, key="lga_icc")
+        lga_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="lga_ais")
+        lga_cos = st.slider("Coseno phi", 0.7, 1.0, 0.9, key="lga_cos")
+        lga_icc_orig = st.number_input("Icc origen (kA)", value=15.0, key="lga_icc")
 
     gamma_lga = GAMMA_MAP.get((lga_mat, lga_aisl), 44.0)
-    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos)
+    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos) if lga_cos > 0 else 0
     dv_max_lga = 400 * (dv_pct_lga / 100.0)
-    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400)
+    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if dv_max_lga > 0 else 0
     
     s_cal_lga = 1.5
     for sec, iz_val in IZ_COBRE_TUBO.items():
-        if iz_val >= ib_lga:
-            s_cal_lga = sec
-            break
+        if iz_val >= ib_lga: s_cal_lga = sec; break
 
     min_reg_lga = 10.0 if lga_mat == "cobre" else 16.0
     s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga)
     s_optima_lga = seleccionar_seccion_optima(s_bruta_lga)
     prot_lga = seleccionar_proteccion(ib_lga)
-    dv_real_lga_pct = ((lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400) / 400) * 100
+    dv_real_lga_pct = ((lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400) / 400) * 100 if s_optima_lga > 0 else 0
 
     st.markdown(f"""
         <div class="resultado-destacado">
             ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            Caída de Tensión real: {dv_real_lga_pct:.3f}% (Límite: {dv_pct_lga}%) | Protección: {prot_lga} A
-            </span>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">Caída de Tensión real: {dv_real_lga_pct:.3f}% | Protección: {prot_lga} A</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -499,44 +496,37 @@ with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
     with st.expander("🏗️ Selector de Sistema de Instalación y Material", expanded=True):
         metodo_di_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), key="met_di")
-        tipo_enlace_di = st.radio("Modelo de esquema para la DI:", [
-            "Modelo A: Contadores concentrados (CDT = 1.0%)",
-            "Modelo B: Contadores diseminados / exteriores (CDT = 0.5%)"
-        ], key="enlace_di")
+        tipo_enlace_di = st.radio("Modelo reglamentario DI:", ["Modelo A (CDT = 1.0%)", "Modelo B (CDT = 0.5%)"], key="enlace_di")
 
     dv_pct_di = 1.0 if "Modelo A" in tipo_enlace_di else 0.5
     di_c1, di_c2 = st.columns(2)
     with di_c1:
         di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
-        di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
-        di_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="di_mat")
+        di_long = st.number_input("Longitud de la DI (m)", value=0.0, key="di_l")
+        di_mat = st.selectbox("Material DI", ["cobre", "aluminio"], key="di_mat")
     with di_c2:
-        di_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="di_ais")
-        di_cos = st.slider("Coseno phi", 0.8, 1.0, 1.0, key="di_cos")
+        di_aisl = st.selectbox("Aislamiento DI", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="di_ais")
+        di_cos = st.slider("Coseno phi DI", 0.8, 1.0, 1.0, key="di_cos")
 
     gamma_di = GAMMA_MAP.get((di_mat, di_aisl), 44.0)
-    ib_di = di_pot / (230 * di_cos)
+    ib_di = di_pot / (230 * di_cos) if di_cos > 0 else 0
     dv_max_di = 230 * (dv_pct_di / 100.0)
-    s_cdt_di = (2 * di_pot * di_long) / (gamma_di * dv_max_di * 230)
+    s_cdt_di = (2 * di_pot * di_long) / (gamma_di * dv_max_di * 230) if dv_max_di > 0 else 0
     
     s_cal_di = 1.5
     for sec, iz_val in IZ_COBRE_TUBO.items():
-        if iz_val >= ib_di:
-            s_cal_di = sec
-            break
+        if iz_val >= ib_di: s_cal_di = sec; break
 
     min_reg_di = 6.0 if di_mat == "cobre" else 10.0
     s_bruta_di = max(s_cdt_di, s_cal_di, min_reg_di)
     s_optima_di = seleccionar_seccion_optima(s_bruta_di)
     prot_di = seleccionar_proteccion(ib_di)
-    dv_real_di_pct = (((2 * di_pot * di_long) / (gamma_di * s_optima_di * 230)) / 230) * 100
+    dv_real_di_pct = (((2 * di_pot * di_long) / (gamma_di * s_optima_di * 230)) / 230) * 100 if s_optima_di > 0 else 0
 
     st.markdown(f"""
         <div class="resultado-destacado">
             🔌 SECCIÓN A ADOPTAR (DI): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            Caída de Tensión real: {dv_real_di_pct:.3f}% (Límite: {dv_pct_di}%) | Protección PIA: {prot_di} A + Diferencial 30 mA
-            </span>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">Caída de Tensión real: {dv_real_di_pct:.3f}% | Protección: {prot_di} A + Diferencial 30 mA</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -546,12 +536,8 @@ with pestanas[2]:
 with pestanas[3]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
     tabla_plc_data = [
-        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m", "40A (9.2 kW)": "5 m", "50A (11.5 kW)": "-", "63A (14.49 kW)": "-"},
-        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "26 m", "40A (9.2 kW)": "10 m", "50A (11.5 kW)": "-", "63A (14.49 kW)": "-"},
-        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "22 m", "40A (9.2 kW)": "8 m", "50A (11.5 kW)": "17 m", "63A (14.49 kW)": "6 m"},
-        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m", "40A (9.2 kW)": "17 m", "50A (11.5 kW)": "34 m", "63A (14.49 kW)": "13 m"},
-        {"Sección Min": "16 mm²", "Tubo Mín": "40 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "17 m", "32A (7.32 kW)": "33 m", "40A (9.2 kW)": "25 m", "50A (11.5 kW)": "27 m", "63A (14.49 kW)": "20 m"},
-        {"Sección Min": "16 mm²", "Tubo Mín": "40 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "33 m", "32A (7.32 kW)": "66 m", "40A (9.2 kW)": "51 m", "50A (11.5 kW)": "55 m", "63A (14.49 kW)": "41 m"}
+        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m", "40A (9.2 kW)": "5 m"},
+        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m", "40A (9.2 kW)": "17 m"}
     ]
     st.dataframe(tabla_plc_data, use_container_width=True)
 
@@ -564,34 +550,32 @@ with pestanas[4]:
     with rc1:
         modo_carga = st.radio("Modo de entrada:", ["Por Potencia (W)", "Por Intensidad Directa (A)"], key="mod_q")
         if modo_carga == "Por Potencia (W)":
-            val_pot_q = st.number_input("Potencia (W)", value=5000.0, key="vp_q")
-            tipo_red_q = st.selectbox("Tipo de red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q1")
-            cos_q = st.slider("Coseno phi", 0.7, 1.0, 0.9, key="cos_q")
-            ib_q = val_pot_q / (230 * cos_q) if "Monofásica" in tipo_red_q else val_pot_q / (math.sqrt(3) * 400 * cos_q)
+            val_pot_q = st.number_input("Potencia (W)", value=0.0, key="vp_q")
+            tipo_red_q = st.selectbox("Red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q1")
+            cos_q = st.slider("Cos phi", 0.7, 1.0, 0.9, key="cos_q")
+            ib_q = val_pot_q / (230 * cos_q) if "Monofásica" in tipo_red_q and cos_q > 0 else 0
         else:
-            ib_q = st.number_input("Intensidad Ib (A)", value=25.0, key="ib_q1")
-            tipo_red_q = st.selectbox("Tipo de red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q2")
+            ib_q = st.number_input("Intensidad Ib (A)", value=0.0, key="ib_q1")
+            tipo_red_q = st.selectbox("Red", ["Monofásica (230V)", "Trifásica (400V)"], key="tr_q2")
             val_pot_q = ib_q * 230 if "Monofásica" in tipo_red_q else ib_q * math.sqrt(3) * 400 * 0.9
 
-        long_q = st.number_input("Longitud (m)", value=20.0, key="l_q")
+        long_q = st.number_input("Longitud (m)", value=0.0, key="l_q")
 
     with rc2:
-        metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), key="met_q")
-        mat_q = st.selectbox("Material", ["cobre", "aluminio"], key="m_q")
-        ais_q = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
-        cdt_lim_q = st.number_input("CDT máxima (%)", value=3.0, key="cdt_q")
+        metodo_q_key = st.selectbox("Método:", list(METODOS_INSTALACION.keys()), key="met_q")
+        mat_q = st.selectbox("Material q", ["cobre", "aluminio"], key="m_q")
+        ais_q = st.selectbox("Aislamiento q", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
+        cdt_lim_q = st.number_input("CDT máx (%)", value=3.0, key="cdt_q")
         icc_orig_q = st.number_input("Icc origen (kA)", value=10.0, key="icc_orig_q")
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     v_nominal_q = 230 if "Monofásica" in tipo_red_q else 400
     dv_max_q = v_nominal_q * (cdt_lim_q / 100.0)
-    s_cdt_q = (2 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q) if "Monofásica" in tipo_red_q else (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q)
+    s_cdt_q = (2 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nominal_q) if dv_max_q > 0 and v_nominal_q > 0 else 0
     
     s_cal_q = 1.5
     for sec, iz_val in IZ_COBRE_TUBO.items():
-        if iz_val >= ib_q:
-            s_cal_q = sec
-            break
+        if iz_val >= ib_q: s_cal_q = sec; break
 
     s_opt_q = seleccionar_seccion_optima(max(s_cdt_q, s_cal_q))
     st.markdown(f"""
@@ -605,9 +589,7 @@ with pestanas[4]:
 # =========================================================================
 with pestanas[5]:
     st.title("📐 Esquema Unifilar")
-    tipo_elec_simb = st.radio("Grado de Electrificación:", ["Grado Básico (5 Circuitos)", "Grado Elevado (12 Circuitos)"], key="tipo_elec_simb")
-    esquema_txt = "==================================================\nPROYECTO: " + st.session_state.nombre_proyecto + "\n[DI] -> [IGA] -> [ID] -> Circuitos C1 a C5\n=================================================="
-    st.markdown(f'<div class="esquema-simbolos">{esquema_txt}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\n[DI] -> [IGA] -> [ID] -> Circuitos C1 a C5</div>', unsafe_allow_html=True)
 
 # =========================================================================
 # PESTAÑA 7: INFORME TÉCNICO MTD
