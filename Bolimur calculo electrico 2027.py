@@ -288,9 +288,8 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Error al leer PDF: {e}")
     elif archivo_pdf_subido is not None and not has_pypdf:
-        st.info("ℹ️ Librería pypdf no disponible. Usa el selector rápido de abajo para cargar tus casos instantáneamente.")
+        st.info("ℹ️ Librería pypdf no disponible. Usa el selector rápido de abajo.")
 
-    # Selector manual de respaldo (funciona siempre 100%)
     st.markdown("##### ⚡ Carga Rápida de Enunciados Típicos")
     tipo_caso = st.selectbox("Selecciona caso de estudio:", [
         "-- Seleccionar caso --",
@@ -312,7 +311,7 @@ with st.sidebar:
                 st.session_state.grupos_viviendas = [{"nombre": "Bloc 5 Viviendas", "qty": 5, "pot": 5750, "nocturna": False}]
                 st.session_state.lga_long_val = 15.0
                 st.session_state.di_long_val = 10.0
-            st.success("✅ ¡Datos del caso cargados con éxito!")
+            st.success("✅ ¡Datos cargados con éxito!")
             st.rerun()
 
     st.markdown("---")
@@ -636,7 +635,6 @@ with pestanas[1]:
         st.markdown("---")
         st.subheader("📋 Memoria de Justificación Técnica y Criterio de Selección (LGA)")
         
-        # JUSTIFICACIÓN TÉCNICA LGA LIMPIA EN MARKDOWN PLANO (SIN ERRORES)
         st.markdown(f"""
         **1. Cálculo de la Intensidad de Diseño (Ib):**  
         Para una red trifásica, la corriente se calcula mediante la fórmula:  
@@ -653,6 +651,34 @@ with pestanas[1]:
         * Se **descartan** las secciones comerciales inferiores que no cumplan con el límite de caída de tensión del {dv_pct_lga}% o el mínimo reglamentario de **{min_reg_lga} mm²** (exigido por ITC-BT-14).  
         * Se adopta definitivamente **{s_optima_lga} mm²** de **{lga_mat.upper()} ({lga_aisl})**, logrando una caída de tensión real del **{dv_real_lga_pct:.3f}%**.
         """)
+
+        st.markdown("---")
+        st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - LGA")
+        tabla_comparativa_lga = []
+        for sec in SECCIONES_COMERCIALES:
+            iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
+            cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No"
+            
+            dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400) if gamma_lga > 0 and sec > 0 else 0.0
+            dv_sec_pct = (dv_sec_v / 400) * 100
+            cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}%)"
+            
+            cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No"
+            
+            estado = "❌ DESCARTADA"
+            if sec >= s_bruta_lga:
+                estado = "⭐ SELECCIONADA (Óptima)"
+            
+            tabla_comparativa_lga.append({
+                "Sección Comercial": f"{sec} mm²",
+                "Intensidad Admisible (Iz)": f"{iz_sec} A",
+                "Criterio Calentamiento": cumple_cal,
+                "Criterio Caída Tensión": cumple_cdt,
+                "Mínimo REBT (ITC-BT-14)": cumple_reg,
+                "Estado Final": estado
+            })
+
+        st.dataframe(tabla_comparativa_lga, use_container_width=True)
 
         st.markdown(f"""
             <div class="resultado-destacado">
@@ -717,7 +743,6 @@ with pestanas[2]:
         st.markdown("---")
         st.subheader("📋 Memoria de Justificación Técnica y Criterio de Selección (DI)")
         
-        # JUSTIFICACIÓN TÉCNICA DI LIMPIA EN MARKDOWN PLANO (SIN ERRORES)
         st.markdown(f"""
         **1. Cálculo de la Intensidad de Diseño (Ib monofásica):**  
         Para una derivación monofásica, la corriente se calcula mediante la fórmula:  
@@ -734,6 +759,34 @@ with pestanas[2]:
         * Se **descartan** las secciones comerciales inferiores que no alcancen el valor analítico de caída de tensión requerido o el mínimo reglamentario de **{min_reg_di} mm²** (exigido por ITC-BT-15 para viviendas).  
         * Se adopta definitivamente **{s_optima_di} mm²** de **{di_mat.upper()} ({di_aisl})**, logrando una caída de tensión real del **{dv_real_di_pct:.3f}%**.
         """)
+
+        st.markdown("---")
+        st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - DI")
+        tabla_comparativa_di = []
+        for sec in SECCIONES_COMERCIALES:
+            iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
+            cumple_cal = "✅ Sí" if iz_sec >= ib_di else "❌ No"
+            
+            dv_sec_v = (2 * di_pot * di_long) / (gamma_di * sec * 230) if gamma_di > 0 and sec > 0 else 0.0
+            dv_sec_pct = (dv_sec_v / 230) * 100
+            cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_di else f"❌ No ({dv_sec_pct:.3f}%)"
+            
+            cumple_reg = "✅ Sí" if sec >= min_reg_di else f"❌ No"
+            
+            estado = "❌ DESCARTADA"
+            if sec >= s_bruta_di:
+                estado = "⭐ SELECCIONADA (Óptima)"
+            
+            tabla_comparativa_di.append({
+                "Sección Comercial": f"{sec} mm²",
+                "Intensidad Admisible (Iz)": f"{iz_sec} A",
+                "Criterio Calentamiento": cumple_cal,
+                "Criterio Caída Tensión": cumple_cdt,
+                "Mínimo REBT (ITC-BT-15)": cumple_reg,
+                "Estado Final": estado
+            })
+
+        st.dataframe(tabla_comparativa_di, use_container_width=True)
 
         st.markdown(f"""
             <div class="resultado-destacado">
