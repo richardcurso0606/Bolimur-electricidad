@@ -127,7 +127,7 @@ st.sidebar.download_button(
     data=json_str,
     file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
     mime="application/json"
->
+)
 
 archivo_subido = st.sidebar.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
 if archivo_subido is not None:
@@ -263,7 +263,6 @@ with pestanas[1]:
             """)
     with col_btn_lga:
         if st.button("🔄 Vaciar / Resetear LGA"):
-            st.session_state.lga_pot_manual = float(pt_total)
             st.rerun()
 
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
@@ -279,7 +278,6 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        # Potencia editable que por defecto toma la previsión total pt_total
         lga_pot = st.number_input("Potencia de cálculo LGA (W) [Editable]", value=float(pt_total), key="lga_p_edit")
         lga_long = st.number_input("Longitud de la LGA (m)", value=25.0, key="lga_l")
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
