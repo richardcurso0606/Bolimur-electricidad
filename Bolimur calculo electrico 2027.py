@@ -239,11 +239,32 @@ with pestanas[0]:
     st.success(f"### ⚡ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,} W")
 
 # =========================================================================
-# PESTAÑA 2: LGA (CON COMPARATIVA DE SECCIONES NORMALIZADAS Y JUSTIFICACIÓN)
+# PESTAÑA 2: LGA (CON VENTANA EMERGENTE DE AYUDA / POPOVER)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     
+    # Ventana emergente flotante (Popover) de ayuda para los métodos de instalación
+    with st.popover("❓ 📖 Ventana de Ayuda: Explicación de Métodos de Instalación (B1, B2, C, D)"):
+        st.markdown("### Guía Técnica de Métodos de Instalación (UNE-HD 60364-5-52)")
+        st.write("""
+        El método de instalación determina cómo se disipa el calor generado en los conductores por efecto Joule:
+        
+        * **Método B1 (Habitual en Viviendas):** 
+          Cables unipolares alojados en el interior de tubos protectores (corrugados o lisos) empotrados en rozas en paredes aislantes. La pared actúa como barrera térmica, reteniendo algo más el calor. Es el estándar para instalaciones interiores de viviendas y edificios.
+        
+        * **Método B2:** 
+          Cables unipolares en tubo montado en superficie sobre paredes o en canales protectoras.
+        
+        * **Método C:** 
+          Cables multiconductores fijados directamente sobre la pared o bandeja.
+        
+        * **Método D:** 
+          Cables enterrados directamente bajo tubo en el subsuelo.
+        
+        **¿Por qué importa?** Cada método define la intensidad máxima admisible ($I_z$) que soporta el cable sin sobrecalentarse. La calculadora aplica estos criterios automáticamente para cumplir estrictamente con el REBT.
+        """)
+
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
         metodo_lga_key = st.selectbox("Método de Instalación recomendado (por defecto B1 para viviendas):", list(METODOS_INSTALACION.keys()), key="met_lga")
         st.info(f"**Detalle del método:** {METODOS_INSTALACION[metodo_lga_key]['desc']}")
@@ -338,11 +359,21 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON COMPARATIVA DE SECCIONES Y JUSTIFICACIÓN)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON VENTANA EMERGENTE DE AYUDA)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
     
+    with st.popover("❓ 📖 Ventana de Ayuda: Criterios de la Derivación Individual"):
+        st.markdown("### Guía Técnica de la Derivación Individual (ITC-BT-15)")
+        st.write("""
+        La Derivación Individual alimenta la instalación interior de cada usuario desde la centralización de contadores hasta el cuadro general de mando y protección (CGMP).
+        
+        * **Modelo A (CDT máx = 1.0%):** Cuando los contadores están totalmente concentrados en un local o armario único.
+        * **Modelo B (CDT máx = 0.5%):** Cuando los contadores están diseminados o ubicados en el exterior.
+        * **Sección Mínima Reglamentaria:** Por normativa (ITC-BT-15), ninguna Derivación Individual de cobre en viviendas puede ser inferior a **6 mm²**, aunque por cálculo salga menor.
+        """)
+
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
         metodo_di_key = st.selectbox("Método de Instalación recomendado (por defecto B1):", list(METODOS_INSTALACION.keys()), key="met_di")
         st.info(f"**Detalle del método:** {METODOS_INSTALACION[metodo_di_key]['desc']}")
