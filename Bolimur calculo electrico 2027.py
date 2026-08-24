@@ -127,7 +127,7 @@ st.sidebar.download_button(
     data=json_str,
     file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
     mime="application/json"
-)
+>
 
 archivo_subido = st.sidebar.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
 if archivo_subido is not None:
@@ -162,8 +162,15 @@ pestanas = st.tabs([
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
     
-    with st.expander("💡 ¿Qué estoy haciendo en esta sección?"):
-        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE aplicando rigurosamente los coeficientes del REBT.")
+    col_t1, col_b1 = st.columns([4, 1])
+    with col_t1:
+        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE.")
+    with col_b1:
+        if st.button("🔄 Resetear Cargas"):
+            st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
+            st.session_state.locales = [{"nombre": "Local 1", "superficie": 40, "qty": 1}]
+            st.session_state.servicios_generales = [{"nombre": "Servicio", "potencia": 1000, "tipo": "direct", "qty": 1}]
+            st.rerun()
 
     st.subheader("1. Viviendas del Edificio (P1)")
     if st.button("➕ Añadir Grupo de Viviendas"):
@@ -239,31 +246,25 @@ with pestanas[0]:
     st.success(f"### ⚡ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,} W")
 
 # =========================================================================
-# PESTAÑA 2: LGA (CON VENTANA EMERGENTE DE AYUDA / POPOVER)
+# PESTAÑA 2: LGA (POTENCIA EDITABLE + BOTÓN RESET + TABLA COMPARATIVA)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # Ventana emergente flotante (Popover) de ayuda para los métodos de instalación
-    with st.popover("❓ 📖 Ventana de Ayuda: Explicación de Métodos de Instalación (B1, B2, C, D)"):
-        st.markdown("### Guía Técnica de Métodos de Instalación (UNE-HD 60364-5-52)")
-        st.write("""
-        El método de instalación determina cómo se disipa el calor generado en los conductores por efecto Joule:
-        
-        * **Método B1 (Habitual en Viviendas):** 
-          Cables unipolares alojados en el interior de tubos protectores (corrugados o lisos) empotrados en rozas en paredes aislantes. La pared actúa como barrera térmica, reteniendo algo más el calor. Es el estándar para instalaciones interiores de viviendas y edificios.
-        
-        * **Método B2:** 
-          Cables unipolares en tubo montado en superficie sobre paredes o en canales protectoras.
-        
-        * **Método C:** 
-          Cables multiconductores fijados directamente sobre la pared o bandeja.
-        
-        * **Método D:** 
-          Cables enterrados directamente bajo tubo en el subsuelo.
-        
-        **¿Por qué importa?** Cada método define la intensidad máxima admisible ($I_z$) que soporta el cable sin sobrecalentarse. La calculadora aplica estos criterios automáticamente para cumplir estrictamente con el REBT.
-        """)
+    col_h_lga, col_btn_lga = st.columns([4, 1])
+    with col_h_lga:
+        with st.popover("❓ 📖 Ventana de Ayuda: Explicación de Métodos de Instalación (B1, B2...)"):
+            st.markdown("### Guía Técnica de Métodos de Instalación (UNE-HD 60364-5-52)")
+            st.write("""
+            * **Método B1 (Habitual en Viviendas):** Cables unipolares en tubo empotrado en paredes aislantes. Disipa peor el calor, por lo que es la referencia más restrictiva y segura.
+            * **Método B2:** En tubo superficial.
+            * **Método C:** Multiconductor fijado a pared.
+            * **Método D:** Enterrado bajo tubo.
+            """)
+    with col_btn_lga:
+        if st.button("🔄 Vaciar / Resetear LGA"):
+            st.session_state.lga_pot_manual = float(pt_total)
+            st.rerun()
 
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
         metodo_lga_key = st.selectbox("Método de Instalación recomendado (por defecto B1 para viviendas):", list(METODOS_INSTALACION.keys()), key="met_lga")
@@ -278,7 +279,8 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = st.number_input("Potencia de cálculo LGA (W)", value=float(pt_total), key="lga_p")
+        # Potencia editable que por defecto toma la previsión total pt_total
+        lga_pot = st.number_input("Potencia de cálculo LGA (W) [Editable]", value=float(pt_total), key="lga_p_edit")
         lga_long = st.number_input("Longitud de la LGA (m)", value=25.0, key="lga_l")
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
     with lga_c2:
@@ -359,20 +361,23 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON VENTANA EMERGENTE DE AYUDA)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON BOTÓN RESET)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
     
-    with st.popover("❓ 📖 Ventana de Ayuda: Criterios de la Derivación Individual"):
-        st.markdown("### Guía Técnica de la Derivación Individual (ITC-BT-15)")
-        st.write("""
-        La Derivación Individual alimenta la instalación interior de cada usuario desde la centralización de contadores hasta el cuadro general de mando y protección (CGMP).
-        
-        * **Modelo A (CDT máx = 1.0%):** Cuando los contadores están totalmente concentrados en un local o armario único.
-        * **Modelo B (CDT máx = 0.5%):** Cuando los contadores están diseminados o ubicados en el exterior.
-        * **Sección Mínima Reglamentaria:** Por normativa (ITC-BT-15), ninguna Derivación Individual de cobre en viviendas puede ser inferior a **6 mm²**, aunque por cálculo salga menor.
-        """)
+    col_h_di, col_btn_di = st.columns([4, 1])
+    with col_h_di:
+        with st.popover("❓ 📖 Ventana de Ayuda: Criterios de la Derivación Individual"):
+            st.markdown("### Guía Técnica de la Derivación Individual (ITC-BT-15)")
+            st.write("""
+            * **Modelo A (CDT máx = 1.0%):** Contadores totalmente concentrados.
+            * **Modelo B (CDT máx = 0.5%):** Contadores diseminados o exteriores.
+            * **Sección Mínima Reglamentaria:** Ninguna Derivación Individual de cobre en viviendas puede ser inferior a **6 mm²**.
+            """)
+    with col_btn_di:
+        if st.button("🔄 Vaciar / Resetear DI"):
+            st.rerun()
 
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
         metodo_di_key = st.selectbox("Método de Instalación recomendado (por defecto B1):", list(METODOS_INSTALACION.keys()), key="met_di")
