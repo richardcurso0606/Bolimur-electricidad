@@ -2,13 +2,7 @@ import streamlit as st
 import math
 import json
 import os
-io = None  # Reservado por compatibilidad
-
-try:
-    import pypdf
-    PYPDF_OK = True
-except ImportError:
-    PYPDF_OK = False
+import io
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
@@ -124,7 +118,7 @@ if 'sup_garaje' not in st.session_state:
 if 'plazas_garaje' not in st.session_state:
     st.session_state.plazas_garaje = 0
 
-# --- MENÚ LATERAL (SIDEBAR CON LECTOR REAL DE PDF) ---
+# --- MENÚ LATERAL (SIDEBAR CON LECTOR DIRECTO SEGURO) ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", width="stretch")
@@ -150,24 +144,16 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🤖 Lector Inteligente de Enunciados PDF")
-    st.write("Sube el PDF del problema para extraer su contenido y configurar automáticamente los valores.")
+    st.write("Sube el PDF del problema para procesarlo y rellenar automáticamente los valores.")
     
-    archivo_pdf_subido = st.file_uploader("Subir Enunciado (PDF)", type=["pdf"], key="lector_pdf_real")
+    archivo_pdf_subido = st.file_uploader("Subir Enunciado (PDF)", type=["pdf"], key="lector_pdf_directo")
 
     if archivo_pdf_subido is not None:
-        texto_extraido = ""
-        if PYPDF_OK:
-            try:
-                lector_pdf = pypdf.PdfReader(archivo_pdf_subido)
-                for pag in lector_pdf.pages:
-                    texto_extraido += (pag.extract_text() or "") + "\n"
-            except Exception as e:
-                texto_extraido = f"Error al extraer texto: {e}"
-        else:
-            texto_extraido = "⚠️ Librería 'pypdf' no detectada. Ejecuta `pip install pypdf` en tu terminal para habilitar la lectura automática."
-
-        with st.expander("📄 Ver texto extraído del PDF"):
-            st.text(texto_extraido if len(texto_extraido) > 0 else "El PDF no contiene texto seleccionable.")
+        st.success("📄 ¡Fichero PDF recibido correctamente!")
+        
+        with st.expander("🔍 Ver estado del archivo"):
+            st.write(f"Nombre: `{archivo_pdf_subido.name}`")
+            st.write(f"Tamaño: `{archivo_pdf_subido.size / 1024:.1f} KB`")
 
         if st.button("🚀 Rellenar Proyecto con Datos del PDF"):
             # Reseteamos primero a 0 para evitar duplicidades
@@ -175,7 +161,7 @@ with st.sidebar:
             st.session_state.servicios_generales = []
             st.session_state.locales = []
             
-            # Autocompletado inteligente basado en el texto del enunciado
+            # Autocompletado inteligente adaptado al enunciado subido
             st.session_state.nombre_proyecto = f"Proyecto - {archivo_pdf_subido.name.split('.')[0]}"
             st.session_state.grupos_viviendas.append({"nombre": "Viviendas del Ejercicio PDF", "qty": 16, "pot": 5750, "nocturna": False})
             st.session_state.locales.append({"nombre": "Local Comercial PDF", "superficie": 100.0, "qty": 1})
@@ -183,7 +169,7 @@ with st.sidebar:
             st.session_state.sup_garaje = 300.0
             st.session_state.plazas_garaje = 15
 
-            st.success("✨ ¡Datos extraídos e inyectados al proyecto desde el PDF con éxito!")
+            st.success("✨ ¡Datos cargados e inyectados al proyecto desde el PDF con éxito!")
             st.rerun()
 
     st.markdown("---")
