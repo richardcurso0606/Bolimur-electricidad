@@ -109,7 +109,7 @@ if 'nombre_proyecto' not in st.session_state:
 if 'grupos_viviendas' not in st.session_state:
     st.session_state.grupos_viviendas = [{"nombre": "Viviendas Básicas", "qty": 16, "pot": 5750, "nocturna": False}]
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor Común Trifásico", "potencia": 4000, "tipo": "elevator", "qty": 1}]
+    st.session_state.servicios_generales = [{"nombre": "Ascensor Común Trifásico", "potencia": 4000, "tipo": "Ascensores y aparatos elevadores", "qty": 1}]
 if 'locales' not in st.session_state:
     st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
 
@@ -182,10 +182,10 @@ with pestanas[0]:
         if st.button("🔄 Resetear Cargas"):
             st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Local 1", "superficie": 40, "qty": 1}]
-            st.session_state.servicios_generales = [{"nombre": "Servicio", "potencia": 1000, "tipo": "direct", "qty": 1}]
+            st.session_state.servicios_generales = [{"nombre": "Servicio", "potencia": 1000, "tipo": "Servicios generales directos", "qty": 1}]
             st.rerun()
 
-    # Cabecera con botón de ayuda para simultaneidad de viviendas
+    # 1. VIVIENDAS
     col_h_viv, col_pop_viv = st.columns([4, 1])
     with col_h_viv:
         st.subheader("1. Viviendas del Edificio (P1)")
@@ -289,26 +289,53 @@ with pestanas[0]:
     st.markdown("---")
 
     # 3. SERVICIOS GENERALES
-    st.subheader("3. Servicios Generales (P3)")
-    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio", "potencia": 1000, "tipo": "direct", "qty": 1})
+    col_h_serv, col_pop_serv = st.columns([4, 1])
+    with col_h_serv:
+        st.subheader("3. Servicios Generales (P3)")
+    with col_pop_serv:
+        with st.popover("📖 Ver Criterio Servicios"):
+            st.markdown("### Factores de Corrección (ITC-BT-10)")
+            st.write("• Servicios directos (K = 1.0)")
+            st.write("• Motores y bombas (K = 1.25 para contemplar intensidades de arranque)")
+            st.write("• Ascensores y elevadores (K = 1.3)")
+            st.write("• Alumbrado de seguridad / descargas (K = 1.8)")
+
+    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio", "potencia": 1000, "tipo": "Servicios generales directos", "qty": 1})
     pot_total_servicios = 0
+
+    tipos_servicios_map = {
+        "Servicios generales directos": 1.0,
+        "Alumbrado de seguridad / descargas": 1.8,
+        "Motores / bombas": 1.25,
+        "Ascensores y aparatos elevadores": 1.3
+    }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1: serv["nombre"] = st.text_input(f"Servicio #{idx+1}", serv["nombre"], key=f"serv_nom_{idx}")
         with c2: serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0, value=int(serv["potencia"]), key=f"serv_pot_{idx}")
         with c3: serv["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx}")
-        with c4: serv["tipo"] = st.selectbox(f"Tipo #{idx+1}", ["direct", "discharge", "motor", "elevator"], index=0, key=f"serv_tipo_{idx}")
+        
+        # Selector limpio en castellano con índice seguro
+        tipo_actual = serv.get("tipo", "Servicios generales directos")
+        if tipo_actual not in tipos_servicios_map:
+            tipo_actual = "Servicios generales directos"
+        lista_opciones_serv = list(tipos_servicios_map.keys())
+        
+        with c4: 
+            sel_tipo = st.selectbox(f"Tipo #{idx+1}", lista_opciones_serv, index=lista_opciones_serv.index(tipo_actual), key=f"serv_tipo_{idx}")
+            serv["tipo"] = sel_tipo
+
         with c5:
             if st.button("🗑️", key=f"del_serv_{idx}"): st.session_state.servicios_generales.pop(idx); st.rerun()
 
-        factor = {"direct": 1.0, "discharge": 1.8, "motor": 1.25, "elevator": 1.3}[serv["tipo"]]
+        factor = tipos_servicios_map[sel_tipo]
         desc_factor = {
-            "direct": "Servicios generales directos (Factor K = 1.0)",
-            "discharge": "Alumbrado de seguridad / descargas (Factor K = 1.8)",
-            "motor": "Motores / bombas (Factor K = 1.25)",
-            "elevator": "Ascensores y aparatos elevadores (Factor K = 1.3)"
-        }[serv["tipo"]]
+            "Servicios generales directos": "Servicios generales directos (Factor K = 1.0)",
+            "Alumbrado de seguridad / descargas": "Alumbrado de seguridad / descargas (Factor K = 1.8)",
+            "Motores / bombas": "Motores y bombas (Factor K = 1.25 para corrientes de arranque)",
+            "Ascensores y aparatos elevadores": "Ascensores y aparatos elevadores (Factor K = 1.3)"
+        }[sel_tipo]
 
         p_parcial_serv = int(serv["potencia"] * serv["qty"] * factor)
         pot_total_servicios += p_parcial_serv
@@ -323,8 +350,17 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,} W**")
     st.markdown("---")
 
-    # 4. GARAJES E IRVE
-    st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
+    # 4. GARAJES E IRVE (CON EXPLICACIÓN TÉCNICA DETALLADA)
+    col_h_irve, col_pop_irve = st.columns([4, 1])
+    with col_h_irve:
+        st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
+    with col_pop_irve:
+        with st.popover("📖 Explicación Técnica IRVE"):
+            st.markdown("### Criterios Técnicos ITC-BT-52 e ITC-BT-10")
+            st.write("1. **Garaje (ITC-BT-10):** Se asignan 20 W por cada m² de superficie, estableciendo un suelo mínimo obligatorio de 3.450 W.")
+            st.write("2. **Preinstalación Vehículo Eléctrico (ITC-BT-52):** Cada plaza de garaje en edificios nuevos debe contemplar una previsión mínima de potencia de 3.680 W (afectada por un coeficiente base del 10% o 0.1).")
+            st.write("3. **Efecto del SPL (Sistema de Protección de Línea):** Si el edificio instala un gestor dinámico de recarga (SPL), la potencia simultánea destinada a la recarga se reduce en un 90% (aplicando un factor corrector de 0.1 sobre el total teórico).")
+
     gc1, gc2, gc3 = st.columns(3)
     with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300)
     with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=25)
@@ -333,15 +369,26 @@ with pestanas[0]:
     pot_garaje_por_sup = sup_garaje * 20.0
     if pot_garaje_por_sup < 3450.0 and sup_garaje > 0:
         pot_garaje_adjudicada = 3450.0
-        st.markdown(f"<span style='color: #d9534f; font-size: 13px;'>⚠️ El garaje por superficie ({sup_garaje} m² x 20 W/m² = {pot_garaje_por_sup:.0f} W) no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>.</span>", unsafe_allow_html=True)
+        aviso_garaje = f"⚠️ El garaje por superficie ({sup_garaje} m² x 20 W/m² = {pot_garaje_por_sup:.0f} W) no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>."
     else:
         pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
+        aviso_garaje = f"✅ Garaje calculado por superficie: {sup_garaje} m² x 20 W/m² = <b>{int(pot_garaje_adjudicada):,} W</b>."
 
     fsim_ve = 1.0 if "Sin" in opcion_irve else 0.1
     pot_total_irve = int(round(plazas_garaje * 0.1 * 3680 * fsim_ve))
     pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
 
-    st.info(f"💡 **Total Parcial P4 / P5 (Garaje e IRVE): {pot_total_garaje_irve:,} W** (Garaje: {int(pot_garaje_adjudicada):,}W | IRVE: {pot_total_irve:,}W)")
+    st.markdown(f"""
+    <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+        <b>Justificación Técnica del Cálculo IRVE y Garaje:</b><br>
+        • {aviso_garaje}<br>
+        • Preinstalación IRVE (ITC-BT-52): {plazas_garaje} plazas x 10% x 3.680 W = {int(plazas_garaje * 0.1 * 3680):,} W de base teórica.<br>
+        • Modo de recarga seleccionado: {"Sin SPL (Factor K = 1.0)" if fsim_ve == 1.0 else "Con SPL / Gestión dinámica (Factor K = 0.1, reducción del 90%)"}.<br>
+        • Potencia total IRVE resultante: <b>{pot_total_irve:,} W</b><br>
+        • <b>Suma Parcial P4 / P5:</b> {int(pot_garaje_adjudicada):,} W (Garaje) + {pot_total_irve:,} W (IRVE) = <b>{pot_total_garaje_irve:,} W</b>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("---")
 
     pt_total = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + int(pot_garaje_adjudicada) + pot_total_irve
