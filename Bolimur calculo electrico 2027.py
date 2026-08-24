@@ -1,8 +1,6 @@
 import streamlit as st
 import math
 import json
-import matplotlib.pyplot as plt
-import io
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
@@ -33,6 +31,18 @@ st.markdown("""
         border-radius: 8px;
         margin: 10px 0;
         color: #333333;
+    }
+    .esquema-grafico {
+        background-color: #ffffff;
+        border: 2px solid #222222;
+        padding: 25px;
+        border-radius: 8px;
+        font-family: 'Courier New', Courier, monospace;
+        color: #000000;
+        font-size: 13px;
+        line-height: 1.4;
+        white-space: pre;
+        overflow-x: auto;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -478,75 +488,124 @@ with pestanas[4]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 6: ESQUEMA UNIFILAR TÉCNICO EN IMAGEN (VECTORIAL MATPLOTLIB)
+# PESTAÑA 6: ESQUEMA UNIFILAR TÉCNICO ESTRUCTURADO (PLANO PROFESIONAL)
 # =========================================================================
 with pestanas[5]:
-    st.title("📐 Esquema Unifilar Gráfico (Plano Vectorial REBT)")
-    st.write("Generación automática del plano unifilar en formato de imagen gráfica con símbolos de protecciones y circuitos normalizados en España:")
+    st.title("📐 Esquema Unifilar Técnico y Cuadro de Protecciones (ITC-BT-25)")
+    st.write("Representación unifilar estructurada con formato de plano técnico oficial, símbolos normalizados y desglose de hilos:")
 
-    # Generar gráfico vectorial con Matplotlib
-    fig, ax = plt.subplots(figsize=(12, 7))
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
-    ax.axis('off')
+    tipo_electrificacion_esquema = st.radio("Grado de Electrificación para el Plano Unifilar:", [
+        "Grado Básico (ITC-BT-25 - 5 Circuitos)",
+        "Grado Básico con C4 Desdoblado",
+        "Grado Elevado (12 Circuitos)"
+    ], key="tipo_elec_esq")
 
-    # Título del plano
-    ax.text(50, 95, f"BOLIMUR INSTALACIONES INTEGRALES - ESQUEMA UNIFILAR (ITC-BT-25)", fontsize=12, fontweight='bold', ha='center', color='#111111')
-    ax.text(50, 90, f"Proyecto: {st.session_state.nombre_proyecto}", fontsize=10, ha='center', color='#555555')
+    if "Básico" in tipo_electrificacion_esquema and "Desdoblado" not in tipo_electrificacion_esquema:
+        plano_visual = """
+==========================================================================================
+BOLIMUR INSTALACIONES INTEGRALES - PLANO DE ESQUEMA UNIFILAR REBT
+PROYECTO: """ + st.session_state.nombre_proyecto + """
+==========================================================================================
 
-    # Línea principal de alimentación horizontal
-    ax.plot([5, 95], [75, 75], color='black', lw=2)
+   [ ORÍGEN: DERIVACIÓN INDIVIDUAL (DI) ]
+   Conductor: 10 mm² Cu (F + N + TT) | Tubo corrugado protector: M32
+     │
+     ▼
+   [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ]
+   2 Polos | Calibre: 25 A | Poder de corte: 6 kA
+     │
+     ▼
+   [ PROTECTOR DE SOBRETENSIONES ]
+   Transitorias (Tipo 2) + Permanentes (Bobina disparador)
+     │
+     ▼
+   [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ]
+   2 Polos | Sensibilidad: 30 mA | Calibre: 40 A (Clase A / AC)
+     │
+     ├─► [ C1 - ILUMINACIÓN ]
+     │     Símbolo PIA: [ 10 A ] ─── Conductor: 2 x 1,5 mm² + TT 1,5 mm² (3 hilos) ── // ── Tubo M16
+     │
+     ├─► [ C2 - TOMAS GENERALES ]
+     │     Símbolo PIA: [ 16 A ] ─── Conductor: 2 x 2,5 mm² + TT 2,5 mm² (3 hilos) ── // ── Tubo M20
+     │
+     ├─► [ C3 - COCINA Y HORNO ]
+     │     Símbolo PIA: [ 25 A ] ─── Conductor: 2 x 6,0 mm² + TT 6,0 mm² (3 hilos) ── // ── Tubo M25
+     │
+     ├─► [ C4 - LAVADORA, LAVAVAJILLAS Y TERMO ]
+     │     Símbolo PIA: [ 20 A ] ─── Conductor: 2 x 4,0 mm² + TT 4,0 mm² (3 hilos) ── // ── Tubo M20
+     │
+     └─► [ C5 - BAÑOS Y COCINA (ZONAS HÚMEDAS) ]
+           Símbolo PIA: [ 16 A ] ─── Conductor: 2 x 2,5 mm² + TT 2,5 mm² (3 hilos) ── // ── Tubo M20
+=========================================================================================="""
+    elif "Desdoblado" in tipo_electrificacion_esquema:
+        plano_visual = """
+==========================================================================================
+BOLIMUR INSTALACIONES INTEGRALES - PLANO DE ESQUEMA UNIFILAR REBT
+PROYECTO: """ + st.session_state.nombre_proyecto + """ (Con C4 Desdoblado)
+==========================================================================================
 
-    # Cajas de elementos principales (ICP, IGA, Sobretensiones, ID)
-    elementos = [
-        ("ICP", 15),
-        ("IGA (25A)", 32),
-        ("Sobretensiones\n(Trans.+Perm.)", 52),
-        ("ID (40A / 30mA)", 72)
-    ]
+   [ ORÍGEN: DERIVACIÓN INDIVIDUAL (DI) ]
+   Conductor: 10 mm² Cu (F + N + TT) | Tubo protector: M32
+     │
+     ▼
+   [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ] --- 25 A (2 Polos)
+     │
+     ▼
+   [ PROTECTOR DE SOBRETENSIONES ] (Transitorias + Permanentes)
+     │
+     ▼
+   [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ] --- 40 A, 30 mA
+     │
+     ├─► [ C1 - ILUMINACIÓN ] ────────────── [ 10 A ] ── 3 hilos (1,5 mm²) ── // ── Tubo M16
+     ├─► [ C2 - TOMAS GENERALES ] ───────── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── Tubo M20
+     ├─► [ C3 - COCINA Y HORNO ] ────────── [ 25 A ] ── 3 hilos (6,0 mm²) ── // ── Tubo M25
+     ├─► [ C4-A - LAVADORA Y TERMO ] ────── [ 20 A ] ── 3 hilos (4,0 mm²) ── // ── Tubo M20
+     ├─► [ C4-B - LAVAVAJILLAS ] ────────── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── Tubo M20
+     └─► [ C5 - BAÑOS Y ZONAS HÚMEDAS ] ─── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── Tubo M20
+=========================================================================================="""
+    else:
+        plano_visual = """
+==========================================================================================
+BOLIMUR INSTALACIONES INTEGRALES - PLANO DE ESQUEMA UNIFILAR REBT
+PROYECTO: """ + st.session_state.nombre_proyecto + """ (Grado Elevado - 12 Circuitos)
+==========================================================================================
 
-    for nombre, x_pos in elementos:
-        ax.plot([x_pos, x_pos], [75, 82], color='black', lw=1.5)
-        rect = plt.Rectangle((x_pos - 4, 82), 8, 8, facecolor='#ffffff', edgecolor='black', lw=1.5)
-        ax.add_patch(rect)
-        ax.text(x_pos, 86, nombre, fontsize=8, ha='center', va='center', fontweight='bold')
+   [ ORÍGEN: DERIVACIÓN INDIVIDUAL (DI) ]
+   Conductor: 16 mm² Cu (F + N + TT) | Tubo protector: M40
+     │
+     ▼
+   [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ] --- 40 A / 50 A (2 Polos)
+     │
+     ▼
+   [ PROTECTOR DE SOBRETENSIONES ] (Transitorias + Permanentes)
+     │
+     ▼
+   [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ] --- 63 A, 30 mA
+     │
+     ├─► [ C1 - ILUMINACIÓN (1º) ] ──────── [ 10 A ] ── 3 hilos (1,5 mm²) ── // ── M16
+     ├─► [ C2 - TOMAS GENERALES (1º) ] ──── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── M20
+     ├─► [ C3 - COCINA Y HORNO ] ────────── [ 25 A ] ── 3 hilos (6,0 mm²) ── // ── M25
+     ├─► [ C4-A - LAVADORA Y TERMO ] ────── [ 20 A ] ── 3 hilos (4,0 mm²) ── // ── M20
+     ├─► [ C4-B - LAVAVAJILLAS ] ────────── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── M20
+     ├─► [ C5 - BAÑOS Y COCINA ] ────────── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── M20
+     ├─► [ C6 - ILUMINACIÓN (2º) ] ──────── [ 10 A ] ── 3 hilos (1,5 mm²) ── // ── M16
+     ├─► [ C7 - TOMAS ADICIONALES ] ─────── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── M20
+     ├─► [ C8 - CALEFACCIÓN / CLIMA ] ───── [ 25 A ] ── 3 hilos (6,0 mm²) ── // ── M25
+     ├─► [ C9 - AIRE ACONDICIONADO ] ────── [ 20 A ] ── 3 hilos (4,0 mm²) ── // ── M20
+     ├─► [ C10 - SECADORA ] ─────────────── [ 16 A ] ── 3 hilos (2,5 mm²) ── // ── M20
+     ├─► [ C11 - DOMÓTICA / ALARMA ] ────── [ 10 A ] ── 3 hilos (1,5 mm²) ── // ── M16
+     └─► [ C12 - CIRCUITOS ESPECIALES ] ─── [ 25 A ] ── 3 hilos (6,0 mm²) ── // ── M25
+=========================================================================================="""
 
-    # Derivación a circuitos verticales (desde x=85)
-    ax.plot([85, 85], [75, 20], color='black', lw=2)
-
-    # Circuitos de vivienda (C1 a C5)
-    circuitos = [
-        ("C1: Iluminación", "10 A", "2x1,5 + 1,5", "Tubo 16", 65),
-        ("C2: TC Usos Varios", "16 A", "2x2,5 + 2,5", "Tubo 20", 52),
-        ("C3: Cocina - Horno", "25 A", "2x6,0 + 6,0", "Tubo 25", 39),
-        ("C4: Lavadora, Termo", "20 A", "2x4,0 + 4,0", "Tubo 20", 26),
-        ("C5: TC Baños / Cocina", "16 A", "2x2,5 + 2,5", "Tubo 20", 13)
-    ]
-
-    for nombre, pia, cable, tubo, y_pos in circuitos:
-        # Conexión horizontal hacia el circuito
-        ax.plot([85, 92], [y_pos, y_pos], color='black', lw=1.5)
-        # Símbolo de magnetotérmico (corte diagonal con flecha)
-        ax.text(88, y_pos + 1.5, pia, fontsize=9, fontweight='bold', ha='center')
-        
-        # Etiqueta de características del circuito a la derecha
-        info_txt = f"{cable} | {tubo} ── // ── {nombre}"
-        ax.text(94, y_pos - 1, info_txt, fontsize=9, va='center', family='monospace')
-
-    # Guardar figura en buffer para mostrarla en Streamlit
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png", bbox_inches='tight', dpi=200)
-    buf.seek(0)
-    
-    st.image(buf, use_container_width=True)
+    st.markdown(f'<div class="esquema-grafico">{plano_visual}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
     st.download_button(
-        label="📥 Descargar Plano Vectorial (.png)",
-        data=buf,
-        file_name=f"Plano_Unifilar_{st.session_state.nombre_proyecto.replace(' ', '_')}.png",
-        mime="image/png"
+        label="📥 Descargar Plano Unifilar Técnico (.txt)",
+        data=plano_visual,
+        file_name=f"Plano_Unifilar_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
+        mime="text/plain"
     )
 
 # =========================================================================
