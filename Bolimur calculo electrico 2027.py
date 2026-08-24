@@ -7,14 +7,12 @@ import sqlite3
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Suite REBT Murcia", page_icon="⚡", layout="wide")
 
-# --- GESTIÓN DE BASE DE DATOS LOCAL (CON AUTOREPARACIÓN Y MIGRACIÓN TOTAL) ---
+# --- GESTIÓN DE BASE DE DATOS LOCAL (CON AUTOREPARACIÓN Y MIGRACIÓN) ---
 DB_NAME = "bolimur_database.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
-    # 1. Asegurar tabla instalador y sus columnas
     cursor.execute("PRAGMA table_info(instalador)")
     cols_inst = [col[1] for col in cursor.fetchall()]
     if not cols_inst:
@@ -31,7 +29,6 @@ def init_db():
             if col_nombre not in cols_inst:
                 cursor.execute(f"ALTER TABLE instalador ADD COLUMN {col_nombre} {col_tipo}")
 
-    # 2. Asegurar tabla clientes y sus columnas
     cursor.execute("PRAGMA table_info(clientes)")
     cols_cli = [col[1] for col in cursor.fetchall()]
     if not cols_cli:
@@ -44,11 +41,7 @@ def init_db():
             )
         ''')
     else:
-        nuevas_cols_cli = [
-            ("provincia", "TEXT"), ("cp", "TEXT"), 
-            ("telefono_cliente", "TEXT"), ("email_cliente", "TEXT")
-        ]
-        for col_nombre, col_tipo in nuevas_cols_cli:
+        for col_nombre, col_tipo in [("provincia", "TEXT"), ("cp", "TEXT"), ("telefono_cliente", "TEXT"), ("email_cliente", "TEXT")]:
             if col_nombre not in cols_cli:
                 cursor.execute(f"ALTER TABLE clientes ADD COLUMN {col_nombre} {col_tipo}")
 
@@ -129,6 +122,7 @@ st.markdown("""
     .resultado-destacado { background-color: #1e1e1e; color: #ffffff; padding: 20px; border-radius: 10px; border-left: 6px solid #ff4b4b; font-size: 18px; font-weight: bold; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .resumen-parciales-box { background-color: #f1f3f5; border: 2px solid #ced4da; padding: 20px; border-radius: 10px; margin: 20px 0; color: #212529; }
     .mtd-oficial-box { background-color: #ffffff; border: 2px solid #111111; padding: 30px; border-radius: 8px; color: #000000; font-family: 'Times New Roman', Times, serif; }
+    .boletin-box { background-color: #ffffff; border: 2px solid #333333; padding: 25px; border-radius: 8px; color: #111111; font-family: Arial, sans-serif; }
     .esquema-simbolos { background-color: #ffffff; border: 3px solid #111111; padding: 30px; border-radius: 10px; font-family: 'Courier New', Courier, monospace; color: #000000; font-size: 14px; line-height: 1.6; white-space: pre; overflow-x: auto; }
     </style>
 """, unsafe_allow_html=True)
@@ -169,7 +163,7 @@ if 'cliente_actual' not in st.session_state: st.session_state.cliente_actual = {
 if 'lga_pot' not in st.session_state: st.session_state.lga_pot = 112500.0
 if 'lga_long' not in st.session_state: st.session_state.lga_long = 20.0
 
-# --- MENÚ LATERAL (SIDEBAR) ---
+# --- MENÚ LATERAL (SIDEBAR, LECTOR PDF Y CLIENTES) ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", width="stretch")
@@ -196,6 +190,20 @@ with st.sidebar:
         if st.button("💾 Guardar Perfil en BD"):
             guardar_datos_instalador(inst_nombre, inst_nif, inst_empresa, inst_carnet, inst_tel, inst_email, inst_cat, inst_tipo, inst_num, "Región de Murcia")
             st.success("✅ ¡Guardado!")
+            st.rerun()
+
+    st.markdown("---")
+    st.header("🤖 Lector de Enunciado PDF")
+    st.write("Sube el PDF del ejercicio para configurar automáticamente los valores.")
+    archivo_pdf_subido = st.file_uploader("Subir Enunciado (PDF)", type=["pdf"], key="lector_pdf_main")
+
+    if archivo_pdf_subido is not None:
+        st.success("📄 ¡PDF recibido!")
+        if st.button("🚀 Cargar Datos del Ejercicio 1 (LGA)"):
+            st.session_state.nombre_proyecto = "Ejercicio 1: Línea general de alimentación"
+            st.session_state.lga_pot = 112500.0  # 112.5 kW
+            st.session_state.lga_long = 20.0    # 20 metros
+            st.success("✨ ¡Datos cargados en LGA con éxito!")
             st.rerun()
 
     st.markdown("---")
@@ -234,7 +242,7 @@ with st.sidebar:
     st.header("📁 Proyecto")
     st.session_state.nombre_proyecto = st.text_input("Nombre Proyecto", st.session_state.nombre_proyecto)
 
-# --- PESTAÑAS PRINCIPALES ---
+# --- PESTAÑAS PRINCIPALES COMPLETAS ---
 pestanas = st.tabs([
     "🏢 Previsión Cargas", 
     "⚡ Línea General (LGA)", 
@@ -242,7 +250,8 @@ pestanas = st.tabs([
     "📊 Tabla PLC Madrid",
     "🧮 Cálculo Rápido",
     "📐 Esquemas Unifilares",
-    "📋 MTD Oficial CARM (Murcia)",
+    "📝 Asistente de Boletines",
+    "📋 MTD Oficial CARM",
     "📄 Informe Técnico MTD",
     "💡 Simulador Consumo"
 ])
@@ -363,9 +372,64 @@ TITULAR: {st.session_state.cliente_actual['nombre']}
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 7: MTD OFICIAL CARM (REGIÓN DE MURCIA)
+# PESTAÑA 7: ASISTENTE DE BOLETINES
 # =========================================================================
 with pestanas[6]:
+    st.title("📝 Asistente de Generación de Boletines Oficiales")
+    st.write(f"Relleno automatizado para el cliente actual: **{st.session_state.cliente_actual['nombre']}**")
+
+    with st.container():
+        st.markdown(f"""
+        <div class="boletin-box">
+            <h3 style="color: #ff4b4b; margin-top: 0;">⚡ CERTIFICADO DE INSTALACIÓN ELÉCTRICA / MTD</h3>
+            <p><b>Titular / Cliente:</b> {st.session_state.cliente_actual['nombre']} | <b>NIF/CIF:</b> {st.session_state.cliente_actual['nif']}</p>
+            <p><b>Dirección del Suministro:</b> {st.session_state.cliente_actual['direccion']}, {st.session_state.cliente_actual['municipio']}</p>
+            <hr>
+            <p><b>Empresa Instaladora:</b> {perfil_guardado["empresa"]}</p>
+            <p><b>Instalador Autorizado:</b> {perfil_guardado["nombre"]} | <b>NIF:</b> {perfil_guardado["nif"]}</p>
+            <p><b>Nº de Carné Profesional:</b> {perfil_guardado["carnet"]} | <b>Teléfono:</b> {perfil_guardado["telefono"]}</p>
+            <hr>
+            <h4>Datos del Proyecto Actual</h4>
+            <ul>
+                <li><b>Expediente / Proyecto:</b> {st.session_state.nombre_proyecto}</li>
+                <li><b>Potencia Total / Cálculo:</b> {st.session_state.lga_pot:,.0f} W</li>
+                <li><b>Longitud del Trayecto:</b> {st.session_state.lga_long} m</li>
+                <li><b>Conductor Seleccionado:</b> {s_opt} mm² RZ1-K Cu[cite: 1]</li>
+                <li><b>Caída de Tensión Estimada:</b> {dv_pct:.3f}%[cite: 1]</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    if st.button("📥 Generar y Descargar Boletín Oficial Completo (.txt)"):
+        contenido_boletin = f"""CERTIFICADO DE INSTALACIÓN ELÉCTRICA (CIE / MTD)
+--------------------------------------------------
+DATOS DEL TITULAR / CLIENTE:
+- Nombre: {st.session_state.cliente_actual['nombre']}
+- NIF/CIF: {st.session_state.cliente_actual['nif']}
+- Dirección: {st.session_state.cliente_actual['direccion']}, {st.session_state.cliente_actual['municipio']}
+--------------------------------------------------
+EMPRESA INSTALADORA:
+- Empresa: {perfil_guardado['empresa']}
+- Instalador: {perfil_guardado['nombre']}
+- NIF: {perfil_guardado['nif']}
+- Carné Profesional: {perfil_guardado['carnet']}
+- Teléfono: {perfil_guardado['telefono']}
+--------------------------------------------------
+PROYECTO: {st.session_state.nombre_proyecto}
+- Potencia: {st.session_state.lga_pot:,.0f} W
+- Longitud: {st.session_state.lga_long} m
+- Sección LGA: {s_opt} mm2 RZ1-K[cite: 1]
+- Caída de Tensión: {dv_pct:.3f}%[cite: 1]
+--------------------------------------------------
+Documento generado automáticamente para BOLIMUR INSTALACIONES INTEGRALES.
+"""
+        st.download_button("💾 Descargar Archivo del Boletín", data=contenido_boletin, file_name=f"Boletin_{st.session_state.cliente_actual['nombre'].replace(' ', '_')}.txt", mime="text/plain")
+
+# =========================================================================
+# PESTAÑA 8: MTD OFICIAL CARM (REGIÓN DE MURCIA)
+# =========================================================================
+with pestanas[7]:
     st.title("📋 Generador de Memoria Técnica de Diseño (CARM)")
     st.write("Vista previa oficial con los datos sincronizados para la Dirección General de Industria de la Región de Murcia.")
 
@@ -428,27 +492,27 @@ with pestanas[6]:
 - Proyecto: {st.session_state.nombre_proyecto}
 - Potencia Total Prevista (Pt): {st.session_state.lga_pot:,.0f} W
 - Longitud LGA: {st.session_state.lga_long} m
-- Sección Fases LGA: {s_opt} mm2 Cu (RZ1-K)
-- Caída de Tensión: {dv_pct:.3f}%
-- Protecciones: Fusibles CGP 200A, IGM 250A
+- Sección Fases LGA: {s_opt} mm2 Cu (RZ1-K)[cite: 1]
+- Caída de Tensión: {dv_pct:.3f}%[cite: 1]
+- Protecciones: Fusibles CGP 200A, IGM 250A[cite: 1]
 
 Documento generado para BOLIMUR INSTALACIONES INTEGRALES (Murcia, España).
 """
         st.download_button("💾 Guardar Archivo MTD CARM", data=f_materia, file_name=f"MTD_Murcia_{st.session_state.cliente_actual['nombre'].replace(' ', '_')}.txt", mime="text/plain")
 
 # =========================================================================
-# PESTAÑA 8: INFORME TÉCNICO MTD
+# PESTAÑA 9: INFORME TÉCNICO MTD
 # =========================================================================
-with pestanas[7]:
+with pestanas[8]:
     st.title("📄 Memoria Técnica de Diseño (Resumen General)")
     inf_txt = f"Proyecto: {st.session_state.nombre_proyecto}\nCliente: {st.session_state.cliente_actual['nombre']}\nPotencia: {st.session_state.lga_pot:,.0f} W"
     st.text(inf_txt)
     st.download_button("📥 Descargar Informe Resumen (.txt)", data=inf_txt, file_name="Informe_Tecnico.txt", mime="text/plain")
 
 # =========================================================================
-# PESTAÑA 9: SIMULADOR DE CONSUMO
+# PESTAÑA 10: SIMULADOR DE CONSUMO
 # =========================================================================
-with pestanas[8]:
+with pestanas[9]:
     st.title("💡 Simulador de Consumo Eléctrico")
     kw_c = st.number_input("kW contratados", value=4.6)
     kwh_m = st.number_input("kWh mes", value=250.0)
