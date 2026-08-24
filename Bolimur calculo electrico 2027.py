@@ -75,7 +75,11 @@ GAMMA_MAP = {
 }
 
 SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
-IZ_COBRE_TUBO = {1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0}
+IZ_COBRE_TUBO = {
+    1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 
+    25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 
+    120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0
+}
 CALIBRES_INTERRUPTORES = [10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400]
 
 def seleccionar_seccion_optima(s_necesaria):
@@ -235,7 +239,7 @@ with pestanas[0]:
     st.success(f"### ⚡ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,} W")
 
 # =========================================================================
-# PESTAÑA 2: LGA
+# PESTAÑA 2: LGA (CON COMPARATIVA DE SECCIONES NORMALIZADAS Y JUSTIFICACIÓN)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -289,19 +293,52 @@ with pestanas[1]:
     st.markdown(f"""
     1. **Intensidad de Diseño (Ib):** Ib = Potencia / (Raíz de 3 * V * cos phi) = {lga_pot:.1f} / (1.732 * 400 * {lga_cos}) = **{ib_lga:.2f} A**
     2. **Sección por Caída de Tensión (Delta V <= {dv_pct_lga}%):** S = (P * L) / (gamma * Delta V * V) = ({lga_pot:.1f} * {lga_long}) / ({gamma_lga} * {dv_max_lga:.2f} * 400) = **{s_cdt_lga:.2f} mm²** (Real: **{dv_real_lga_pct:.3f}%**)
-    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_lga} mm²** (Método {METODOS_INSTALACION[metodo_lga_key]['ref']})
-    4. **Corriente de Cortocircuito (Icc final):** **{icc_fin_lga:.2f} kA**
+    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_lga} mm²** (Admisibilidad bajo método {METODOS_INSTALACION[metodo_lga_key]['ref']})
+    4. **Sección Mínima Reglamentaria (ITC-BT-14):** **{min_reg_lga} mm²** ({lga_mat.upper()})
+    5. **Corriente de Cortocircuito (Icc final):** **{icc_fin_lga:.2f} kA**
     """)
+
+    st.markdown("---")
+    st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - LGA")
+    st.write("Análisis de admisibilidad y cumplimiento normativo para todas las secciones comerciales disponibles:")
+
+    tabla_comparativa_lga = []
+    for sec in SECCIONES_COMERCIALES:
+        iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
+        cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No (Calentamiento insuficiente)"
+        
+        dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400)
+        dv_sec_pct = (dv_sec_v / 400) * 100
+        cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}% > {dv_pct_lga}%)"
+        
+        cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No (Mín. {min_reg_lga}mm²)"
+        
+        estado = "❌ DESCARTADA"
+        if sec >= s_bruta_lga:
+            estado = "⭐ SELECCIONADA (Óptima)"
+        
+        tabla_comparativa_lga.append({
+            "Sección Comercial": f"{sec} mm²",
+            "Intensidad Admisible (Iz)": f"{iz_sec} A",
+            "Criterio Calentamiento": cumple_cal,
+            "Criterio Caída Tensión": cumple_cdt,
+            "Mínimo REBT (ITC-BT-14)": cumple_reg,
+            "Estado Final": estado
+        })
+
+    st.dataframe(tabla_comparativa_lga, use_container_width=True)
 
     st.markdown(f"""
         <div class="resultado-destacado">
             ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">Protección General Asociada: Magnetotérmico de {prot_lga} A</span>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+            <b>Justificación Analítica:</b> La sección teórica necesaria por caída de tensión es de <b>{s_cdt_lga:.2f} mm²</b> y por calentamiento exige un mínimo de <b>{s_cal_lga} mm²</b> (para $I_b = {ib_lga:.2f}\text{{ A}}$). Adicionalmente, el REBT exige una sección mínima por normativa de <b>{min_reg_lga} mm²</b>. Por tanto, la sección comercial normalizada inmediatamente superior que satisface simultáneamente todos los criterios es <b>{s_optima_lga} mm²</b>. Protección general asociada: Magnetotérmico de {prot_lga} A.
+            </span>
         </div>
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON COMPARATIVA DE SECCIONES Y JUSTIFICACIÓN)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -354,15 +391,46 @@ with pestanas[2]:
     st.markdown(f"""
     1. **Intensidad de Diseño (Ib monofásica):** Ib = Potencia / (V * cos phi) = {di_pot} / (230 * {di_cos}) = **{ib_di:.2f} A**
     2. **Sección por Caída de Tensión (Delta V <= {dv_pct_di}%):** S = (2 * P * L) / (gamma * Delta V * V) = (2 * {di_pot} * {di_long}) / ({gamma_di} * {dv_max_di:.2f} * 230) = **{s_cdt_di:.2f} mm²** (Real: **{dv_real_di_pct:.3f}%**)
-    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_di} mm²** (Método {METODOS_INSTALACION[metodo_di_key]['ref']})
-    4. **Corriente de Cortocircuito (Icc final):** **{icc_fin_di:.2f} kA**
+    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_di} mm²** (Admisibilidad bajo método {METODOS_INSTALACION[metodo_di_key]['ref']})
+    4. **Sección Mínima Reglamentaria (ITC-BT-15):** **{min_reg_di} mm²** ({di_mat.upper()})
+    5. **Corriente de Cortocircuito (Icc final):** **{icc_fin_di:.2f} kA**
     """)
 
     st.markdown("---")
-    st.subheader("🎯 Comprobación del Tramo Más Desfavorable (LGA + DI Acumulada)")
+    st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - DI")
+    st.write("Análisis de admisibilidad y cumplimiento normativo para todas las secciones comerciales de la Derivación Individual:")
+
+    tabla_comparativa_di = []
+    for sec in SECCIONES_COMERCIALES:
+        iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
+        cumple_cal = "✅ Sí" if iz_sec >= ib_di else "❌ No (Calentamiento insuficiente)"
+        
+        dv_sec_v = (2 * di_pot * di_long) / (gamma_di * sec * 230)
+        dv_sec_pct = (dv_sec_v / 230) * 100
+        cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_di else f"❌ No ({dv_sec_pct:.3f}% > {dv_pct_di}%)"
+        
+        cumple_reg = "✅ Sí" if sec >= min_reg_di else f"❌ No (Mín. {min_reg_di}mm²)"
+        
+        estado = "❌ DESCARTADA"
+        if sec >= s_bruta_di:
+            estado = "⭐ SELECCIONADA (Óptima)"
+        
+        tabla_comparativa_di.append({
+            "Sección Comercial": f"{sec} mm²",
+            "Intensidad Admisible (Iz)": f"{iz_sec} A",
+            "Criterio Calentamiento": cumple_cal,
+            "Criterio Caída Tensión": cumple_cdt,
+            "Mínimo REBT (ITC-BT-15)": cumple_reg,
+            "Estado Final": estado
+        })
+
+    st.dataframe(tabla_comparativa_di, use_container_width=True)
+
     cdt_acumulada_pct = dv_real_lga_pct + dv_real_di_pct
     limite_global_conjunto = 1.5
-    
+
+    st.markdown("---")
+    st.subheader("🎯 Comprobación del Tramo Más Desfavorable (LGA + DI Acumulada)")
     col_df1, col_df2 = st.columns(2)
     with col_df1: st.metric("Caída Acumulada (LGA + DI)", f"{cdt_acumulada_pct:.3f}%")
     with col_df2: st.metric("Límite Reglamentario Global", f"{limite_global_conjunto}%")
@@ -375,7 +443,9 @@ with pestanas[2]:
     st.markdown(f"""
         <div class="resultado-destacado">
             🔌 SECCIÓN A ADOPTAR (DI): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">Protección PIA Asociado: {prot_di} A + Diferencial 30 mA</span>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+            <b>Justificación Analítica:</b> La sección teórica necesaria por caída de tensión es de <b>{s_cdt_di:.2f} mm²</b> y por calentamiento exige un mínimo de <b>{s_cal_di} mm²</b> (para $I_b = {ib_di:.2f}\text{{ A}}$). Además, la ITC-BT-15 fija un suelo normativo de <b>{min_reg_di} mm²</b>. La sección comercial normalizada elegida es <b>{s_optima_di} mm²</b> por satisfacer de sobra todos los requerimientos técnicos y legales. Protección PIA asociada: {prot_di} A + Diferencial 30 mA.
+            </span>
         </div>
     """, unsafe_allow_html=True)
 
