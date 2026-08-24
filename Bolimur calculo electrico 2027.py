@@ -165,7 +165,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- TABLA OFICIAL Y FÓRMULA DE SIMULTANEIDAD VIVIENDAS (ITC-BT-10) ---
 COEF_SIMULTANEIDAD_VIVIENDAS = {
     1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8,
     10: 8.5, 11: 9.2, 12: 9.9, 13: 10.6, 14: 11.3, 15: 11.9, 
@@ -211,7 +210,6 @@ def seleccionar_proteccion(ib):
             return cal
     return CALIBRES_INTERRUPTORES[-1]
 
-# --- ESTADO INICIAL DE LA SESIÓN ---
 if 'nombre_proyecto' not in st.session_state:
     st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio Plurifamiliar"
 if 'grupos_viviendas' not in st.session_state:
@@ -228,7 +226,6 @@ if 'cliente_actual' not in st.session_state:
 if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 25.0
 if 'di_long_val' not in st.session_state: st.session_state.di_long_val = 15.0
 
-# --- MENÚ LATERAL ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", use_container_width=True)
@@ -409,7 +406,6 @@ with pestanas[0]:
             st.session_state.di_long_val = 0.0
             st.rerun()
 
-    # 1. VIVIENDAS
     col_h_viv, col_pop_viv = st.columns([4, 1])
     with col_h_viv:
         st.subheader("1. Viviendas del Edificio (P1)")
@@ -462,7 +458,6 @@ with pestanas[0]:
     st.success(f"💡 Viviendas totales: **{total_viviendas_edificio}** | **Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W**")
     st.markdown("---")
     
-    # 2. LOCALES COMERCIALES
     col_h_loc, col_pop_loc = st.columns([4, 1])
     with col_h_loc:
         st.subheader("2. Locales Comerciales y Oficinas (P2)")
@@ -503,7 +498,6 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
-    # 3. SERVICIOS GENERALES
     col_h_serv, col_pop_serv = st.columns([4, 1])
     with col_h_serv:
         st.subheader("3. Servicios Generales (P3)")
@@ -542,7 +536,6 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,} W**")
     st.markdown("---")
 
-    # 4. GARAJES E IRVE
     col_h_irve, col_pop_irve = st.columns([4, 1])
     with col_h_irve:
         st.subheader("4. Garajes e IRVE (ITC-BT-52)")
@@ -665,9 +658,11 @@ with pestanas[1]:
             
             cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No"
             
-            estado = "❌ DESCARTADA"
-            if sec >= s_bruta_lga:
+            # Corrección lógica de selección única exacta
+            if sec == s_optima_lga:
                 estado = "⭐ SELECCIONADA (Óptima)"
+            else:
+                estado = "❌ DESCARTADA"
             
             tabla_comparativa_lga.append({
                 "Sección Comercial": f"{sec} mm²",
@@ -773,9 +768,10 @@ with pestanas[2]:
             
             cumple_reg = "✅ Sí" if sec >= min_reg_di else f"❌ No"
             
-            estado = "❌ DESCARTADA"
-            if sec >= s_bruta_di:
+            if sec == s_optima_di:
                 estado = "⭐ SELECCIONADA (Óptima)"
+            else:
+                estado = "❌ DESCARTADA"
             
             tabla_comparativa_di.append({
                 "Sección Comercial": f"{sec} mm²",
