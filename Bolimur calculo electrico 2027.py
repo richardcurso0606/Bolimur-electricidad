@@ -223,7 +223,7 @@ def seleccionar_proteccion(ib):
             return cal
     return CALIBRES_INTERRUPTORES[-1]
 
-# --- ESTADO INICIAL DE LA SESIÓN (AHORA TODO EMPIEZA A 0) ---
+# --- ESTADO INICIAL DE LA SESIÓN ---
 if 'nombre_proyecto' not in st.session_state:
     st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio Plurifamiliar"
 if 'grupos_viviendas' not in st.session_state:
@@ -370,7 +370,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (EMPIEZA A 0)
+# PESTAÑA 1: PREVISIÓN DE CARGAS
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -641,7 +641,7 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (TOMA AUTOMÁTICAMENTE PT DE LA PESTAÑA 1)
+# PESTAÑA 2: LGA (CON BLOQUEO SI LA POTENCIA O LONGITUD ESTÁN A 0)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -674,7 +674,6 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        # Sincronizado automáticamente con pt_total (si se resetea a 0 en previsión, aquí pasa a 0)
         lga_pot = st.number_input("Potencia de cálculo LGA (W) [Automática desde Previsión Pt]", value=float(pt_total), key="lga_p_edit")
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
@@ -684,78 +683,82 @@ with pestanas[1]:
         lga_cos = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.9, key="lga_cos")
         lga_icc_orig = st.number_input("Icc en el origen (kA)", value=15.0, key="lga_icc")
 
-    gamma_lga = GAMMA_MAP.get((lga_mat, lga_aisl), 44.0)
-    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos) if lga_cos > 0 and lga_pot > 0 else 0.0
-    dv_max_lga = 400 * (dv_pct_lga / 100.0)
-    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if dv_max_lga > 0 and gamma_lga > 0 else 0.0
-    
-    s_cal_lga = 1.5
-    for sec, iz_val in IZ_COBRE_TUBO.items():
-        if iz_val >= ib_lga:
-            s_cal_lga = sec
-            break
-
-    min_reg_lga = 10.0 if lga_mat == "cobre" else 16.0
-    s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga) if lga_pot > 0 else min_reg_lga
-    s_optima_lga = seleccionar_seccion_optima(s_bruta_lga)
-
-    r_lga = (0.018 * lga_long) / s_optima_lga if s_optima_lga > 0 else 0.0
-    z_lga_tot = (400 / (lga_icc_orig * 1000)) + (2 * r_lga) if lga_icc_orig > 0 else 1.0
-    icc_fin_lga = 400 / z_lga_tot / 1000 if z_lga_tot > 0 else 0
-    prot_lga = seleccionar_proteccion(ib_lga)
-
-    dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400) if gamma_lga > 0 and s_optima_lga > 0 else 0.0
-    dv_real_lga_pct = (dv_real_lga_v / 400) * 100
-
-    st.markdown("---")
-    st.subheader("📐 Desglose detallado de Fórmulas y Resultados - LGA")
-    st.markdown(f"""
-    1. **Intensidad de Diseño (Ib):** Ib = <b>{ib_lga:.2f} A</b><br>
-    2. **Sección por Caída de Tensión:** S = <b>{s_cdt_lga:.2f} mm²</b> (Real: <b>{dv_real_lga_pct:.3f}%</b>)<br>
-    3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_lga} mm²</b><br>
-    4. **Sección Mínima Reglamentaria:** <b>{min_reg_lga} mm²</b> ({lga_mat.upper()})<br>
-    5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
-    """)
-
-    st.markdown("---")
-    st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - LGA")
-    tabla_comparativa_lga = []
-    for sec in SECCIONES_COMERCIALES:
-        iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
-        cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No"
+    # VALIDACIÓN DE SEGURIDAD: SI NO HAY POTENCIA O LONGITUD, SE DETIENE EL CÁLCULO
+    if lga_pot <= 0 or lga_long <= 0:
+        st.warning("⚠️ **Atención:** La Potencia Total Prevista (Pt) o la longitud de la LGA están a 0. Añade cargas en la pestaña 'Previsión de Cargas' o introduce valores válidos para calcular la sección.")
+    else:
+        gamma_lga = GAMMA_MAP.get((lga_mat, lga_aisl), 44.0)
+        ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos) if lga_cos > 0 else 0.0
+        dv_max_lga = 400 * (dv_pct_lga / 100.0)
+        s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if dv_max_lga > 0 and gamma_lga > 0 else 0.0
         
-        dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400) if gamma_lga > 0 and sec > 0 else 0.0
-        dv_sec_pct = (dv_sec_v / 400) * 100
-        cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}%)"
-        
-        cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No"
-        
-        estado = "❌ DESCARTADA"
-        if sec >= s_bruta_lga:
-            estado = "⭐ SELECCIONADA (Óptima)"
-        
-        tabla_comparativa_lga.append({
-            "Sección Comercial": f"{sec} mm²",
-            "Intensidad Admisible (Iz)": f"{iz_sec} A",
-            "Criterio Calentamiento": cumple_cal,
-            "Criterio Caída Tensión": cumple_cdt,
-            "Mínimo REBT (ITC-BT-14)": cumple_reg,
-            "Estado Final": estado
-        })
+        s_cal_lga = 1.5
+        for sec, iz_val in IZ_COBRE_TUBO.items():
+            if iz_val >= ib_lga:
+                s_cal_lga = sec
+                break
 
-    st.dataframe(tabla_comparativa_lga, use_container_width=True)
+        min_reg_lga = 10.0 if lga_mat == "cobre" else 16.0
+        s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga)
+        s_optima_lga = seleccionar_seccion_optima(s_bruta_lga)
 
-    st.markdown(f"""
-        <div class="resultado-destacado">
-            ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_lga:.2f} mm²</b>, calentamiento = <b>{s_cal_lga} mm²</b>, mínimo = <b>{min_reg_lga} mm²</b>. S óptima = <b>{s_optima_lga} mm²</b>. Protección: {prot_lga} A.
-            </span>
-        </div>
-    """, unsafe_allow_html=True)
+        r_lga = (0.018 * lga_long) / s_optima_lga if s_optima_lga > 0 else 0.0
+        z_lga_tot = (400 / (lga_icc_orig * 1000)) + (2 * r_lga) if lga_icc_orig > 0 else 1.0
+        icc_fin_lga = 400 / z_lga_tot / 1000 if z_lga_tot > 0 else 0
+        prot_lga = seleccionar_proteccion(ib_lga)
+
+        dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400) if gamma_lga > 0 and s_optima_lga > 0 else 0.0
+        dv_real_lga_pct = (dv_real_lga_v / 400) * 100
+
+        st.markdown("---")
+        st.subheader("📐 Desglose detallado de Fórmulas y Resultados - LGA")
+        st.markdown(f"""
+        1. **Intensidad de Diseño (Ib):** Ib = <b>{ib_lga:.2f} A</b><br>
+        2. **Sección por Caída de Tensión:** S = <b>{s_cdt_lga:.2f} mm²</b> (Real: <b>{dv_real_lga_pct:.3f}%</b>)<br>
+        3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_lga} mm²</b><br>
+        4. **Sección Mínima Reglamentaria:** <b>{min_reg_lga} mm²</b> ({lga_mat.upper()})<br>
+        5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
+        """)
+
+        st.markdown("---")
+        st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - LGA")
+        tabla_comparativa_lga = []
+        for sec in SECCIONES_COMERCIALES:
+            iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
+            cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No"
+            
+            dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400) if gamma_lga > 0 and sec > 0 else 0.0
+            dv_sec_pct = (dv_sec_v / 400) * 100
+            cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}%)"
+            
+            cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No"
+            
+            estado = "❌ DESCARTADA"
+            if sec >= s_bruta_lga:
+                estado = "⭐ SELECCIONADA (Óptima)"
+            
+            tabla_comparativa_lga.append({
+                "Sección Comercial": f"{sec} mm²",
+                "Intensidad Admisible (Iz)": f"{iz_sec} A",
+                "Criterio Calentamiento": cumple_cal,
+                "Criterio Caída Tensión": cumple_cdt,
+                "Mínimo REBT (ITC-BT-14)": cumple_reg,
+                "Estado Final": estado
+            })
+
+        st.dataframe(tabla_comparativa_lga, use_container_width=True)
+
+        st.markdown(f"""
+            <div class="resultado-destacado">
+                ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
+                <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+                <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_lga:.2f} mm²</b>, calentamiento = <b>{s_cal_lga} mm²</b>, mínimo = <b>{min_reg_lga} mm²</b>. S óptima = <b>{s_optima_lga} mm²</b>. Protección: {prot_lga} A.
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON BOTÓN DE RESETEAR A CERO)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON BLOQUEO SI LA LONGITUD ESTÁ A 0)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -795,89 +798,95 @@ with pestanas[2]:
         di_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="di_ais")
         di_cos = st.slider("Coseno phi (cos phi)", 0.8, 1.0, 1.0, key="di_cos")
 
-    gamma_di = GAMMA_MAP.get((di_mat, di_aisl), 44.0)
-    ib_di = di_pot / (230 * di_cos) if di_cos > 0 else 0.0
-    dv_max_di = 230 * (dv_pct_di / 100.0)
-    s_cdt_di = (2 * di_pot * di_long) / (gamma_di * dv_max_di * 230) if dv_max_di > 0 and gamma_di > 0 else 0.0
-    
-    s_cal_di = 1.5
-    for sec, iz_val in IZ_COBRE_TUBO.items():
-        if iz_val >= ib_di:
-            s_cal_di = sec
-            break
-
-    min_reg_di = 6.0 if di_mat == "cobre" else 10.0
-    s_bruta_di = max(s_cdt_di, s_cal_di, min_reg_di)
-    s_optima_di = seleccionar_seccion_optima(s_bruta_di)
-
-    r_di = (0.018 * di_long) / s_optima_di if s_optima_di > 0 else 0.0
-    z_di_tot = (230 / (10000)) + (2 * r_di)
-    icc_fin_di = 230 / z_di_tot / 1000 if z_di_tot > 0 else 0
-    prot_di = seleccionar_proteccion(ib_di)
-
-    dv_real_di_v = (2 * di_pot * di_long) / (gamma_di * s_optima_di * 230) if gamma_di > 0 and s_optima_di > 0 else 0.0
-    dv_real_di_pct = (dv_real_di_v / 230) * 100
-
-    st.markdown("---")
-    st.subheader("📐 Desglose detallado de Fórmulas y Resultados - DI")
-    st.markdown(f"""
-    1. **Intensidad de Diseño (Ib monofásica):** Ib = <b>{ib_di:.2f} A</b><br>
-    2. **Sección por Caída de Tensión:** S = <b>{s_cdt_di:.2f} mm²</b> (Real: <b>{dv_real_di_pct:.3f}%</b>)<br>
-    3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_di} mm²</b><br>
-    4. **Sección Mínima Reglamentaria:** <b>{min_reg_di} mm²</b> ({di_mat.upper()})<br>
-    5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
-    """)
-
-    st.markdown("---")
-    st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - DI")
-    tabla_comparativa_di = []
-    for sec in SECCIONES_COMERCIALES:
-        iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
-        cumple_cal = "✅ Sí" if iz_sec >= ib_di else "❌ No"
-        
-        dv_sec_v = (2 * di_pot * di_long) / (gamma_di * sec * 230) if gamma_di > 0 and sec > 0 else 0.0
-        dv_sec_pct = (dv_sec_v / 230) * 100
-        cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_di else f"❌ No ({dv_sec_pct:.3f}%)"
-        
-        cumple_reg = "✅ Sí" if sec >= min_reg_di else f"❌ No"
-        
-        estado = "❌ DESCARTADA"
-        if sec >= s_bruta_di:
-            estado = "⭐ SELECCIONADA (Óptima)"
-        
-        tabla_comparativa_di.append({
-            "Sección Comercial": f"{sec} mm²",
-            "Intensidad Admisible (Iz)": f"{iz_sec} A",
-            "Criterio Calentamiento": cumple_cal,
-            "Criterio Caída Tensión": cumple_cdt,
-            "Mínimo REBT (ITC-BT-15)": cumple_reg,
-            "Estado Final": estado
-        })
-
-    st.dataframe(tabla_comparativa_di, use_container_width=True)
-
-    cdt_acumulada_pct = dv_real_lga_pct + dv_real_di_pct
-    limite_global_conjunto = 1.5
-
-    st.markdown("---")
-    st.subheader("🎯 Comprobación del Tramo Más Desfavorable (LGA + DI Acumulada)")
-    col_df1, col_df2 = st.columns(2)
-    with col_df1: st.metric("Caída Acumulada (LGA + DI)", f"{cdt_acumulada_pct:.3f}%")
-    with col_df2: st.metric("Límite Reglamentario Global", f"{limite_global_conjunto}%")
-
-    if cdt_acumulada_pct <= limite_global_conjunto:
-        st.success(f"✅ **Verificación superada:** Cumple estrictamente con el límite global de {limite_global_conjunto}%.")
+    # VALIDACIÓN DE SEGURIDAD PARA LA DI
+    if di_long <= 0:
+        st.warning("⚠️ **Atención:** La longitud de la Derivación Individual está a 0. Introduce una longitud válida para realizar el cálculo.")
     else:
-        st.warning(f"⚠️ **Atención:** Supera el límite recomendado de {limite_global_conjunto}%.")
+        gamma_di = GAMMA_MAP.get((di_mat, di_aisl), 44.0)
+        ib_di = di_pot / (230 * di_cos) if di_cos > 0 else 0.0
+        dv_max_di = 230 * (dv_pct_di / 100.0)
+        s_cdt_di = (2 * di_pot * di_long) / (gamma_di * dv_max_di * 230) if dv_max_di > 0 and gamma_di > 0 else 0.0
+        
+        s_cal_di = 1.5
+        for sec, iz_val in IZ_COBRE_TUBO.items():
+            if iz_val >= ib_di:
+                s_cal_di = sec
+                break
 
-    st.markdown(f"""
-        <div class="resultado-destacado">
-            🔌 SECCIÓN A ADOPTAR (DI): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_di:.2f} mm²</b>, calentamiento = <b>{s_cal_di} mm²</b>, mínimo = <b>{min_reg_di} mm²</b>. S óptima = <b>{s_optima_di} mm²</b>. PIA: {prot_di} A.
-            </span>
-        </div>
-    """, unsafe_allow_html=True)
+        min_reg_di = 6.0 if di_mat == "cobre" else 10.0
+        s_bruta_di = max(s_cdt_di, s_cal_di, min_reg_di)
+        s_optima_di = seleccionar_seccion_optima(s_bruta_di)
+
+        r_di = (0.018 * di_long) / s_optima_di if s_optima_di > 0 else 0.0
+        z_di_tot = (230 / (10000)) + (2 * r_di)
+        icc_fin_di = 230 / z_di_tot / 1000 if z_di_tot > 0 else 0
+        prot_di = seleccionar_proteccion(ib_di)
+
+        dv_real_di_v = (2 * di_pot * di_long) / (gamma_di * s_optima_di * 230) if gamma_di > 0 and s_optima_di > 0 else 0.0
+        dv_real_di_pct = (dv_real_di_v / 230) * 100
+
+        st.markdown("---")
+        st.subheader("📐 Desglose detallado de Fórmulas y Resultados - DI")
+        st.markdown(f"""
+        1. **Intensidad de Diseño (Ib monofásica):** Ib = <b>{ib_di:.2f} A</b><br>
+        2. **Sección por Caída de Tensión:** S = <b>{s_cdt_di:.2f} mm²</b> (Real: <b>{dv_real_di_pct:.3f}%</b>)<br>
+        3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_di} mm²</b><br>
+        4. **Sección Mínima Reglamentaria:** <b>{min_reg_di} mm²</b> ({di_mat.upper()})<br>
+        5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
+        """)
+
+        st.markdown("---")
+        st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - DI")
+        tabla_comparativa_di = []
+        for sec in SECCIONES_COMERCIALES:
+            iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
+            cumple_cal = "✅ Sí" if iz_sec >= ib_di else "❌ No"
+            
+            dv_sec_v = (2 * di_pot * di_long) / (gamma_di * sec * 230) if gamma_di > 0 and sec > 0 else 0.0
+            dv_sec_pct = (dv_sec_v / 230) * 100
+            cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_di else f"❌ No ({dv_sec_pct:.3f}%)"
+            
+            cumple_reg = "✅ Sí" if sec >= min_reg_di else f"❌ No"
+            
+            estado = "❌ DESCARTADA"
+            if sec >= s_bruta_di:
+                estado = "⭐ SELECCIONADA (Óptima)"
+            
+            tabla_comparativa_di.append({
+                "Sección Comercial": f"{sec} mm²",
+                "Intensidad Admisible (Iz)": f"{iz_sec} A",
+                "Criterio Calentamiento": cumple_cal,
+                "Criterio Caída Tensión": cumple_cdt,
+                "Mínimo REBT (ITC-BT-15)": cumple_reg,
+                "Estado Final": estado
+            })
+
+        st.dataframe(tabla_comparativa_di, use_container_width=True)
+
+        # Cálculo auxiliar para la comprobación conjunta si LGA está activa
+        dv_real_lga_pct_val = dv_real_lga_pct if 'dv_real_lga_pct' in locals() and lga_pot > 0 and lga_long > 0 else 0.0
+        cdt_acumulada_pct = dv_real_lga_pct_val + dv_real_di_pct
+        limite_global_conjunto = 1.5
+
+        st.markdown("---")
+        st.subheader("🎯 Comprobación del Tramo Más Desfavorable (LGA + DI Acumulada)")
+        col_df1, col_df2 = st.columns(2)
+        with col_df1: st.metric("Caída Acumulada (LGA + DI)", f"{cdt_acumulada_pct:.3f}%")
+        with col_df2: st.metric("Límite Reglamentario Global", f"{limite_global_conjunto}%")
+
+        if cdt_acumulada_pct <= limite_global_conjunto:
+            st.success(f"✅ **Verificación superada:** Cumple estrictamente con el límite global de {limite_global_conjunto}%.")
+        else:
+            st.warning(f"⚠️ **Atención:** Supera el límite recomendado de {limite_global_conjunto}%.")
+
+        st.markdown(f"""
+            <div class="resultado-destacado">
+                🔌 SECCIÓN A ADOPTAR (DI): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
+                <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+                <b>Justificación Analítica:</b> S por CDT = <b>{s_cdt_di:.2f} mm²</b>, calentamiento = <b>{s_cal_di} mm²</b>, mínimo = <b>{min_reg_di} mm²</b>. S óptima = <b>{s_optima_di} mm²</b>. PIA: {prot_di} A.
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
 
 # =========================================================================
 # PESTAÑA 4: TABLA GUÍA ESTILO PLC MADRID
