@@ -7,55 +7,51 @@ import sqlite3
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Suite REBT Murcia", page_icon="⚡", layout="wide")
 
-# --- GESTIÓN DE BASE DE DATOS LOCAL (CON AUTOREPARACIÓN Y MIGRACIÓN) ---
+# --- GESTIÓN DE BASE DE DATOS LOCAL (CON AUTOREPARACIÓN Y MIGRACIÓN TOTAL) ---
 DB_NAME = "bolimur_database.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(instalador)")
-    columnas_instalador = [col[1] for col in cursor.fetchall()]
     
-    if not columnas_instalador:
+    # 1. Asegurar tabla instalador y sus columnas
+    cursor.execute("PRAGMA table_info(instalador)")
+    cols_inst = [col[1] for col in cursor.fetchall()]
+    if not cols_inst:
         cursor.execute('''
             CREATE TABLE instalador (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT,
-                nif TEXT,
-                empresa TEXT,
-                carnet TEXT,
-                telefono TEXT,
-                email TEXT,
-                categoria TEXT,
-                tipo_inst TEXT,
-                num_inscripcion TEXT,
-                comunidad TEXT
+                nombre TEXT, nif TEXT, empresa TEXT, carnet TEXT, 
+                telefono TEXT, email TEXT, categoria TEXT, 
+                tipo_inst TEXT, num_inscripcion TEXT, comunidad TEXT
             )
         ''')
     else:
-        nuevas_cols = [
-            ("categoria", "TEXT"), 
-            ("tipo_inst", "TEXT"), 
-            ("num_inscripcion", "TEXT"), 
-            ("comunidad", "TEXT")
-        ]
-        for col_nombre, col_tipo in nuevas_cols:
-            if col_nombre not in columnas_instalador:
+        for col_nombre, col_tipo in [("categoria", "TEXT"), ("tipo_inst", "TEXT"), ("num_inscripcion", "TEXT"), ("comunidad", "TEXT")]:
+            if col_nombre not in cols_inst:
                 cursor.execute(f"ALTER TABLE instalador ADD COLUMN {col_nombre} {col_tipo}")
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS clientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cliente TEXT,
-            nif_cliente TEXT,
-            direccion TEXT,
-            municipio TEXT,
-            provincia TEXT,
-            cp TEXT,
-            telefono_cliente TEXT,
-            email_cliente TEXT
-        )
-    ''')
+    # 2. Asegurar tabla clientes y sus columnas
+    cursor.execute("PRAGMA table_info(clientes)")
+    cols_cli = [col[1] for col in cursor.fetchall()]
+    if not cols_cli:
+        cursor.execute('''
+            CREATE TABLE clientes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cliente TEXT, nif_cliente TEXT, direccion TEXT, 
+                municipio TEXT, provincia TEXT, cp TEXT, 
+                telefono_cliente TEXT, email_cliente TEXT
+            )
+        ''')
+    else:
+        nuevas_cols_cli = [
+            ("provincia", "TEXT"), ("cp", "TEXT"), 
+            ("telefono_cliente", "TEXT"), ("email_cliente", "TEXT")
+        ]
+        for col_nombre, col_tipo in nuevas_cols_cli:
+            if col_nombre not in cols_cli:
+                cursor.execute(f"ALTER TABLE clientes ADD COLUMN {col_nombre} {col_tipo}")
+
     conn.commit()
     conn.close()
 
@@ -88,16 +84,11 @@ def cargar_datos_instalador():
             "num_inscripcion": row[8] or "", "comunidad": row[9] or ""
         }
     return {
-        "nombre": "Richard Orlando Choque Tejerina", 
-        "nif": "34331426Q", 
-        "empresa": "BOLIMUR INSTALACIONES INTEGRALES", 
-        "carnet": "INS-2026-MUR", 
-        "telefono": "682 195 295", 
-        "email": "richard@bolimur.com",
-        "categoria": "Especialista",
-        "tipo_inst": "Baja Tensión",
-        "num_inscripcion": "30/XXXXX",
-        "comunidad": "Región de Murcia"
+        "nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", 
+        "empresa": "BOLIMUR INSTALACIONES INTEGRALES", "carnet": "INS-2026-MUR", 
+        "telefono": "682 195 295", "email": "richard@bolimur.com",
+        "categoria": "Especialista", "tipo_inst": "Baja Tensión",
+        "num_inscripcion": "30/XXXXX", "comunidad": "Región de Murcia"
     }
 
 def guardar_cliente_db(cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente):
@@ -111,67 +102,34 @@ def guardar_cliente_db(cliente, nif_cliente, direccion, municipio, provincia, cp
 def buscar_clientes_db(termino):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente FROM clientes WHERE cliente LIKE ? OR nif_cliente LIKE ?", 
-                   (f"%{termino}%", f"%{termino}%"))
-    rows = cursor.fetchall()
+    try:
+        cursor.execute("SELECT id, cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente FROM clientes WHERE cliente LIKE ? OR nif_cliente LIKE ?", 
+                       (f"%{termino}%", f"%{termino}%"))
+        rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        rows = []
     conn.close()
     return rows
 
 def obtener_todos_clientes():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente FROM clientes")
-    rows = cursor.fetchall()
+    try:
+        cursor.execute("SELECT id, cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente FROM clientes")
+        rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        rows = []
     conn.close()
     return rows
 
 # --- DISEÑO CORPORATIVO Y ESTILOS ---
 st.markdown("""
     <style>
-    .bolimur-header {
-        border-bottom: 3px solid #ff4b4b;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    .resultado-destacado {
-        background-color: #1e1e1e;
-        color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 6px solid #ff4b4b;
-        font-size: 18px;
-        font-weight: bold;
-        margin: 20px 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .resumen-parciales-box {
-        background-color: #f1f3f5;
-        border: 2px solid #ced4da;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
-        color: #212529;
-    }
-    .mtd-oficial-box {
-        background-color: #ffffff;
-        border: 2px solid #111111;
-        padding: 30px;
-        border-radius: 8px;
-        color: #000000;
-        font-family: 'Times New Roman', Times, serif;
-    }
-    .esquema-simbolos {
-        background-color: #ffffff;
-        border: 3px solid #111111;
-        padding: 30px;
-        border-radius: 10px;
-        font-family: 'Courier New', Courier, monospace;
-        color: #000000;
-        font-size: 14px;
-        line-height: 1.6;
-        white-space: pre;
-        overflow-x: auto;
-    }
+    .bolimur-header { border-bottom: 3px solid #ff4b4b; padding-bottom: 10px; margin-bottom: 20px; }
+    .resultado-destacado { background-color: #1e1e1e; color: #ffffff; padding: 20px; border-radius: 10px; border-left: 6px solid #ff4b4b; font-size: 18px; font-weight: bold; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .resumen-parciales-box { background-color: #f1f3f5; border: 2px solid #ced4da; padding: 20px; border-radius: 10px; margin: 20px 0; color: #212529; }
+    .mtd-oficial-box { background-color: #ffffff; border: 2px solid #111111; padding: 30px; border-radius: 8px; color: #000000; font-family: 'Times New Roman', Times, serif; }
+    .esquema-simbolos { background-color: #ffffff; border: 3px solid #111111; padding: 30px; border-radius: 10px; font-family: 'Courier New', Courier, monospace; color: #000000; font-size: 14px; line-height: 1.6; white-space: pre; overflow-x: auto; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -276,7 +234,7 @@ with st.sidebar:
     st.header("📁 Proyecto")
     st.session_state.nombre_proyecto = st.text_input("Nombre Proyecto", st.session_state.nombre_proyecto)
 
-# --- PESTAÑAS PRINCIPALES (COMPLETAS RESTAURADAS) ---
+# --- PESTAÑAS PRINCIPALES ---
 pestanas = st.tabs([
     "🏢 Previsión Cargas", 
     "⚡ Línea General (LGA)", 
