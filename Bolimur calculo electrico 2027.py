@@ -1,6 +1,7 @@
 import streamlit as st
 import math
 import json
+import os
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
@@ -112,45 +113,50 @@ if 'servicios_generales' not in st.session_state:
 if 'locales' not in st.session_state:
     st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
 
-# --- MENÚ LATERAL (SIDEBAR) ---
-st.sidebar.markdown("""
-    <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4b4b; margin-bottom: 15px;">
-        <h3 style="color: white; margin: 0; font-size: 16px;">⚡ BOLIMUR</h3>
-        <p style="color: #b0b0b0; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales<br>Murcia, España</p>
-    </div>
-""", unsafe_allow_html=True)
+# --- MENÚ LATERAL (SIDEBAR CON LOGOTIPO OFICIAL) ---
+with st.sidebar:
+    # Intenta cargar el logo si existe en la ruta; si no, muestra el cuadro alternativo corporativo
+    if os.path.exists("logo_bolimur.png"):
+        st.image("logo_bolimur.png", use_container_width=True)
+    else:
+        st.markdown("""
+            <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4b4b; margin-bottom: 15px; text-align: center;">
+                <h3 style="color: white; margin: 0; font-size: 18px;">⚡ BOLIMUR</h3>
+                <p style="color: #b0b0b0; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales<br>Murcia, España</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-st.sidebar.header("📁 Gestión de Proyectos")
-st.session_state.nombre_proyecto = st.sidebar.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
+    st.header("📁 Gestión de Proyectos")
+    st.session_state.nombre_proyecto = st.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
 
-datos_proyecto = {
-    "nombre_proyecto": st.session_state.nombre_proyecto,
-    "grupos_viviendas": st.session_state.grupos_viviendas,
-    "servicios_generales": st.session_state.servicios_generales,
-    "locales": st.session_state.locales
-}
-json_str = json.dumps(datos_proyecto, indent=4)
-st.sidebar.download_button(
-    label="💾 Guardar Proyecto (JSON)",
-    data=json_str,
-    file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
-    mime="application/json"
-)
+    datos_proyecto = {
+        "nombre_proyecto": st.session_state.nombre_proyecto,
+        "grupos_viviendas": st.session_state.grupos_viviendas,
+        "servicios_generales": st.session_state.servicios_generales,
+        "locales": st.session_state.locales
+    }
+    json_str = json.dumps(datos_proyecto, indent=4)
+    st.download_button(
+        label="💾 Guardar Proyecto (JSON)",
+        data=json_str,
+        file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
+        mime="application/json"
+    )
 
-archivo_subido = st.sidebar.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
-if archivo_subido is not None:
-    try:
-        proyecto_cargado = json.load(archivo_subido)
-        st.session_state.nombre_proyecto = proyecto_cargado.get("nombre_proyecto", "Proyecto")
-        st.session_state.grupos_viviendas = proyecto_cargado.get("grupos_viviendas", [])
-        st.session_state.servicios_generales = proyecto_cargado.get("servicios_generales", [])
-        st.session_state.locales = proyecto_cargado.get("locales", [])
-        st.sidebar.success("✅ ¡Proyecto cargado con éxito!")
-        st.rerun()
-    except Exception as e:
-        st.sidebar.error(f"Error al leer el archivo: {e}")
+    archivo_subido = st.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
+    if archivo_subido is not None:
+        try:
+            proyecto_cargado = json.load(archivo_subido)
+            st.session_state.nombre_proyecto = proyecto_cargado.get("nombre_proyecto", "Proyecto")
+            st.session_state.grupos_viviendas = proyecto_cargado.get("grupos_viviendas", [])
+            st.session_state.servicios_generales = proyecto_cargado.get("servicios_generales", [])
+            st.session_state.locales = proyecto_cargado.get("locales", [])
+            st.success("✅ ¡Proyecto cargado con éxito!")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error al leer el archivo: {e}")
 
-st.sidebar.markdown("---")
+    st.markdown("---")
 
 # --- PESTAÑAS PRINCIPALES ---
 pestanas = st.tabs([
