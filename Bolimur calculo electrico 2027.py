@@ -24,6 +24,14 @@ st.markdown("""
         margin: 20px 0;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
+    .resumen-parciales-box {
+        background-color: #f1f3f5;
+        border: 2px solid #ced4da;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        color: #212529;
+    }
     .formula-box {
         background-color: #f8f9fa;
         border: 1px solid #dcdcdc;
@@ -157,7 +165,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS
+# PESTAÑA 1: PREVISIÓN DE CARGAS (CON RESUMEN DE PARCIALES AL FINAL)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -193,7 +201,7 @@ with pestanas[0]:
         cs_grupo = float(viv["qty"]) if viv["nocturna"] else get_coef_simultaneidad(viv["qty"])
         pot_total_viviendas += int(round(viv["pot"] * cs_grupo))
 
-    st.info(f"💡 Viviendas totales: **{total_viviendas_edificio}** | Potencia P1: **{pot_total_viviendas:,}W**")
+    st.info(f"💡 Viviendas totales: **{total_viviendas_edificio}** | **Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W**")
     st.markdown("---")
     
     st.subheader("2. Locales Comerciales y Oficinas (P2)")
@@ -208,7 +216,7 @@ with pestanas[0]:
             if st.button("🗑️", key=f"del_loc_{idx}"): st.session_state.locales.pop(idx); st.rerun()
         pot_total_locales += max(loc["superficie"] * 100, 3450) * loc["qty"]
 
-    st.markdown(f"**Potencia Locales (P2):** `{int(pot_total_locales):,} W`")
+    st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
     st.subheader("3. Servicios Generales (P3)")
@@ -225,7 +233,7 @@ with pestanas[0]:
         factor = {"direct": 1.0, "discharge": 1.8, "motor": 1.25, "elevator": 1.3}[serv["tipo"]]
         pot_total_servicios += int(serv["potencia"] * serv["qty"] * factor)
 
-    st.markdown(f"**Potencia Servicios (P3):** `{pot_total_servicios:,} W`")
+    st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,} W**")
     st.markdown("---")
 
     st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
@@ -238,12 +246,27 @@ with pestanas[0]:
     fsim_ve = 1.0 if "Sin" in opcion_irve else 0.1
     pot_total_irve = int(round(plazas_garaje * 0.1 * 3680 * fsim_ve))
 
-    st.markdown(f"- **Potencia Garaje (P4):** `{pot_garaje_adjudicada:,} W`")
-    st.markdown(f"- **Potencia IRVE (Vehículos Eléctricos):** `{pot_total_irve:,} W`")
+    pot_total_garaje_irve = pot_garaje_adjudicada + pot_total_irve
+    st.info(f"💡 **Total Parcial P4 / P5 (Garaje e IRVE): {pot_total_garaje_irve:,} W** (Garaje: {pot_garaje_adjudicada:,}W | IRVE: {pot_total_irve:,}W)")
     st.markdown("---")
 
     pt_total = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + pot_garaje_adjudicada + pot_total_irve
-    st.success(f"### ⚡ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,} W")
+
+    # --- RESUMEN FINAL CON TOTALES PARCIALES Y SUMA TOTAL ---
+    st.markdown(f"""
+        <div class="resumen-parciales-box">
+            <h3 style="color: #111; margin-top: 0;">📋 RESUMEN DE POTENCIAS PARCIALES Y TOTALES (ITC-BT-10)</h3>
+            <ul>
+                <li><b>P1 (Viviendas - {total_viviendas_edificio} uds):</b> {pot_total_viviendas:,} W</li>
+                <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
+                <li><b>P3 (Servicios Generales):</b> {pot_total_servicios:,} W</li>
+                <li><b>P4 (Garaje):</b> {pot_garaje_adjudicada:,} W</li>
+                <li><b>P5 (IRVE / Vehículo Eléctrico):</b> {pot_total_irve:,} W</li>
+            </ul>
+            <hr style="border: 1px solid #ced4da;">
+            <h2 style="color: #ff4b4b; margin-bottom: 0;">⚡ SUMA TOTAL PREVISTA (Pt): {pt_total:,} W ({pt_total/1000:,.2f} kW)</h2>
+        </div>
+    """, unsafe_allow_html=True)
 
 # =========================================================================
 # PESTAÑA 2: LGA (POTENCIA EDITABLE + BOTÓN RESET + TABLA COMPARATIVA)
@@ -353,7 +376,7 @@ with pestanas[1]:
         <div class="resultado-destacado">
             ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de {lga_mat.upper()} ({lga_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación Analítica:</b> La sección teórica necesaria por caída de tensión es de <b>{s_cdt_lga:.2f} mm²</b> y por calentamiento exige un mínimo de <b>{s_cal_lga} mm²</b> (para $I_b = {ib_lga:.2f}\text{{ A}}$). Adicionalmente, el REBT exige una sección mínima por normativa de <b>{min_reg_lga} mm²</b>. Por tanto, la sección comercial normalizada inmediatamente superior que satisface simultáneamente todos los criterios es <b>{s_optima_lga} mm²</b>. Protección general asociada: Magnetotérmico de {prot_lga} A.
+            <b>Justificación Analítica:</b> La sección teórica necesaria por caída de tensión es de <b>{s_cdt_lga:.2f} mm²</b> y por calentamiento exige un mínimo de <b>{s_cal_lga} mm²</b> (para $I_b = {ib_di:.2f}\text{{ A}}$). Adicionalmente, el REBT exige una sección mínima por normativa de <b>{min_reg_lga} mm²</b>. Por tanto, la sección comercial normalizada inmediatamente superior que satisface simultáneamente todos los criterios es <b>{s_optima_lga} mm²</b>. Protección general asociada: Magnetotérmico de {prot_lga} A.
             </span>
         </div>
     """, unsafe_allow_html=True)
