@@ -32,25 +32,18 @@ st.markdown("""
         margin: 10px 0;
         color: #333333;
     }
-    /* Estilo Plano Técnico CAD / CIE */
-    .plano-cad {
-        background-color: #0d1117;
-        color: #00ff66;
-        border: 2px solid #30363d;
-        padding: 25px;
-        border-radius: 6px;
+    .esquema-simbolos {
+        background-color: #ffffff;
+        border: 3px solid #111111;
+        padding: 30px;
+        border-radius: 10px;
         font-family: 'Courier New', Courier, monospace;
+        color: #000000;
         font-size: 14px;
         line-height: 1.6;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-    }
-    .cajetin-plano {
-        border: 2px solid #ffffff;
-        padding: 15px;
-        margin-top: 20px;
-        background-color: #161b22;
-        color: #ffffff;
-        font-family: Arial, sans-serif;
+        white-space: pre;
+        overflow-x: auto;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -496,117 +489,108 @@ with pestanas[4]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 6: ESQUEMA UNIFILAR ESTILO PLANO TÉCNICO CAD / CIE
+# PESTAÑA 6: ESQUEMA UNIFILAR GRÁFICO CON SÍMBOLOS TÉCNICOS
 # =========================================================================
 with pestanas[5]:
-    st.title("📐 Esquema Unifilar Estilo Plano Técnico CAD / CIE (REBT)")
-    st.write("Representación unifilar estructurada con formato de plano técnico oficial para certificados de instalación (CIE):")
+    st.title("📐 Esquema Unifilar con Símbolos Gráficos Reglamentarios")
+    st.write("Representación unifilar esquemática con símbolos de magnetotérmicos [ / ], diferencial y trazado reglamentario de hilos:")
 
-    tipo_electrificacion_cad = st.radio("Grado de Electrificación para el Plano CAD:", [
+    tipo_electrificacion_simbolos = st.radio("Grado de Electrificación para el Esquema Gráfico:", [
         "Grado Básico (ITC-BT-25 - 5 Circuitos)",
         "Grado Básico con C4 Desdoblado",
         "Grado Elevado (12 Circuitos)"
-    ], key="tipo_elec_cad")
+    ], key="tipo_elec_simb")
 
-    if "Básico" in tipo_electrificacion_cad and "Desdoblado" not in tipo_electrificacion_cad:
-        plano_cad_txt = """╔══════════════════════════════════════════════════════════════════════════════════╗
-║                          BOLIMUR INSTALACIONES INTEGRALES                        ║
-║                       ESQUEMA UNIFILAR DE INSTALACIÓN INTERIOR                   ║
-╚══════════════════════════════════════════════════════════════════════════════════╝
+    if "Básico" in tipo_electrificacion_simbolos and "Desdoblado" not in tipo_electrificacion_simbolos:
+        esquema_simbolos_txt = """
+==========================================================================================
+PROYECTO: """ + st.session_state.nombre_proyecto + """
+GRADO DE ELECTRIFICACIÓN: BÁSICO (ITC-BT-25) - BOLIMUR INSTALACIONES INTEGRALES
+==========================================================================================
 
-   [ ORIGEN: DERIVACIÓN INDIVIDUAL (DI) ]
-   Cableado: 10 mm² Cu (Fase + Neutro + Protección) en tubo corrugado M32
-   │
-   ▼
-   [ INTERRUPTOR GENERAL AUTOMÁTICO (IGA) ] ─── 2P | 25 A | P.Corte: 6 kA
-   │
-   ▼
-   [ PROTECTOR DE SOBRETENSIONES ] ─────────── Transitorias (Tipo 2) + Permanentes
-   │
-   ▼
-   [ INTERRUPTOR DIFERENCIAL (ID) PRINCIPAL ] ── 2P | 40 A | 30 mA (Sensibilidad Alta)
-   │
-   ├─► [ C1 - ILUMINACIÓN ]
-   │     PIA: [ 10 A - Curva C ] ── Conductor: 2 x 1,5 mm² + TT 1,5 mm² ── // ── Tubo M16
-   │
-   ├─► [ C2 - TOMAS GENERALES ]
-   │     PIA: [ 16 A - Curva C ] ── Conductor: 2 x 2,5 mm² + TT 2,5 mm² ── // ── Tubo M20
-   │
-   ├─► [ C3 - COCINA Y HORNO ]
-   │     PIA: [ 25 A - Curva C ] ── Conductor: 2 x 6,0 mm² + TT 6,0 mm² ── // ── Tubo M25
-   │
-   ├─► [ C4 - LAVADORA, LAVAVAJILLAS Y TERMO ]
-   │     PIA: [ 20 A - Curva C ] ── Conductor: 2 x 4,0 mm² + TT 4,0 mm² ── // ── Tubo M20
-   │
-   └─► [ C5 - BAÑOS Y ZONAS HÚMEDAS ]
-         PIA: [ 16 A - Curva C ] ── Conductor: 2 x 2,5 mm² + TT 2,5 mm² ── // ── Tubo M20"""
-    elif "Desdoblado" in tipo_electrificacion_cad:
-        plano_cad_txt = """╔══════════════════════════════════════════════════════════════════════════════════╗
-║                          BOLIMUR INSTALACIONES INTEGRALES                        ║
-║                   ESQUEMA UNIFILAR (CON C4 DESDOBLADO) - REBT                    ║
-╚══════════════════════════════════════════════════════════════════════════════════╝
+   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
+   10 mm² Cu               25 A                     Transitorias +           40 A, 30 mA
+   (F + N + TT)          (2 Polos)                  Permanentes (Bobina)     [ 30 mA ]
+     │                      │                             │                    │
+     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
+                                                                                 │
+         ┌───────────────────────────────────────────────────────────────────────┘
+         │
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
+         │
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
+         │
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
+         │
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4: Lavadora, lavavajillas y termo
+         │
+         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
+=========================================================================================="""
+    elif "Desdoblado" in tipo_electrificacion_simbolos:
+        esquema_simbolos_txt = """
+==========================================================================================
+PROYECTO: """ + st.session_state.nombre_proyecto + """
+GRADO DE ELECTRIFICACIÓN: BÁSICO CON C4 DESDOBLADO - BOLIMUR INSTALACIONES INTEGRALES
+==========================================================================================
 
-   [ ORIGEN: DERIVACIÓN INDIVIDUAL (DI) ] ── 10 mm² Cu | Tubo M32
-   │
-   ▼
-   [ IGA ] ── 25 A (2P)  ──► [ SOBRETENSIONES ] ──► [ DIFERENCIAL ] ── 40 A, 30 mA
-   │
-   ├─► [ C1 - ILUMINACIÓN ] ────────────── [ 10 A ] ── 2x1,5 + TT 1,5 mm² ── // ── M16
-   ├─► [ C2 - TOMAS GENERALES ] ───────── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   ├─► [ C3 - COCINA Y HORNO ] ────────── [ 25 A ] ── 2x6,0 + TT 6,0 mm² ── // ── M25
-   ├─► [ C4-A - LAVADORA Y TERMO ] ────── [ 20 A ] ── 2x4,0 + TT 4,0 mm² ── // ── M20
-   ├─► [ C4-B - LAVAVAJILLAS ] ────────── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   └─► [ C5 - BAÑOS Y ZONAS HÚMEDAS ] ─── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20"""
+   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
+   10 mm² Cu               25 A                     Transitorias +           40 A, 30 mA
+   (F + N + TT)          (2 Polos)                  Permanentes              [ 30 mA ]
+     │                      │                             │                    │
+     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
+                                                                                 │
+         ┌───────────────────────────────────────────────────────────────────────┘
+         │
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
+         │
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
+         │
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
+         │
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4-A: Lavadora y Termo
+         │
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C4-B: Lavavajillas independiente
+         │
+         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
+=========================================================================================="""
     else:
-        plano_cad_txt = """╔══════════════════════════════════════════════════════════════════════════════════╗
-║                          BOLIMUR INSTALACIONES INTEGRALES                        ║
-║                 ESQUEMA UNIFILAR - GRADO ELEVADO (12 CIRCUITOS)                  ║
-╚══════════════════════════════════════════════════════════════════════════════════╝
+        esquema_simbolos_txt = """
+==========================================================================================
+PROYECTO: """ + st.session_state.nombre_proyecto + """
+GRADO DE ELECTRIFICACIÓN: ELEVADO (12 CIRCUITOS) - BOLIMUR INSTALACIONES INTEGRALES
+==========================================================================================
 
-   [ ORIGEN: DERIVACIÓN INDIVIDUAL (DI) ] ── 16 mm² Cu | Tubo M40
-   │
-   ▼
-   [ IGA ] ── 40 A (2P)  ──► [ SOBRETENSIONES ] ──► [ DIFERENCIAL ] ── 63 A, 30 mA
-   │
-   ├─► [ C1 - ILUMINACIÓN (1º) ] ──────── [ 10 A ] ── 2x1,5 + TT 1,5 mm² ── // ── M16
-   ├─► [ C2 - TOMAS GENERALES (1º) ] ──── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   ├─► [ C3 - COCINA Y HORNO ] ────────── [ 25 A ] ── 2x6,0 + TT 6,0 mm² ── // ── M25
-   ├─► [ C4-A - LAVADORA Y TERMO ] ────── [ 20 A ] ── 2x4,0 + TT 4,0 mm² ── // ── M20
-   ├─► [ C4-B - LAVAVAJILLAS ] ────────── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   ├─► [ C5 - BAÑOS Y COCINA ] ────────── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   ├─► [ C6 - ILUMINACIÓN (2º) ] ──────── [ 10 A ] ── 2x1,5 + TT 1,5 mm² ── // ── M16
-   ├─► [ C7 - TOMAS ADICIONALES ] ─────── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   ├─► [ C8 - CALEFACCIÓN / CLIMA ] ───── [ 25 A ] ── 2x6,0 + TT 6,0 mm² ── // ── M25
-   ├─► [ C9 - AIRE ACONDICIONADO ] ────── [ 20 A ] ── 2x4,0 + TT 4,0 mm² ── // ── M20
-   ├─► [ C10 - SECADORA ] ─────────────── [ 16 A ] ── 2x2,5 + TT 2,5 mm² ── // ── M20
-   ├─► [ C11 - DOMÓTICA / ALARMA ] ────── [ 10 A ] ── 2x1,5 + TT 1,5 mm² ── // ── M16
-   └─► [ C12 - CIRCUITOS ESPECIALES ] ─── [ 25 A ] ── 2x6,0 + TT 6,0 mm² ── // ── M25"""
+   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
+   16 mm² Cu               40 A                     Transitorias +           63 A, 30 mA
+   (F + N + TT)          (2 Polos)                  Permanentes              [ 30 mA ]
+     │                      │                             │                    │
+     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
+                                                                                 │
+         ┌───────────────────────────────────────────────────────────────────────┘
+         │
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación principal
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: Tomas de corriente generales
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y horno
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4-A: Lavadora y termo
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C4-B: Lavavajillas
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: Baños y cocina (húmedas)
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C6: Iluminación adicional
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C7: Tomas de corriente adicionales
+         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C8: Calefacción / Climatización
+         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C9: Aire acondicionado
+         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C10: Secadora independiente
+         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C11: Automatización / Domótica / Alarma
+         └─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C12: Circuitos especiales (Hidromasaje)
+=========================================================================================="""
 
-    # Mostrar plano en caja con estilo CAD oscuro profesional
-    st.markdown(f'<div class="plano-cad">{plano_cad_txt}</div>', unsafe_allow_html=True)
-
-    # Cajetín técnico oficial inferior estilo plano
-    st.markdown(f"""
-        <div class="cajetin-plano">
-            <table width="100%" style="color: white; border-collapse: collapse;">
-                <tr>
-                    <td style="border: 1px solid white; padding: 8px;"><b>EMPRESA:</b> BOLIMUR INSTALACIONES INTEGRALES</td>
-                    <td style="border: 1px solid white; padding: 8px;"><b>PROYECTO:</b> {st.session_state.nombre_proyecto}</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid white; padding: 8px;"><b>UBICACIÓN:</b> Murcia, España</td>
-                    <td style="border: 1px solid white; padding: 8px;"><b>NORMATIVA:</b> REBT (RD 842/2002)</td>
-                </tr>
-            </table>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="esquema-simbolos">{esquema_simbolos_txt}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
     st.download_button(
-        label="📥 Descargar Plano Unifilar CAD (.txt)",
-        data=plano_cad_txt,
-        file_name=f"Plano_CIE_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
+        label="📥 Descargar Esquema con Símbolos (.txt)",
+        data=esquema_simbolos_txt,
+        file_name=f"Esquema_Simbolos_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
         mime="text/plain"
     )
 
