@@ -1,6 +1,8 @@
 import streamlit as st
 import math
 import json
+import matplotlib.pyplot as plt
+import io
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
@@ -31,18 +33,6 @@ st.markdown("""
         border-radius: 8px;
         margin: 10px 0;
         color: #333333;
-    }
-    .esquema-grafico {
-        background-color: #fcfcfc;
-        border: 2px solid #222222;
-        padding: 25px;
-        border-radius: 8px;
-        font-family: 'Courier New', Courier, monospace;
-        color: #000000;
-        font-size: 14px;
-        line-height: 1.5;
-        white-space: pre;
-        overflow-x: auto;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -474,7 +464,7 @@ with pestanas[4]:
     </div>
 
     <div class="formula-box">
-        <b>4. Corriente de Cortocircuito (Icc final):<</b><br>
+        <b>4. Corriente de Cortocircuito (Icc final):</b><br>
         Fórmula: Icc = V / Z_total<br>
         Cálculo: <b>{icc_fin_q:.2f} kA</b>
     </div>
@@ -488,110 +478,75 @@ with pestanas[4]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 6: ESQUEMAS UNIFILARES EN FORMATO GRÁFICO (ESTILO PLANO TÉCNICO)
+# PESTAÑA 6: ESQUEMA UNIFILAR TÉCNICO EN IMAGEN (VECTORIAL MATPLOTLIB)
 # =========================================================================
 with pestanas[5]:
-    st.title("📐 Esquema Unifilar Gráfico (Estilo Plano Técnico REBT)")
-    st.write("Representación unifilar esquemática estructurada con símbolos de magnetotérmicos, protecciones y trazado de hilos por circuito:")
+    st.title("📐 Esquema Unifilar Gráfico (Plano Vectorial REBT)")
+    st.write("Generación automática del plano unifilar en formato de imagen gráfica con símbolos de protecciones y circuitos normalizados en España:")
 
-    tipo_electrificacion_grafica = st.radio("Grado de Electrificación para el Esquema Gráfico:", [
-        "Grado Básico (ITC-BT-25 - 5 Circuitos)",
-        "Grado Básico con C4 Desdoblado",
-        "Grado Elevado (12 Circuitos)"
-    ], key="tipo_elec_graf")
+    # Generar gráfico vectorial con Matplotlib
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.axis('off')
 
-    if "Básico" in tipo_electrificacion_grafica and "Desdoblado" not in tipo_electrificacion_grafica:
-        esquema_dibujo = """
-==========================================================================================
-PROYECTO: """ + st.session_state.nombre_proyecto + """
-GRADO DE ELECTRIFICACIÓN: BÁSICO (ITC-BT-25) - BOLIMUR INSTALACIONES INTEGRALES
-==========================================================================================
+    # Título del plano
+    ax.text(50, 95, f"BOLIMUR INSTALACIONES INTEGRALES - ESQUEMA UNIFILAR (ITC-BT-25)", fontsize=12, fontweight='bold', ha='center', color='#111111')
+    ax.text(50, 90, f"Proyecto: {st.session_state.nombre_proyecto}", fontsize=10, ha='center', color='#555555')
 
-   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
-    10 mm²                 25 A                     Transitorias +           40 A
-   (F+N+TT)              (2 Polos)                  Permanentes (Bobina)     30 mA
-     │                      │                             │                    │
-     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
-                                                                                 │
-         ┌───────────────────────────────────────────────────────────────────────┘
-         │
-         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
-         │
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
-         │
-         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
-         │
-         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4: Lavadora, lavavajillas y termo
-         │
-         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
-=========================================================================================="""
-    elif "Desdoblado" in tipo_electrificacion_grafica:
-        esquema_dibujo = """
-==========================================================================================
-PROYECTO: """ + st.session_state.nombre_proyecto + """
-GRADO DE ELECTRIFICACIÓN: BÁSICO CON C4 DESDOBLADO - BOLIMUR INSTALACIONES INTEGRALES
-==========================================================================================
+    # Línea principal de alimentación horizontal
+    ax.plot([5, 95], [75, 75], color='black', lw=2)
 
-   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
-    10 mm²                 25 A                     Transitorias +           40 A
-   (F+N+TT)              (2 Polos)                  Permanentes              30 mA
-     │                      │                             │                    │
-     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
-                                                                                 │
-         ┌───────────────────────────────────────────────────────────────────────┘
-         │
-         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación
-         │
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: TC usos varios
-         │
-         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y Horno
-         │
-         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4-A: Lavadora y Termo
-         │
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C4-B: Lavavajillas independiente
-         │
-         └─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: TC Baños y aux. de cocina
-=========================================================================================="""
-    else:
-        esquema_dibujo = """
-==========================================================================================
-PROYECTO: """ + st.session_state.nombre_proyecto + """
-GRADO DE ELECTRIFICACIÓN: ELEVADO (12 CIRCUITOS) - BOLIMUR INSTALACIONES INTEGRALES
-==========================================================================================
+    # Cajas de elementos principales (ICP, IGA, Sobretensiones, ID)
+    elementos = [
+        ("ICP", 15),
+        ("IGA (25A)", 32),
+        ("Sobretensiones\n(Trans.+Perm.)", 52),
+        ("ID (40A / 30mA)", 72)
+    ]
 
-   [ DI ] ──────────────── [ IGA ] ─────────────── [ SOBRETENSIONES ] ────────────── [ ID ]
-    16 mm²                 40 A                     Transitorias +           63 A
-   (F+N+TT)              (2 Polos)                  Permanentes              30 mA
-     │                      │                             │                    │
-     └──────────────────────┴─────────────────────────────┴────────────────────┴──┬──────────────────
-                                                                                 │
-         ┌───────────────────────────────────────────────────────────────────────┘
-         │
-         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C1: Iluminación principal
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C2: Tomas de corriente generales
-         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C3: Cocina y horno
-         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C4-A: Lavadora y termo
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C4-B: Lavavajillas
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C5: Baños y cocina (húmedas)
-         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C6: Iluminación adicional
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C7: Tomas de corriente adicionales
-         ├─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C8: Calefacción / Climatización
-         ├─(20 A)──[/]─── 2x4,0+4,0 Tubo 20 ── // ─── C9: Aire acondicionado
-         ├─(16 A)──[/]─── 2x2,5+2,5 Tubo 20 ── // ─── C10: Secadora independiente
-         ├─(10 A)──[/]─── 2x1,5+1,5 Tubo 16 ── // ─── C11: Automatización / Domótica / Alarma
-         └─(25 A)──[/]─── 2x6,0+6,0 Tubo 25 ── // ─── C12: Circuitos especiales (Hidromasaje)
-=========================================================================================="""
+    for nombre, x_pos in elementos:
+        ax.plot([x_pos, x_pos], [75, 82], color='black', lw=1.5)
+        rect = plt.Rectangle((x_pos - 4, 82), 8, 8, facecolor='#ffffff', edgecolor='black', lw=1.5)
+        ax.add_patch(rect)
+        ax.text(x_pos, 86, nombre, fontsize=8, ha='center', va='center', fontweight='bold')
 
-    # Mostrar esquema en caja gráfica tipo plano
-    st.markdown(f'<div class="esquema-grafico">{esquema_dibujo}</div>', unsafe_allow_html=True)
+    # Derivación a circuitos verticales (desde x=85)
+    ax.plot([85, 85], [75, 20], color='black', lw=2)
+
+    # Circuitos de vivienda (C1 a C5)
+    circuitos = [
+        ("C1: Iluminación", "10 A", "2x1,5 + 1,5", "Tubo 16", 65),
+        ("C2: TC Usos Varios", "16 A", "2x2,5 + 2,5", "Tubo 20", 52),
+        ("C3: Cocina - Horno", "25 A", "2x6,0 + 6,0", "Tubo 25", 39),
+        ("C4: Lavadora, Termo", "20 A", "2x4,0 + 4,0", "Tubo 20", 26),
+        ("C5: TC Baños / Cocina", "16 A", "2x2,5 + 2,5", "Tubo 20", 13)
+    ]
+
+    for nombre, pia, cable, tubo, y_pos in circuitos:
+        # Conexión horizontal hacia el circuito
+        ax.plot([85, 92], [y_pos, y_pos], color='black', lw=1.5)
+        # Símbolo de magnetotérmico (corte diagonal con flecha)
+        ax.text(88, y_pos + 1.5, pia, fontsize=9, fontweight='bold', ha='center')
+        
+        # Etiqueta de características del circuito a la derecha
+        info_txt = f"{cable} | {tubo} ── // ── {nombre}"
+        ax.text(94, y_pos - 1, info_txt, fontsize=9, va='center', family='monospace')
+
+    # Guardar figura en buffer para mostrarla en Streamlit
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches='tight', dpi=200)
+    buf.seek(0)
+    
+    st.image(buf, use_container_width=True)
     
     st.markdown("---")
     
     st.download_button(
-        label="📥 Descargar Plano Unifilar Gráfico (.txt)",
-        data=esquema_dibujo,
-        file_name=f"Plano_Esquema_Grafico_{st.session_state.nombre_proyecto.replace(' ', '_')}.txt",
-        mime="text/plain"
+        label="📥 Descargar Plano Vectorial (.png)",
+        data=buf,
+        file_name=f"Plano_Unifilar_{st.session_state.nombre_proyecto.replace(' ', '_')}.png",
+        mime="image/png"
     )
 
 # =========================================================================
@@ -663,7 +618,7 @@ Documento técnico redactado y verificado para BOLIMUR INSTALACIONES INTEGRALES.
     - **Método de Instalación:** {METODOS_INSTALACION[metodo_di_key]['ref']}
     - **Potencia / Longitud de cálculo:** `{di_pot} W` / `{di_long} m`
     - **Conductor seleccionado:** **`{s_optima_di} mm²` de {di_mat.upper()}** ({di_aisl})
-    - **Caída de Tension real estimada:** `{dv_real_di_pct:.3f}%` (Límite admisible: `{dv_pct_di}%`)
+    - **Caída de Tensión real estimada:** `{dv_real_di_pct:.3f}%` (Límite admisible: `{dv_pct_di}%`)
     - **Verificación Tramo Más Desfavorable (LGA + DI):** `{cdt_acumulada_pct:.3f}%` (Límite global: `1.5%`) -> **CUMPLE**
     - **Protección PIA asociado:** `{prot_di} A` + Diferencial `30 mA`
 
