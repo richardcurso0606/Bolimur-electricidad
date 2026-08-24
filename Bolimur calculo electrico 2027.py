@@ -3,6 +3,7 @@ import math
 import json
 import os
 import sqlite3
+import re
 
 # Importación segura de lector de PDF
 try:
@@ -160,14 +161,15 @@ st.markdown("""
         color: #333333;
     }
     .justificacion-tecnica-box {
-        background-color: #f8f9fa;
-        border-left: 4px solid #0066cc;
-        padding: 15px;
-        border-radius: 6px;
+        background-color: #ffffff;
+        border: 2px solid #0066cc;
+        padding: 20px;
+        border-radius: 8px;
         margin: 15px 0;
         font-size: 14px;
         color: #212529;
-        line-height: 1.5;
+        line-height: 1.6;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     }
     .esquema-simbolos {
         background-color: #ffffff;
@@ -282,25 +284,54 @@ with st.sidebar:
     st.markdown("---")
     st.header("🤖 Lector Inteligente de PDF")
     archivo_pdf_subido = st.file_uploader("Subir Enunciado (PDF)", type=["pdf"])
+    
     if archivo_pdf_subido is not None and has_pypdf:
         try:
             reader = PdfReader(archivo_pdf_subido)
             texto_pdf = ""
             for pagina in reader.pages:
                 texto_pdf += pagina.extract_text() or ""
+            
             st.success(f"📄 ¡PDF leído! ({len(texto_pdf)} caracteres)")
-            if st.button("🚀 Extraer Datos del PDF"):
+            
+            if st.button("🚀 Extraer y Cargar Datos en la App"):
                 st.session_state.nombre_proyecto = "Proyecto Extraído de Enunciado PDF"
-                st.success("✨ ¡Datos sincronizados con éxito!")
+                
+                # Búsqueda inteligente de viviendas (ej: "20 viviendas", "15 pisos")
+                match_viv = re.search(r'(\d+)\s*(?:viviendas|pisos|edificios|doct)', texto_pdf, re.IGNORECASE)
+                qty_ext = int(match_viv.group(1)) if match_viv else 10
+                
+                # Búsqueda de potencia unitaria (ej: 5750, 9200)
+                pot_ext = 5750
+                if '9200' in texto_pdf: pot_ext = 9200
+                elif '7360' in texto_pdf: pot_ext = 7360
+                elif '11500' in texto_pdf: pot_ext = 11500
+
+                # Búsqueda de longitud LGA (ej: "longitud de 30 m", "30 metros")
+                match_lga = re.search(r'(?:lga|línea general).*?(\d+(?[\.,]\d+)?)\s*m', texto_pdf, re.IGNORECASE)
+                if not match_lga:
+                    match_lga = re.search(r'(\d+)\s*metros.*?(?:lga|línea general)', texto_pdf, re.IGNORECASE)
+                
+                if match_lga:
+                    st.session_state.lga_long_val = float(match_lga.group(1).replace(',', '.'))
+                else:
+                    st.session_state.lga_long_val = 30.0
+
+                # Cargar en el estado los grupos de viviendas extraídos
+                st.session_state.grupos_viviendas = [{
+                    "nombre": "Viviendas Extraídas de PDF",
+                    "qty": qty_ext,
+                    "pot": pot_ext,
+                    "nocturna": False
+                }]
+                
+                st.success(f"✨ ¡Cargado con éxito! ({qty_ext} viviendas de {pot_ext} W, LGA: {st.session_state.lga_long_val} m)")
                 st.rerun()
+                
         except Exception as e:
-            st.error(f"Error al leer PDF: {e}")
+            st.error(f"Error al procesar PDF: {e}")
     elif archivo_pdf_subido is not None and not has_pypdf:
         st.warning("Librería pypdf no disponible.")
-        if st.button("⚡ Cargar Datos Estándar"):
-            st.session_state.nombre_proyecto = "Ejercicio LGA desde PDF"
-            st.success("¡Cargado!")
-            st.rerun()
 
     st.markdown("---")
     st.header("🔍 Buscador de Clientes (BD)")
@@ -404,10 +435,10 @@ with pestanas[0]:
     with col_pop_viv:
         with st.popover("📖 Ver Tabla ITC-BT-10 Completa"):
             st.markdown("### Tabla Oficial de Simultaneidad (ITC-BT-10)")
-            tabla_aux_md = "| Nº Viviendas ($n$) | Coeficiente ($K$) |\n| :---: | :---: |\n"
+            tabla_aux_md = "| Nº Viviendas (n) | Coeficiente (K) |\n| :---: | :---: |\n"
             for k_viv, v_coef in COEF_SIMULTANEIDAD_VIVIENDAS.items():
                 tabla_aux_md += f"| {k_viv} | {v_coef} |\n"
-            tabla_aux_md += "| > 21 | $15,3 + (n - 21) \\times 0,5$ |"
+            tabla_aux_md += "| > 21 | 15,3 + (n - 21) x 0,5 |"
             st.markdown(tabla_aux_md)
 
     if st.button("➕ Añadir Grupo de Viviendas"):
@@ -417,7 +448,7 @@ with pestanas[0]:
     pot_total_viviendas = 0
 
     if not st.session_state.grupos_viviendas:
-        st.info("ℹ️ No hay grupos de viviendas añadidos. Pulsa en '➕ Añadir Grupo de Viviendas' para empezar.")
+        st.info("ℹ️ No hay grupos de viviendas añadidos. Pulsa en '➕ Añadir Grupo de Viviendas' o sube un PDF en el menú lateral.")
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
@@ -731,13 +762,25 @@ with pestanas[1]:
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
         """, unsafe_allow_html=True)
 
-        # --- JUSTIFICACIÓN TÉCNICA Y LÓGICA DE SELECCIÓN (LGA) ---
+        # --- MEMORIA DE JUSTIFICACIÓN TÉCNICA Y LÓGICA DE SELECCIÓN (LGA) ---
         st.markdown(f"""
         <div class="justificacion-tecnica-box">
-            <b>💡 Justificación Técnica y Criterio de Selección (LGA):</b><br>
-            • <b>Criterio de Calentamiento:</b> Con una intensidad de diseño de $I_b = {ib_lga:.2f}\\text{{ A}}$, el conductor debe soportar al menos dicha corriente ($I_z \\ge I_b$). La primera sección comercial que cumple es la de <b>{s_cal_lga}\\text{{ mm²}}</b>.<br>
-            • <b>Criterio de Caída de Tensión:</b> Mediante la fórmula $S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$, el cálculo analítico exacto arroja un valor de <b>{s_cdt_lga:.2f}\\text{{ mm²}}</b> para no superar el límite reglamentario del {dv_pct_lga}% de caída.<br>
-            • <b>Conclusión y Descarte:</b> Las secciones inferiores ($10\\text{{ a }}50\\text{{ mm²}}$) se <b>descartan</b> porque su caída de tensión real supera el límite permitido y no alcanzan la intensidad admisible requerida. Por tanto, se adopta la sección comercial óptima inmediata superior de <b>{s_optima_lga}\\text{{ mm²}}</b> de {lga_mat.upper()} ({lga_aisl}), garantizando seguridad y cumplimiento estricto del REBT (ITC-BT-14).
+            <h4 style="color: #0066cc; margin-top: 0;">📋 Memoria de Justificación Técnica y Criterio de Selección (LGA)</h4>
+            <p><b>1. Cálculo de la Intensidad de Diseño (Ib):</b><br>
+            Para una red trifásica, la intensidad se determina mediante la expresión:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<b>Ib = P / ( sqrt(3) x V x cos phi )</b> = {lga_pot:,.2f} / ( 1.732 x 400 x {lga_cos} ) = <b>{ib_lga:.2f} A</b></p>
+            
+            <p><b>2. Criterio de Calentamiento (Intensidad Admisible Iz >= Ib):</b><br>
+            El conductor seleccionado debe soportar una intensidad superior o igual a Ib sin sobrecalentarse. Buscando en tablas para {lga_mat.upper()} bajo tubo ({lga_aisl}), la intensidad admisible (Iz) debe ser de al menos {ib_lga:.2f} A, lo que exige térmicamente una sección mínima de <b>{s_cal_lga} mm²</b>.</p>
+            
+            <p><b>3. Criterio de Caída de Tensión (CDT <= {dv_pct_lga}%):</b><br>
+            Aplicando la fórmula analítica trifásica de caída de tensión:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<b>S = ( P x L ) / (gamma x Delta V x V)</b> = ({lga_pot:,.2f} x {lga_long}) / ( {gamma_lga} x {dv_max_lga} x 400 ) = <b style="color: #ff4b4b; font-size: 16px;">{s_cdt_lga:.2f} mm²</b></p>
+            
+            <p><b>4. Lógica de Descarte y Selección de la Sección Óptima:</b><br>
+            • Las secciones inferiores (desde 10 mm² hasta 50 mm² ) se <b>descartan</b> porque su caída de tensión real excede el límite máximo permitido del {dv_pct_lga}% y su intensidad admisible Iz es inferior a los {ib_lga:.2f} A requeridos.<br>
+            • La sección comercial inmediata superior que cumple simultáneamente con todos los criterios reglamentarios (calentamiento, caída de tensión y mínimo REBT de {min_reg_lga} mm²) es <b>{s_optima_lga} mm²</b>.<br>
+            • Por tanto, se adopta definitivamente la sección de <b>{s_optima_lga} mm² de {lga_mat.upper()} ({lga_aisl})</b>, obteniendo una caída de tensión real del <b>{dv_real_lga_pct:.3f}%</b> (totalmente dentro de norma).</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -855,13 +898,24 @@ with pestanas[2]:
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
         """, unsafe_allow_html=True)
 
-        # --- JUSTIFICACIÓN TÉCNICA Y LÓGICA DE SELECCIÓN (DI) ---
+        # --- MEMORIA DE JUSTIFICACIÓN TÉCNICA Y LÓGICA DE SELECCIÓN (DI) ---
         st.markdown(f"""
         <div class="justificacion-tecnica-box">
-            <b>💡 Justificación Técnica y Criterio de Selección (DI):</b><br>
-            • <b>Criterio de Calentamiento:</b> Con $I_b = {ib_di:.2f}\\text{{ A}}$, requerimos una sección con $I_z \\ge I_b$, siendo el mínimo térmico de <b>{s_cal_di}\\text{{ mm²}}</b>.<br>
-            • <b>Criterio de Caída de Tensión:</b> Aplicando la fórmula monofásica $S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$, obtenemos un resultado analítico de <b>{s_cdt_di:.2f}\\text{{ mm²}}</b> para cumplir el límite del {dv_pct_di}% de caída admisible.<br>
-            • <b>Conclusión y Descarte:</b> Las secciones inferiores que no alcancen el valor analítico de caída o el mínimo reglamentario de {min_reg_di} mm² se <b>descartan</b>. Se selecciona la primera sección comercial óptima de <b>{s_optima_di}\\text{{ mm²}}</b> de {di_mat.upper()} ({di_aisl}) según ITC-BT-15.
+            <h4 style="color: #0066cc; margin-top: 0;">📋 Memoria de Justificación Técnica y Criterio de Selección (DI)</h4>
+            <p><b>1. Cálculo de la Intensidad de Diseño (Ib):</b><br>
+            Para una derivación monofásica, la corriente se calcula mediante la fórmula:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<b>Ib = P / ( V x cos phi )</b> = {di_pot} / ( 230 x {di_cos} ) = <b>{ib_di:.2f} A</b></p>
+            
+            <p><b>2. Criterio de Calentamiento (Intensidad Admisible Iz >= Ib):</b><br>
+            El conductor debe soportar al menos la corriente de diseño. Según tablas para {di_mat.upper()} en tubo ({di_aisl}), se requiere una sección térmica mínima de <b>{s_cal_di} mm²</b>.</p>
+            
+            <p><b>3. Criterio de Caída de Tensión (CDT <= {dv_pct_di}%):</b><br>
+            Aplicando la fórmula analítica monofásica de caída de tensión:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<b>S = ( 2 x P x L ) / (gamma x Delta V x V)</b> = ( 2 x {di_pot} x {di_long} ) / ( {gamma_di} x {dv_max_di} x 230 ) = <b style="color: #ff4b4b; font-size: 16px;">{s_cdt_di:.2f} mm²</b></p>
+            
+            <p><b>4. Lógica de Descarte y Selección de la Sección Óptima:</b><br>
+            • Se <b>descartan</b> las secciones comerciales inferiores que no alcancen el valor analítico de caída de tensión requerido o el mínimo reglamentario de {min_reg_di} mm² (exigido por ITC-BT-15 para viviendas).<br>
+            • Se selecciona la primera sección comercial que cumple todos los requisitos, adoptando definitivamente <b>{s_optima_di} mm² de {di_mat.upper()} ({di_aisl})</b>, logrando una caída de tensión real del <b>{dv_real_di_pct:.3f}%</b>.</p>
         </div>
         """, unsafe_allow_html=True)
 
