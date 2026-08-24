@@ -237,6 +237,11 @@ if 'cliente_actual' not in st.session_state:
         "nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", "direccion": "Rincón de Seca", "municipio": "Murcia", "provincia": "Murcia", "cp": "30009", "telefono": "682195295", "email": "richard@bolimur.com"
     }
 
+# Variables de control para reseteos en LGA y DI
+if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 25.0
+if 'di_long_val' not in st.session_state: st.session_state.di_long_val = 15.0
+if 'di_pot_val' not in st.session_state: st.session_state.di_pot_val = 5750
+
 # --- MENÚ LATERAL ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
@@ -380,6 +385,8 @@ with pestanas[0]:
             st.session_state.grupos_viviendas = []
             st.session_state.locales = []
             st.session_state.servicios_generales = []
+            st.session_state.lga_long_val = 0.0
+            st.session_state.di_long_val = 0.0
             st.rerun()
 
     # 1. VIVIENDAS
@@ -636,7 +643,7 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA
+# PESTAÑA 2: LGA (CON BOTÓN DE RESETEAR A CERO Y ENLACE AUTOMÁTICO A PT)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -652,7 +659,8 @@ with pestanas[1]:
             * **Método D:** Enterrado bajo tubo.
             """)
     with col_btn_lga:
-        if st.button("🔄 Vaciar / Resetear LGA"):
+        if st.button("🔄 Resetear LGA a 0"):
+            st.session_state.lga_long_val = 0.0
             st.rerun()
 
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
@@ -668,8 +676,10 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = st.number_input("Potencia de cálculo LGA (W) [Editable]", value=float(pt_total), key="lga_p_edit")
-        lga_long = st.number_input("Longitud de la LGA (m)", value=25.0, key="lga_l")
+        # Sincronizado automáticamente con pt_total calculado en la Pestaña 1
+        lga_pot = st.number_input("Potencia de cálculo LGA (W) [Automática desde Pt]", value=float(pt_total), key="lga_p_edit")
+        lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
+        st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
     with lga_c2:
         lga_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="lga_ais")
@@ -677,9 +687,9 @@ with pestanas[1]:
         lga_icc_orig = st.number_input("Icc en el origen (kA)", value=15.0, key="lga_icc")
 
     gamma_lga = GAMMA_MAP.get((lga_mat, lga_aisl), 44.0)
-    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos)
+    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos) if lga_cos > 0 else 0.0
     dv_max_lga = 400 * (dv_pct_lga / 100.0)
-    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400)
+    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if dv_max_lga > 0 and gamma_lga > 0 else 0.0
     
     s_cal_lga = 1.5
     for sec, iz_val in IZ_COBRE_TUBO.items():
@@ -691,22 +701,22 @@ with pestanas[1]:
     s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga)
     s_optima_lga = seleccionar_seccion_optima(s_bruta_lga)
 
-    r_lga = (0.018 * lga_long) / s_optima_lga
-    z_lga_tot = (400 / (lga_icc_orig * 1000)) + (2 * r_lga)
+    r_lga = (0.018 * lga_long) / s_optima_lga if s_optima_lga > 0 else 0.0
+    z_lga_tot = (400 / (lga_icc_orig * 1000)) + (2 * r_lga) if lga_icc_orig > 0 else 1.0
     icc_fin_lga = 400 / z_lga_tot / 1000 if z_lga_tot > 0 else 0
     prot_lga = seleccionar_proteccion(ib_lga)
 
-    dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400)
+    dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400) if gamma_lga > 0 and s_optima_lga > 0 else 0.0
     dv_real_lga_pct = (dv_real_lga_v / 400) * 100
 
     st.markdown("---")
     st.subheader("📐 Desglose detallado de Fórmulas y Resultados - LGA")
     st.markdown(f"""
-    1. **Intensidad de Diseño (Ib):** Ib = Potencia / (Raíz de 3 * V * cos phi) = {lga_pot:.1f} / (1.732 * 400 * {lga_cos}) = **{ib_lga:.2f} A**
-    2. **Sección por Caída de Tensión (Delta V <= {dv_pct_lga}%):** S = (P * L) / (gamma * Delta V * V) = **{s_cdt_lga:.2f} mm²** (Real: **{dv_real_lga_pct:.3f}%**)
-    3. **Sección por Calentamiento (Iz >= Ib):** Mínimo requerido = **{s_cal_lga} mm²**
-    4. **Sección Mínima Reglamentaria (ITC-BT-14):** **{min_reg_lga} mm²** ({lga_mat.upper()})
-    5. **Corriente de Cortocircuito (Icc final):** **{icc_fin_lga:.2f} kA**
+    1. **Intensidad de Diseño (Ib):** Ib = <b>{ib_lga:.2f} A</b><br>
+    2. **Sección por Caída de Tensión:** S = <b>{s_cdt_lga:.2f} mm²</b> (Real: <b>{dv_real_lga_pct:.3f}%</b>)<br>
+    3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_lga} mm²</b><br>
+    4. **Sección Mínima Reglamentaria:** <b>{min_reg_lga} mm²</b> ({lga_mat.upper()})<br>
+    5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
     """)
 
     st.markdown("---")
@@ -716,7 +726,7 @@ with pestanas[1]:
         iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
         cumple_cal = "✅ Sí" if iz_sec >= ib_lga else "❌ No"
         
-        dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400)
+        dv_sec_v = (lga_pot * lga_long) / (gamma_lga * sec * 400) if gamma_lga > 0 and sec > 0 else 0.0
         dv_sec_pct = (dv_sec_v / 400) * 100
         cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_lga else f"❌ No ({dv_sec_pct:.3f}%)"
         
@@ -747,7 +757,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON BOTÓN DE RESETEAR A CERO)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -762,7 +772,8 @@ with pestanas[2]:
             * **Sección Mínima Reglamentaria:** Mínimo **6 mm²** de cobre para viviendas.
             """)
     with col_btn_di:
-        if st.button("🔄 Vaciar / Resetear DI"):
+        if st.button("🔄 Resetear DI a 0"):
+            st.session_state.di_long_val = 0.0
             st.rerun()
 
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
@@ -779,16 +790,17 @@ with pestanas[2]:
     di_c1, di_c2 = st.columns(2)
     with di_c1:
         di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
-        di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
+        di_long = st.number_input("Longitud de la DI (m)", value=float(st.session_state.di_long_val), key="di_l")
+        st.session_state.di_long_val = di_long
         di_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="di_mat")
     with di_c2:
         di_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="di_ais")
         di_cos = st.slider("Coseno phi (cos phi)", 0.8, 1.0, 1.0, key="di_cos")
 
     gamma_di = GAMMA_MAP.get((di_mat, di_aisl), 44.0)
-    ib_di = di_pot / (230 * di_cos)
+    ib_di = di_pot / (230 * di_cos) if di_cos > 0 else 0.0
     dv_max_di = 230 * (dv_pct_di / 100.0)
-    s_cdt_di = (2 * di_pot * di_long) / (gamma_di * dv_max_di * 230)
+    s_cdt_di = (2 * di_pot * di_long) / (gamma_di * dv_max_di * 230) if dv_max_di > 0 and gamma_di > 0 else 0.0
     
     s_cal_di = 1.5
     for sec, iz_val in IZ_COBRE_TUBO.items():
@@ -800,12 +812,12 @@ with pestanas[2]:
     s_bruta_di = max(s_cdt_di, s_cal_di, min_reg_di)
     s_optima_di = seleccionar_seccion_optima(s_bruta_di)
 
-    r_di = (0.018 * di_long) / s_optima_di
+    r_di = (0.018 * di_long) / s_optima_di if s_optima_di > 0 else 0.0
     z_di_tot = (230 / (10000)) + (2 * r_di)
     icc_fin_di = 230 / z_di_tot / 1000 if z_di_tot > 0 else 0
     prot_di = seleccionar_proteccion(ib_di)
 
-    dv_real_di_v = (2 * di_pot * di_long) / (gamma_di * s_optima_di * 230)
+    dv_real_di_v = (2 * di_pot * di_long) / (gamma_di * s_optima_di * 230) if gamma_di > 0 and s_optima_di > 0 else 0.0
     dv_real_di_pct = (dv_real_di_v / 230) * 100
 
     st.markdown("---")
@@ -825,7 +837,7 @@ with pestanas[2]:
         iz_sec = IZ_COBRE_TUBO.get(sec, 300.0)
         cumple_cal = "✅ Sí" if iz_sec >= ib_di else "❌ No"
         
-        dv_sec_v = (2 * di_pot * di_long) / (gamma_di * sec * 230)
+        dv_sec_v = (2 * di_pot * di_long) / (gamma_di * sec * 230) if gamma_di > 0 and sec > 0 else 0.0
         dv_sec_pct = (dv_sec_v / 230) * 100
         cumple_cdt = f"✅ Sí ({dv_sec_pct:.3f}%)" if dv_sec_pct <= dv_pct_di else f"❌ No ({dv_sec_pct:.3f}%)"
         
