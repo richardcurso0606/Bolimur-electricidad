@@ -115,9 +115,8 @@ if 'locales' not in st.session_state:
 
 # --- MENÚ LATERAL (SIDEBAR CON LOGOTIPO OFICIAL) ---
 with st.sidebar:
-    # Intenta cargar el logo si existe en la ruta; si no, muestra el cuadro alternativo corporativo
-    if os.path.exists("logo_bolimur.png"):
-        st.image("logo_bolimur.png", use_container_width=True)
+    if os.path.exists("logo_bolimur.PNG"):
+        st.image("logo_bolimur.PNG", use_container_width=True)
     else:
         st.markdown("""
             <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4b4b; margin-bottom: 15px; text-align: center;">
