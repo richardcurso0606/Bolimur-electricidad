@@ -135,14 +135,14 @@ with st.sidebar:
         "locales": st.session_state.locales
     }
     json_str = json.dumps(datos_proyecto, indent=4)
-    st.download_button(
+    st.sidebar.download_button(
         label="💾 Guardar Proyecto (JSON)",
         data=json_str,
         file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
         mime="application/json"
     )
 
-    archivo_subido = st.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
+    archivo_subido = st.sidebar.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
     if archivo_subido is not None:
         try:
             proyecto_cargado = json.load(archivo_subido)
@@ -150,12 +150,12 @@ with st.sidebar:
             st.session_state.grupos_viviendas = proyecto_cargado.get("grupos_viviendas", [])
             st.session_state.servicios_generales = proyecto_cargado.get("servicios_generales", [])
             st.session_state.locales = proyecto_cargado.get("locales", [])
-            st.success("✅ ¡Proyecto cargado con éxito!")
+            st.sidebar.success("✅ ¡Proyecto cargado con éxito!")
             st.rerun()
         except Exception as e:
-            st.error(f"Error al leer el archivo: {e}")
+            st.sidebar.error(f"Error al leer el archivo: {e}")
 
-    st.markdown("---")
+    st.sidebar.markdown("---")
 
 # --- PESTAÑAS PRINCIPALES ---
 pestanas = st.tabs([
@@ -170,14 +170,14 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (CON RESUMEN DE PARCIALES AL FINAL)
+# PESTAÑA 1: PREVISIÓN DE CARGAS
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
     with col_t1:
-        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE.")
+        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE con su justificación analítica y reglamentaria.")
     with col_b1:
         if st.button("🔄 Resetear Cargas"):
             st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
@@ -185,6 +185,7 @@ with pestanas[0]:
             st.session_state.servicios_generales = [{"nombre": "Servicio", "potencia": 1000, "tipo": "direct", "qty": 1}]
             st.rerun()
 
+    # 1. VIVIENDAS
     st.subheader("1. Viviendas del Edificio (P1)")
     if st.button("➕ Añadir Grupo de Viviendas"):
         st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 4, "pot": 9200, "nocturna": False})
@@ -203,30 +204,78 @@ with pestanas[0]:
                 if len(st.session_state.grupos_viviendas) > 1: st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
         total_viviendas_edificio += viv["qty"]
-        cs_grupo = float(viv["qty"]) if viv["nocturna"] else get_coef_simultaneidad(viv["qty"])
-        pot_total_viviendas += int(round(viv["pot"] * cs_grupo))
+        qty_g = viv["qty"]
+        pot_unit = viv["pot"]
+        noct = viv["nocturna"]
+
+        if noct:
+            cs_grupo = float(qty_g)
+            just_str = f"Tarifa Nocturna activada: Coeficiente de simultaneidad K = 1.0 (se aplica la suma total de potencia sin reducir)."
+        else:
+            cs_grupo = get_coef_simultaneidad(qty_g)
+            just_str = f"Aplicación ITC-BT-10 (Tabla 1) para {qty_g} viviendas: Coeficiente de simultaneidad K = {cs_grupo:.2f}."
+
+        pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
+        pot_total_viviendas += pot_parcial_g
+
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #0066cc; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Justificación Grupo #{idx+1} ({viv['nombre']}):</b> {just_str}<br>
+            Cálculo parcial: {qty_g} viviendas $\times$ {pot_unit} W $\times$ {cs_grupo} = <b>{pot_parcial_g:,} W</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.info(f"💡 Viviendas totales: **{total_viviendas_edificio}** | **Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W**")
     st.markdown("---")
     
+    # 2. LOCALES COMERCIALES
     st.subheader("2. Locales Comerciales y Oficinas (P2)")
     if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 40, "qty": 1})
     pot_total_locales = 0
+
     for idx, loc in enumerate(st.session_state.locales):
         c1, c2, c3, c4 = st.columns([3, 3, 2, 1])
         with c1: loc["nombre"] = st.text_input(f"Local #{idx+1}", loc["nombre"], key=f"loc_nom_{idx}")
         with c2: loc["superficie"] = st.number_input(f"Superficie m² #{idx+1}", min_value=0.0, value=float(loc["superficie"]), key=f"loc_sup_{idx}")
-        with c3: loc["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(loc["qty"]), key=f"loc_qty_{idx}")
+        with c3: loc["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(loc["qty"], key=f"loc_qty_{idx}" if f"loc_qty_{idx}" in locals() else f"loc_qty_{idx}"))
         with c4:
             if st.button("🗑️", key=f"del_loc_{idx}"): st.session_state.locales.pop(idx); st.rerun()
-        pot_total_locales += max(loc["superficie"] * 100, 3450) * loc["qty"]
+
+        sup_val = loc["superficie"]
+        cant_loc = loc["qty"]
+        pot_por_superficie = sup_val * 100.0
+
+        if pot_por_superficie < 3450.0:
+            pot_unidad_local = 3450.0
+            estado_minimo = f"⚠️ <b>NO ALCANZA EL MÍNIMO REGLAMENTARIO:</b> La superficie introducida ({sup_val} m² $\times$ 100 W/m² = {pot_por_superficie:,.0f} W) es inferior al suelo normativo de la ITC-BT-10."
+            accion_minimo = f"👉 <b>Se aplica obligatoriamente el mínimo legal de 3.450 W</b> para este local."
+        else:
+            pot_unidad_local = pot_por_superficie
+            estado_minimo = f"✅ <b>CUMPLE EL MÍNIMO:</b> La superficie introducida ({sup_val} m² $\times$ 100 W/m² = {pot_por_superficie:,.0f} W) supera el umbral mínimo exigido."
+            accion_minimo = f"👉 Se toma el valor calculado por superficie ({pot_por_superficie:,.0f} W)."
+
+        pot_parcial_local = pot_unidad_local * cant_loc
+        pot_total_locales += pot_parcial_local
+
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Análisis Normativo Local #{idx+1} ({loc['nombre']}):</b><br>
+            • Criterio ITC-BT-10: Mínimo 100 W por cada metro cuadrado de superficie.<br>
+            • Suelo reglamentario obligatorio por local: <b>3.450 W</b>.<br>
+            • Estado actual: {estado_minimo}<br>
+            • {accion_minimo}<br>
+            • Total Parcial Local: {cant_loc} local(es) $\times$ {pot_unidad_local:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
+    # 3. SERVICIOS GENERALES
     st.subheader("3. Servicios Generales (P3)")
     if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio", "potencia": 1000, "tipo": "direct", "qty": 1})
     pot_total_servicios = 0
+
     for idx, serv in enumerate(st.session_state.servicios_generales):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1: serv["nombre"] = st.text_input(f"Servicio #{idx+1}", serv["nombre"], key=f"serv_nom_{idx}")
@@ -235,29 +284,52 @@ with pestanas[0]:
         with c4: serv["tipo"] = st.selectbox(f"Tipo #{idx+1}", ["direct", "discharge", "motor", "elevator"], index=0, key=f"serv_tipo_{idx}")
         with c5:
             if st.button("🗑️", key=f"del_serv_{idx}"): st.session_state.servicios_generales.pop(idx); st.rerun()
+
         factor = {"direct": 1.0, "discharge": 1.8, "motor": 1.25, "elevator": 1.3}[serv["tipo"]]
-        pot_total_servicios += int(serv["potencia"] * serv["qty"] * factor)
+        desc_factor = {
+            "direct": "Servicios generales directos (Factor K = 1.0)",
+            "discharge": "Alumbrado de seguridad / descargas (Factor K = 1.8)",
+            "motor": "Motores / bombas (Factor K = 1.25 por intensidad de arranque)",
+            "elevator": "Ascensores y aparatos elevadores (Factor K = 1.3)"
+        }[serv["tipo"]]
+
+        p_parcial_serv = int(serv["potencia"] * serv["qty"] * factor)
+        pot_total_servicios += p_parcial_serv
+
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Justificación Servicio #{idx+1} ({serv['nombre']}):</b> {desc_factor}.<br>
+            Cálculo: {serv['potencia']} W $\times$ {serv['qty']} ud(s) $\times$ {factor} = <b>{p_parcial_serv:,} W</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,} W**")
     st.markdown("---")
 
+    # 4. GARAJES E IRVE
     st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
     gc1, gc2, gc3 = st.columns(3)
     with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300)
     with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=25)
     with gc3: opcion_irve = st.selectbox("Sistema de Recarga IRVE (ITC-BT-52)", ["Sin SPL [Factor = 1.0]", "Con Sistema de Protección de Línea - SPL (Reducción 90% / Factor = 0.1)"])
 
-    pot_garaje_adjudicada = max(sup_garaje * 20, 3450 if sup_garaje > 0 else 0)
+    pot_garaje_por_sup = sup_garaje * 20.0
+    if pot_garaje_por_sup < 3450.0 and sup_garaje > 0:
+        pot_garaje_adjudicada = 3450.0
+        st.markdown(f"<span style='color: #d9534f; font-size: 13px;'>⚠️ El garaje por superficie ({sup_garaje} m² $\times$ 20 W/m² = {pot_garaje_por_sup:.0f} W) no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>.</span>", unsafe_allow_html=True)
+    else:
+        pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
+
     fsim_ve = 1.0 if "Sin" in opcion_irve else 0.1
     pot_total_irve = int(round(plazas_garaje * 0.1 * 3680 * fsim_ve))
+    pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
 
-    pot_total_garaje_irve = pot_garaje_adjudicada + pot_total_irve
-    st.info(f"💡 **Total Parcial P4 / P5 (Garaje e IRVE): {pot_total_garaje_irve:,} W** (Garaje: {pot_garaje_adjudicada:,}W | IRVE: {pot_total_irve:,}W)")
+    st.info(f"💡 **Total Parcial P4 / P5 (Garaje e IRVE): {pot_total_garaje_irve:,} W** (Garaje: {int(pot_garaje_adjudicada):,}W | IRVE: {pot_total_irve:,}W)")
     st.markdown("---")
 
-    pt_total = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + pot_garaje_adjudicada + pot_total_irve
+    pt_total = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + int(pot_garaje_adjudicada) + pot_total_irve
 
-    # --- RESUMEN FINAL CON TOTALES PARCIALES Y SUMA TOTAL ---
+    # --- RESUMEN FINAL DE PARCIALES Y SUMA TOTAL ---
     st.markdown(f"""
         <div class="resumen-parciales-box">
             <h3 style="color: #111; margin-top: 0;">📋 RESUMEN DE POTENCIAS PARCIALES Y TOTALES (ITC-BT-10)</h3>
@@ -265,7 +337,7 @@ with pestanas[0]:
                 <li><b>P1 (Viviendas - {total_viviendas_edificio} uds):</b> {pot_total_viviendas:,} W</li>
                 <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
                 <li><b>P3 (Servicios Generales):</b> {pot_total_servicios:,} W</li>
-                <li><b>P4 (Garaje):</b> {pot_garaje_adjudicada:,} W</li>
+                <li><b>P4 (Garaje):</b> {int(pot_garaje_adjudicada):,} W</li>
                 <li><b>P5 (IRVE / Vehículo Eléctrico):</b> {pot_total_irve:,} W</li>
             </ul>
             <hr style="border: 1px solid #ced4da;">
@@ -274,7 +346,7 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (POTENCIA EDITABLE + BOTÓN RESET + TABLA COMPARATIVA)
+# PESTAÑA 2: LGA
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -387,7 +459,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON BOTÓN RESET)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -621,7 +693,7 @@ with pestanas[4]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 6: ESQUEMA UNIFILAR GRÁFICO CON SÍMBOLOS TÉCNICOS
+# PESTAÑA 6: ESQUEMAS UNIFILARES
 # =========================================================================
 with pestanas[5]:
     st.title("📐 Esquema Unifilar con Símbolos Gráficos Reglamentarios")
@@ -752,7 +824,7 @@ Normativa: REBT (Real Decreto 842/2002)
 - Viviendas asociadas: {total_viviendas_edificio} unidades
 - Potencia Locales Comerciales (P2): {int(pot_total_locales):,} W
 - Potencia Servicios Generales (P3): {pot_total_servicios:,} W
-- Potencia Garaje (P4) e IRVE (ITC-BT-52): {pot_garaje_adjudicada + pot_total_irve:,} W
+- Potencia Garaje (P4) e IRVE (ITC-BT-52): {int(pot_garaje_adjudicada) + pot_total_irve:,} W
 
 2. LÍNEA GENERAL DE ALIMENTACIÓN - LGA (ITC-BT-14)
 - Método de Instalación: {METODOS_INSTALACION[metodo_lga_key]['ref']}
@@ -780,7 +852,7 @@ Documento técnico redactado y verificado para BOLIMUR INSTALACIONES INTEGRALES.
     - **Viviendas asociadas:** `{total_viviendas_edificio}` unidades
     - **Potencia en Locales Comerciales (P2):** `{int(pot_total_locales):,} W`
     - **Potencia en Servicios Generales (P3):** `{pot_total_servicios:,} W`
-    - **Potencia Garaje e IRVE (ITC-BT-52):** `{pot_garaje_adjudicada + pot_total_irve:,} W`
+    - **Potencia Garaje e IRVE (ITC-BT-52):** `{int(pot_garaje_adjudicada) + pot_total_irve:,} W`
 
     ---
     #### 2. DIMENSIONAMIENTO DE LA LÍNEA GENERAL DE ALIMENTACIÓN - LGA (ITC-BT-14)
