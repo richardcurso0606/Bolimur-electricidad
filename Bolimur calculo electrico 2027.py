@@ -641,7 +641,7 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (CON BLOQUEO SI LA POTENCIA O LONGITUD ESTÁN A 0)
+# PESTAÑA 2: LGA (SINCRONIZADA AUTOMÁTICAMENTE CON PT)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -657,8 +657,8 @@ with pestanas[1]:
             * **Método D:** Enterrado bajo tubo.
             """)
     with col_btn_lga:
-        if st.button("🔄 Resetear LGA a 0"):
-            st.session_state.lga_long_val = 0.0
+        if st.button("🔄 Resetear Longitud LGA"):
+            st.session_state.lga_long_val = 25.0
             st.rerun()
 
     with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
@@ -674,7 +674,9 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = st.number_input("Potencia de cálculo LGA (W) [Automática desde Previsión Pt]", value=float(pt_total), key="lga_p_edit")
+        lga_pot = float(pt_total)
+        st.metric("Potencia de cálculo LGA (W) [Automática desde Previsión]", f"{lga_pot:,.2f} W")
+        
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -683,7 +685,6 @@ with pestanas[1]:
         lga_cos = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.9, key="lga_cos")
         lga_icc_orig = st.number_input("Icc en el origen (kA)", value=15.0, key="lga_icc")
 
-    # VALIDACIÓN DE SEGURIDAD: SI NO HAY POTENCIA O LONGITUD, SE DETIENE EL CÁLCULO
     if lga_pot <= 0 or lga_long <= 0:
         st.warning("⚠️ **Atención:** La Potencia Total Prevista (Pt) o la longitud de la LGA están a 0. Añade cargas en la pestaña 'Previsión de Cargas' o introduce valores válidos para calcular la sección.")
     else:
@@ -758,7 +759,7 @@ with pestanas[1]:
         """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON BLOQUEO SI LA LONGITUD ESTÁ A 0)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -773,7 +774,7 @@ with pestanas[2]:
             * **Sección Mínima Reglamentaria:** Mínimo **6 mm²** de cobre para viviendas.
             """)
     with col_btn_di:
-        if st.button("🔄 Resetear DI a 0"):
+        if st.button("🔄 Resetear Longitud DI"):
             st.session_state.di_long_val = 0.0
             st.rerun()
 
@@ -798,7 +799,6 @@ with pestanas[2]:
         di_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="di_ais")
         di_cos = st.slider("Coseno phi (cos phi)", 0.8, 1.0, 1.0, key="di_cos")
 
-    # VALIDACIÓN DE SEGURIDAD PARA LA DI
     if di_long <= 0:
         st.warning("⚠️ **Atención:** La longitud de la Derivación Individual está a 0. Introduce una longitud válida para realizar el cálculo.")
     else:
@@ -863,7 +863,6 @@ with pestanas[2]:
 
         st.dataframe(tabla_comparativa_di, use_container_width=True)
 
-        # Cálculo auxiliar para la comprobación conjunta si LGA está activa
         dv_real_lga_pct_val = dv_real_lga_pct if 'dv_real_lga_pct' in locals() and lga_pot > 0 and lga_long > 0 else 0.0
         cdt_acumulada_pct = dv_real_lga_pct_val + dv_real_di_pct
         limite_global_conjunto = 1.5
@@ -889,19 +888,27 @@ with pestanas[2]:
         """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 4: TABLA GUÍA ESTILO PLC MADRID
+# PESTAÑA 4: TABLA GUÍA ESTILO PLC MADRID (AMPLIADA)
 # =========================================================================
 with pestanas[3]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta horizontal rápida para Derivaciones Individuales con conductores de cobre bajo tubo empotrado:")
+    st.write("Consulta horizontal rápida y orientativa de longitudes máximas admisibles para Derivaciones Individuales con conductores de cobre bajo tubo empotrado:")
 
     tabla_plc_data = [
-        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m"},
-        {"Sección Min": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "26 m"},
-        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "22 m"},
-        {"Sección Min": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m"}
+        {"Sección Mín": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m", "40A (9.20 kW)": "10 m", "50A (11.5 kW)": "8 m"},
+        {"Sección Mín": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "26 m", "40A (9.20 kW)": "20 m", "50A (11.5 kW)": "16 m"},
+        {"Sección Mín": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "11 m", "32A (7.32 kW)": "22 m", "40A (9.20 kW)": "17 m", "50A (11.5 kW)": "14 m"},
+        {"Sección Mín": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m", "40A (9.20 kW)": "34 m", "50A (11.5 kW)": "27 m"},
+        {"Sección Mín": "16 mm²", "Tubo Mín": "40 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "35 m", "32A (7.32 kW)": "35 m", "40A (9.20 kW)": "27 m", "50A (11.5 kW)": "22 m"},
+        {"Sección Mín": "16 mm²", "Tubo Mín": "40 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "70 m", "32A (7.32 kW)": "70 m", "40A (9.20 kW)": "55 m", "50A (11.5 kW)": "44 m"}
     ]
     st.dataframe(tabla_plc_data, use_container_width=True)
+    
+    st.markdown("""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #ff4b4b; padding: 15px; border-radius: 5px; margin-top: 20px; color: #333;">
+            <b>💡 Nota técnica de campo:</b> Esta tabla es ideal para comprobaciones rápidas pie de obra basadas en las directrices formativas clásicas. Para el proyecto oficial y la MTD, utiliza siempre el cálculo analítico exacto de las pestañas de LGA y DI.
+        </div>
+    """, unsafe_allow_html=True)
 
 # =========================================================================
 # PESTAÑA 5: CÁLCULO RÁPIDO
