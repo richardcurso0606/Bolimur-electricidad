@@ -159,6 +159,16 @@ st.markdown("""
         margin: 10px 0;
         color: #333333;
     }
+    .justificacion-tecnica-box {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0066cc;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+        font-size: 14px;
+        color: #212529;
+        line-height: 1.5;
+    }
     .esquema-simbolos {
         background-color: #ffffff;
         border: 3px solid #111111;
@@ -721,6 +731,16 @@ with pestanas[1]:
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_lga:.2f} kA</b>
         """, unsafe_allow_html=True)
 
+        # --- JUSTIFICACIÓN TÉCNICA Y LÓGICA DE SELECCIÓN (LGA) ---
+        st.markdown(f"""
+        <div class="justificacion-tecnica-box">
+            <b>💡 Justificación Técnica y Criterio de Selección (LGA):</b><br>
+            • <b>Criterio de Calentamiento:</b> Con una intensidad de diseño de $I_b = {ib_lga:.2f}\\text{{ A}}$, el conductor debe soportar al menos dicha corriente ($I_z \\ge I_b$). La primera sección comercial que cumple es la de <b>{s_cal_lga}\\text{{ mm²}}</b>.<br>
+            • <b>Criterio de Caída de Tensión:</b> Mediante la fórmula $S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$, el cálculo analítico exacto arroja un valor de <b>{s_cdt_lga:.2f}\\text{{ mm²}}</b> para no superar el límite reglamentario del {dv_pct_lga}% de caída.<br>
+            • <b>Conclusión y Descarte:</b> Las secciones inferiores ($10\\text{{ a }}50\\text{{ mm²}}$) se <b>descartan</b> porque su caída de tensión real supera el límite permitido y no alcanzan la intensidad admisible requerida. Por tanto, se adopta la sección comercial óptima inmediata superior de <b>{s_optima_lga}\\text{{ mm²}}</b> de {lga_mat.upper()} ({lga_aisl}), garantizando seguridad y cumplimiento estricto del REBT (ITC-BT-14).
+        </div>
+        """, unsafe_allow_html=True)
+
         st.markdown("---")
         st.subheader("📋 Tabla Comparativa de Secciones Normalizadas y Justificación - LGA")
         tabla_comparativa_lga = []
@@ -833,6 +853,16 @@ with pestanas[2]:
         3. **Sección por Calentamiento:** Mínimo requerido = <b>{s_cal_di} mm²</b><br>
         4. **Sección Mínima Reglamentaria:** <b>{min_reg_di} mm²</b> ({di_mat.upper()})<br>
         5. **Corriente de Cortocircuito (Icc final):** <b>{icc_fin_di:.2f} kA</b>
+        """, unsafe_allow_html=True)
+
+        # --- JUSTIFICACIÓN TÉCNICA Y LÓGICA DE SELECCIÓN (DI) ---
+        st.markdown(f"""
+        <div class="justificacion-tecnica-box">
+            <b>💡 Justificación Técnica y Criterio de Selección (DI):</b><br>
+            • <b>Criterio de Calentamiento:</b> Con $I_b = {ib_di:.2f}\\text{{ A}}$, requerimos una sección con $I_z \\ge I_b$, siendo el mínimo térmico de <b>{s_cal_di}\\text{{ mm²}}</b>.<br>
+            • <b>Criterio de Caída de Tensión:</b> Aplicando la fórmula monofásica $S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$, obtenemos un resultado analítico de <b>{s_cdt_di:.2f}\\text{{ mm²}}</b> para cumplir el límite del {dv_pct_di}% de caída admisible.<br>
+            • <b>Conclusión y Descarte:</b> Las secciones inferiores que no alcancen el valor analítico de caída o el mínimo reglamentario de {min_reg_di} mm² se <b>descartan</b>. Se selecciona la primera sección comercial óptima de <b>{s_optima_di}\\text{{ mm²}}</b> de {di_mat.upper()} ({di_aisl}) según ITC-BT-15.
+        </div>
         """, unsafe_allow_html=True)
 
         st.markdown("---")
