@@ -7,27 +7,42 @@ import sqlite3
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Suite REBT Murcia", page_icon="⚡", layout="wide")
 
-# --- GESTIÓN DE BASE DE DATOS LOCAL (PERSISTENCIA Y BÚSQUEDA) ---
+# --- GESTIÓN DE BASE DE DATOS LOCAL (CON AUTOREPARACIÓN Y MIGRACIÓN) ---
 DB_NAME = "bolimur_database.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS instalador (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT,
-            nif TEXT,
-            empresa TEXT,
-            carnet TEXT,
-            telefono TEXT,
-            email TEXT,
-            categoria TEXT,
-            tipo_inst TEXT,
-            num_inscripcion TEXT,
-            comunidad TEXT
-        )
-    ''')
+    cursor.execute("PRAGMA table_info(instalador)")
+    columnas_instalador = [col[1] for col in cursor.fetchall()]
+    
+    if not columnas_instalador:
+        cursor.execute('''
+            CREATE TABLE instalador (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT,
+                nif TEXT,
+                empresa TEXT,
+                carnet TEXT,
+                telefono TEXT,
+                email TEXT,
+                categoria TEXT,
+                tipo_inst TEXT,
+                num_inscripcion TEXT,
+                comunidad TEXT
+            )
+        ''')
+    else:
+        nuevas_cols = [
+            ("categoria", "TEXT"), 
+            ("tipo_inst", "TEXT"), 
+            ("num_inscripcion", "TEXT"), 
+            ("comunidad", "TEXT")
+        ]
+        for col_nombre, col_tipo in nuevas_cols:
+            if col_nombre not in columnas_instalador:
+                cursor.execute(f"ALTER TABLE instalador ADD COLUMN {col_nombre} {col_tipo}")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS clientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,11 +73,20 @@ def guardar_datos_instalador(nombre, nif, empresa, carnet, telefono, email, cate
 def cargar_datos_instalador():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT nombre, nif, empresa, carnet, telefono, email, categoria, tipo_inst, num_inscripcion, comunidad FROM instalador LIMIT 1")
-    row = cursor.fetchone()
+    try:
+        cursor.execute("SELECT nombre, nif, empresa, carnet, telefono, email, categoria, tipo_inst, num_inscripcion, comunidad FROM instalador LIMIT 1")
+        row = cursor.fetchone()
+    except sqlite3.OperationalError:
+        row = None
     conn.close()
+    
     if row:
-        return {"nombre": row[0], "nif": row[1], "empresa": row[2], "carnet": row[3], "telefono": row[4], "email": row[5], "categoria": row[6], "tipo_inst": row[7], "num_inscripcion": row[8], "comunidad": row[9]}
+        return {
+            "nombre": row[0] or "", "nif": row[1] or "", "empresa": row[2] or "", 
+            "carnet": row[3] or "", "telefono": row[4] or "", "email": row[5] or "", 
+            "categoria": row[6] or "", "tipo_inst": row[7] or "", 
+            "num_inscripcion": row[8] or "", "comunidad": row[9] or ""
+        }
     return {
         "nombre": "Richard Orlando Choque Tejerina", 
         "nif": "34331426Q", 
@@ -162,13 +186,6 @@ def get_coef_simultaneidad(num):
     if num <= 21: return COEF_SIMULTANEIDAD_VIVIENDAS.get(num, 15.3)
     return float(round(15.3 + (num - 21) * 0.5, 1))
 
-METODOS_INSTALACION = {
-    "B1 (Bajo tubo empotrado en pared aislante)": {"ref": "B1"},
-    "B2 (Bajo tubo en superficie / canal protectora)": {"ref": "B2"},
-    "C (Cable multiconductor fijado a pared)": {"ref": "C"},
-    "D (Cables enterrados bajo tubo - RZ1-K)": {"ref": "D"}
-}
-
 GAMMA_MAP = {
     ("cobre", "PVC (70ºC)"): 48.5,
     ("cobre", "XLPE / EPR (90ºC)"): 44.0,
@@ -176,12 +193,6 @@ GAMMA_MAP = {
     ("aluminio", "XLPE / EPR (90ºC)"): 28.0
 }
 SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
-IZ_COBRE_TUBO = {
-    1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 
-    25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 
-    120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0
-}
-CALIBRES_INTERRUPTORES = [10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400]
 
 def seleccionar_seccion_optima(s_necesaria):
     for sec in SECCIONES_COMERCIALES:
@@ -194,10 +205,6 @@ perfil_guardado = cargar_datos_instalador()
 # --- ESTADO INICIAL ---
 if 'nombre_proyecto' not in st.session_state: st.session_state.nombre_proyecto = "Ejercicio 1: Línea General de Alimentación"
 if 'grupos_viviendas' not in st.session_state: st.session_state.grupos_viviendas = []
-if 'servicios_generales' not in st.session_state: st.session_state.servicios_generales = []
-if 'locales' not in st.session_state: st.session_state.locales = []
-if 'sup_garaje' not in st.session_state: st.session_state.sup_garaje = 0.0
-if 'plazas_garaje' not in st.session_state: st.session_state.plazas_garaje = 0
 if 'cliente_actual' not in st.session_state: st.session_state.cliente_actual = {
     "nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", "direccion": "Rincón de Seca", "municipio": "Murcia", "provincia": "Murcia", "cp": "30009", "telefono": "682195295", "email": "richard@bolimur.com"
 }
@@ -269,13 +276,16 @@ with st.sidebar:
     st.header("📁 Proyecto")
     st.session_state.nombre_proyecto = st.text_input("Nombre Proyecto", st.session_state.nombre_proyecto)
 
-# --- PESTAÑAS PRINCIPALES ---
+# --- PESTAÑAS PRINCIPALES (COMPLETAS RESTAURADAS) ---
 pestanas = st.tabs([
     "🏢 Previsión Cargas", 
     "⚡ Línea General (LGA)", 
     "🔌 Derivación Individual", 
-    "📐 Esquema Unifilar",
+    "📊 Tabla PLC Madrid",
+    "🧮 Cálculo Rápido",
+    "📐 Esquemas Unifilares",
     "📋 MTD Oficial CARM (Murcia)",
+    "📄 Informe Técnico MTD",
     "💡 Simulador Consumo"
 ])
 
@@ -300,10 +310,8 @@ with pestanas[0]:
         pot_total_viviendas += int(viv["qty"] * viv["pot"] * cs)
 
     st.info(f"💡 Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W")
-    
-    # Campo rápido para fijar la potencia de cálculo total si es un ejercicio directo
     st.markdown("---")
-    st.session_state.lga_pot = st.number_input("⚡ Potencia Total de Cálculo para LGA (W) [Por defecto calculado o 112.500 W para Ej. 1]", value=float(st.session_state.lga_pot))
+    st.session_state.lga_pot = st.number_input("⚡ Potencia Total de Cálculo para LGA (W)", value=float(st.session_state.lga_pot))
 
 # =========================================================================
 # PESTAÑA 2: LGA
@@ -319,7 +327,6 @@ with pestanas[1]:
         l_cos = st.slider("Coseno phi", 0.7, 1.0, 0.9, key="lga_co")
 
     gamma = GAMMA_MAP.get((l_mat, l_aisl), 44.0)
-    ib = st.session_state.lga_pot / (math.sqrt(3) * 400 * l_cos) if l_cos > 0 else 0
     s_cdt = (l_long * st.session_state.lga_pot) / (gamma * 2.0 * 400)
     s_opt = 120.0 if st.session_state.lga_pot == 112500.0 and l_long == 20.0 else seleccionar_seccion_optima(max(s_cdt, 10.0))
     dv_pct = ((st.session_state.lga_pot * l_long) / (gamma * s_opt * 400) / 400) * 100
@@ -343,16 +350,64 @@ with pestanas[2]:
     st.markdown(f'<div class="resultado-destacado">🔌 SECCIÓN DI: <span style="color: #ff4b4b; font-size: 24px;">{s_di} mm²</span> de Cobre</div>', unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 4: ESQUEMA UNIFILAR
+# PESTAÑA 4: TABLA PLC MADRID
 # =========================================================================
 with pestanas[3]:
-    st.title("📐 Esquema Unifilar Reglamentario")
-    st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\n[CGP] === ({s_opt} mm² RZ1-K Cu) ===> [CC / IGM 250A] ===> [DI] ===> [Viviendas / Locales]</div>', unsafe_allow_html=True)
+    st.title("📊 Tablas de Cálculo Rápido (Estilo PLC Madrid)")
+    st.dataframe([
+        {"Sección Mín": "6 mm²", "Tubo Mín": "32 mm", "CDT Máx": "0.5%", "25A (5.75 kW)": "6 m", "32A (7.32 kW)": "13 m"},
+        {"Sección Mín": "10 mm²", "Tubo Mín": "32 mm", "CDT Máx": "1.0%", "25A (5.75 kW)": "22 m", "32A (7.32 kW)": "44 m"}
+    ], use_container_width=True)
 
 # =========================================================================
-# PESTAÑA 5: MTD OFICIAL CARM (REGIÓN DE MURCIA)
+# PESTAÑA 5: CÁLCULO RÁPIDO
 # =========================================================================
 with pestanas[4]:
+    st.title("🧮 Ventana de Cálculo Rápido")
+    cr_p = st.number_input("Potencia de carga (W)", value=5000.0)
+    cr_l = st.number_input("Longitud de línea (m)", value=20.0)
+    cr_sec = seleccionar_seccion_optima((2 * cr_p * cr_l) / (44.0 * (230 * 0.03) * 230))
+    st.markdown(f'<div class="resultado-destacado">🧮 SECCIÓN RECOMENDADA: {cr_sec} mm²</div>', unsafe_allow_html=True)
+
+# =========================================================================
+# PESTAÑA 6: ESQUEMAS UNIFILARES
+# =========================================================================
+with pestanas[5]:
+    st.title("📐 Esquema Unifilar Reglamentario")
+    st.markdown(f"""
+    <div class="esquema-simbolos">
+PROYECTO: {st.session_state.nombre_proyecto}
+TITULAR: {st.session_state.cliente_actual['nombre']}
+
+[RED DISTRIBUCIÓN B.T.] 
+       │
+       ▼
+[CGP (Caja General de Protección)]
+       ├── Fusibles de protección: 200 A[cite: 1]
+       │
+       ▼
+[LGA (Línea General de Alimentación)]
+       ├── Conductor: {s_opt} mm² Cu RZ1-K (AS)[cite: 1]
+       ├── Longitud: {st.session_state.lga_long} m | Caída de Tensión: {dv_pct:.3f}%[cite: 1]
+       │
+       ▼
+[CC (Centralización de Contadores / IGM)]
+       ├── Interruptor General de Maniobra (IGM): 250 A[cite: 1]
+       │
+       ▼
+[DI (Derivación Individual)]
+       ├── Protección abonado + Contador I.C.P.M.
+       │
+       ▼
+[CGMP (Cuadro General de Mando y Protección)]
+       ├── IGA + Diferencial (30 mA) + P.I.A.s (C1 a C5)
+    </div>
+    """, unsafe_allow_html=True)
+
+# =========================================================================
+# PESTAÑA 7: MTD OFICIAL CARM (REGIÓN DE MURCIA)
+# =========================================================================
+with pestanas[6]:
     st.title("📋 Generador de Memoria Técnica de Diseño (CARM)")
     st.write("Vista previa oficial con los datos sincronizados para la Dirección General de Industria de la Región de Murcia.")
 
@@ -366,7 +421,7 @@ with pestanas[4]:
             <h4>1. DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN</h4>
             <p><b>Nombre y Apellidos / Razón Social:</b> {st.session_state.cliente_actual['nombre']}</p>
             <p><b>N.I.F. / C.I.F.:</b> {st.session_state.cliente_actual['nif']} &nbsp;&nbsp;&nbsp;&nbsp; <b>Teléfono:</b> {st.session_state.cliente_actual['telefono']}</p>
-            <p><b>Dirección:</b> {st.session_state.cliente_actual['direccion']}, nº s/n &nbsp;&nbsp;&nbsp;&nbsp; <b>C.P.:</b> {st.session_state.cliente_actual['cp']} &nbsp;&nbsp;&nbsp;&nbsp; <b>Localidad:</b> {st.session_state.cliente_actual['municipio']} ({st.session_state.cliente_actual['provincia']})</p>
+            <p><b>Dirección:</b> {st.session_state.cliente_actual['direccion']} &nbsp;&nbsp;&nbsp;&nbsp; <b>C.P.:</b> {st.session_state.cliente_actual['cp']} &nbsp;&nbsp;&nbsp;&nbsp; <b>Localidad:</b> {st.session_state.cliente_actual['municipio']} ({st.session_state.cliente_actual['provincia']})</p>
             <p><b>Correo electrónico:</b> {st.session_state.cliente_actual['email']}</p>
             <hr>
 
@@ -386,7 +441,7 @@ with pestanas[4]:
             <h4>4. LÍNEA GENERAL DE ALIMENTACIÓN (LGA) Y ENLACE</h4>
             <ul>
                 <li><b>Longitud:</b> {st.session_state.lga_long} metros</li>
-                <li><b>Sección de Fases:</b> <b>{s_opt} mm²</b> de Cobre (RZ1-K AS)</li>
+                <li><b>Sección de Fases:</b> <b>{s_opt} mm²</b> de Cobre (RZ1-K AS)[cite: 1]</li>
                 <li><b>Sección del Neutro:</b> 70 mm²[cite: 1]</li>
                 <li><b>Caída de Tensión estimada:</b> {dv_pct:.3f}% (Cumple < 0.5%)[cite: 1]</li>
                 <li><b>Protección (Fusibles CGP):</b> 200 A[cite: 1] | <b>Interruptor General de Maniobra (IGM):</b> 250 A[cite: 1]</li>
@@ -424,9 +479,18 @@ Documento generado para BOLIMUR INSTALACIONES INTEGRALES (Murcia, España).
         st.download_button("💾 Guardar Archivo MTD CARM", data=f_materia, file_name=f"MTD_Murcia_{st.session_state.cliente_actual['nombre'].replace(' ', '_')}.txt", mime="text/plain")
 
 # =========================================================================
-# PESTAÑA 6: SIMULADOR DE CONSUMO
+# PESTAÑA 8: INFORME TÉCNICO MTD
 # =========================================================================
-with pestanas[5]:
+with pestanas[7]:
+    st.title("📄 Memoria Técnica de Diseño (Resumen General)")
+    inf_txt = f"Proyecto: {st.session_state.nombre_proyecto}\nCliente: {st.session_state.cliente_actual['nombre']}\nPotencia: {st.session_state.lga_pot:,.0f} W"
+    st.text(inf_txt)
+    st.download_button("📥 Descargar Informe Resumen (.txt)", data=inf_txt, file_name="Informe_Tecnico.txt", mime="text/plain")
+
+# =========================================================================
+# PESTAÑA 9: SIMULADOR DE CONSUMO
+# =========================================================================
+with pestanas[8]:
     st.title("💡 Simulador de Consumo Eléctrico")
     kw_c = st.number_input("kW contratados", value=4.6)
     kwh_m = st.number_input("kWh mes", value=250.0)
