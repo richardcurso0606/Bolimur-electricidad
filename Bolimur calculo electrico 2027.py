@@ -135,14 +135,14 @@ with st.sidebar:
         "locales": st.session_state.locales
     }
     json_str = json.dumps(datos_proyecto, indent=4)
-    st.sidebar.download_button(
+    st.download_button(
         label="💾 Guardar Proyecto (JSON)",
         data=json_str,
         file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
         mime="application/json"
     )
 
-    archivo_subido = st.sidebar.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
+    archivo_subido = st.file_uploader("📂 Cargar Proyecto Guardado", type=["json"])
     if archivo_subido is not None:
         try:
             proyecto_cargado = json.load(archivo_subido)
@@ -150,12 +150,12 @@ with st.sidebar:
             st.session_state.grupos_viviendas = proyecto_cargado.get("grupos_viviendas", [])
             st.session_state.servicios_generales = proyecto_cargado.get("servicios_generales", [])
             st.session_state.locales = proyecto_cargado.get("locales", [])
-            st.sidebar.success("✅ ¡Proyecto cargado con éxito!")
+            st.success("✅ ¡Proyecto cargado con éxito!")
             st.rerun()
         except Exception as e:
-            st.sidebar.error(f"Error al leer el archivo: {e}")
+            st.error(f"Error al leer el archivo: {e}")
 
-    st.sidebar.markdown("---")
+    st.markdown("---")
 
 # --- PESTAÑAS PRINCIPALES ---
 pestanas = st.tabs([
@@ -185,8 +185,17 @@ with pestanas[0]:
             st.session_state.servicios_generales = [{"nombre": "Servicio", "potencia": 1000, "tipo": "direct", "qty": 1}]
             st.rerun()
 
-    # 1. VIVIENDAS
-    st.subheader("1. Viviendas del Edificio (P1)")
+    # Cabecera con botón de ayuda para simultaneidad de viviendas
+    col_h_viv, col_pop_viv = st.columns([4, 1])
+    with col_h_viv:
+        st.subheader("1. Viviendas del Edificio (P1)")
+    with col_pop_viv:
+        with st.popover("📖 Ver Tabla ITC-BT-10"):
+            st.markdown("### Coeficientes de Simultaneidad (ITC-BT-10)")
+            st.write("Nº de viviendas (n) y coeficiente aplicable (K):")
+            st.write("• 1 a 21 viviendas: Tabla oficial (de 1.0 hasta 15.3)")
+            st.write("• Más de 21 viviendas: K = 15.3 + (n - 21) * 0.5")
+
     if st.button("➕ Añadir Grupo de Viviendas"):
         st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 4, "pot": 9200, "nocturna": False})
 
@@ -210,10 +219,10 @@ with pestanas[0]:
 
         if noct:
             cs_grupo = float(qty_g)
-            just_str = f"Tarifa Nocturna activada: Coeficiente de simultaneidad K = 1.0 (se aplica la suma total de potencia sin reducir)."
+            just_str = f"Tarifa Nocturna activada: Coeficiente K = 1.0 (suma total de potencia sin reducir)."
         else:
             cs_grupo = get_coef_simultaneidad(qty_g)
-            just_str = f"Aplicación ITC-BT-10 (Tabla 1) para {qty_g} viviendas: Coeficiente de simultaneidad K = {cs_grupo:.2f}."
+            just_str = f"Aplicación ITC-BT-10 para {qty_g} viviendas: Coeficiente de simultaneidad K = {cs_grupo:.2f}."
 
         pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
         pot_total_viviendas += pot_parcial_g
@@ -221,7 +230,7 @@ with pestanas[0]:
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #0066cc; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
             <b>Justificación Grupo #{idx+1} ({viv['nombre']}):</b> {just_str}<br>
-            Cálculo parcial: {qty_g} viviendas $\times$ {pot_unit} W $\times$ {cs_grupo} = <b>{pot_parcial_g:,} W</b>
+            Cálculo parcial: {qty_g} viviendas x {pot_unit} W x {cs_grupo} = <b>{pot_parcial_g:,} W</b>
         </div>
         """, unsafe_allow_html=True)
 
@@ -229,7 +238,15 @@ with pestanas[0]:
     st.markdown("---")
     
     # 2. LOCALES COMERCIALES
-    st.subheader("2. Locales Comerciales y Oficinas (P2)")
+    col_h_loc, col_pop_loc = st.columns([4, 1])
+    with col_h_loc:
+        st.subheader("2. Locales Comerciales y Oficinas (P2)")
+    with col_pop_loc:
+        with st.popover("📖 Ver Criterio Locales"):
+            st.markdown("### Criterio ITC-BT-10 (Locales Comerciales)")
+            st.write("• Potencia mínima por superficie: 100 W por cada m².")
+            st.write("• Suelo reglamentario absoluto: Ningún local se calculará por debajo de 3.450 W.")
+
     if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 40, "qty": 1})
     pot_total_locales = 0
 
@@ -237,7 +254,7 @@ with pestanas[0]:
         c1, c2, c3, c4 = st.columns([3, 3, 2, 1])
         with c1: loc["nombre"] = st.text_input(f"Local #{idx+1}", loc["nombre"], key=f"loc_nom_{idx}")
         with c2: loc["superficie"] = st.number_input(f"Superficie m² #{idx+1}", min_value=0.0, value=float(loc["superficie"]), key=f"loc_sup_{idx}")
-        with c3: loc["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(loc["qty"], key=f"loc_qty_{idx}" if f"loc_qty_{idx}" in locals() else f"loc_qty_{idx}"))
+        with c3: loc["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(loc["qty"]), key=f"loc_qty_{idx}")
         with c4:
             if st.button("🗑️", key=f"del_loc_{idx}"): st.session_state.locales.pop(idx); st.rerun()
 
@@ -247,11 +264,11 @@ with pestanas[0]:
 
         if pot_por_superficie < 3450.0:
             pot_unidad_local = 3450.0
-            estado_minimo = f"⚠️ <b>NO ALCANZA EL MÍNIMO REGLAMENTARIO:</b> La superficie introducida ({sup_val} m² $\times$ 100 W/m² = {pot_por_superficie:,.0f} W) es inferior al suelo normativo de la ITC-BT-10."
+            estado_minimo = f"⚠️ <b>NO ALCANZA EL MÍNIMO REGLAMENTARIO:</b> La superficie introducida ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W) es inferior al suelo normativo de la ITC-BT-10."
             accion_minimo = f"👉 <b>Se aplica obligatoriamente el mínimo legal de 3.450 W</b> para este local."
         else:
             pot_unidad_local = pot_por_superficie
-            estado_minimo = f"✅ <b>CUMPLE EL MÍNIMO:</b> La superficie introducida ({sup_val} m² $\times$ 100 W/m² = {pot_por_superficie:,.0f} W) supera el umbral mínimo exigido."
+            estado_minimo = f"✅ <b>CUMPLE EL MÍNIMO:</b> La superficie introducida ({sup_val} m² x 100 W/m² = {pot_por_superficie:,.0f} W) supera el umbral mínimo exigido."
             accion_minimo = f"👉 Se toma el valor calculado por superficie ({pot_por_superficie:,.0f} W)."
 
         pot_parcial_local = pot_unidad_local * cant_loc
@@ -260,11 +277,11 @@ with pestanas[0]:
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
             <b>Análisis Normativo Local #{idx+1} ({loc['nombre']}):</b><br>
-            • Criterio ITC-BT-10: Mínimo 100 W por cada metro cuadrado de superficie.<br>
+            • Criterio ITC-BT-10: Mínimo 100 W por cada metro cuadrado.<br>
             • Suelo reglamentario obligatorio por local: <b>3.450 W</b>.<br>
             • Estado actual: {estado_minimo}<br>
             • {accion_minimo}<br>
-            • Total Parcial Local: {cant_loc} local(es) $\times$ {pot_unidad_local:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
+            • Total Parcial Local: {cant_loc} local(es) x {pot_unidad_local:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
         </div>
         """, unsafe_allow_html=True)
 
@@ -289,7 +306,7 @@ with pestanas[0]:
         desc_factor = {
             "direct": "Servicios generales directos (Factor K = 1.0)",
             "discharge": "Alumbrado de seguridad / descargas (Factor K = 1.8)",
-            "motor": "Motores / bombas (Factor K = 1.25 por intensidad de arranque)",
+            "motor": "Motores / bombas (Factor K = 1.25)",
             "elevator": "Ascensores y aparatos elevadores (Factor K = 1.3)"
         }[serv["tipo"]]
 
@@ -299,7 +316,7 @@ with pestanas[0]:
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
             <b>Justificación Servicio #{idx+1} ({serv['nombre']}):</b> {desc_factor}.<br>
-            Cálculo: {serv['potencia']} W $\times$ {serv['qty']} ud(s) $\times$ {factor} = <b>{p_parcial_serv:,} W</b>
+            Cálculo: {serv['potencia']} W x {serv['qty']} ud(s) x {factor} = <b>{p_parcial_serv:,} W</b>
         </div>
         """, unsafe_allow_html=True)
 
@@ -316,7 +333,7 @@ with pestanas[0]:
     pot_garaje_por_sup = sup_garaje * 20.0
     if pot_garaje_por_sup < 3450.0 and sup_garaje > 0:
         pot_garaje_adjudicada = 3450.0
-        st.markdown(f"<span style='color: #d9534f; font-size: 13px;'>⚠️ El garaje por superficie ({sup_garaje} m² $\times$ 20 W/m² = {pot_garaje_por_sup:.0f} W) no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>.</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color: #d9534f; font-size: 13px;'>⚠️ El garaje por superficie ({sup_garaje} m² x 20 W/m² = {pot_garaje_por_sup:.0f} W) no alcanza el mínimo legal. Se aplica el suelo normativo de <b>3.450 W</b>.</span>", unsafe_allow_html=True)
     else:
         pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
 
