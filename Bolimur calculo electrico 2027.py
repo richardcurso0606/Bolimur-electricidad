@@ -109,7 +109,7 @@ if 'nombre_proyecto' not in st.session_state:
 if 'grupos_viviendas' not in st.session_state:
     st.session_state.grupos_viviendas = [{"nombre": "Viviendas Básicas", "qty": 16, "pot": 5750, "nocturna": False}]
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor Común Trifásico", "potencia": 4000, "tipo": "Ascensores y aparatos elevadores", "qty": 1}]
+    st.session_state.servicios_generales = [{"nombre": "Ascensor Principal Tracción", "potencia": 4000, "tipo": "Ascensor Principal (Motor más desfavorable - K = 1.3)", "qty": 1}]
 if 'locales' not in st.session_state:
     st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
 
@@ -182,7 +182,7 @@ with pestanas[0]:
         if st.button("🔄 Resetear Cargas"):
             st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 1, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Local 1", "superficie": 40, "qty": 1}]
-            st.session_state.servicios_generales = [{"nombre": "Servicio", "potencia": 1000, "tipo": "Servicios generales directos", "qty": 1}]
+            st.session_state.servicios_generales = [{"nombre": "Ascensor Principal", "potencia": 4000, "tipo": "Ascensor Principal (Motor más desfavorable - K = 1.3)", "qty": 1}]
             st.rerun()
 
     # 1. VIVIENDAS
@@ -288,26 +288,27 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
-    # 3. SERVICIOS GENERALES
+    # 3. SERVICIOS GENERALES (CON CRITERIO TÉCNICO DE ASCENSOR PRINCIPAL / SECUNDARIO Y MOTORES)
     col_h_serv, col_pop_serv = st.columns([4, 1])
     with col_h_serv:
         st.subheader("3. Servicios Generales (P3)")
     with col_pop_serv:
-        with st.popover("📖 Ver Criterio Servicios"):
-            st.markdown("### Factores de Corrección (ITC-BT-10)")
-            st.write("• Servicios directos (K = 1.0)")
-            st.write("• Motores y bombas (K = 1.25 para contemplar intensidades de arranque)")
-            st.write("• Ascensores y elevadores (K = 1.3)")
-            st.write("• Alumbrado de seguridad / descargas (K = 1.8)")
+        with st.popover("📖 Explicación Técnica Motores y Ascensores"):
+            st.markdown("### Criterios ITC-BT-10 y Normativa de Ascensores")
+            st.write("1. **Ascensor Principal (Más desfavorable):** Se computa al 100% de su potencia nominal afectada por un coeficiente corrector K = 1.3 para contemplar las puntas de intensidad y par de arranque exigidas por normativa.")
+            st.write("2. **Motores / Bombas Secundarias:** Se calculan aplicando un coeficiente de simultaneidad e intensidad de arranque K = 1.25.")
+            st.write("3. **Servicios Generales Directos:** Alumbrado de portal, escalera y portero automático sin coeficiente de mayoración (K = 1.0).")
+            st.write("4. **Alumbrado de Emergencia / Descargas:** Se pondera con un factor K = 1.8.")
 
-    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio", "potencia": 1000, "tipo": "Servicios generales directos", "qty": 1})
+    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio Secundario", "potencia": 2000, "tipo": "Motores / Bombas secundarias (K = 1.25)", "qty": 1})
     pot_total_servicios = 0
 
     tipos_servicios_map = {
-        "Servicios generales directos": 1.0,
-        "Alumbrado de seguridad / descargas": 1.8,
-        "Motores / bombas": 1.25,
-        "Ascensores y aparatos elevadores": 1.3
+        "Ascensor Principal (Motor más desfavorable - K = 1.3)": 1.3,
+        "Ascensor Secundario / Otro elevador (K = 1.15)": 1.15,
+        "Motores / Bombas secundarias (K = 1.25)": 1.25,
+        "Servicios generales directos (Iluminación / Portales - K = 1.0)": 1.0,
+        "Alumbrado de seguridad / descargas (K = 1.8)": 1.8
     }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
@@ -316,10 +317,9 @@ with pestanas[0]:
         with c2: serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0, value=int(serv["potencia"]), key=f"serv_pot_{idx}")
         with c3: serv["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx}")
         
-        # Selector limpio en castellano con índice seguro
-        tipo_actual = serv.get("tipo", "Servicios generales directos")
+        tipo_actual = serv.get("tipo", "Ascensor Principal (Motor más desfavorable - K = 1.3)")
         if tipo_actual not in tipos_servicios_map:
-            tipo_actual = "Servicios generales directos"
+            tipo_actual = "Ascensor Principal (Motor más desfavorable - K = 1.3)"
         lista_opciones_serv = list(tipos_servicios_map.keys())
         
         with c4: 
@@ -331,10 +331,11 @@ with pestanas[0]:
 
         factor = tipos_servicios_map[sel_tipo]
         desc_factor = {
-            "Servicios generales directos": "Servicios generales directos (Factor K = 1.0)",
-            "Alumbrado de seguridad / descargas": "Alumbrado de seguridad / descargas (Factor K = 1.8)",
-            "Motores / bombas": "Motores y bombas (Factor K = 1.25 para corrientes de arranque)",
-            "Ascensores y aparatos elevadores": "Ascensores y aparatos elevadores (Factor K = 1.3)"
+            "Ascensor Principal (Motor más desfavorable - K = 1.3)": "Ascensor principal: Motor más desfavorable con coeficiente de arranque K = 1.3 (ITC-BT-10)",
+            "Ascensor Secundario / Otro elevador (K = 1.15)": "Ascensor secundario o montacargas: Ponderado con coeficiente K = 1.15",
+            "Motores / Bombas secundarias (K = 1.25)": "Grupo de presión / motores secundarios: Coeficiente de simultaneidad y arranque K = 1.25",
+            "Servicios generales directos (Iluminación / Portales - K = 1.0)": "Servicios directos de iluminación y fuerza general sin coeficiente de punta (K = 1.0)",
+            "Alumbrado de seguridad / descargas (K = 1.8)": "Alumbrado de emergencia y seguridad con factor reglamentario K = 1.8"
         }[sel_tipo]
 
         p_parcial_serv = int(serv["potencia"] * serv["qty"] * factor)
@@ -342,7 +343,7 @@ with pestanas[0]:
 
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
-            <b>Justificación Servicio #{idx+1} ({serv['nombre']}):</b> {desc_factor}.<br>
+            <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> {desc_factor}.<br>
             Cálculo: {serv['potencia']} W x {serv['qty']} ud(s) x {factor} = <b>{p_parcial_serv:,} W</b>
         </div>
         """, unsafe_allow_html=True)
@@ -350,7 +351,7 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,} W**")
     st.markdown("---")
 
-    # 4. GARAJES E IRVE (CON EXPLICACIÓN TÉCNICA DETALLADA)
+    # 4. GARAJES E IRVE
     col_h_irve, col_pop_irve = st.columns([4, 1])
     with col_h_irve:
         st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
