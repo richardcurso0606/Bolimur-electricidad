@@ -223,24 +223,22 @@ def seleccionar_proteccion(ib):
             return cal
     return CALIBRES_INTERRUPTORES[-1]
 
-# --- ESTADO INICIAL DE LA SESIÓN ---
+# --- ESTADO INICIAL DE LA SESIÓN (AHORA TODO EMPIEZA A 0) ---
 if 'nombre_proyecto' not in st.session_state:
     st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio Plurifamiliar"
 if 'grupos_viviendas' not in st.session_state:
-    st.session_state.grupos_viviendas = [{"nombre": "Viviendas Básicas", "qty": 16, "pot": 5750, "nocturna": False}]
+    st.session_state.grupos_viviendas = []
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor Principal NTE-ITA", "potencia": 4000, "factor": 1.30, "qty": 1}]
+    st.session_state.servicios_generales = []
 if 'locales' not in st.session_state:
-    st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 40, "qty": 1}]
+    st.session_state.locales = []
 if 'cliente_actual' not in st.session_state:
     st.session_state.cliente_actual = {
         "nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", "direccion": "Rincón de Seca", "municipio": "Murcia", "provincia": "Murcia", "cp": "30009", "telefono": "682195295", "email": "richard@bolimur.com"
     }
 
-# Variables de control para reseteos en LGA y DI
 if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 25.0
 if 'di_long_val' not in st.session_state: st.session_state.di_long_val = 15.0
-if 'di_pot_val' not in st.session_state: st.session_state.di_pot_val = 5750
 
 # --- MENÚ LATERAL ---
 with st.sidebar:
@@ -372,7 +370,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (CON RESETEO A CERO)
+# PESTAÑA 1: PREVISIÓN DE CARGAS (EMPIEZA A 0)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -643,7 +641,7 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (CON BOTÓN DE RESETEAR A CERO Y ENLACE AUTOMÁTICO A PT)
+# PESTAÑA 2: LGA (TOMA AUTOMÁTICAMENTE PT DE LA PESTAÑA 1)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -676,8 +674,8 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        # Sincronizado automáticamente con pt_total calculado en la Pestaña 1
-        lga_pot = st.number_input("Potencia de cálculo LGA (W) [Automática desde Pt]", value=float(pt_total), key="lga_p_edit")
+        # Sincronizado automáticamente con pt_total (si se resetea a 0 en previsión, aquí pasa a 0)
+        lga_pot = st.number_input("Potencia de cálculo LGA (W) [Automática desde Previsión Pt]", value=float(pt_total), key="lga_p_edit")
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -687,7 +685,7 @@ with pestanas[1]:
         lga_icc_orig = st.number_input("Icc en el origen (kA)", value=15.0, key="lga_icc")
 
     gamma_lga = GAMMA_MAP.get((lga_mat, lga_aisl), 44.0)
-    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos) if lga_cos > 0 else 0.0
+    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos) if lga_cos > 0 and lga_pot > 0 else 0.0
     dv_max_lga = 400 * (dv_pct_lga / 100.0)
     s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if dv_max_lga > 0 and gamma_lga > 0 else 0.0
     
@@ -698,7 +696,7 @@ with pestanas[1]:
             break
 
     min_reg_lga = 10.0 if lga_mat == "cobre" else 16.0
-    s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga)
+    s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga) if lga_pot > 0 else min_reg_lga
     s_optima_lga = seleccionar_seccion_optima(s_bruta_lga)
 
     r_lga = (0.018 * lga_long) / s_optima_lga if s_optima_lga > 0 else 0.0
