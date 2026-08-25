@@ -657,12 +657,16 @@ elif seleccion_modulo.startswith("🏢"):
     }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
-        c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
+        st.markdown(f"#### ⚙️ Servicio #{idx+1}")
+        c1, c2, c3 = st.columns(3)
         with c1:
-            serv["nombre"] = st.text_input(f"Tipo de Servicio #{idx+1}", serv["nombre"], key=f"serv_nom_{idx}")
-        with c2: serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0.0, value=float(serv["potencia"]), key=f"serv_pot_{idx}")
-        with c3: serv["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx}")
-        
+            serv["nombre"] = st.text_input(f"Descripción #{idx+1}", serv["nombre"], key=f"serv_nom_{idx}")
+        with c2:
+            serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0.0, value=float(serv["potencia"]), key=f"serv_pot_{idx}")
+        with c3:
+            serv["qty"] = st.number_input(f"Cantidad #{idx+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx}")
+
+        c4, c5 = st.columns([4, 1])
         factor_actual = serv.get("factor", 1.30)
         def_opt_idx = 0
         for i, (k_text, v_val) in enumerate(opciones_factores_k.items()):
@@ -671,7 +675,7 @@ elif seleccion_modulo.startswith("🏢"):
                 break
 
         with c4:
-            sel_opt = st.selectbox(f"Coeficiente K #{idx+1}", list(opciones_factores_k.keys()), index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
+            sel_opt = st.selectbox(f"Coeficiente K #{idx+1} (Despliega completo sin cortes)", list(opciones_factores_k.keys()), index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
             if sel_opt.startswith("Personalizado"):
                 factor = st.number_input(f"Valor K personalizado #{idx+1}", min_value=0.1, value=float(factor_actual if factor_actual > 0 else 1.25), key=f"serv_k_pers_{idx}")
             else:
@@ -679,13 +683,17 @@ elif seleccion_modulo.startswith("🏢"):
             serv["factor"] = factor
 
         with c5:
-            if st.button("🗑️", key=f"del_serv_{idx}"): st.session_state.servicios_generales.pop(idx); st.rerun()
+            st.write("")
+            st.write("")
+            if st.button("🗑️ Eliminar", key=f"del_serv_{idx}"):
+                st.session_state.servicios_generales.pop(idx)
+                st.rerun()
 
         p_parcial_serv = serv["potencia"] * serv["qty"] * factor
         pot_total_servicios += p_parcial_serv
 
         st.markdown(f"""
-        <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+        <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 13px; color: #333;">
             <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente <b>K = {factor:.2f}</b> (NTE-ITA / ITC-BT-10).<br>
             Cálculo: {serv['potencia']} W x {serv['qty']} ud(s) x {factor:.2f} = <b>{p_parcial_serv:,.1f} W</b>
         </div>
@@ -757,9 +765,21 @@ elif seleccion_modulo.startswith("⚡"):
 
     dv_pct_lga = 0.5 if "Modelo 1" in tipo_enlace_lga else 1.0
 
+    # CÁLCULO AUTOMÁTICO DE LA POTENCIA DESDE LA PREVISIÓN DE CARGAS (PT)
+    pt_calculado_automatico = float(pt_total) if 'pt_total' in locals() else 112500.0
+
+    lga_modo_potencia = st.radio("Origen de la potencia para el cálculo de la LGA:", [
+        f"Automático (Desde Previsión de Cargas Pt = {pt_calculado_automatico:,.1f} W)",
+        "Manual (Introducir valor libremente)"
+    ], key="lga_modo_pot")
+
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = st.number_input("Potencia de cálculo LGA (W)", min_value=0.0, value=112500.0, step=500.0, key="lga_pot_manual")
+        if lga_modo_potencia.startswith("Automático"):
+            lga_pot = st.number_input("Potencia de cálculo LGA (W) [Automática desde Pt]", value=pt_calculado_automatico, disabled=True, key="lga_pot_auto_val")
+        else:
+            lga_pot = st.number_input("Potencia de cálculo LGA (W) [Manual]", min_value=0.0, value=112500.0, step=500.0, key="lga_pot_manual")
+
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -936,13 +956,12 @@ elif seleccion_modulo.startswith("🔌"):
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# MÓDULO MEJORADO: COMPENDIO TOTAL DE TABLAS REBT + FAVORITOS EN OBRA
+# MÓDULO MEJORADO: COMPENDIO TOTAL DE TABLAS REBT + FAVORITOS INTERACTIVOS
 # =========================================================================
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Compendio General y Completo de Tablas REBT (ITC-BT 01 a 51)")
-    st.write("Catálogo normativo absoluto. Todas las Instrucciones Técnicas Complementarias del Reglamento Electrotécnico de Baja Tensión (REBT) sin excepción. Marca tus tablas más utilizadas en obra para tener acceso rápido superior.")
+    st.write("Catálogo normativo absoluto. Todas las Instrucciones Técnicas Complementarias del Reglamento Electrotécnico de Baja Tensión (REBT) sin excepción. Pulsa en tus favoritas guardadas para abrirlas al instante.")
 
-    # Lista completa de todas las ITC-BT reglamentarias oficiales
     todas_las_itc = [
         "ITC-BT-01: Terminología",
         "ITC-BT-02: Normas de referencia",
@@ -997,25 +1016,27 @@ elif seleccion_modulo.startswith("📚"):
         "ITC-BT-51: Instalaciones de sistemas de automatización, gestión técnica de la energía y seguridad"
     ]
 
-    st.markdown("### ⭐ Tus Favoritas / Más Utilizadas en Obra")
+    st.markdown("### ⭐ Acceso Rápido: Tus Favoritas en Obra")
     if st.session_state.favoritos_itc:
         cols_fav = st.columns(min(len(st.session_state.favoritos_itc), 3))
         for idx_f, fav_item in enumerate(st.session_state.favoritos_itc):
             with cols_fav[idx_f % len(cols_fav)]:
-                st.markdown(f"""
-                    <div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; color: #856404; font-weight: bold;">
-                        📌 {fav_item}
-                    </div>
-                """, unsafe_allow_html=True)
+                if st.button(f"📌 Abrir {fav_item.split(':')[0]}", key=f"btn_fav_{idx_f}"):
+                    st.session_state.itc_activa_sel = fav_item
+                    st.rerun()
     else:
-        st.info("💡 No tienes ninguna tabla marcada como favorita todavía. Usa el botón en el selector de abajo para añadir tus imprescindibles de obra.")
+        st.info("💡 No tienes ninguna tabla marcada como favorita todavía.")
 
     st.markdown("---")
     st.subheader("🔍 Buscador y Selector General de ITC-BT")
 
+    default_idx = 9
+    if 'itc_activa_sel' in st.session_state and st.session_state.itc_activa_sel in todas_las_itc:
+        default_idx = todas_las_itc.index(st.session_state.itc_activa_sel)
+
     col_sel_itc, col_btn_fav = st.columns([3, 1])
     with col_sel_itc:
-        itc_seleccionada = st.selectbox("Selecciona cualquier ITC-BT del reglamento:", todas_las_itc, index=14)
+        itc_seleccionada = st.selectbox("Selecciona cualquier ITC-BT del reglamento:", todas_las_itc, index=default_idx, key="selectbox_itc_principal")
     with col_btn_fav:
         st.write("")
         st.write("")
@@ -1025,13 +1046,12 @@ elif seleccion_modulo.startswith("📚"):
                 st.session_state.favoritos_itc.remove(itc_seleccionada)
                 st.rerun()
         else:
-            if st.button("➕ Marcar en Favoritos (Obra)"):
+            if st.button("➕ Marcar en Favoritos"):
                 st.session_state.favoritos_itc.append(itc_seleccionada)
                 st.rerun()
 
     st.markdown("---")
 
-    # Renderizado inteligente según la ITC seleccionada
     if "ITC-BT-15" in itc_seleccionada:
         st.subheader("📑 Contenido Técnico: ITC-BT-15 (Derivaciones Individuales)")
         st.markdown("""
@@ -1053,19 +1073,23 @@ elif seleccion_modulo.startswith("📚"):
         st.subheader("🏢 Contenido Técnico: ITC-BT-10 (Previsión de Cargas)")
         st.markdown("""
         <div class="info-box-tecnico">
-            <b>📖 Criterio reglamentario:</b> Coeficientes de simultaneidad (K) aplicables al conjunto de viviendas y locales de un edificio.
+            <b>📖 Criterio reglamentario:</b> Coeficientes de simultaneidad (K) aplicables al conjunto de viviendas y locales de un edificio según la ITC-BT-10 del REBT.
         </div>
         """, unsafe_allow_html=True)
+        
+        tabla_itc10_completa = "| Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |\n| :---: | :---: |\n"
+        for num_v, coef_v in COEF_SIMULTANEIDAD_VIVIENDAS.items():
+            tabla_itc10_completa += f"| **{num_v}** | {coef_v} |\n"
+        tabla_itc10_completa += "| **> 21** | $15,3 + (n - 21) \\times 0,5$ |"
+        
+        st.markdown(tabla_itc10_completa)
+        
         st.markdown("""
-        | Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |
-        | :---: | :---: |
-        | **1** | 1,0 |
-        | **2** | 2,0 |
-        | **3** | 3,0 |
-        | **4** | 3,8 |
-        | **5 - 21** | Escalonado reglamentario oficial |
-        | **> 21** | $15,3 + (n - 21) \\times 0,5$ |
-        """)
+        <div class="recomendacion-box">
+            <b>📌 Consulta directa de referencia:</b><br>
+            • Para <b>n = 18 viviendas</b>, el coeficiente reglamentario exacto según la tabla oficial es <b>K = 13,7</b>.
+        </div>
+        """, unsafe_allow_html=True)
 
     elif "ITC-BT-25" in itc_seleccionada:
         st.subheader("🏠 Contenido Técnico: ITC-BT-25 (Instalaciones Interiores en Viviendas)")
@@ -1170,7 +1194,7 @@ elif seleccion_modulo.startswith("🛡️"):
         st.subheader("Desarrollo Caso 2: Línea de Alimentación de Motores e Intensidad de Diseño")
         st.markdown("""
         **Enunciado del Problema:**  
-        Alimentación de un motor trifásico de 15 kW, 400V, $\\cos\\varphi = 0,85$, rendimiento $\\eta = 0,90$. Longitud 50 metros en tubo empotrado (Método B1).
+        Alimentación de motor trifásico de 15 kW, 400V, $\\cos\\varphi = 0,85$, rendimiento $\\eta = 0,90$. Longitud 50 metros en tubo empotrado (Método B1).
 
         **1. Cálculo de la Intensidad de Diseño ($I_b$):**  
         * $I_b = \\frac{P}{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi \\cdot \\eta} = \\frac{15.000}{\\sqrt{3} \\cdot 400 \\cdot 0,85 \\cdot 0,90} = \\mathbf{{28,31\\text{{ A}}}}$
