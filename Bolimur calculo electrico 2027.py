@@ -230,9 +230,16 @@ elif seleccion_modulo.startswith("🧮"):
     dv_real_pct_q = (dv_real_v_q / v_nom_calc) * 100.0 if v_nom_calc > 0 else 0.0
 
     rho_q = 1.0 / gamma_q if gamma_q > 0 else 0.0
-    r_cable_q = (rho_q * long_q) / s_opt_q if s_opt_q > 0 else 0.0
-    if "Monofásico" in tipo_red_q: z_tot_q = (v_nom_calc / (icc_orig_q * 1000.0)) + (2.0 * r_cable_q) if icc_orig_q > 0 else 1.0
-    else: z_tot_q = (v_nom_calc / (icc_orig_q * 1000.0)) + r_cable_q if icc_orig_q > 0 else 1.0
+    r_cable_unitario = (rho_q * long_q) / s_opt_q if s_opt_q > 0 else 0.0
+    
+    if "Monofásico" in tipo_red_q:
+        r_cable_total = 2.0 * r_cable_unitario
+        z_origen = v_nom_calc / (icc_orig_q * 1000.0) if icc_orig_q > 0 else 0
+        z_tot_q = z_origen + r_cable_total
+    else:
+        r_cable_total = r_cable_unitario
+        z_origen = v_nom_calc / (icc_orig_q * 1000.0) if icc_orig_q > 0 else 0
+        z_tot_q = z_origen + r_cable_total
         
     icc_fin_q = v_nom_calc / z_tot_q / 1000.0 if z_tot_q > 0 else 0.0
     prot_q = seleccionar_proteccion(ib_q)
@@ -245,17 +252,13 @@ elif seleccion_modulo.startswith("🧮"):
     
     txt_formula_cdt = r"$$S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$$" if "Monofásico" in tipo_red_q else r"$$S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
     txt_sust_cdt = f"(2 · {val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})" if "Monofásico" in tipo_red_q else f"({val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})"
-    
-    z_origen = v_nom_calc / (icc_orig_q * 1000.0) if icc_orig_q > 0 else 0
-    r_cable_total = (2.0 * r_cable_q) if "Monofásico" in tipo_red_q else r_cable_q
-    txt_sust_icc = f"{v_nom_calc} / ({z_origen:.4f} + {r_cable_total:.4f})"
 
     st.markdown("---")
     st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
 
     st.info(f"""
     #### 1. Intensidad de Diseño ($I_b$)
-    **Justificación:** Se calcula la corriente nominal base a plena carga. Este es el valor que el cable debe soportar térmicamente sin degradarse ($I_z \\ge I_b$).
+    **Justificación:** Se calcula la corriente nominal base a plena carga ($I_z \\ge I_b$).
     
     {txt_formula_ib}
     
@@ -265,15 +268,14 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.info(f"""
     #### 2. Determinación de Sección por Calentamiento ($I_z$)
-    **Justificación:** Buscamos en las tablas reglamentarias de corrientes admisibles la sección mínima cuyo valor de $I_z$ sea superior a la intensidad de diseño $I_b$ ({ib_q:.2f} A).
+    **Justificación:** Buscamos en las tablas reglamentarias la sección mínima con $I_z \\ge I_b$ ({ib_q:.2f} A).
     
-    * **Condición de calentamiento:** $I_z \\ge I_b$
-    * **Sección requerida por este criterio:** **{s_cal_q} mm²** (con una intensidad admisible de {tabla_iz_q.get(s_cal_q, 0)} A).
+    * **Sección requerida por este criterio:** **{s_cal_q} mm²** ($I_z$ = {tabla_iz_q.get(s_cal_q, 0)} A).
     """)
 
     st.info(f"""
     #### 3. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Calculamos el grosor estrictamente necesario para que la resistencia del cable no provoque una pérdida de voltaje superior al límite del {cdt_lim_q}% ({dv_max_q:.2f} V) al final de la línea.
+    **Justificación:** Grosor necesario para no superar el límite del {cdt_lim_q}% ({dv_max_q:.2f} V).
     
     {txt_formula_cdt}
     
@@ -284,12 +286,15 @@ elif seleccion_modulo.startswith("🧮"):
     estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
     st.info(f"""
     #### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)
-    **Justificación:** Verificamos la impedancia total (red + cable). La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe superar el umbral de disparo instantáneo del interruptor (Curva C = $10 \\cdot I_n$).
+    **Justificación:** La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe superar el umbral magnético (Curva C = $10 \\cdot I_n$).
     
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
-    **Sustitución:** 
-    $I_{{cc,final}} =$ {txt_sust_icc} = **{icc_fin_q * 1000:.1f} A**
+    **Sustitución detallada con los datos actuales:** 
+    * Impedancia de red ($Z_{{origen}}$): `{z_origen:.4f}` $\\Omega$
+    * Resistencia del cable ($R_{{cable}}$): `{r_cable_total:.4f}` $\\Omega$
+    
+    $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
 
     * **Umbral de disparo exigido ({prot_q} A x 10):** {corriente_disparo:.1f} A
     * **Veredicto:** {estado_icc}
@@ -300,14 +305,12 @@ elif seleccion_modulo.startswith("🧮"):
         🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
         <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
         <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando simultáneamente la protección del aislamiento frente a sobrecargas al cumplir estrictamente la condición $I_n \\le 0.91 \\cdot I_z$ (donde $I_z$ = {iz_opt_val} A).
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \\le 0.91 \\cdot I_z$</b> (donde $I_z$ = {iz_opt_val} A).
         </span>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
-    st.markdown("Extracto de la tabla de referencia utilizada para comprobar el cumplimiento térmico ($I_z \\ge I_b$ y $I_n \\le 0.91 \\cdot I_z$) según la sección comercial:")
-    
     tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
@@ -326,6 +329,16 @@ elif seleccion_modulo.startswith("🧮"):
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
+
+
+# =========================================================================
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================
+
+
+# =========================================================================
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================
 
 
 # =========================================================================
