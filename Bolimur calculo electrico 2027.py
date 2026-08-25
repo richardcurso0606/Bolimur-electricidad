@@ -7,7 +7,7 @@ import sqlite3
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
 
-# --- GESTIÓN DE BASE DE DATOS LOCAL (PERFIL, CLIENTES Y CONFIGURACIÓN) ---
+# --- GESTIÓN DE BASE DE DATOS LOCAL (PERFIL Y CONFIGURACIÓN) ---
 DB_NAME = "bolimur_database.db"
 
 def init_db():
@@ -23,18 +23,6 @@ def init_db():
                 nombre TEXT, nif TEXT, empresa TEXT, carnet TEXT, 
                 telefono TEXT, email TEXT, categoria TEXT, 
                 tipo_inst TEXT, num_inscripcion TEXT, comunidad TEXT
-            )
-        ''')
-
-    cursor.execute("PRAGMA table_info(clientes)")
-    cols_cli = [col[1] for col in cursor.fetchall()]
-    if not cols_cli:
-        cursor.execute('''
-            CREATE TABLE clientes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                cliente TEXT, nif_cliente TEXT, direccion TEXT, 
-                municipio TEXT, provincia TEXT, cp TEXT, 
-                telefono_cliente TEXT, email_cliente TEXT
             )
         ''')
 
@@ -117,11 +105,6 @@ ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 # --- DISEÑO CORPORATIVO Y ESTILOS ---
 st.markdown("""
     <style>
-    .bolimur-header {
-        border-bottom: 3px solid #ff4b4b;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
     .resultado-destacado {
         background-color: #1e1e1e;
         color: #ffffff;
@@ -151,27 +134,6 @@ st.markdown("""
         border-radius: 10px;
         margin: 20px 0;
         color: #212529;
-    }
-    .formula-box {
-        background-color: #f8f9fa;
-        border: 1px solid #dcdcdc;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
-        color: #333333;
-    }
-    .esquema-simbolos {
-        background-color: #ffffff;
-        border: 3px solid #111111;
-        padding: 30px;
-        border-radius: 10px;
-        font-family: 'Courier New', Courier, monospace;
-        color: #000000;
-        font-size: 14px;
-        line-height: 1.6;
-        white-space: pre;
-        overflow-x: auto;
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -304,24 +266,6 @@ with st.sidebar:
             else:
                 st.warning("⚠️ Archivo no encontrado.")
 
-    st.markdown("---")
-    st.header("⚡ Carga Rápida de Enunciados Típicos")
-    tipo_caso = st.selectbox("Selecciona caso de estudio:", [
-        "-- Seleccionar caso --",
-        "Edificio 10 viviendas (LGA: 25m, DI: 15m)",
-        "Caso Examen: CC 112.5 kW, LGA Enterrada 20m (RZ1-K)"
-    ])
-    if tipo_caso != "-- Seleccionar --":
-        if st.button("📥 Cargar Configuración Seleccionada"):
-            if "10 viviendas" in tipo_caso:
-                st.session_state.grupos_viviendas = [{"nombre": "Bloc 10 Viviendas", "qty": 10, "pot": 5750, "nocturna": False}]
-                st.session_state.lga_long_val = 25.0
-            elif "Caso Examen" in tipo_caso:
-                st.session_state.grupos_viviendas = []
-                st.session_state.lga_long_val = 20.0
-            st.success("✅ ¡Datos cargados con éxito!")
-            st.rerun()
-
 # --- PESTAÑAS PRINCIPALES ---
 pestanas = st.tabs([
     "🏢 Previsión de Cargas (Pt)", 
@@ -336,7 +280,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (CON TABLA SERVICIOS Y JUSTIFICACIONES)
+# PESTAÑA 1: PREVISIÓN DE CARGAS (CON SERVICIOS EDITABLES Y EXPLICACIÓN IRVE)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -428,7 +372,7 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
-    # 3. SERVICIOS GENERALES (CON TABLA NTE-ITA Y SELECTOR DE K)
+    # 3. SERVICIOS GENERALES (CAMPO EDITABLE + SELECTOR COEFICIENTE K)
     col_h_serv, col_pop_serv = st.columns([4, 1])
     with col_h_serv:
         st.subheader("3. Servicios Generales (P3)")
@@ -460,11 +404,7 @@ with pestanas[0]:
     for idx, serv in enumerate(st.session_state.servicios_generales):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1:
-            serv["nombre"] = st.selectbox(f"Tipo de Servicio #{idx+1}", [
-                "Ascensor principal", "Ascensor secundario / Montacargas", 
-                "Alumbrado portal y escalera", "Grupo de presión / Bomba de agua", 
-                "Ventilación / Extracción de humos", "Puerta automática de garaje", "Otro servicio general"
-            ], index=0, key=f"serv_nom_{idx}")
+            serv["nombre"] = st.text_input(f"Tipo de Servicio #{idx+1}", serv["nombre"], key=f"serv_nom_{idx}")
         with c2: serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0.0, value=float(serv["potencia"]), key=f"serv_pot_{idx}")
         with c3: serv["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx}")
         
@@ -499,17 +439,40 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,.1f} W**")
     st.markdown("---")
 
-    # 4. GARAJES E IRVE
-    st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
+    # 4. GARAJES E IRVE (CON EXPLICACIÓN TÉCNICA DETALLADA)
+    col_h_irve, col_pop_irve = st.columns([4, 1])
+    with col_h_irve:
+        st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
+    with col_pop_irve:
+        with st.popover("📖 Explicación Técnica IRVE (ITC-BT-52)"):
+            st.markdown("### Criterios Técnicos y Reglamentarios IRVE")
+            st.write("1. **Previsión de Potencia por Plaza:** Cada plaza de garaje con preinstalación IRVE se calcula con una potencia unitaria estándar de **3.680 W**.")
+            st.write("2. **Esquema de Instalación (ITC-BT-52):**")
+            st.write("   • **Esquema 1.5 (Recarga vinculada en plazas de garaje):** Se aplica un coeficiente reductor de simultaneidad del **30% (0.3)** sobre el total de plazas previstas.")
+            st.write("   • **Esquema 1.4 (Línea troncal con derivaciones):** Se aplica un coeficiente del **50% (0.5)**.")
+            st.write("3. **Garaje (ITC-BT-10):** Se asignan 20 W por cada m² de superficie, con un mínimo legal de 3.450 W.")
+
     gc1, gc2, gc3 = st.columns(3)
     with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300.0)
-    with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=5)
-    with gc3: opcion_irve = st.selectbox("Sistema de Recarga IRVE (ITC-BT-52)", ["Esquema 1.5 (Recarga vinculada en plazas de garaje)", "Esquema 1.4 (Línea troncal con derivaciones para plazas)"])
+    with gc2: plazas_garaje = st.number_input("Plazas Garaje con Preinstalación IRVE", value=5)
+    with gc3: opcion_irve = st.selectbox("Sistema de Recarga IRVE (ITC-BT-52)", ["Esquema 1.5 (Recarga vinculada en plazas de garaje - Coef. 0.3)", "Esquema 1.4 (Línea troncal con derivaciones para plazas - Coef. 0.5)"])
 
     pot_garaje_por_sup = sup_garaje * 20.0
     pot_garaje_adjudicada = max(pot_garaje_por_sup, 3450.0 if sup_garaje > 0 else 0.0)
-    pot_total_irve = int(round(plazas_garaje * 3680 * 0.3)) if "1.5" in opcion_irve else int(round(plazas_garaje * 3680 * 0.5))
+    
+    coef_irve = 0.3 if "Esquema 1.5" in opcion_irve else 0.5
+    pot_total_irve = int(round(plazas_garaje * 3680.0 * coef_irve))
     pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
+
+    st.markdown(f"""
+    <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+        <b>Justificación Técnica Detallada del Cálculo IRVE (ITC-BT-52):</b><br>
+        • Criterio adoptado: {opcion_irve}.<br>
+        • Cálculo analítico IRVE: {plazas_garaje} plazas x 3.680 W x {coef_irve} (Coeficiente de simultaneidad) = <b>{pot_total_irve:,} W</b>.<br>
+        • Garaje (ITC-BT-10): {sup_garaje} m² x 20 W/m² = {pot_garaje_por_sup:,.0f} W (Suelo mínimo: 3.450 W) -> <b>{int(pot_garaje_adjudicada):,} W</b>.<br>
+        • <b>Total Parcial P4 (Garaje + IRVE):</b> {int(pot_garaje_adjudicada):,} W + {pot_total_irve:,} W = <b>{pot_total_garaje_irve:,} W</b>
+    </div>
+    """, unsafe_allow_html=True)
 
     pt_total = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios) + pot_total_garaje_irve
 
@@ -519,16 +482,16 @@ with pestanas[0]:
             <ul>
                 <li><b>P1 (Viviendas - {total_viviendas_edificio} uds):</b> {pot_total_viviendas:,} W</li>
                 <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
-                <li><b>P3 (Servicios Generales):</b> {int(pot_total_servicios):,} W</li>
+                <li><b>P3 (Servicios Generales):</b> {int(pot_total_servicios):,.1f} W</li>
                 <li><b>P4 (Garaje e IRVE - ITC-BT-52):</b> {pot_total_garaje_irve:,} W</li>
             </ul>
             <hr style="border: 1px solid #ced4da;">
-            <h2 style="color: #ff4b4b; margin-bottom: 0;">⚡ SUMA TOTAL PREVISTA (Pt): {pt_total:,} W ({pt_total/1000:,.2f} kW)</h2>
+            <h2 style="color: #ff4b4b; margin-bottom: 0;">⚡ SUMA TOTAL PREVISTA (Pt): {pt_total:,.1f} W ({pt_total/1000:,.2f} kW)</h2>
         </div>
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (LÍNEA GENERAL DE ALIMENTACIÓN EXACTA Y ORIGINAL)
+# PESTAÑA 2: LGA
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -632,7 +595,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON FÓRMULAS SEGURAS SIN ERROR)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -654,7 +617,6 @@ with pestanas[2]:
     st.markdown("---")
     st.subheader("📋 Memoria de Cálculo Justificada (Derivación Individual)")
     
-    # Texto seguro sin llaves problemáticas en f-strings
     st.markdown("""
     **1. Intensidad de cálculo ($I_b$):**  
     * $I_b = P / (V \\cdot \\cos\\varphi)$
@@ -678,15 +640,15 @@ with pestanas[2]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑAS 4 A 9 (RESTO DE VENTANAS COMPLETAS)
+# PESTAÑAS 4 A 9 (RESTO DE VENTANAS)
 # =========================================================================
 with pestanas[3]:
     st.title("🛡️ Resolución Avanzada y Exámenes")
-    st.write("Desarrollo completo analítico de casos de examen con verificaciones de cortocircuito.")
+    st.write("Desarrollo analítico completo de casos de examen.")
 
 with pestanas[4]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta rápida de secciones, caídas de tensión y calibres comerciales.")
+    st.write("Consulta rápida de secciones y caídas de tensión.")
 
 with pestanas[5]:
     st.title("🧮 Cálculo Rápido (CDT & Icc)")
@@ -698,7 +660,7 @@ with pestanas[6]:
 
 with pestanas[7]:
     st.title("📄 Informe Técnico Formal MTD")
-    st.write("Vista previa del informe técnico completo listo para exportar y firmar.")
+    st.write("Vista previa del informe técnico completo.")
 
 with pestanas[8]:
     st.title("💡 Simulador Consumo Eléctrico")
