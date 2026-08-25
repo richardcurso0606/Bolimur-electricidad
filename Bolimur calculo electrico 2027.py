@@ -102,7 +102,7 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS (TARJETAS MÓVILES) ---
+# --- DISEÑO CORPORATIVO Y ESTILOS (TARJETAS MÓVILES LIMPIAS) ---
 st.markdown("""
     <style>
     .resultado-destacado {
@@ -143,17 +143,21 @@ st.markdown("""
         margin: 10px 0;
         color: #333333;
     }
-    .card-menu {
+    /* Estilo limpio para los botones tipo tarjeta estilo app */
+    .stButton > button {
         background-color: #1e1e1e;
-        color: white;
-        padding: 18px 20px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        border-left: 6px solid #ff4b4b;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        color: #ffffff;
+        border: 1px solid #333333;
+        border-radius: 10px;
+        text-align: left;
+        padding: 15px 20px;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+    }
+    .stButton > button:hover {
+        background-color: #2b2b2b;
+        border-color: #ff4b4b;
+        color: #ffffff;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -301,11 +305,11 @@ with st.sidebar:
                 st.warning("⚠️ Archivo no encontrado.")
 
 # =========================================================================
-# PANTALLA PRINCIPAL: MENÚ VERTICAL ESTILO APP MÓVIL (TARJETAS)
+# PANTALLA PRINCIPAL: MENÚ VERTICAL ESTILO APP MÓVIL (SIN "ABRIR" Y CON FLECHA)
 # =========================================================================
 if st.session_state.vista_activa == "menu":
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
-    st.write("Selecciona una herramienta o módulo de cálculo deslizando o pulsando sobre las tarjetas de acceso rápido:")
+    st.write("Selecciona una herramienta o módulo de cálculo pulsando directamente sobre la tarjeta deseada:")
 
     modulos = [
         ("🧮 Cálculo Rápido (CDT & Icc Avanzado)", "Diagnóstico integral para bombas, líneas largas y extremos de circuito.", "calc_rapido"),
@@ -320,13 +324,7 @@ if st.session_state.vista_activa == "menu":
     ]
 
     for titulo, desc, clave in modulos:
-        st.markdown(f"""
-            <div style="background-color: #1e1e1e; padding: 15px 20px; border-radius: 10px; border-left: 6px solid #ff4b4b; margin-bottom: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.15);">
-                <h3 style="color: white; margin: 0 0 5px 0; font-size: 18px;">{titulo}</h3>
-                <p style="color: #b0b0b0; margin: 0; font-size: 13px;">{desc}</p>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button(f"Abrir {titulo}", key=f"btn_{clave}", use_container_width=True):
+        if st.button(f"{titulo}   ➔", key=f"btn_{clave}", use_container_width=True):
             st.session_state.vista_activa = clave
             st.rerun()
 
