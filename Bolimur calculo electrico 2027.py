@@ -295,11 +295,11 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: CÁLCULO RÁPIDO AVANZADO (CON VERIFICACIÓN DE ADMISIBILIDAD Y ICC)
+# PESTAÑA 1: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 with pestanas[0]:
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento e Intensidad de Cortocircuito Mínima ($I_{cc\_min}$).")
+    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento e Intensidad de Cortocircuito Mínima.")
 
     rc1, rc2 = st.columns(2)
     with rc1:
@@ -307,8 +307,8 @@ with pestanas[0]:
         tipo_red_q = st.selectbox("Sistema eléctrico", ["Monofásico (230V)", "Trifásico (400V)"], key="tr_q1")
         
         if modo_carga == "Por Potencia (W o CV)":
-            val_pot_q = st.number_input("Potencia activa (W) [Ej: Bomba 1.5 CV ≈ 1100 W]", value=2200.0, step=100.0, key="vp_q")
-            cos_q = st.slider("Coseno phi (cos phi) [Motores habituales ~0.82]", 0.7, 1.0, 0.85, key="cos_q")
+            val_pot_q = st.number_input("Potencia activa (W) [Ej: Bomba 1.5 CV aprox 1100 W]", value=2200.0, step=100.0, key="vp_q")
+            cos_q = st.slider("Coseno phi (cos phi) [Motores habituales 0.82]", 0.7, 1.0, 0.85, key="cos_q")
             v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
             if "Monofásico" in tipo_red_q:
                 ib_q = val_pot_q / (v_nom_calc * cos_q)
@@ -329,19 +329,17 @@ with pestanas[0]:
         metodo_q_key = st.selectbox("Método de Instalación (UNE-HD 60364-5-52):", list(METODOS_INSTALACION.keys()), index=0, key="met_q")
         mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"], key="m_q")
         ais_q = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
-        cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%) [Fuerza/Motores máx 3-5%]", value=3.0, step=0.5, key="cdt_q")
+        cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%) [Fuerza/Motores max 3-5%]", value=3.0, step=0.5, key="cdt_q")
         icc_orig_q = st.number_input("Icc de cortocircuito en el origen de la línea (kA)", value=10.0, step=0.5, key="icc_orig_q")
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     dv_max_q = v_nom_calc * (cdt_lim_q / 100.0)
     
-    # 1. Sección por Caída de Tensión
     if "Monofásico" in tipo_red_q:
         s_cdt_q = (2.0 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc)
     else:
         s_cdt_q = (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc)
 
-    # 2. Sección por Calentamiento (Iz >= Ib)
     tabla_iz_q = IZ_COBRE_ENTERRADO if "D (" in metodo_q_key else IZ_COBRE_TUBO
     s_cal_q = 1.5
     for sec, iz_val in tabla_iz_q.items():
@@ -353,7 +351,6 @@ with pestanas[0]:
     s_bruta_q = max(s_cdt_q, s_cal_q, min_reg_q)
     s_opt_q = seleccionar_seccion_optima(s_bruta_q)
 
-    # 3. Cálculo de Caída de Tensión Real con la sección comercial elegida
     if "Monofásico" in tipo_red_q:
         dv_real_v_q = (2.0 * val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc)
     else:
@@ -361,7 +358,6 @@ with pestanas[0]:
     
     dv_real_pct_q = (dv_real_v_q / v_nom_calc) * 100.0
 
-    # 4. Cálculo de Icc Mínima al final de la línea larga
     rho_q = 1.0 / gamma_q
     r_cable_q = (rho_q * long_q) / s_opt_q
     if "Monofásico" in tipo_red_q:
@@ -371,36 +367,34 @@ with pestanas[0]:
         
     icc_fin_q = v_nom_calc / z_tot_q / 1000.0 if z_tot_q > 0 else 0.0
     prot_q = seleccionar_proteccion(ib_q)
-
-    # Comprobación de salto de protección (Disparo magnético aproximado para curva C: 5 a 10 veces In)
-    corriente_disparo_magnetico = prot_q * 10.0 # Umbral superior seguro para curva C
+    corriente_disparo_magnetico = prot_q * 10.0
     salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo_magnetico
 
     st.markdown("---")
-    st.subheader("📋 Memoria Justificativa Analítica y Fórmulas Desarrolladas")
+    st.subheader("Memoria Justificativa Analítica y Fórmulas Desarrolladas")
 
     st.markdown(f"""
     <div class="formula-box">
-        <b>1. Intensidad de Diseño ($I_b$):</b><br>
-        • Fórmula: $I_b = \\frac{{P}}{{{'V \\cdot \\cos\\varphi' if 'Monofásico' in tipo_red_q else '\\sqrt{3} \\cdot V \\cdot \\cos\\varphi'}}}$.<br>
-        • Sustitución: ${val_pot_q:,.1f} / ({v_nom_calc} \\times {cos_q}) = \\mathbf{{{ib_q:.2f}\\text{{ A}}}}$
+        <b>1. Intensidad de Diseño (Ib):</b><br>
+        • Fórmula: Ib = Potencia / (V * cos phi) [Monofásico] o Raiz(3) * V * cos phi [Trifásico].<br>
+        • Sustitución: {val_pot_q:,.1f} / ({v_nom_calc} * {cos_q}) = <b>{ib_q:.2f} A</b>
     </div>
 
     <div class="formula-box">
-        <b>2. Sección por Caída de Tensión ($\Delta V$):</b><br>
-        • Fórmula: $S = \\frac{{{'2 \\cdot P \\cdot L' if 'Monofásico' in tipo_red_q else 'P \\cdot L'}}}{{\\gamma \\cdot \\Delta V \\cdot V}}$ (Límite máx: {cdt_lim_q}% -> {dv_max_q:.2f} V).<br>
+        <b>2. Sección por Caída de Tensión (Delta V):</b><br>
+        • Fórmula: S = (m * P * L) / (gamma * Delta V * V) (Límite max: {cdt_lim_q}% -> {dv_max_q:.2f} V).<br>
         • Cálculo teórico puro: <b>{s_cdt_q:.2f} mm²</b>
     </div>
 
     <div class="formula-box">
-        <b>3. Comprobación por Calentamiento y Cortocircuito ($I_{cc\_min}$):</b><br>
-        • Intensidad admisible del cable elegido ({s_opt_q} mm²): <b>{tabla_iz_q.get(s_opt_q, 0)} A</b> (Debe ser $\\ge I_b = {ib_q:.2f}\\text{{ A}}$).<br>
+        <b>3. Comprobación por Calentamiento y Cortocircuito (Icc min):</b><br>
+        • Intensidad admisible del cable elegido ({s_opt_q} mm²): <b>{tabla_iz_q.get(s_opt_q, 0)} A</b>.<br>
         • Corriente de cortocircuito al final de los {long_q} metros: <b>{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)</b>.<br>
-        • Comprobación de disparo magnético del PIA ({prot_q} A): Se requiere al menos ~{corriente_disparo_magnetico} A para garantizar el corte instantáneo. Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCIÓN: Icc insuficiente para disparo magnético rápido, revisar sección'}</b>.
+        • Comprobación de disparo magnético del PIA ({prot_q} A): Se requiere al menos ~{corriente_disparo_magnetico} A. Estado: <b>{'GARANTIZADO EL DISPARO' if salta_proteccion else 'ATENCION: Icc insuficiente para disparo magnetico rapido'}</b>.
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales")
+    st.markdown("### Tabla de Verificación de Secciones Comerciales")
     tabla_q_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Icc Final Extremo (A) | Estado Reglamentario |\n| :---: | :---: | :---: | :---: | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
@@ -416,23 +410,23 @@ with pestanas[0]:
         icc_c_A = (v_nom_calc / z_c) if z_c > 0 else 0.0
 
         if sec_com >= s_bruta_q and icc_c_A >= corriente_disparo_magnetico:
-            estado_c = "⭐ **SELECCIONADA (ÓPTIMA Y SEGURA)**"
+            estado_c = "SELECCIONADA (OPTIMA Y SEGURA)"
         elif iz_c < ib_q:
-            estado_c = "❌ No cumple calentamiento"
+            estado_c = "No cumple calentamiento"
         elif dv_c_pct > cdt_lim_q:
-            estado_c = "❌ No cumple caída de tensión"
+            estado_c = "No cumple caida de tension"
         elif icc_c_A < corriente_disparo_magnetico:
-            estado_c = "⚠️ Icc baja (Riesgo protección)"
+            estado_c = "Icc baja (Riesgo proteccion)"
         else:
-            estado_c = "Válida pero superior"
+            estado_c = "Valida pero superior"
         tabla_q_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {icc_c_A:.1f} A | {estado_c} |\n"
     st.markdown(tabla_q_md)
 
     st.markdown(f"""
         <div class="resultado-destacado">
-            ⚡ CONCLUSIÓN Y SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
+            ⚡ CONCLUSIÓN Y SECCIÓN OPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación de por qué se aumenta la sección:</b> Aunque la fórmula matemática estricta de caída de tensión pueda arrojar una sección menor, la sección final se eleva a <b>{s_opt_q} mm²</b> para garantizar que se cumplan simultáneamente tres condiciones críticas: 1) Soportar la intensidad de servicio sin sobrecalentamiento ($I_z \\ge I_b$), 2) Mantener la caída de tensión por debajo del {cdt_lim_q}% en tiradas largas, y 3) Asegurar que la corriente de cortocircuito al final de la línea sea suficientemente alta como para disparar instantáneamente el magnetotérmico de {prot_q} A y evitar incendios por defecto franco.
+            <b>Justificación de por qué se aumenta la sección:</b> Aunque la fórmula matemática estricta de caída de tensión pueda arrojar una sección menor, la sección final se eleva a <b>{s_opt_q} mm²</b> para garantizar que se cumplan simultáneamente tres condiciones críticas: 1) Soportar la intensidad de servicio sin sobrecalentamiento, 2) Mantener la caída de tensión por debajo del {cdt_lim_q}% en tiradas largas, y 3) Asegurar que la corriente de cortocircuito al final de la línea sea suficientemente alta como para disparar instantáneamente el magnetotérmico de {prot_q} A y evitar incendios por defecto franco.
             </span>
         </div>
     """, unsafe_allow_html=True)
