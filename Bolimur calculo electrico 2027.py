@@ -119,37 +119,6 @@ def cargar_config_proyecto():
         return row[0], row[1]
     return "proyecto_bolimur_default.json", "proyectos_bolimur"
 
-def guardar_cliente_db(cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO clientes (cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                   (cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente))
-    conn.commit()
-    conn.close()
-
-def buscar_clientes_db(termino):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT id, cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente FROM clientes WHERE cliente LIKE ? OR nif_cliente LIKE ?", 
-                       (f"%{termino}%", f"%{termino}%"))
-        rows = cursor.fetchall()
-    except sqlite3.OperationalError:
-        rows = []
-    conn.close()
-    return rows
-
-def obtener_todos_clientes():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT id, cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente FROM clientes")
-        rows = cursor.fetchall()
-    except sqlite3.OperationalError:
-        rows = []
-    conn.close()
-    return rows
-
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
@@ -260,7 +229,7 @@ if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 20.0
 if 'nombre_archivo_guardado' not in st.session_state: st.session_state.nombre_archivo_guardado = ultimo_archivo_db
 if 'carpeta_trabajo_input' not in st.session_state: st.session_state.carpeta_trabajo_input = carpeta_trabajo_db
 
-# --- BARRA LATERAL COMPLETA (VENTANA LATERAL IZQUIERDA) ---
+# --- BARRA LATERAL COMPLETA ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", use_container_width=True)
@@ -318,12 +287,10 @@ with st.sidebar:
                     st.session_state.grupos_viviendas = data_j.get("grupos_viviendas", [])
                     st.session_state.locales = data_j.get("locales", [])
                     st.session_state.servicios_generales = data_j.get("servicios_generales", [])
-                    st.session_state.irve_config = data_j.get("irvees", {"con_irve": True, "tipo_esquema": "Esquema 1.5 (Recarga vinculada)", "num_plazas": 5, "pot_plaza": 3680.0})
+                    st.session_state.irve_config = data_j.get("irve", {"con_irve": True, "tipo_esquema": "Esquema 1.5", "num_plazas": 5, "pot_plaza": 3680.0})
                     st.session_state.lga_long_val = data_j.get("lga_long", 20.0)
                 st.success("✅ ¡Cargado!")
                 st.rerun()
-            else:
-                st.warning("⚠️ Archivo no encontrado.")
 
     st.markdown("---")
     st.header("⚡ Carga Rápida de Enunciados Típicos")
@@ -358,7 +325,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (CON IRVE Y TODOS LOS APARTADOS)
+# PESTAÑA 1: PREVISIÓN DE CARGAS (COMPLETA CON IRVE Y SERVICIOS GENERALES)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -438,15 +405,20 @@ with pestanas[0]:
         pot_local_unit = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
         pot_total_locales += pot_local_unit * loc["qty"]
 
-    # 3. Servicios Generales (P3)
+    # 3. Servicios Generales (P3) CON SELECTOR DE TIPO DE SERVICIO
     st.subheader("3. Servicios Generales del Edificio (P3)")
     if st.button("➕ Añadir Servicio General"):
-        st.session_state.servicios_generales.append({"nombre": f"Servicio {len(st.session_state.servicios_generales)+1}", "qty": 1, "potencia": 3000.0, "factor": 1.0})
+        st.session_state.servicios_generales.append({"nombre": "Ascensor principal", "qty": 1, "potencia": 3000.0, "factor": 1.0})
 
     pot_total_servicios = 0.0
     for idx_s, serv in enumerate(st.session_state.servicios_generales):
         cs1, cs2, cs3, cs4, cs5 = st.columns([3, 2, 2, 2, 1])
-        with cs1: serv["nombre"] = st.text_input(f"Servicio #{idx_s+1}", serv["nombre"], key=f"serv_nom_{idx_s}")
+        with cs1:
+            serv["nombre"] = st.selectbox(f"Tipo de Servicio #{idx_s+1}", [
+                "Ascensor principal", "Ascensor secundario / Montacargas", 
+                "Alumbrado portal y escalera", "Grupo de presión / Bomba de agua", 
+                "Ventilación / Extracción de humos", "Puerta automática de garaje", "Otro servicio general"
+            ], index=0 if serv["nombre"] not in ["Ascensor principal", "Ascensor secundario / Montacargas", "Alumbrado portal y escalera", "Grupo de presión / Bomba de agua", "Ventilación / Extracción de humos", "Puerta automática de garaje", "Otro servicio general"] else 0, key=f"serv_nom_{idx_s}")
         with cs2: serv["qty"] = st.number_input(f"Cantidad #{idx_s+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx_s}")
         with cs3: serv["potencia"] = st.number_input(f"Potencia Unit. (W) #{idx_s+1}", value=float(serv["potencia"]), key=f"serv_pot_{idx_s}")
         with cs4: serv["factor"] = st.number_input(f"Factor Simultaneidad #{idx_s+1}", value=float(serv["factor"]), key=f"serv_fac_{idx_s}")
@@ -464,28 +436,23 @@ with pestanas[0]:
         ic1, ic2, ic3 = st.columns(3)
         with ic1:
             st.session_state.irve_config["tipo_esquema"] = st.selectbox("Esquema de instalación (ITC-BT-52)", [
-                "Esquema 1.5a (Circuito individual con contador principal)",
-                "Esquema 1.5b (Estación principal con contadores secundarios)",
+                "Esquema 1.5 (Recarga vinculada en plazas de garaje)",
                 "Esquema 1.4 (Línea troncal con derivaciones para plazas)"
             ], index=0)
         with ic2:
-            st.session_state.irve_config["num_plazas"] = st.number_input("Nº de plazas de garaje con preinstalación", min_value=1, value=int(st.session_state.irve_config["num_plazas"]))
+            st.session_state.irve_config["num_plazas"] = st.number_input("Nº de plazas con preinstalación IRVE", min_value=1, value=int(st.session_state.irve_config["num_plazas"]))
         with ic3:
             st.session_state.irve_config["pot_plaza"] = st.number_input("Potencia por plaza (W)", value=float(st.session_state.irve_config["pot_plaza"]))
         
-        # Cálculo de potencia IRVE aplicando coeficientes reglamentarios
         n_plazas = st.session_state.irve_config["num_plazas"]
         p_plaz = st.session_state.irve_config["pot_plaza"]
-        if "1.5a" in st.session_state.irve_config["tipo_esquema"]:
-            pot_total_irve = n_plazas * p_plaz * 0.3  # Factor estimado de simultaneidad colectivo
-        else:
-            pot_total_irve = n_plazas * p_plaz * 0.5
+        pot_total_irve = n_plazas * p_plaz * 0.3 if "1.5" in st.session_state.irve_config["tipo_esquema"] else n_plazas * p_plaz * 0.5
 
     pt_total_calc = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios) + int(pot_total_irve)
 
     st.markdown(f"""
         <div class="resumen-parciales-box">
-            <h4>📊 Resumen de Parciales de Previsión de Cargas:</h4>
+            <h4>📊 Resumen de Parciales de Previsión de Cargas (ITC-BT-10):</h4>
             <ul>
                 <li><b>P1 (Viviendas):</b> {pot_total_viviendas:,} W</li>
                 <li><b>P2 (Locales / Oficinas):</b> {int(pot_total_locales):,} W</li>
@@ -602,27 +569,44 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (DI)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (DI) CON DESGLOSE COMPLETO
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
-    di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
-    di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
-    
-    gamma_di = 56.0 # Cobre PVC / XLPE habitual
-    ib_di = di_pot / (230.0 * 1.0)
+    di_c1, di_c2 = st.columns(2)
+    with di_c1:
+        di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
+        di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
+    with di_c2:
+        di_cos = st.slider("Coseno phi (cos phi) DI", 0.7, 1.0, 1.0, key="di_cos")
+
+    gamma_di = 56.0 # Cobre
+    ib_di = di_pot / (230.0 * di_cos)
     dv_max_di = 230.0 * 0.01 # 1% para contadores concentrados
     s_di_calc = (di_long * di_pot) / (gamma_di * dv_max_di * 230.0)
-    s_di_opt = seleccionar_seccion_optima(max(s_di_calc, 6.0)) # Mínimo reglamentario viviendas 6 mm2
-    
+    s_di_opt = seleccionar_sec = seleccionar_seccion_optima(max(s_di_calc, 6.0)) # Mínimo reglamentario viviendas 6 mm2
+    dv_real_di_v = (di_pot * di_long) / (gamma_di * s_di_opt * 230.0)
+    dv_real_di_pct = (dv_real_di_v / 230.0) * 100
+
+    st.markdown("---")
+    st.subheader("📋 Memoria de Cálculo Justificada (Derivación Individual)")
     st.markdown(f"""
-    **Desgloses reglamentarios de la Derivación Individual (ITC-BT-15):**
-    * Intensidad de cálculo ($I_b$): {ib_di:.2f} A
-    * Sección teórica por caída de tensión: {s_di_calc:.2f} mm²
+    **1. Intensidad de cálculo ($I_b$):**  
+    $I_b = P / (V \\cdot \\cos\\varphi) = {di_pot} / (230 \\cdot {di_cos}) = \\mathbf{{{ib_di:.2f}\\text{ A}}}$
+
+    **2. Caída de Tensión (ITC-BT-15):**  
+    * Límite reglamentario para contadores concentrados: $\\Delta V\\% \\le 1\\%$.
+    * Sección teórica: $S = (L \\cdot P) / (\\gamma \\cdot \\Delta V \\cdot V) = ({di_long} \\cdot {di_pot}) / (56 \\cdot 2.3 \\cdot 230) = \\mathbf{{{s_di_calc:.2f}\\text{ mm}^2}}$
+    * Aplicando el mínimo reglamentario para viviendas ($6\\text{ mm}^2$ de cobre) y sección comercial adoptada: $\\mathbf{{{s_di_opt}\\text{ mm}^2}}$.
+    * Caída de tensión real: $\\mathbf{{{dv_real_di_pct:.3f}\\%}}$ (Cumple el límite del 1%).
     """)
+
     st.markdown(f"""
         <div class="resultado-destacado">
-            🔌 SECCIÓN DE LA DERIVACIÓN INDIVIDUAL: <span style="color: #ff4b4b; font-size: 22px;">{s_di_opt} mm²</span> de Cobre
+            🔌 SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_di_opt} mm²</span> de Cobre (Unipolares en tubo)<br>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+            Intensidad de diseño: <b>{ib_di:.2f} A</b> | CDT Real: <b>{dv_real_di_pct:.3f}%</b>
+            </span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -705,7 +689,7 @@ with pestanas[3]:
 
     **4. Verificación de Cortocircuito (Procedimiento Manual MT 2.80.12 de Iberdrola):**
       * **1ª Condición (Poder de Corte):** PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**.
-      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) es superior a la intensidad de fusión del fusible en 5 segundos (If aprox. 1.250 A para {in_univ} A):
+      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) is superior a la intensidad de fusión del fusible en 5 segundos (If aprox. 1.250 A para {in_univ} A):
         Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**
     """)
 
