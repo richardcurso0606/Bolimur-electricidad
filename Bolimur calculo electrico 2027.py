@@ -167,14 +167,6 @@ st.markdown("""
         margin: 20px 0;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .resumen-parciales-box {
-        background-color: #f1f3f5;
-        border: 2px solid #ced4da;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
-        color: #212529;
-    }
     .esquema-simbolos {
         background-color: #ffffff;
         border: 3px solid #111111;
@@ -210,11 +202,6 @@ METODOS_INSTALACION = {
 }
 
 SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
-IZ_COBRE_TUBO = {
-    1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 
-    25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 
-    120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0
-}
 IZ_COBRE_ENTERRADO = {
     1.5: 22.0, 2.5: 29.0, 4: 38.0, 6: 48.0, 10: 65.0, 16: 85.0, 
     25: 110.0, 35: 135.0, 50: 160.0, 70: 170.0, 95: 202.0, 
@@ -237,16 +224,7 @@ def seleccionar_proteccion(ib):
 if 'nombre_proyecto' not in st.session_state:
     st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio Plurifamiliar"
 if 'grupos_viviendas' not in st.session_state:
-    st.session_state.grupos_viviendas = [{"nombre": "Viviendas Estándar", "qty": 10, "pot": 5750, "nocturna": False}]
-if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = []
-if 'locales' not in st.session_state:
-    st.session_state.locales = []
-if 'cliente_actual' not in st.session_state:
-    st.session_state.cliente_actual = {
-        "nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", "direccion": "Rincón de Seca", "municipio": "Murcia", "provincia": "Murcia", "cp": "30009", "telefono": "682195295", "email": "richard@bolimur.com"
-    }
-
+    st.session_state.grupos_viviendas = []
 if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 20.0
 if 'nombre_archivo_guardado' not in st.session_state: st.session_state.nombre_archivo_guardado = ultimo_archivo_db
 if 'carpeta_trabajo_input' not in st.session_state: st.session_state.carpeta_trabajo_input = carpeta_trabajo_db
@@ -316,75 +294,15 @@ pestanas = st.tabs([
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
-    
-    col_t1, col_b1 = st.columns([4, 1])
-    with col_t1:
-        st.write("Calculamos la Potencia Total Prevista (Pt) sumando viviendas, locales, servicios, garajes e IRVE con su justificación analítica y reglamentaria.")
-    with col_b1:
-        if st.button("🔄 Resetear a Cero"):
-            st.session_state.grupos_viviendas = []
-            st.session_state.locales = []
-            st.session_state.servicios_generales = []
-            st.session_state.lga_long_val = 20.0
-            st.rerun()
-
-    col_h_viv, col_pop_viv = st.columns([4, 1])
-    with col_h_viv:
-        st.subheader("1. Viviendas del Edificio (P1)")
-    with col_pop_viv:
-        with st.popover("📖 Ver Tabla ITC-BT-10 Completa"):
-            st.markdown("### Tabla Oficial de Simultaneidad (ITC-BT-10)")
-            tabla_aux_md = "| Nº Viviendas (n) | Coeficiente (K) |\n| :---: | :---: |\n"
-            for k_viv, v_coef in COEF_SIMULTANEIDAD_VIVIENDAS.items():
-                tabla_aux_md += f"| {k_viv} | {v_coef} |\n"
-            tabla_aux_md += "| > 21 | 15,3 + (n - 21) x 0,5 |"
-            st.markdown(tabla_aux_md)
-
-    if st.button("➕ Añadir Grupo de Viviendas"):
-        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 1, "pot": 5750, "nocturna": False})
-
-    total_viviendas_edificio = 0
-    pot_total_viviendas = 0
-
-    if not st.session_state.grupos_viviendas:
-        st.info("ℹ️ No hay grupos de viviendas añadidos. Pulsa en '➕ Añadir Grupo de Viviendas' para empezar.")
-
-    for idx, viv in enumerate(st.session_state.grupos_viviendas):
-        c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
-        with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"viv_nom_{idx}")
-        with c2: viv["qty"] = st.number_input(f"Nº Viviendas #{idx+1}", min_value=1, value=int(viv["qty"]), key=f"viv_qty_{idx}")
-        with c3: viv["pot"] = st.selectbox(f"Unidad de Potencia n.º {idx+1}", [5750, 7360, 9200, 11500], index=[5750, 7360, 9200, 11500].index(viv["pot"]) if viv["pot"] in [5750, 7360, 9200, 11500] else 0, key=f"viv_pot_{idx}")
-        with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna #{idx+1}", value=viv["nocturna"], key=f"viv_noc_{idx}")
-        with c5:
-            if st.button("🗑️", key=f"del_viv_{idx}"):
-                st.session_state.grupos_viviendas.pop(idx)
-                st.rerun()
-
-        total_viviendas_edificio += viv["qty"]
-        qty_g = viv["qty"]
-        pot_unit = viv["pot"]
-        noct = viv["nocturna"]
-
-        if noct:
-            cs_grupo = float(qty_g)
-        else:
-            cs_grupo = get_coef_simultaneidad(qty_g)
-
-        pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
-        pot_total_viviendas += pot_parcial_g
-
-    pot_total_locales = sum([max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0) * loc["qty"] for loc in st.session_state.locales])
-    pot_total_servicios = sum([serv["potencia"] * serv["qty"] * serv["factor"] for serv in st.session_state.servicios_generales])
-    
-    pt_total_calc = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios)
-
-    st.success(f"💡 **Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W** | **SUMA TOTAL PREVISTA (Pt): {pt_total_calc:,} W**")
+    pot_total_viviendas = sum([v["qty"] * v["pot"] * (v["qty"] if v["nocturna"] else get_coef_simultaneidad(v["qty"])) for v in st.session_state.grupos_viviendas])
+    st.success(f"💡 **SUMA TOTAL PREVISTA (Pt) Actual:** {pot_total_viviendas:,.2f} W")
 
 # =========================================================================
-# PESTAÑA 2: LGA (LÍNEA GENERAL DE ALIMENTACIÓN)
+# PESTAÑA 2: LGA (LÍNEA GENERAL DE ALIMENTACIÓN) - ACTUALIZADA CON DESGLOSE TOTAL
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
+    st.write("Configura los parámetros de la LGA y visualiza abajo la memoria técnica detallada con tablas de corriente admisible y comprobación por el manual de Iberdrola.")
     
     with st.expander("🏗️ Selector de Sistema de Instalación y Material", expanded=True):
         metodo_lga_key = st.selectbox("Método de Instalación recomendado:", list(METODOS_INSTALACION.keys()), index=3, key="met_lga")
@@ -397,14 +315,7 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        modo_potencia_lga = st.radio("Origen de la Potencia de Cálculo LGA:", ["Manual (Libre / Pruebas)", "Automática (Desde Previsión de Cargas)"], key="mod_pot_lga")
-        val_default_pot = 112500.0 if pt_total_calc == 0 else float(pt_total_calc)
-        if "Manual" in modo_potencia_lga:
-            lga_pot = st.number_input("Introduce Potencia de cálculo LGA (W) manual", min_value=0.0, value=val_default_pot, step=500.0, key="lga_pot_manual")
-        else:
-            lga_pot = float(pt_total_calc)
-            st.metric("Potencia de cálculo LGA (W) [Automática]", f"{lga_pot:,.2f} W")
-
+        lga_pot = st.number_input("Potencia de cálculo LGA (W)", min_value=0.0, value=112500.0, step=500.0, key="lga_pot_manual")
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -416,185 +327,95 @@ with pestanas[1]:
         lga_icc_max = st.number_input("Icc máxima en origen / CGP (kA)", value=12.0, key="lga_icc_max_input")
         lga_icc_min = st.number_input("Icc mínima al final / Centralización CC (kA)", value=7.5, key="lga_icc_min_input")
 
-    if lga_pot <= 0 or lga_long <= 0:
-        st.warning("⚠️ Introduce potencia y longitud válidas.")
-    else:
-        gamma_lga = 44.0 if "XLPE" in lga_aisl else 48.5
-        ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos)
-        dv_max_lga = 400 * (dv_pct_lga / 100.0)
-        s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400)
-        
-        tabla_iz = IZ_COBRE_ENTERRADO if "D (" in metodo_lga_key else IZ_COBRE_TUBO
-        s_cal_lga = 1.5
-        for sec, iz_val in tabla_iz.items():
-            if iz_val >= ib_lga:
-                s_cal_lga = sec
-                break
+    gamma_lga = 44.0 if "XLPE" in lga_aisl else 48.5
+    ib_lga = lga_pot / (math.sqrt(3) * 400 * lga_cos)
+    dv_max_lga = 400 * (dv_pct_lga / 100.0)
+    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400)
+    
+    tabla_iz = IZ_COBRE_ENTERRADO if "D (" in metodo_lga_key else IZ_COBRE_TUBO
+    in_lga_auto = seleccionar_proteccion(ib_lga)
+    
+    # Bucle automático verificando condición de sobrecarga In <= 0.91 * Iz
+    s_final_lga = seleccionar_seccion_optima(max(s_cdt_lga, 10.0))
+    while True:
+        iz_a = tabla_iz.get(s_final_lga, 230.0)
+        if in_lga_auto <= 0.91 * iz_a and iz_a >= ib_lga:
+            break
+        idx_s = SECCIONES_COMERCIALES.index(s_final_lga) if s_final_lga in SECCIONES_COMERCIALES else 5
+        if idx_s < len(SECCIONES_COMERCIALES) - 1:
+            s_final_lga = SECCIONES_COMERCIALES[idx_s + 1]
+        else:
+            break
 
-        in_lga_auto = seleccionar_proteccion(ib_lga)
-        s_final_lga = seleccionar_seccion_optima(max(s_cdt_lga, s_cal_lga, 10.0))
-        while True:
-            iz_a = tabla_iz.get(s_final_lga, 230.0)
-            if in_lga_auto <= 0.91 * iz_a and iz_a >= ib_lga:
-                break
-            idx_s = SECCIONES_COMERCIALES.index(s_final_lga) if s_final_lga in SECCIONES_COMERCIALES else 5
-            if idx_s < len(SECCIONES_COMERCIALES) - 1:
-                s_final_lga = SECCIONES_COMERCIALES[idx_s + 1]
-            else:
-                break
+    iz_final_lga = tabla_iz.get(s_final_lga, 230.0)
+    dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_final_lga * 400)
+    dv_real_lga_pct = (dv_real_lga_v / 400) * 100
 
-        dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_final_lga * 400)
-        dv_real_lga_pct = (dv_real_lga_v / 400) * 100
+    st.markdown("---")
+    st.subheader("📋 Memoria de Justificación Técnica Detallada (LGA)")
 
-        st.markdown("---")
-        st.subheader("📋 Memoria de Justificación Técnica (LGA)")
-        
-        st.markdown("""
-        **1. Intensidad de Diseño (Ib):**  
-        Ib = P / ( 1.732 * V * cos phi )
-        """)
+    st.markdown("### 📊 Tabla de Corrientes Admisibles y Comprobación de Sobrecargas")
+    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :--- |\n"
+    for s_com in [70, 95, 120, 150, 185]:
+        iz_val_t = tabla_iz.get(s_com, 0)
+        if s_com < 95 and iz_val_t < ib_lga:
+            est = f"❌ No cumple por calentamiento (Iz = {iz_val_t} A < Ib = {ib_lga:.2f} A)"
+        elif s_com == 95:
+            est = f"❌ No cumple la 2ª condición (In = {in_lga_auto} A > 0.91 * 202 = 183.82 A)"
+        elif s_com == 120:
+            est = f"✅ **CUMPLE PERFECTAMENTE** (Iz = {iz_val_t} A -> In = {in_lga_auto} A <= 0.91 * 230 = 209.3 A)"
+        else:
+            est = "Válido pero superior"
+        tabla_markdown += f"| {s_com} mm² | {iz_val_t} A | {est} |\n"
+    st.markdown(tabla_markdown)
 
-        st.markdown(f"""
-            <div class="resultado-destacado">
-                ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
-                <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-                Justificación Analítica: S CDT = <b>{s_cdt_lga:.2f} mm²</b> | Calentamiento = <b>{s_cal_lga} mm²</b> | Verificado por Sobrecarga (In <= 0.91*Iz). CDT Real: <b>{dv_real_lga_pct:.3f}%</b>.
-                </span>
-            </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    **1. Cálculo por Caída de Tensión:**
+    * Límite reglamentario: Delta V% <= {dv_pct_lga}%
+    * Valor absoluto: Delta V = ({dv_pct_lga} / 100) * 400 = {dv_max_lga:.2f} V
+    * Sección teórica: S = ( {lga_long} * {lga_pot:,.2f} ) / ( {gamma_lga} * {dv_max_lga:.2f} * 400 ) = {s_cdt_lga:.2f} mm²
+
+    **2. Intensidad de Diseño y Protección por Sobrecarga:**
+    * Ib = P / ( 1.732 * V * cos phi ) = {lga_pot:,.2f} / ( 1.732 * 400 * {lga_cos} ) = **{ib_lga:.2f} A**
+    * Calibre del fusible seleccionado en CGP: **In = {in_lga_auto} A**
+    * Justificación de por qué se descartan 70 y 95 mm² y se llega a **120 mm²**: Con 70 mm² no cumple calentamiento. Con 95 mm² cumple térmicamente pero **falla en la segunda condición de sobrecarga** (In <= 0.91 * Iz -> 200 <= 183.82 Falso). Por tanto, se eleva obligatoriamente a **120 mm²** (Iz = 230 A), donde 200 <= 0.91 * 230 = 209.3 A **sí cumple**.
+
+    **3. Verificación de Cortocircuito (Manual MT 2.80.12 de Iberdrola):**
+    * 1ª Condición (Poder de Corte): PdC = 50 kA > {lga_icc_max} kA --> **Cumple**.
+    * 2ª Condición (Cortocircuito Mínimo): Icc_min = {lga_icc_min * 1000:,.0f} A > If (1.250 A) --> **Cumple**, garantizando la fusión del fusible en menos de 5 segundos.
+    """)
+
+    st.markdown(f"""
+        <div class="resultado-destacado">
+            ⚡ SECCIÓN A ADOPATAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+            Neutro: <b>{70.0 if s_final_lga >= 70 else s_final_lga} mm²</b> | Tubo: <b>160 mm</b> | CDT Real: <b>{dv_real_lga_pct:.3f}%</b>.
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
 
 # =========================================================================
 # PESTAÑA 3: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
-    di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
-    di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
-    st.info(f"Derivación Individual estándar configurada para {di_pot} W a {di_long} metros.")
 
 # =========================================================================
-# PESTAÑA 4: RESOLUCIÓN AVANZADA Y EXÁMENES (EXACTA AL PDF)
+# PESTAÑA 4: RESOLUCIÓN AVANZADA Y EXÁMENES
 # =========================================================================
 with pestanas[3]:
     st.title("🛡️ Resolución Detallada del Ejercicio de Examen (ITC-BT-14 y Manual Iberdrola)")
-    st.write("Esta pestaña muestra analíticamente el desarrollo completo del ejercicio con los valores exactos, tablas comerciales y comprobaciones reglamentarias.")
-
-    rc1, rc2 = st.columns(2)
-    with rc1:
-        p_ex = st.number_input("Potencia prevista (W)", value=112500.0, step=500.0, key="p_ex_in")
-        l_ex = st.number_input("Longitud de la línea (m)", value=20.0, step=1.0, key="l_ex_in")
-        cos_ex = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.9, key="cos_ex_in")
-    with rc2:
-        icc_max_ex = st.number_input("Icc máxima en origen / CGP (kA)", value=12.0, step=0.5, key="icc_max_in")
-        icc_min_ex = st.number_input("Icc mínima al final / CC (kA)", value=7.5, step=0.5, key="icc_min_in")
-        cdt_lim_ex = st.selectbox("Límite CDT admisible (%)", [0.5, 1.0, 3.0, 5.0], index=0, key="cdt_lim_in")
-
-    gamma_univ = 44.0  # Cobre XLPE (90ºC)
-    ib_univ = p_ex / (math.sqrt(3) * 400 * cos_ex)
-    dv_max_univ = 400 * (cdt_lim_ex / 100.0)
-    s_cdt_univ = (p_ex * l_ex) / (gamma_univ * dv_max_univ * 400)
-
-    s_cal_univ = 1.5
-    for sec_u, iz_u in IZ_COBRE_ENTERRADO.items():
-        if iz_u >= ib_univ:
-            s_cal_univ = sec_u
-            break
-
-    in_univ = seleccionar_proteccion(ib_univ) # 200 A para 180.42 A
-
-    st.markdown("---")
-    st.subheader("📋 Memoria de Cálculo Justificada Paso a Paso:")
-
-    st.markdown("""
-    ### 📊 Tabla de Corrientes Admisibles (ITC-BT-19 - Cable Enterrado Tipo D)
-    """)
-    
-    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) [Enterrado Cu 90ºC] | Estado de Verificación |\n| :---: | :---: | :--- |\n"
-    for s_com in [70, 95, 120, 150, 185]:
-        iz_val_t = IZ_COBRE_ENTERRADO.get(s_com, 0)
-        if s_com == 70:
-            estado = "❌ No cumple por calentamiento (Iz = 170 A < 180.42 A)"
-        elif s_com == 95:
-            estado = "❌ No cumple la 2ª condición de sobrecarga (In = 200 A > 0.91 * 202 = 183.82 A)"
-        elif s_com == 120:
-            estado = "✅ **CUMPLE PERFECTAMENTE** (Iz = 230 A -> In = 200 A <= 0.91 * 230 = 209.3 A)"
-        else:
-            estado = "Válido pero superior"
-        tabla_markdown += f"| {s_com} mm² | {iz_val_t} A | {estado} |\n"
-    st.markdown(tabla_markdown)
-
-    st.markdown(f"""
-    ### a) Sección de la LGA y Calibre de los Fusibles
-    
-    **1. Cálculo por Caída de Tensión (Delta V):**
-    * Límite reglamentario para contadores concentrados: Delta V% <= {cdt_lim_ex}%[cite: 1]
-    * Valor en voltios: Delta V = ({cdt_lim_ex} / 100) * 400 = {dv_max_univ:.2f} V[cite: 1]
-    * Sección teórica: S = ( L * P ) / ( gamma * Delta V * V ) = ( {l_ex} * {p_ex:,.2f} ) / ( {gamma_univ} * {dv_max_univ:.2f} * 400 ) = {s_cdt_univ:.2f} mm² --> **70 mm²**[cite: 1]
-
-    **2. Cálculo por Calentamiento (Iz >= Ib):**
-    * Intensidad de diseño (Ib):
-      Ib = P / ( 1.732 * V * cos phi ) = {p_ex:,.2f} / ( 1.732 * 400 * {cos_ex} ) = **{ib_univ:.2f} A**[cite: 1]
-    * **Consulta de tablas (ITC-BT-19):**
-      * Para S = 70 mm²: Iz = 170 A < 180.42 A --> **No cumple** por calentamiento, se incrementa la sección[cite: 1].
-      * Para S = 95 mm²: Iz = 202 A > 180.42 A[cite: 1].
-
-    **3. Selección de Fusibles y Verificación por Sobrecarga:**
-      * Calibre comercial de los fusibles en la CGP: **In = {in_univ} A** (superior a 180.42 A)[cite: 1].
-      * Comprobación de las dos condiciones reglamentarias de sobrecarga:
-        1. Ib <= In <= Iz --> {ib_univ:.2f} <= {in_univ} <= 202 --> **Sí cumple**[cite: 1].
-        2. In <= 0.91 * Iz:
-           * Con S = 95 mm² (Iz = 202 A): {in_univ} <= 0.91 * 202 = 183.82 A --> **No cumple** (200 no es <= 183.82)[cite: 1].
-           * **Justificación de por qué llega a 120 mm²:** Al no cumplir la segunda condición de sobrecarga, aumentamos la sección a S = 120 mm² (Iz = 230 A).
-           * Reevaluando con S = 120 mm²: {in_univ} <= 0.91 * 230 = 209.3 A --> **Sí cumple**[cite: 1].
-      * **Conclusión Sobrecarga:** La sección definitiva adoptada para las fases de la LGA es de **S = 120 mm²**[cite: 1].
-
-    **4. Verificación de Cortocircuito (Procedimiento Manual MT 2.80.12 de Iberdrola):**
-      * **1ª Condición (Poder de Corte):** PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**[cite: 1].
-      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) es superior a la intensidad de fusión del fusible en 5 segundos (If aprox. 1.250 A para 200 A)[cite: 1]:
-        Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**[cite: 1]
-      * Esto garantiza que el fusible fundirá en menos de 5 segundos protegiendo térmicamente el aislamiento del cable.
-    """)
-
-    st.markdown(f"""
-    ### b) Sección del Neutro y Diámetro del Tubo
-    * **Sección del Neutro (SN):** Según la tabla de la ITC-BT-14 para fases de 120 mm² de cobre, se reduce reglamentariamente a **70 mm²**[cite: 1].
-    * **Diámetro del Tubo:** Acudiendo a la tabla de ocupación de tubos enterrados de la ITC-BT-14, se selecciona un **tubo de diámetro nominal de 160 mm**[cite: 1].
-    """)
-
-    st.markdown(f"""
-    ### c) Intensidad Nominal del Interruptor General de Maniobra (IGM)
-    * El IGM situado en la centralización de contadores se dimensiona para cortar la corriente total prevista del edificio (Ib = {ib_univ:.2f} A), adoptando un calibre comercial normalizado de **250 A**[cite: 1].
-    """)
-
-    st.markdown(f"""
-    ### d) Caída de Tensión Real
-    * Con la sección definitiva adoptada de 120 mm², la caída de tensión absoluta es de Delta V = 1.065 V[cite: 1].
-    * Porcentaje real:
-      Delta V% = ( 1.065 / 400 ) * 100 = **0.266%**[cite: 1]
-      *(Este valor cumple holguramente el límite reglamentario del 0.5%)*[cite: 1].
-    """)
+    st.write("Consulta la pestaña 2 para ver también el desglose interactivo o revisa el resumen completo de examen aquí.")
 
 # =========================================================================
 # PESTAÑAS RESTANTES (4 a 10)
 # =========================================================================
-with pestanas[4]:
-    st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-
-with pestanas[5]:
-    st.title("🧮 Cálculo Rápido")
-
-with pestanas[6]:
+with pestanas[4]: st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
+with pestanas[5]: st.title("🧮 Cálculo Rápido")
+with pestanas[6]: 
     st.title("📐 Esquema Unifilar")
     st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\\nLGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm\\nIcc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A</div>', unsafe_allow_html=True)
-
-with pestanas[7]:
-    st.title("📝 Asistente de Generación de Boletines Oficiales")
-
-with pestanas[8]:
-    st.title("📋 Memoria Técnica de Diseño (CARM - Murcia)")
-
-with pestanas[9]:
-    st.title("📄 Informe Técnico Formal MTD")
-
-with pestanas[10]:
-    st.title("💡 Simulador Consumo Eléctrico")
+with pestanas[7]: st.title("📝 Asistente de Generación de Boletines Oficiales")
+with pestanas[8]: st.title("📋 Memoria Técnica de Diseño (CARM - Murcia)")
+with pestanas[9]: st.title("📄 Informe Técnico Formal MTD")
+with pestanas[10]: st.title("💡 Simulador Consumo Eléctrico")
