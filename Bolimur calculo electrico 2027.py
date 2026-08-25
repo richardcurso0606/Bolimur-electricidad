@@ -178,6 +178,14 @@ st.markdown("""
         margin: 15px 0;
         box-shadow: 0 4px 10px rgba(255, 75, 75, 0.3);
     }
+    .resumen-parciales-box {
+        background-color: #f1f3f5;
+        border: 2px solid #ced4da;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        color: #212529;
+    }
     .esquema-simbolos {
         background-color: #ffffff;
         border: 3px solid #111111;
@@ -371,12 +379,56 @@ with pestanas[0]:
         pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
         pot_total_viviendas += pot_parcial_g
 
-    pot_total_locales = sum([max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0) * loc["qty"] for loc in st.session_state.locales])
-    pot_total_servicios = sum([serv["potencia"] * serv["qty"] * serv["factor"] for serv in st.session_state.servicios_generales])
-    
+    # 2. Locales Comerciales y Oficinas (P2)
+    st.subheader("2. Locales Comerciales y Oficinas (P2)")
+    if st.button("➕ Añadir Local / Oficina"):
+        st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "qty": 1, "superficie": 100.0})
+
+    pot_total_locales = 0.0
+    for idx_l, loc in enumerate(st.session_state.locales):
+        cl1, cl2, cl3, cl4 = st.columns([3, 2, 2, 1])
+        with cl1: loc["nombre"] = st.text_input(f"Local #{idx_l+1}", loc["nombre"], key=f"loc_nom_{idx_l}")
+        with cl2: loc["qty"] = st.number_input(f"Cant. Locales #{idx_l+1}", min_value=1, value=int(loc["qty"]), key=f"loc_qty_{idx_l}")
+        with cl3: loc["superficie"] = st.number_input(f"Superficie (m²) #{idx_l+1}", min_value=0.0, value=float(loc["superficie"]), key=f"loc_sup_{idx_l}")
+        with cl4:
+            if st.button("🗑️", key=f"del_loc_{idx_l}"):
+                st.session_state.locales.pop(idx_l)
+                st.rerun()
+        pot_local_unit = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
+        pot_total_locales += pot_local_unit * loc["qty"]
+
+    # 3. Servicios Generales (P3)
+    st.subheader("3. Servicios Generales del Edificio (P3 - Ascensores, Alumbrado, Bomba)")
+    if st.button("➕ Añadir Servicio General"):
+        st.session_state.servicios_generales.append({"nombre": f"Servicio {len(st.session_state.servicios_generales)+1}", "qty": 1, "potencia": 3000.0, "factor": 1.0})
+
+    pot_total_servicios = 0.0
+    for idx_s, serv in enumerate(st.session_state.servicios_generales):
+        cs1, cs2, cs3, cs4, cs5 = st.columns([3, 2, 2, 2, 1])
+        with cs1: serv["nombre"] = st.text_input(f"Servicio #{idx_s+1}", serv["nombre"], key=f"serv_nom_{idx_s}")
+        with cs2: serv["qty"] = st.number_input(f"Cantidad #{idx_s+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx_s}")
+        with cs3: serv["potencia"] = st.number_input(f"Potencia Unit. (W) #{idx_s+1}", value=float(serv["potencia"]), key=f"serv_pot_{idx_s}")
+        with cs4: serv["factor"] = st.number_input(f"Factor Simultaneidad #{idx_s+1}", value=float(serv["factor"]), key=f"serv_fac_{idx_s}")
+        with cs5:
+            if st.button("🗑️", key=f"del_serv_{idx_s}"):
+                st.session_state.servicios_generales.pop(idx_s)
+                st.rerun()
+        pot_total_servicios += serv["potencia"] * serv["qty"] * serv["factor"]
+
     pt_total_calc = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios)
 
-    st.success(f"💡 **Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W** | **SUMA TOTAL PREVISTA (Pt): {pt_total_calc:,} W**")
+    st.markdown(f"""
+        <div class="resumen-parciales-box">
+            <h4>📊 Resumen de Parciales de Previsión de Cargas:</h4>
+            <ul>
+                <li><b>P1 (Viviendas):</b> {pot_total_viviendas:,} W</li>
+                <li><b>P2 (Locales / Oficinas):</b> {int(pot_total_locales):,} W</li>
+                <li><b>P3 (Servicios Generales):</b> {int(pot_total_servicios):,} W</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.success(f"💡 **SUMA TOTAL PREVISTA (Pt) Actual:** {pt_total_calc:,} W")
 
 # =========================================================================
 # PESTAÑA 2: LGA (LÍNEA GENERAL DE ALIMENTACIÓN)
@@ -475,7 +527,7 @@ with pestanas[1]:
 
     st.markdown(f"""
         <div class="resultado-destacado">
-            ⚡ SECCIÓN A ADOPATAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
+            ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
             Neutro: <b>{70.0 if s_final_lga >= 70 else s_final_lga} mm²</b> | Tubo: <b>160 mm</b> | CDT Real: <b>{dv_real_lga_pct:.3f}%</b> | <b>Fusible CGP: {in_lga_auto} A</b>
             </span>
@@ -597,6 +649,12 @@ with pestanas[4]:
 with pestanas[5]:
     st.title("🧮 Cálculo Rápido (CDT & Icc)")
     st.write("Herramienta exprés para comprobaciones puntuales de tramos individuales.")
+    rc_pot = st.number_input("Potencia (W)", value=10000.0, key="rc_p")
+    rc_len = st.number_input("Longitud (m)", value=25.0, key="rc_l")
+    rc_v = st.number_input("Tensión (V)", value=400.0, key="rc_v")
+    if rc_v > 0 and rc_len > 0:
+        ib_rc = rc_pot / (math.sqrt(3) * rc_v * 0.9)
+        st.metric("Intensidad de cálculo (Ib)", f"{ib_rc:.2f} A")
 
 with pestanas[6]:
     st.title("📐 Esquemas Unifilares")
@@ -612,7 +670,7 @@ with pestanas[8]:
 
 with pestanas[9]:
     st.title("📄 Informe Técnico Formal MTD")
-    st.write("Vista previa del informe técnico completo listo para exportar y firmar por el instalador autorizaado.")
+    st.write("Vista previa del informe técnico completo listo para exportar y firmar por el instalador autorizado.")
 
 with pestanas[10]:
     st.title("💡 Simulador Consumo Eléctrico")
