@@ -165,6 +165,11 @@ if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
     st.write("Bienvenido al panel de cálculo eléctrico. Todos los módulos cuentan con justificación analítica REBT completa. Selecciona un módulo en el menú lateral.")
 
+
+
+# =========================================================================
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
+# =========================================================================
 # =========================================================================
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
@@ -192,14 +197,14 @@ elif seleccion_modulo.startswith("🧮"):
         long_q = st.number_input("Longitud del circuito (m)", value=0.0, step=5.0)
 
     with rc2:
-        ayuda_metodo = "B1: Empotrado en pared (habitual en viviendas). \nB2: En superficie bajo tubo/canaleta. \nC: Multiconductor directo a pared. \nD: Enterrado bajo tubo. \n(El método define la capacidad de refrigeración del cable)"
+        ayuda_metodo = "B1: Empotrado en pared (viviendas). \nB2: En superficie bajo tubo. \nC: Multiconductor directo. \nD: Enterrado bajo tubo."
         metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), index=0, help=ayuda_metodo)
         
         mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"])
         ais_q = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"])
         cdt_lim_q = st.number_input("Caída de Tensión máxima (%)", value=3.0, step=0.5)
         
-        ayuda_icc = "Corriente de cortocircuito en el punto donde nace esta línea. Valores habituales: 6 kA en cuadros de vivienda estándar; 10 kA o más cerca de centralizaciones o derivaciones."
+        ayuda_icc = "Corriente de cortocircuito en origen (ej. 6 kA o 10 kA)."
         icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, step=0.5, help=ayuda_icc)
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
@@ -218,6 +223,7 @@ elif seleccion_modulo.startswith("🧮"):
     min_reg_q = 1.5 if mat_q == "cobre" else 10.0
     s_bruta_q = max(s_cdt_q, s_cal_q, min_reg_q)
     s_opt_q = seleccionar_seccion_optima(s_bruta_q)
+    iz_opt_val = tabla_iz_q.get(s_opt_q, 0.0)
 
     if "Monofásico" in tipo_red_q: dv_real_v_q = (2.0 * val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * v_nom_calc > 0 else 0.0
     else: dv_real_v_q = (val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * v_nom_calc > 0 else 0.0
@@ -249,7 +255,7 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.info(f"""
     #### 1. Intensidad de Diseño ($I_b$)
-    **Justificación:** Se calcula la corriente nominal base a plena carga. Este es el valor que el cable debe soportar térmicamente sin degradarse ($I_z \ge I_b$) y el valor de referencia para elegir la protección magnetotérmica.
+    **Justificación:** Se calcula la corriente nominal base a plena carga. Este es el valor que el cable debe soportar térmicamente sin degradarse ($I_z \\ge I_b$).
     
     {txt_formula_ib}
     
@@ -258,8 +264,16 @@ elif seleccion_modulo.startswith("🧮"):
     """)
 
     st.info(f"""
-    #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Calculamos el grosor de cobre/aluminio estrictamente necesario para que la resistencia del cable no provoque una pérdida de voltaje superior al límite del {cdt_lim_q}% ({dv_max_q:.2f} V) al final de la línea.
+    #### 2. Determinación de Sección por Calentamiento ($I_z$)
+    **Justificación:** Buscamos en las tablas reglamentarias de corrientes admisibles la sección mínima cuyo valor de $I_z$ sea superior a la intensidad de diseño $I_b$ ({ib_q:.2f} A).
+    
+    * **Condición de calentamiento:** $I_z \\ge I_b$
+    * **Sección requerida por este criterio:** **{s_cal_q} mm²** (con una intensidad admisible de {tabla_iz_q.get(s_cal_q, 0)} A).
+    """)
+
+    st.info(f"""
+    #### 3. Sección Teórica por Caída de Tensión ($\\Delta V$)
+    **Justificación:** Calculamos el grosor estrictamente necesario para que la resistencia del cable no provoque una pérdida de voltaje superior al límite del {cdt_lim_q}% ({dv_max_q:.2f} V) al final de la línea.
     
     {txt_formula_cdt}
     
@@ -269,8 +283,8 @@ elif seleccion_modulo.startswith("🧮"):
 
     estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
     st.info(f"""
-    #### 3. Comprobación Cortocircuito y Disparo Magnético (0.1s)
-    **Justificación:** Verificamos la impedancia total (red + cable). La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe ser mayor que el umbral de disparo instantáneo del interruptor (Curva C = $10 \cdot I_n$) para despejar el fallo a tiempo.
+    #### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)
+    **Justificación:** Verificamos la impedancia total (red + cable). La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe superar el umbral de disparo instantáneo del interruptor (Curva C = $10 \\cdot I_n$).
     
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
@@ -286,30 +300,37 @@ elif seleccion_modulo.startswith("🧮"):
         🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
         <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
         <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando simultáneamente la protección del aislamiento del cable frente a sobrecargas persistentes al cumplir la condición In $\le$ 0.91·Iz. (Recomendable acompañar de Diferencial 30 mA para contactos indirectos).
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando simultáneamente la protección del aislamiento frente a sobrecargas al cumplir estrictamente la condición $I_n \\le 0.91 \\cdot I_z$ (donde $I_z$ = {iz_opt_val} A).
         </span>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📊 Tabla de Verificación de Secciones")
-    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \le 0.91 \cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
+    st.markdown("Extracto de la tabla de referencia utilizada para comprobar el cumplimiento térmico ($I_z \\ge I_b$ y $I_n \\le 0.91 \\cdot I_z$) según la sección comercial:")
+    
+    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
         elif prot_q > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\le$ {cond_sobrecarga:.1f}A)"
+        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\\le$ {cond_sobrecarga:.1f}A)"
         else: est_v = "Válido pero sobredimensionado"
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
     st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
-    La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ > $I_b$) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
-    Perfectamente coordinada con un **PIA de {prot_q} A (Curva C)**.
+    La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
+    Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
+
+
+# =========================================================================
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================
 
 
 # =========================================================================
