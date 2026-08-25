@@ -146,14 +146,12 @@ st.markdown("""
     .esquema-simbolos {
         background-color: #ffffff;
         border: 3px solid #111111;
-        padding: 30px;
+        padding: 25px;
         border-radius: 10px;
         font-family: 'Courier New', Courier, monospace;
         color: #000000;
         font-size: 14px;
         line-height: 1.6;
-        white-space: pre;
-        overflow-x: auto;
         box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     </style>
@@ -294,23 +292,27 @@ with st.sidebar:
             else:
                 st.warning("⚠️ Archivo no encontrado.")
 
-# --- PESTAÑAS PRINCIPALES ---
-pestanas = st.tabs([
+# --- NAVEGACIÓN PRINCIPAL MEDIANTE MENÚ DESPLEGABLE (CÓMODO PARA MÓVIL Y TABLET) ---
+opciones_modulo = [
     "🧮 Cálculo Rápido (CDT & Icc Avanzado)",
     "🏢 Previsión de Cargas (Pt)", 
     "⚡ Línea General (LGA)", 
     "🔌 Derivación Individual (DI)", 
-    "🛡️ Resolución Avanzada y Exámenes",
     "📊 Tabla Guía Estilo PLC Madrid",
     "📐 Esquemas Unifilares",
     "📄 Informe Técnico MTD",
-    "💡 Simulador Consumo"
-])
+    "💡 Simulador Consumo",
+    "🛡️ Resolución Avanzada y Exámenes"
+]
+
+seleccion_modulo = st.selectbox("📂 Selecciona el Módulo de Cálculo / Sección:", opciones_modulo)
+
+st.markdown("---")
 
 # =========================================================================
-# PESTAÑA 1: CÁLCULO RÁPIDO AVANZADO
+# MÓDULO 1: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
-with pestanas[0]:
+if seleccion_modulo.startswith("🧮"):
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
     st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
 
@@ -435,15 +437,15 @@ with pestanas[0]:
         <div class="resultado-destacado">
             ⚡ CONCLUSIÓN Y SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación detallada de por qué se aumenta la sección:</b> Aunque la fórmula estricta de caída de tensión arroje una sección menor, la sección final se eleva obligatoriamente a <b>{s_opt_q} mm²</b> para garantizar tres pilares de seguridad: 1) Soportar la intensidad de servicio sin sobrecalentamiento, 2) Cumplir la condición de protección frente a sobrecargas (In <= 0.91 * Iz), y 3) Asegurar que la corriente de cortocircuito al final de la línea sea suficientemente alta para disparar instantáneamente el magnetotérmico.
+            <b>Justificación detallada de por qué se aumenta la sección:</b> Aunque la fórmula estricta de caída de tensión arroje una sección menor, la sección final se eleva obligatoriamente a <b>{s_opt_q} mm²</b> para garantizar tres pilares de seguridad: 1) Soportar la intensidad de servicio sin sobrecalentamiento, 2) Cumplir la condición de protección frente a sobrecargas (In <= 0.91 * Iz), y 3) Asegurar que la corriente de cortocircuito al final de la línea seja suficientemente alta para disparar instantáneamente el magnetotérmico.
             </span>
         </div>
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: PREVISIÓN DE CARGAS
+# MÓDULO 2: PREVISIÓN DE CARGAS
 # =========================================================================
-with pestanas[1]:
+elif seleccion_modulo.startswith("🏢"):
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
@@ -651,9 +653,9 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: LGA
+# MÓDULO 3: LGA
 # =========================================================================
-with pestanas[2]:
+elif seleccion_modulo.startswith("⚡ LGA"):
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     st.write("Configura los parámetros de la LGA y visualiza abajo la memoria técnica detallada con tablas de corriente admisible y el fusible recomendado.")
     
@@ -668,7 +670,7 @@ with pestanas[2]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = st.number_input("Potencia de cálculo LGA (W)", min_value=0.0, value=float(pt_total if pt_total > 0 else 112500.0), step=500.0, key="lga_pot_manual")
+        lga_pot = st.number_input("Potencia de cálculo LGA (W)", min_value=0.0, value=112500.0, step=500.0, key="lga_pot_manual")
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -756,9 +758,9 @@ with pestanas[2]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 4: DERIVACIÓN INDIVIDUAL
+# MÓDULO 4: DERIVACIÓN INDIVIDUAL
 # =========================================================================
-with pestanas[3]:
+elif seleccion_modulo.startswith("🔌"):
     st.title("Derivación Individual - DI (ITC-BT-15)")
     st.write("Configura los parámetros de la Derivación Individual y visualiza abajo la memoria técnica detallada con fórmulas, tablas de admisibilidad y verificación ampliada de sobrecargas.")
 
@@ -841,12 +843,6 @@ with pestanas[3]:
         tabla_di_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_di_md)
 
-    cdt_acumulada_global = dv_real_lga_pct + dv_real_di_pct
-    st.markdown(f"""
-    **4. Verificación del Tramo Más Desfavorable (LGA + DI Acumulada):**  
-    * CDT LGA ({dv_real_lga_pct:.3f}%) + CDT DI ({dv_real_di_pct:.3f}%) = **{cdt_acumulada_global:.3f}%** (Límite global recomendado: 1.5%) -> **CUMPLE CORRECTAMENTE**.
-    """)
-
     st.markdown(f"""
         <div class="resultado-destacado">
             🔌 SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
@@ -857,9 +853,57 @@ with pestanas[3]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 5: RESOLUCIÓN AVANZADA Y EXÁMENES
+# MÓDULO 5: TABLA GUÍA ESTILO PLC MADRID
 # =========================================================================
-with pestanas[4]:
+elif seleccion_modulo.startswith("📊"):
+    st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
+    st.write("Consulta rápida de secciones reglamentarias, caídas de tensión máximas admitidas y calibres comerciales estándar según el REBT.")
+
+    st.markdown("""
+    | Tipo de Línea / Circuito | Sección Mínima Cobre | Sección Mínima Aluminio | Caída de Tensión Máxima ($\\Delta V\\%$) | Protección Habitual |
+    | :--- | :---: | :---: | :---: | :--- |
+    | **Línea General de Alimentación (LGA)** | $10\\text{ mm}^2$ | $16\\text{ mm}^2$ | 0.5% (Mod. 1) / 1.0% (Mod. 2) | Fusibles gG (CGP) |
+    | **Derivación Individual (DI)** | $6\\text{ mm}^2$ | $10\\text{ mm}^2$ | 1.0% (Mod. A) / 0.5% (Mod. B) | Interruptor General (IGM) |
+    | **Circuitos Interiores Viviendas (C1 - Iluminación)** | $1,5\\text{ mm}^2$ | - | 3.0% | PIA 10 A |
+    | **Circuitos Interiores Viviendas (C2 - Enchufes)** | $2,5\\text{ mm}^2$ | - | 3.0% | PIA 16 A |
+    | **Circuitos Interiores Viviendas (C3 - Cocina/Hornos)**| $6\\text{ mm}^2$ | - | 3.0% | PIA 25 A |
+    | **Circuitos Interiores Viviendas (C4 - Lavadora/Lavavajillas)** | $4\\text{ mm}^2$ | - | 3.0% | PIA 20 A |
+    """)
+
+# =========================================================================
+# MÓDULO 6: ESQUEMAS UNIFILARES
+# =========================================================================
+elif seleccion_modulo.startswith("📐"):
+    st.title("📐 Esquemas Unifilares")
+    st.write("Representación unifilar esquemática y parámetros principales del proyecto.")
+    
+    texto_esquema = f"""PROYECTO: {st.session_state.nombre_proyecto}
+LGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm
+Icc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A"""
+    
+    st.code(texto_esquema, language="text")
+
+# =========================================================================
+# MÓDULO 7: INFORME TÉCNICO MTD
+# =========================================================================
+elif seleccion_modulo.startswith("📄"):
+    st.title("📄 Informe Técnico Formal MTD")
+    st.write("Vista previa del informe técnico completo listo para firmar y presentar en Industria.")
+
+# =========================================================================
+# MÓDULO 8: SIMULADOR DE CONSUMO
+# =========================================================================
+elif seleccion_modulo.startswith("💡"):
+    st.title("💡 Simulador Consumo Eléctrico")
+    kw_c = st.number_input("kW contratados", value=4.6)
+    kwh_m = st.number_input("kWh al mes", value=250.0)
+    total_con_impuestos = ((kw_c * 0.11 * 30) + (kwh_m * 0.18)) * 1.051127 * 1.10
+    st.metric("Estimación Factura Mensual", f"{total_con_impuestos:.2f} €")
+
+# =========================================================================
+# MÓDULO 9: RESOLUCIÓN AVANZADA Y EXÁMENES
+# =========================================================================
+elif seleccion_modulo.startswith("🛡️"):
     st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
     st.write("Selecciona el caso de examen o problema tipo para ver el desarrollo analítico completo paso a paso con fórmulas y verificación reglamentaria.")
 
@@ -910,45 +954,3 @@ with pestanas[4]:
         **1. Verificación de Poder de Corte ($PdC$):**  
         * $PdC \\ge I_{cc\\_max}$ (15 kA). Se selecciona un interruptor automático con poder de corte de **25 kA**, garantizando la protección frente a corrientes de defecto francas.
         """)
-
-# =========================================================================
-# PESTAÑA 6: TABLA GUÍA ESTILO PLC MADRID
-# =========================================================================
-with pestanas[5]:
-    st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta rápida de secciones reglamentarias, caídas de tensión máximas admitidas y calibres comerciales estándar según el REBT.")
-
-    st.markdown("""
-    | Tipo de Línea / Circuito | Sección Mínima Cobre | Sección Mínima Aluminio | Caída de Tensión Máxima ($\\Delta V\\%$) | Protección Habitual |
-    | :--- | :---: | :---: | :---: | :--- |
-    | **Línea General de Alimentación (LGA)** | $10\\text{ mm}^2$ | $16\\text{ mm}^2$ | 0.5% (Mod. 1) / 1.0% (Mod. 2) | Fusibles gG (CGP) |
-    | **Derivación Individual (DI)** | $6\\text{ mm}^2$ | $10\\text{ mm}^2$ | 1.0% (Mod. A) / 0.5% (Mod. B) | Interruptor General (IGM) |
-    | **Circuitos Interiores Viviendas (C1 - Iluminación)** | $1,5\\text{ mm}^2$ | - | 3.0% | PIA 10 A |
-    | **Circuitos Interiores Viviendas (C2 - Enchufes)** | $2,5\\text{ mm}^2$ | - | 3.0% | PIA 16 A |
-    | **Circuitos Interiores Viviendas (C3 - Cocina/Hornos)**| $6\\text{ mm}^2$ | - | 3.0% | PIA 25 A |
-    | **Circuitos Interiores Viviendas (C4 - Lavadora/Lavavajillas)** | $4\\text{ mm}^2$ | - | 3.0% | PIA 20 A |
-    """)
-
-# =========================================================================
-# PESTAÑA 7: ESQUEMAS UNIFILARES
-# =========================================================================
-with pestanas[6]:
-    st.title("📐 Esquemas Unifilares")
-    st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\nLGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm\nIcc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A</div>', unsafe_allow_html=True)
-
-# =========================================================================
-# PESTAÑA 8: INFORME TÉCNICO MTD
-# =========================================================================
-with pestanas[7]:
-    st.title("📄 Informe Técnico Formal MTD")
-    st.write("Vista previa del informe técnico completo listo para firmar y presentar en Industria.")
-
-# =========================================================================
-# PESTAÑA 9: SIMULADOR DE CONSUMO
-# =========================================================================
-with pestanas[8]:
-    st.title("💡 Simulador Consumo Eléctrico")
-    kw_c = st.number_input("kW contratados", value=4.6)
-    kwh_m = st.number_input("kWh al mes", value=250.0)
-    total_con_impuestos = ((kw_c * 0.11 * 30) + (kwh_m * 0.18)) * 1.051127 * 1.10
-    st.metric("Estimación Factura Mensual", f"{total_con_impuestos:.2f} €")
