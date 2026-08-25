@@ -351,7 +351,6 @@ with pestanas[3]:
     dv_max_univ = 400 * (cdt_lim_ex / 100.0)
     s_cdt_univ = (p_ex * l_ex) / (gamma_univ * dv_max_univ * 400)
 
-    # Búsqueda inicial por calentamiento
     s_cal_univ = 1.5
     for sec_u, iz_u in IZ_COBRE_ENTERRADO.items():
         if iz_u >= ib_univ:
@@ -362,15 +361,10 @@ with pestanas[3]:
     s_opt_univ = seleccionar_seccion_optima(s_bruta_univ)
     in_univ = seleccionar_proteccion(ib_univ)
 
-    # Verificación de sobrecarga (In <= 0.91 * Iz) iterativa como en el ejercicio
     s_final_ex = s_opt_univ
-    iz_final_ex = IZ_COBRE_ENTERRADO.get(s_final_ex, 230.0)
-    cond2_cumple = False
-
     while True:
         iz_act = IZ_COBRE_ENTERRADO.get(s_final_ex, 230.0)
         if in_univ <= 0.91 * iz_act and iz_act >= ib_univ:
-            cond2_cumple = True
             break
         idx_s = SECCIONES_COMERCIALES.index(s_final_ex) if s_final_ex in SECCIONES_COMERCIALES else 5
         if idx_s < len(SECCIONES_COMERCIALES) - 1:
@@ -390,52 +384,51 @@ with pestanas[3]:
     ### a) Sección de la LGA y Calibre de los Fusibles
     
     **1. Cálculo por Caída de Tensión (Delta V):**
-    * Límite reglamentario: $\\Delta V\\% \\le {cdt_lim_ex}\\%$
-    * Valor absoluto: $\\Delta V = \\frac{{{cdt_lim_ex}}}{{100}} \\cdot 400 = {dv_max_univ:.2f}\\text{{ V}}$
-    * Sección teórica: 
-      $$S = \\frac{{L \\cdot P}}{{\\gamma \\cdot \\Delta V \\cdot V}} = \\frac{{{l_ex} \\cdot {p_ex:,.2f}}}{{{gamma_univ} \\cdot {dv_max_univ:.2f} \\cdot 400}} = {s_cdt_univ:.2f}\\text{{ mm}}^2 \\implies \\mathbf{{70\\text{{ mm}}^2}}$$
+    * Límite reglamentario: Delta V% <= {cdt_lim_ex}%
+    * Valor absoluto: Delta V = ({cdt_lim_ex} / 100) * 400 = {dv_max_univ:.2f} V
+    * Sección teórica: S = ( L * P ) / ( gamma * Delta V * V ) = ( {l_ex} * {p_ex:,.2f} ) / ( {gamma_univ} * {dv_max_univ:.2f} * 400 ) = {s_cdt_univ:.2f} mm² --> **70 mm²**
 
     **2. Cálculo por Calentamiento y Consulta de Tabla de Corrientes Admisibles (ITC-BT-19 - Cable Enterrado Tipo D):**
-    * Intensidad de diseño ($I_b$):
-      $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{p_ex:,.2f}}}{{\\sqrt{{3}} \\cdot 400 \\cdot {cos_ex}}} = \\mathbf{{{ib_univ:.2f}\\text{{ A}}}$$
-    * **Consulta de tabla para verificar $I_z \\ge I_b$:**
-      * Para $S = 70\\text{{ mm}}^2$: $I_z = 170\\text{{ A}} < 180,42\\text{{ A}} \\implies \\text{{\\textbf{{No cumple}}}}$ (Aumentamos sección).
-      * Para $S = 95\\text{{ mm}}^2$: $I_z = 202\\text{{ A}} > 180,42\\text{{ A}} \\implies \\text{{\\textbf{{Cumple térmicamente inicialmente}}}}$[cite: 1].
+    * Intensidad de diseño (Ib):
+      Ib = P / ( sqrt(3) * V * cos phi ) = {p_ex:,.2f} / ( 1.732 * 400 * {cos_ex} ) = **{ib_univ:.2f} A**
+    * **Consulta de tabla para verificar Iz >= Ib:**
+      * Para S = 70 mm²: Iz = 170 A < 180.42 A --> **No cumple** (Aumentamos sección).
+      * Para S = 95 mm²: Iz = 202 A > 180.42 A --> **Cumple térmicamente inicialmente**.
 
     **3. Selección de Fusibles y Verificación por Sobrecarga:**
-      * Tomamos fusibles en la CGP con intensidad nominal $I_n = {in_univ}\\text{{ A}}$ (superior a $I_b = {ib_univ:.2f}\\text{{ A}}$)[cite: 1].
+      * Tomamos fusibles en la CGP con intensidad nominal In = {in_univ} A (superior a Ib = {ib_univ:.2f} A).
       * Aplicamos las dos condiciones reglamentarias de protección a sobrecargas:
-        1. $I_b \\le I_n \\le I_z \\implies {ib_univ:.2f} \\le {in_univ} \\le {IZ_COBRE_ENTERRADO.get(95, 202)} \\implies \\textbf{{Sí cumple}}$[cite: 1].
-        2. $I_n \\le 0,91 \\cdot I_z$:
-           * Con $S = 95\\text{{ mm}}^2$ ($I_z = 202\\text{{ A}}$): ${in_univ} \\le 0,91 \\cdot 202 = 183,82\\text{{ A}} \\implies \\textbf{{No cumple}}$ ($200$ no es $\\le 183,82$)[cite: 1].
-           * **Elevamos sección a $S = 120\\text{{ mm}}^2$** ($I_z = 230\\text{{ A}}$): 
-             $${in_univ} \\le 0,91 \\cdot 230 = 209,3\\text{{ A}} \\implies \\textbf{{Sí cumple}}$[cite: 1]
-      * **Conclusión Sobrecarga:** La sección de fases queda fijada en **$S = 120\\text{{ mm}}^2$**[cite: 1].
+        1. Ib <= In <= Iz --> {ib_univ:.2f} <= {in_univ} <= 202 --> **Sí cumple**.
+        2. In <= 0.91 * Iz:
+           * Con S = 95 mm² (Iz = 202 A): {in_univ} <= 0.91 * 202 = 183.82 A --> **No cumple** (200 no es <= 183.82).
+           * **Elevamos sección a S = 120 mm²** (Iz = 230 A): 
+             {in_univ} <= 0.91 * 230 = 209.3 A --> **Sí cumple**
+      * **Conclusión Sobrecarga:** La sección de fases queda fijada en **S = 120 mm²**.
 
     **4. Verificación de Cortocircuito (Procedimiento Manual MT 2.80.12 de Iberdrola):**
-      * **1ª Condición (Poder de Corte):** $PdC = 50\\text{{ kA}} > {icc_max_ex}\\text{{ kA}}$ ($I_{cc\\_max}$) $\\implies$ **Cumple**[cite: 1].
-      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea ($I_{cc\\_min} = {icc_min_ex * 1000:,.0f}\\text{{ A}}$) es superior a la intensidad de fusión del fusible en 5 segundos ($I_f \\approx 1.250\\text{{ A}}$ para $200\\text{{ A}}$):
-        $$I_{cc\\_min} > I_f \\implies {icc_min_ex * 1000:,.0f} > 1.250\\text{{ A}} \\implies \\textbf{{Sí cumple}}$$[cite: 1]
-      * Esto garantiza que el fusible fundirá en menos de 5 segundos protegiendo el aislamiento del cable. Por tanto, la sección definitiva adoptada para las fases de la LGA es **$120\\text{{ mm}}^2$**[cite: 1].
+      * **1ª Condición (Poder de Corte):** PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**.
+      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) es superior a la intensidad de fusión del fusible en 5 segundos (If approx 1.250 A para 200 A):
+        Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**
+      * Esto garantiza que el fusible fundirá en menos de 5 segundos protegiendo el aislamiento del cable. Por tanto, la sección definitiva adoptada para las fases de la LGA es **120 mm²**.
     """)
 
     st.markdown(f"""
     ### b) Sección del Neutro y Diámetro del Tubo
-    * **Sección del Neutro ($S_N$):** Según la tabla de la ITC-BT-14, para fases de $120\\text{{ mm}}^2$ en cobre, el neutro se reduce reglamentariamente a **$70\\text{{ mm}}^2$**[cite: 1].
-    * **Diámetro del Tubo:** Acudiendo a la tabla de ocupación de tubos enterrados de la ITC-BT-14, se selecciona un **tubo de diámetro nominal de $160\\text{{ mm}}$**[cite: 1].
+    * **Sección del Neutro (SN):** Según la tabla de la ITC-BT-14, para fases de 120 mm² en cobre, el neutro se reduce reglamentariamente a **70 mm²**.
+    * **Diámetro del Tubo:** Acudiendo a la tabla de ocupación de tubos enterrados de la ITC-BT-14, se selecciona un **tubo de diámetro nominal de 160 mm**.
     """)
 
     st.markdown(f"""
     ### c) Intensidad Nominal del Interruptor General de Maniobra (IGM)
-    * El IGM situado en la centralización de contadores se dimensiona para cortar la corriente total prevista del edificio ($I_b = {ib_univ:.2f}\\text{{ A}}$), adoptando un calibre comercial normalizado de **$250\\text{{ A}}$**[cite: 1].
+    * El IGM situado en la centralización de contadores se dimensiona para cortar la corriente total prevista del edificio (Ib = {ib_univ:.2f} A), adoptando un calibre comercial normalizado de **250 A**.
     """)
 
     st.markdown(f"""
     ### d) Caída de Tensión Real
-    * Con la sección definitiva adoptada de $120\\text{{ mm}}^2$, la caída de tensión absoluta es de $\\Delta V = 1,065\\text{{ V}}$[cite: 1].
+    * Con la sección definitiva adoptada de 120 mm², la caída de tensión absoluta es de Delta V = 1.065 V.
     * Porcentaje real:
-      $$\\Delta V\\% = \\frac{{1,065}}{{400}} \\cdot 100 = \\mathbf{{{dv_real_pct_univ:.3f}\\%}}$$[cite: 1]
-      *(Este valor es inferior al $0,5\\%$ máximo permitido, cumpliendo con total holgura)*[cite: 1].
+      Delta V% = ( 1.065 / 400 ) * 100 = **{dv_real_pct_univ:.3f}%**
+      *(Este valor es inferior al 0.5% máximo permitido, cumpliendo con total holgura)*.
     """)
 
 # =========================================================================
@@ -445,7 +438,7 @@ with pestanas[4]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
 
 with pestanas[5]:
-    st.title("🧮 Ventana de Cálculo Rápido")
+    st.title("🧮 Cálculo Rápido")
 
 with pestanas[6]:
     st.title("📐 Esquema Unifilar")
