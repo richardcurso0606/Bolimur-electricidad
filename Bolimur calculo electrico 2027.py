@@ -377,7 +377,7 @@ with st.sidebar:
                 st.warning("⚠️ No encontrado")
 
 # =========================================================================
-# CONTENIDO DE LAS PANTALLAS
+# CONTENIDO DE LAS PANTALLAS (INTEGRIDAD 100% RESTAURADA)
 # =========================================================================
 
 if seleccion_modulo.startswith("🏠"):
@@ -505,22 +505,29 @@ elif seleccion_modulo.startswith("🔌"):
     st.success(f"DI configurada para {di_pot} W en {di_long} metros.")
 
 # =========================================================================
-# MÓDULO: TABLAS ITC-BT SEGÚN REBT Y GUÍAS (TODAS LAS PESTAÑAS Y TABLAS CLARAS)
+# MÓDULO: TABLAS ITC-BT SEGÚN REBT Y GUÍAS (SELECTOR POR DESPLEGABLE)
 # =========================================================================
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Compendio General de Tablas REBT y Guías Técnicas")
-    st.write("Biblioteca técnica oficial completa con todas las tablas reglamentarias, explicaciones de uso y recomendaciones de obra ordenadas por pestañas claras.")
+    st.write("Biblioteca técnica oficial completa. Selecciona la Instrucción Técnica Complementaria (ITC-BT) que deseas consultar en el menú desplegable inferior:")
 
-    sub_itc = st.tabs([
-        "🔌 ITC-BT-15 (Derivaciones)",
-        "🏢 ITC-BT-10 y 14 (Cargas y LGA)",
-        "🏠 ITC-BT-25 (Interiores y Alturas)",
-        "🛡️ UNE-HD y Otras ITC (Admisibilidad y Tierras)"
-    ])
+    itc_seleccionada = st.selectbox(
+        "Selecciona la ITC-BT o Bloque Normativo:",
+        [
+            "ITC-BT-15: Derivaciones Individuales (DI) y Canaladuras",
+            "ITC-BT-10: Previsión de Cargas y Simultaneidad",
+            "ITC-BT-14: Línea General de Alimentación (LGA)",
+            "ITC-BT-25: Instalaciones Interiores en Viviendas y Alturas",
+            "UNE-HD 60364-5-52: Intensidades Admisibles (Iz)",
+            "ITC-BT-07 / 08: Redes Subterráneas y Puestas a Tierra",
+            "ITC-BT-27 / 30: Locales Húmedos y Grados de Protección IP"
+        ]
+    )
 
-    with sub_itc[0]:
+    st.markdown("---")
+
+    if "ITC-BT-15" in itc_seleccionada:
         st.subheader("📑 ITC-BT-15: Derivaciones Individuales (DI)")
-        
         st.markdown("""
         <div class="info-box-tecnico">
             <b>📖 ¿Para qué sirve y cómo se utiliza esta tabla?</b><br>
@@ -539,13 +546,7 @@ elif seleccion_modulo.startswith("📚"):
         | **35 mm²** | 50 mm | 0,5% / 1,0% / 1,5% | 77 m / 116 m / 154 m | 60 m / 91 m / 121 m | 48 m / 72 m / 96 m | 38 m / 58 m / 77 m | 31 m / 46 m / 61 m |
         """)
 
-        st.markdown("""
-        <div class="info-box-tecnico">
-            <b>🏗️ Dimensionamiento de Canaladuras (Patinillos de Obra):</b><br>
-            Establece la anchura (L) y profundidad (P) de los conductos de fábrica según el número de derivaciones individuales.
-        </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown("### 🏗️ Dimensiones Mínimas de la Canaladura o Conducto de Obra (Patinillos)")
         st.markdown("""
         | Número de Derivaciones | Anchura L (Profundidad P = 0,15 m, una fila) | Anchura L (Profundidad P = 0,30 m, dos filas) |
         | :---: | :---: | :---: |
@@ -555,16 +556,14 @@ elif seleccion_modulo.startswith("📚"):
         | **37 a 48** | 2,45 m | 1,35 m |
         """)
 
-    with sub_itc[1]:
-        st.subheader("🏢 ITC-BT-10 y 14: Previsión de Cargas y LGA")
-        
+    elif "ITC-BT-10" in itc_seleccionada:
+        st.subheader("🏢 ITC-BT-10: Previsión de Cargas para Edificios")
         st.markdown("""
         <div class="info-box-tecnico">
-            <b>📖 ITC-BT-10 (Coeficientes de Simultaneidad):</b><br>
-            Define los coeficientes (K) aplicables al conjunto de viviendas para calcular la potencia total prevista (Pt) del edificio.
+            <b>📖 ¿Para qué sirve?</b><br>
+            Define los coeficientes de simultaneidad (K) aplicables al conjunto de viviendas y locales de un edificio para calcular la potencia total prevista (Pt).
         </div>
         """, unsafe_allow_html=True)
-
         st.markdown("""
         | Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |
         | :---: | :---: |
@@ -576,16 +575,17 @@ elif seleccion_modulo.startswith("📚"):
         | **> 21** | $15,3 + (n - 21) \\times 0,5$ |
         """)
 
+    elif "ITC-BT-14" in itc_seleccionada:
+        st.subheader("⚡ ITC-BT-14: Línea General de Alimentación (LGA)")
         st.markdown("""
         <div class="info-box-tecnico">
-            <b>📖 ITC-BT-14 (Línea General de Alimentación):</b><br>
-            Secciones mínimas obligatorias de $10\\text{ mm}^2$ (Cobre) y $16\\text{ mm}^2$ (Aluminio). Límite de caída de tensión máxima: 0,5% o 1,0%.
+            <b>📖 Criterio reglamentario:</b><br>
+            Secciones mínimas obligatorias de $10\\text{ mm}^2$ en Cobre y $16\\text{ mm}^2$ en Aluminio. Caída de tensión máxima admisible: 0,5% (Contadores concentrados) o 1,0% (Centralizaciones parciales).
         </div>
         """, unsafe_allow_html=True)
 
-    with sub_itc[2]:
+    elif "ITC-BT-25" in itc_seleccionada:
         st.subheader("🏠 ITC-BT-25: Instalaciones Interiores y Alturas Reglamentarias")
-        
         st.markdown("""
         <div class="recomendacion-box">
             <h4 style="margin-top: 0; color: #004085;">📌 RECOMENDACIONES IMPORTANTES Y ALTURAS DE INSTALACIÓN EN VIVIENDAS</h4>
@@ -598,16 +598,14 @@ elif seleccion_modulo.startswith("📚"):
         </div>
         """, unsafe_allow_html=True)
 
-    with sub_itc[3]:
-        st.subheader("🛡️ UNE-HD y Otras ITC (Admisibilidad y Tierras)")
-        
+    elif "UNE-HD" in itc_seleccionada:
+        st.subheader("🛡️ UNE-HD 60364-5-52: Intensidades Admisibles ($I_z$)")
         st.markdown("""
         <div class="info-box-tecnico">
-            <b>📖 UNE-HD 60364-5-52 (Intensidades Admisibles Iz):</b><br>
-            Corriente máxima admisible que soporta un cable sin sobrepasar su temperatura límite de servicio.
+            <b>📖 ¿Para qué sirve?</b><br>
+            Corriente máxima admisible que soporta un cable sin sobrepasar su temperatura límite de servicio según el aislamiento y modo de instalación.
         </div>
         """, unsafe_allow_html=True)
-
         st.markdown("""
         | Tipo de Cable e Instalación | Sistema | 6 mm² | 10 mm² | 16 mm² | 25 mm² | 35 mm² | 50 mm² |
         | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -617,8 +615,25 @@ elif seleccion_modulo.startswith("📚"):
         | **RZ1-K (0,6/1kV) - Tubos enterrados** | Trifásico (`st`) | 58 A | 77 A | 100 A | 128 A | 152 A | 184 A |
         """)
 
-        st.markdown("### 🌱 ITC-BT-08: Puesta a Tierra y ITC-BT-07 / 27 (Subterráneas y Locales Húmedos)")
-        st.write("Tablas auxiliares de puesta a tierra, redes enterradas y grados de protección IP para baños y locales especiales.")
+    elif "ITC-BT-07" in itc_seleccionada:
+        st.subheader("🌱 ITC-BT-07 / 08: Redes Subterráneas y Puestas a Tierra")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 Criterios principales:</b><br>
+            Dimensionamiento de picas de tierra, conductores de protección equipotenciales y factores de corrección por resistividad térmica del terreno en zanjas subterráneas.
+        </div>
+        """, unsafe_allow_html=True)
+
+    elif "ITC-BT-27" in itc_seleccionada:
+        st.subheader("💧 ITC-BT-27 / 30: Locales Húmedos, Mojados y Grados IP")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 Criterios de protección IP en cuartos de baño y locales especiales:</b><br>
+            • Volumen 0: IPX7 obligatorios.<br>
+            • Volumen 1: IPX4 mínimos.<br>
+            • Volumen 2: IPX4 (IPX5 si hay chorros de agua).
+        </div>
+        """, unsafe_allow_html=True)
 
 elif seleccion_modulo.startswith("📐"):
     st.title("📐 Esquemas Unifilares del Edificio y Desdobles Reglamentarios")
