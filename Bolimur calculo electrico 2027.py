@@ -309,10 +309,10 @@ with pestanas[0]:
     with col_pop_viv:
         with st.popover("📖 Ver Tabla ITC-BT-10 Completa"):
             st.markdown("### Tabla Oficial de Simultaneidad (ITC-BT-10)")
-            tabla_aux_md = "| Nº Viviendas ($n$) | Coeficiente ($K$) |\n| :---: | :---: |\n"
+            tabla_aux_md = "| Nº Viviendas (n) | Coeficiente (K) |\n| :---: | :---: |\n"
             for k_viv, v_coef in COEF_SIMULTANEIDAD_VIVIENDAS.items():
                 tabla_aux_md += f"| {k_viv} | {v_coef} |\n"
-            tabla_aux_md += "| > 21 | $15,3 + (n - 21) \\times 0,5$ |"
+            tabla_aux_md += "| > 21 | 15,3 + (n - 21) x 0,5 |"
             st.markdown(tabla_aux_md)
 
     if st.button("➕ Añadir Grupo de Viviendas"):
@@ -602,7 +602,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (RESTAURADA AL 100% CON EXPLICACIÓN Y TABLA)
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (COMPLETA Y CON TABLA DE SECCIONES)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -653,16 +653,16 @@ with pestanas[2]:
 
     st.markdown(f"""
     **1. Intensidad de Diseño ($I_b$):**  
-    * $I_b = \\frac{P}{V \\cdot \\cos\\varphi} = \\frac{{{di_pot}}}{{{230} \\cdot {di_cos}}} = \\mathbf{{{ib_di:.2f}\\text{ A}}}$
+    * $I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}}$
+    """)
+    st.info(f"Cálculo numérico: {di_pot} W / (230 V x {di_cos}) = **{ib_di:.2f} A**")
 
+    st.markdown(f"""
     **2. Cálculo por Caída de Tensión ($\\Delta V \\le {dv_pct_di}\\%$):**  
     * Valor absoluto máximo admisible: $\\Delta V = {230} \\times \\frac{{{dv_pct_di}}}{{100}} = {dv_max_di:.2f}\\text{{ V}}$
-    * Sección teórica necesaria: $S = \\frac{2 \\cdot P \\cdot L}{\\gamma \\cdot \\Delta V \\cdot V} = \\frac{{2 \\cdot {di_pot} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di:.2f} \\cdot {230}}} = \\mathbf{{{s_cdt_di:.2f}\\text{{ mm}}^2}}$
-
-    **3. Criterio de Calentamiento y Mínimo Reglamentario (ITC-BT-15):**  
-    * Admisibilidad mínima requerida ($I_z \\ge I_b$): **{s_cal_di} mm²**
-    * Suelo reglamentario obligatorio: **{min_reg_di} mm²** ({di_mat.upper()}).
+    * Sección teórica necesaria: $S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$
     """)
+    st.info(f"Cálculo numérico: (2 x {di_pot} W x {di_long} m) / ({gamma_di} x {dv_max_di:.2f} V x 230 V) = **{s_cdt_di:.2f} mm²**")
 
     st.markdown("### 📊 Tabla Comparativa de Secciones Comerciales para la DI")
     tabla_di_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado Reglamentario |\n| :---: | :---: | :---: | :--- |\n"
