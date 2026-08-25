@@ -325,7 +325,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (COMPLETA CON IRVE Y SERVICIOS GENERALES)
+# PESTAÑA 1: PREVISIÓN DE CARGAS (COMPLETA)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -405,7 +405,7 @@ with pestanas[0]:
         pot_local_unit = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
         pot_total_locales += pot_local_unit * loc["qty"]
 
-    # 3. Servicios Generales (P3) CON SELECTOR DE TIPO DE SERVICIO
+    # 3. Servicios Generales (P3)
     st.subheader("3. Servicios Generales del Edificio (P3)")
     if st.button("➕ Añadir Servicio General"):
         st.session_state.servicios_generales.append({"nombre": "Ascensor principal", "qty": 1, "potencia": 3000.0, "factor": 1.0})
@@ -418,7 +418,7 @@ with pestanas[0]:
                 "Ascensor principal", "Ascensor secundario / Montacargas", 
                 "Alumbrado portal y escalera", "Grupo de presión / Bomba de agua", 
                 "Ventilación / Extracción de humos", "Puerta automática de garaje", "Otro servicio general"
-            ], index=0 if serv["nombre"] not in ["Ascensor principal", "Ascensor secundario / Montacargas", "Alumbrado portal y escalera", "Grupo de presión / Bomba de agua", "Ventilación / Extracción de humos", "Puerta automática de garaje", "Otro servicio general"] else 0, key=f"serv_nom_{idx_s}")
+            ], index=0, key=f"serv_nom_{idx_s}")
         with cs2: serv["qty"] = st.number_input(f"Cantidad #{idx_s+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx_s}")
         with cs3: serv["potencia"] = st.number_input(f"Potencia Unit. (W) #{idx_s+1}", value=float(serv["potencia"]), key=f"serv_pot_{idx_s}")
         with cs4: serv["factor"] = st.number_input(f"Factor Simultaneidad #{idx_s+1}", value=float(serv["factor"]), key=f"serv_fac_{idx_s}")
@@ -428,7 +428,7 @@ with pestanas[0]:
                 st.rerun()
         pot_total_servicios += serv["potencia"] * serv["qty"] * serv["factor"]
 
-    # 4. Infraestructura para Recarga de Vehículos (IRVE - ITC-BT-52)
+    # 4. IRVE (ITC-BT-52)
     st.subheader("4. Infraestructura de Recarga de Vehículos - IRVE (ITC-BT-52)")
     st.session_state.irve_config["con_irve"] = st.checkbox("Incluir preinstalación / instalación IRVE en el edificio", value=st.session_state.irve_config["con_irve"])
     pot_total_irve = 0.0
@@ -569,7 +569,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (DI) CON DESGLOSE COMPLETO
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (DI) - CORREGIDA Y DETALLADA
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -584,21 +584,23 @@ with pestanas[2]:
     ib_di = di_pot / (230.0 * di_cos)
     dv_max_di = 230.0 * 0.01 # 1% para contadores concentrados
     s_di_calc = (di_long * di_pot) / (gamma_di * dv_max_di * 230.0)
-    s_di_opt = seleccionar_sec = seleccionar_seccion_optima(max(s_di_calc, 6.0)) # Mínimo reglamentario viviendas 6 mm2
+    s_di_opt = seleccionar_seccion_optima(max(s_di_calc, 6.0)) # Mínimo reglamentario viviendas 6 mm2
     dv_real_di_v = (di_pot * di_long) / (gamma_di * s_di_opt * 230.0)
     dv_real_di_pct = (dv_real_di_v / 230.0) * 100
 
     st.markdown("---")
     st.subheader("📋 Memoria de Cálculo Justificada (Derivación Individual)")
+    
+    # Texto plano seguro sin errores de LaTeX
     st.markdown(f"""
     **1. Intensidad de cálculo ($I_b$):**  
-    $I_b = P / (V \\cdot \\cos\\varphi) = {di_pot} / (230 \\cdot {di_cos}) = \\mathbf{{{ib_di:.2f}\\text{ A}}}$
+    * $I_b = P / (V \\cdot \\cos\\varphi) = {di_pot} / (230 \\cdot {di_cos}) = \\mathbf{{{ib_di:.2f}\\text{ A}}}$
 
     **2. Caída de Tensión (ITC-BT-15):**  
     * Límite reglamentario para contadores concentrados: $\\Delta V\\% \\le 1\\%$.
     * Sección teórica: $S = (L \\cdot P) / (\\gamma \\cdot \\Delta V \\cdot V) = ({di_long} \\cdot {di_pot}) / (56 \\cdot 2.3 \\cdot 230) = \\mathbf{{{s_di_calc:.2f}\\text{ mm}^2}}$
-    * Aplicando el mínimo reglamentario para viviendas ($6\\text{ mm}^2$ de cobre) y sección comercial adoptada: $\\mathbf{{{s_di_opt}\\text{ mm}^2}}$.
-    * Caída de tensión real: $\\mathbf{{{dv_real_di_pct:.3f}\\%}}$ (Cumple el límite del 1%).
+    * Aplicando el mínimo reglamentario para viviendas ($6\\text{ mm}^2$ de cobre) y sección comercial adoptada: **{s_di_opt} mm²**.
+    * Caída de tensión real: **{dv_real_di_pct:.3f}%** (Cumple el límite del 1%).
     """)
 
     st.markdown(f"""
@@ -653,45 +655,6 @@ with pestanas[3]:
             estado = "Válido pero superior"
         tabla_markdown += f"| {s_com} mm² | {iz_val_t} A | {estado} |\n"
     st.markdown(tabla_markdown)
-
-    st.markdown(f"""
-    ### a) Sección de la LGA y Calibre de los Fusibles
-    
-    **1. Cálculo por Caída de Tensión (Delta V):**
-    * Límite reglamentario para contadores concentrados: Delta V% <= {cdt_lim_ex}%
-    * Valor en voltios: Delta V = ({cdt_lim_ex} / 100) * 400 = {dv_max_univ:.2f} V
-    * Sección teórica: S = ( L * P ) / ( gamma * Delta V * V ) = ( {l_ex} * {p_ex:,.2f} ) / ( {gamma_univ} * {dv_max_univ:.2f} * 400 ) = {s_cdt_univ:.2f} mm² --> **70 mm²**
-
-    **2. Cálculo por Calentamiento (Iz >= Ib):**
-    * Intensidad de diseño (Ib):
-      Ib = P / ( 1.732 * V * cos phi ) = {p_ex:,.2f} / ( 1.732 * 400 * {cos_ex} ) = **{ib_univ:.2f} A**
-    * **Consulta de tablas (ITC-BT-19):**
-      * Para S = 70 mm²: Iz = 170 A < 180.42 A --> **No cumple** por calentamiento, se incrementa la sección.
-      * Para S = 95 mm²: Iz = 202 A > 180.42 A.
-
-    **3. Selección de Fusibles y Verificación por Sobrecarga:**
-    """)
-
-    st.markdown(f"""
-        <div class="fusible-vistoso">
-            🛡️ FUSIBLE RECOMENDADO EN CGP: In = {in_univ} A (Tipo gG)
-        </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-      * Comprobación de las dos condiciones reglamentarias de sobrecarga:
-        1. Ib <= In <= Iz --> {ib_univ:.2f} <= {in_univ} <= 202 --> **Sí cumple**.
-        2. In <= 0.91 * Iz:
-           * Con S = 95 mm² (Iz = 202 A): {in_univ} <= 0.91 * 202 = 183.82 A --> **No cumple** ({in_univ} no es <= 183.82).
-           * **Justificación de por qué llega a 120 mm²:** Al no cumplir la segunda condición de sobrecarga, aumentamos la sección a S = 120 mm² (Iz = 230 A).
-           * Reevaluando con S = 120 mm²: {in_univ} <= 0.91 * 230 = 209.3 A --> **Sí cumple**.
-      * **Conclusión Sobrecarga:** La sección definitiva adoptada para las fases de la LGA es de **S = 120 mm²**.
-
-    **4. Verificación de Cortocircuito (Procedimiento Manual MT 2.80.12 de Iberdrola):**
-      * **1ª Condición (Poder de Corte):** PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**.
-      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) is superior a la intensidad de fusión del fusible en 5 segundos (If aprox. 1.250 A para {in_univ} A):
-        Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**
-    """)
 
 # =========================================================================
 # PESTAÑAS 4 A 10 (RECUPERADAS Y TOTALMENTE OPERATIVAS)
