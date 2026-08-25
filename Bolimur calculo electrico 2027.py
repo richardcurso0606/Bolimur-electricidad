@@ -606,13 +606,11 @@ with pestanas[3]:
         icc_min_ex = st.number_input("Icc mínima al final (kA)", value=7.5, step=0.5, key="icc_min_in")
         cdt_lim_ex = st.selectbox("Límite CDT admisible (%)", [0.5, 1.0, 3.0, 5.0], index=0, key="cdt_lim_in")
 
-    # Cálculos dinámicos universales
     gamma_univ = 44.0  # Cobre XLPE
     ib_univ = p_ex / (math.sqrt(3) * 400 * cos_ex)
     dv_max_univ = 400 * (cdt_lim_ex / 100.0)
     s_cdt_univ = (p_ex * l_ex) / (gamma_univ * dv_max_univ * 400)
 
-    # Calentamiento (suposición cable enterrado tipo D)
     s_cal_univ = 1.5
     for sec_u, iz_u in IZ_COBRE_ENTERRADO.items():
         if iz_u >= ib_univ:
@@ -622,11 +620,8 @@ with pestanas[3]:
     s_bruta_univ = max(s_cdt_univ, s_cal_univ, 10.0)
     s_opt_univ = seleccionar_seccion_optima(s_bruta_univ)
 
-    # Verificación de sobrecarga (In <= 0.91 * Iz)
     in_univ = seleccionar_proteccion(ib_univ)
-    iz_opt_univ = IZ_COBRE_ENTERRADO.get(s_opt_univ, 230.0)
     
-    # Bucle por si no cumple la 2ª condición de sobrecarga para aumentarla automáticamente como en el ejercicio
     s_final_ex = s_opt_univ
     while True:
         iz_act = IZ_COBRE_ENTERRADO.get(s_final_ex, 230.0)
@@ -648,36 +643,36 @@ with pestanas[3]:
 
     st.markdown(f"""
     ### a) Sección de la LGA y Calibre de los Fusibles
-    1. **Cálculo por Caída de Tensión ($\\Delta V$):**
-       * Límite admisible: $\\Delta V\\% \\le {cdt_lim_ex}\\%$
-       * Valor absoluto: $\\Delta V = \\frac{{{cdt_lim_ex}}}{{100}} \\cdot 400 = {dv_max_univ:.2f}\\text{{ V}}$
-       * Sección teórica: $S = \\frac{{{l_ex} \\cdot {p_ex:,.2f}}}{{44 \\cdot {dv_max_univ:.2f} \\cdot 400}} = {s_cdt_univ:.2f}\\text{{ mm}}^2$
+    1. **Cálculo por Caída de Tensión (Delta V):**
+       * Límite admisible: Delta V% <= {cdt_lim_ex}%
+       * Valor absoluto: Delta V = ({cdt_lim_ex} / 100) * 400 = {dv_max_univ:.2f} V
+       * Sección teórica: S = ( {l_ex} * {p_ex:,.2f} ) / ( 44 * {dv_max_univ:.2f} * 400 ) = {s_cdt_univ:.2f} mm²
 
-    2. **Cálculo por Calentamiento ($I_z \\ge I_b$):**
+    2. **Cálculo por Calentamiento (Iz >= Ib):**
        * Intensidad de diseño: 
-         $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{p_ex:,.2f}}}{{\\sqrt{{3}} \\cdot 400 \\cdot {cos_ex}}} = \\mathbf{{{ib_univ:.2f}\\text{{ A}}}$$
-       * Corriente admisible inicial requerida: $I_z \\ge {ib_univ:.2f}\\text{{ A}} \\implies S = {s_cal_univ}\\text{{ mm}}^2$
+         Ib = P / ( sqrt(3) * V * cos phi ) = {p_ex:,.2f} / ( 1.732 * 400 * {cos_ex} ) = **{ib_univ:.2f} A**
+       * Corriente admisible inicial requerida: Iz >= {ib_univ:.2f} A --> S = {s_cal_univ} mm²
 
     3. **Selección y Comprobación de Fusibles frente a Sobrecargas:**
-       * Calibre del fusible seleccionado ($I_n$): **{in_univ} A**
-       * Verificación de la condición $I_n \\le 0,91 \\cdot I_z$:
-         * Con la sección comercial optimizada y revisada por sobrecarga, se adopta definitivamente una sección de fases de **{s_final_ex} mm² de cobre RZ1-K** ($I_z = {iz_final_ex}\\text{{ A}}$).
-         * Comprobación: ${in_univ} \\le 0,91 \\cdot {iz_final_ex} = {0.91 * iz_final_ex:.2f}\\text{{ A}} \\implies \\textbf{{Sí cumple}}$
+       * Calibre del fusible seleccionado (In): **{in_univ} A**
+       * Verificación de la condición In <= 0.91 * Iz:
+         * Con la sección comercial optimizada y revisada por sobrecarga, se adopta definitivamente una sección de fases de **{s_final_ex} mm² de cobre RZ1-K** (Iz = {iz_final_ex} A).
+         * Comprobación: {in_univ} <= 0.91 * {iz_final_ex} = {0.91 * iz_final_ex:.2f} A --> **Sí cumple**
 
     4. **Verificación frente a Cortocircuitos:**
-       * Poder de corte del fusible: $PdC = 50\\text{{ kA}} > {icc_max_ex}\\text{{ kA}}$ ($I_{cc\\_max}$) $\\implies$ **Cumple**.
-       * Cortocircuito mínimo al final de la línea: $I_{cc\\_min} = {icc_min_ex * 1000:,.0f}\\text{{ A}} > I_f$ $\\implies$ **Cumple**, asegurando que las protecciones despejan el defecto térmico en menos de 5 segundos.
+       * Poder de corte del fusible: PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**.
+       * Cortocircuito mínimo al final de la línea: Icc_min = {icc_min_ex * 1000:,.0f} A > If --> **Cumple**, asegurando que las protecciones despejan el defecto térmico en menos de 5 segundos.
     """)
 
     st.markdown(f"""
     ### b) Sección del Neutro y Diámetro del Tubo
-    * **Sección del Neutro ($S_N$):** Aplicando la tabla de reducción de la ITC-BT-14 para fases de {s_final_ex} mm², le corresponde un neutro de **{70.0 if s_final_ex >= 70 else s_final_ex} mm²**.
-    * **Diámetro del Tubo:** Según tablas de ocupación de tubos enterrados (ITC-BT-14), se selecciona un **tubo de diámetro nominal adecuado** (ej. $160\\text{{ mm}}$ para secciones elevadas).
+    * **Sección del Neutro (SN):** Aplicando la tabla de reducción de la ITC-BT-14 para fases de {s_final_ex} mm², le corresponde un neutro de **{70.0 if s_final_ex >= 70 else s_final_ex} mm²**.
+    * **Diámetro del Tubo:** Según tablas de ocupación de tubos enterrados (ITC-BT-14), se selecciona un **tubo de diámetro nominal adecuado** (ej. 160 mm para secciones elevadas).
     """)
 
     st.markdown(f"""
     ### c) Intensidad Nominal del Interruptor General de Maniobra (IGM)
-    * El IGM de la centralización se dimensiona para la corriente de diseño $I_b = {ib_univ:.2f}\\text{{ A}}$, resultando un calibre normalizado de **{igm_univ} A**.
+    * El IGM de la centralización se dimensiona para la corriente de diseño Ib = {ib_univ:.2f} A, resultando un calibre normalizado de **{igm_univ} A**.
     """)
 
     st.markdown(f"""
@@ -708,4 +703,4 @@ with pestanas[9]:
     st.title("📄 Informe Técnico Formal MTD")
 
 with pestanas[10]:
-    st.title("💡 Simulador de Consumo Eléctrico")
+    st.title("💡 Simulador Consumo Eléctrico")
