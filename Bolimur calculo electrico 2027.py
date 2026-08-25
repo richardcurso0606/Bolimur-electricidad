@@ -102,7 +102,7 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS (REJILLAS Y CELDAS ACENTUADAS TAMBIÉN EN SIDEBAR) ---
+# --- DISEÑO CORPORATIVO Y ESTILOS AVANZADOS (MENÚS Y CELDAS DIFERENCIADAS) ---
 st.markdown("""
     <style>
     /* Tablas generales */
@@ -131,7 +131,29 @@ st.markdown("""
         background-color: #e9ecef !important;
     }
 
-    /* ESTILO ESPECÍFICO PARA DESTACAR CELDAS, INPUTS Y BOTONES EN LA BARRA LATERAL */
+    /* DIFERENCIACIÓN EXTREMA EN LA BARRA LATERAL (MENÚS SÚPER CLAROS) */
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa !important;
+        border-right: 3px solid #dee2e6;
+    }
+    /* Estilo de los radio buttons del menú lateral para máxima visibilidad */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
+        background-color: #ffffff !important;
+        border: 2px solid #ced4da !important;
+        padding: 10px 15px !important;
+        border-radius: 8px !important;
+        margin-bottom: 8px !important;
+        font-weight: bold !important;
+        color: #212529 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s ease-in-out;
+    }
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
+        background-color: #e9ecef !important;
+        border-color: #ff4b4b !important;
+        color: #ff4b4b !important;
+    }
+    /* Inputs y botones de la barra lateral */
     [data-testid="stSidebar"] input {
         background-color: #ffffff !important;
         border: 2px solid #6c757d !important;
@@ -151,12 +173,6 @@ st.markdown("""
         background-color: #e9ecef !important;
         border-color: #ff4b4b !important;
         color: #ff4b4b !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
-        background-color: #ffffff !important;
-        border: 2px solid #ced4da !important;
-        border-radius: 8px !important;
-        padding: 5px !important;
     }
 
     .resultado-destacado {
@@ -367,17 +383,17 @@ with st.sidebar:
                 st.warning("⚠️ No encontrado")
 
 # =========================================================================
-# CONTENIDO DE LAS PANTALLAS (TODAS DESARROLLADAS AL 100%)
+# CONTENIDO DE LAS PANTALLAS (CON TODA LA PROFUNDIDAD TÉCNICA)
 # =========================================================================
 
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
-    st.write("Bienvenido al panel de cálculo eléctrico REBT. Despliega el menú lateral izquierdo (pulsando las ☰ arriba a la izquierda si estás en el móvil o tablet) para seleccionar cualquier módulo de cálculo de forma limpia y sin ocupar espacio en pantalla.")
-    st.info("💡 **Consejo de navegación:** En teléfonos y tablets, la barra lateral se oculta automáticamente para ofrecerte una visión 100% despejada de los cálculos y tablas.")
+    st.write("Bienvenido al panel de cálculo eléctrico REBT. Despliega el menú lateral izquierdo para seleccionar cualquier módulo de cálculo.")
+    st.info("💡 **Consejo de navegación:** En teléfonos y tablets, la barra lateral se oculta automáticamente para ofrecerte una visión 100% despejada.")
 
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
+    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos, evaluando Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
 
     rc1, rc2 = st.columns(2)
     with rc1:
@@ -480,7 +496,7 @@ elif seleccion_modulo.startswith("🧮"):
         <b>3. Comprobación por Calentamiento y Cortocircuito (Icc min):</b><br>
         • Intensidad admisible del cable elegido ({s_opt_q} mm²): <b>{tabla_iz_q.get(s_opt_q, 0)} A</b>.<br>
         • Corriente de cortocircuito al final de los {long_q} metros: <b>{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)</b>.<br>
-        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCION: Icc insuficiente (Aumentar sección de cable o revisar Icc origen)'}</b>.
+        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCION: Icc insuficiente'}</b>.
     </div>
     """, unsafe_allow_html=True)
 
@@ -520,10 +536,10 @@ elif seleccion_modulo.startswith("🧮"):
             <hr style="border: 1px solid #444; margin: 10px 0;">
             <span style="font-size: 15px; color: #e0e0e0; font-weight: normal; line-height: 1.6;">
             <b>🔍 Explicación detallada de por qué cumple con todos los requisitos:</b><br>
-            1. <b>Intensidad de Servicio (Ib):</b> El circuito absorbe <b>{ib_q:.2f} A</b>. La sección elegida de <b>{s_opt_q} mm²</b> soporta una corriente admisible (Iz) muy superior, evitando cualquier riesgo de calentamiento.<br>
-            2. <b>Caída de Tensión (Delta V):</b> Con una longitud de <b>{long_q} m</b>, la caída de tensión real se queda en el <b>{dv_real_pct_q:.3f}%</b>, cumpliendo holgadamente el límite fijado del <b>{cdt_lim_q}%</b>.<br>
-            3. <b>Coordinación de Protecciones (In <= 0.91 * Iz):</b> El magnetotérmico seleccionado de <b>{prot_q} A</b> protege perfectamente al cable frente a sobrecargas.<br>
-            4. <b>Seguridad ante Cortocircuito en el Extremo (Icc min):</b> Evaluando la corriente de cortocircuito al final de los {long_q} metros (estimada en <b>{icc_fin_q * 1000:.1f} A</b> a partir de los {icc_orig_q} kA introducidos en origen), el sistema confirma que la corriente de defecto es la adecuada para accionar el disparo magnético del PIA de {prot_q} A.
+            1. <b>Intensidad de Servicio (Ib):</b> El circuito absorbe <b>{ib_q:.2f} A</b>. La sección elegida de <b>{s_opt_q} mm²</b> soporta una corriente admisible (Iz) muy superior, evitando calentamientos.<br>
+            2. <b>Caída de Tensión (Delta V):</b> Con una longitud de <b>{long_q} m</b>, la caída real es del <b>{dv_real_pct_q:.3f}%</b>, cumpliendo el límite del <b>{cdt_lim_q}%</b>.<br>
+            3. <b>Coordinación de Protecciones (In <= 0.91 * Iz):</b> El magnetotérmico de <b>{prot_q} A</b> protege el cable frente a sobrecargas.<br>
+            4. <b>Cortocircuito en el Extremo (Icc min):</b> Con una Icc final de <b>{icc_fin_q * 1000:.1f} A</b>, se garantiza el disparo magnético instantáneo del PIA de {prot_q} A.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -873,10 +889,52 @@ elif seleccion_modulo.startswith("🔌"):
     st.subheader("📋 Memoria de Cálculo Justificada y Detallada (Derivación Individual)")
 
     st.markdown(f"""
+    <div class="formula-box">
+        <b>1. Intensidad de Diseño (Ib):</b><br>
+        • Fórmula: $I_b = P / (V \\cdot \\cos\\varphi)$<br>
+        • Sustitución: {di_pot} / (230 * {di_cos}) = <b>{ib_di:.2f} A</b>
+    </div>
+
+    <div class="formula-box">
+        <b>2. Sección por Caída de Tensión (Delta V):</b><br>
+        • Límite max: {dv_pct_di}% -> {dv_max_di:.2f} V.<br>
+        • Cálculo teórico puro: <b>{s_cdt_di:.2f} mm²</b>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 📊 Tabla Detallada de Verificación y Coordinación (Sobrecarga e Iz >= Ib) - DI")
+    tabla_di_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :---: | :--- |\n"
+    for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25]:
+        iz_c = tabla_iz_di.get(sec_com, 100.0)
+        dv_c_pct = ((2.0 * di_pot * di_long) / (gamma_di * sec_com * 230.0) / 230.0) * 100
+        cond_s_di = 0.91 * iz_c
+        
+        if sec_com < min_reg_di:
+            est_v = f"❌ No cumple mínimo ITC-BT-15 (6 mm²)"
+        elif iz_c < ib_di:
+            est_v = f"❌ No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_di:.2f} A)"
+        elif prot_di > cond_s_di:
+            est_v = f"❌ No cumple la 2ª condición (In = {prot_di} A > 0.91 * {iz_c} = {cond_s_di:.2f} A)"
+        elif dv_c_pct > dv_pct_di:
+            est_v = f"❌ No cumple caída de tensión ({dv_c_pct:.3f}% > {dv_pct_di}%)"
+        elif sec_com == s_optima_di:
+            est_v = f"✅ **CUMPLE PERFECTAMENTE** (Iz = {iz_c} A -> In = {prot_di} A <= 0.91 * {iz_c} = {cond_s_di:.2f} A)"
+        else:
+            est_v = "Válido pero superior"
+
+        tabla_di_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
+    st.markdown(tabla_di_md)
+
+    st.markdown(f"""
         <div class="resultado-destacado">
-            🔌 SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
-            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            Intensidad de diseño: <b>{ib_di:.2f} A</b> | CDT Real: <b>{dv_real_di_pct:.3f}%</b> | Protección PIA asociada: <b>{prot_di} A + Diferencial 30 mA</b>
+            ⚡ SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
+            <hr style="border: 1px solid #444; margin: 10px 0;">
+            <span style="font-size: 15px; color: #e0e0e0; font-weight: normal; line-height: 1.6;">
+            <b>🔍 Justificación analítica:</b><br>
+            • Intensidad de diseño: <b>{ib_di:.2f} A</b><br>
+            • Caída de tensión real: <b>{dv_real_di_pct:.3f}%</b> (Límite: {dv_pct_di}%)<br>
+            • Protección asociada: <b>{prot_di} A + Diferencial 30 mA</b><br>
+            • Se adopta esta sección para cumplir simultáneamente con la caída máxima admisible, el calentamiento del conductor y la protección frente a sobrecargas.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -897,14 +955,38 @@ elif seleccion_modulo.startswith("📊"):
     """)
 
 elif seleccion_modulo.startswith("📐"):
-    st.title("📐 Esquemas Unifilares")
-    st.write("Representación unifilar esquemática y parámetros principales del proyecto.")
-    
-    texto_esquema = f"""PROYECTO: {st.session_state.nombre_proyecto}
+    st.title("📐 Esquemas Unifilares del Edificio y Desdobles Reglamentarios")
+    st.write("Representación unifilar esquemática completa para Vivienda Básica, Elevada, desdobles de circuitos interiores y parámetros de la instalación.")
+
+    st.markdown("### 📋 1. Esquema General de Enlace y Parámetros del Proyecto")
+    texto_esquema_gen = f"""PROYECTO: {st.session_state.nombre_proyecto}
 LGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm
 Icc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A"""
-    
-    st.code(texto_esquema, language="text")
+    st.code(texto_esquema_gen, language="text")
+
+    st.markdown("### 🏠 2. Esquema Unifilar - Vivienda de Electrificación Básica (ITC-BT-25)")
+    esquema_basica = """IGM (Interruptor General Automático) 25A + ID (Diferencial 40A / 30mA)
+ ├── C1 (Iluminación - 10A - Cable 1.5 mm²)
+ ├── C2 (Tomas de corriente general - 16A - Cable 2.5 mm²)
+ ├── C3 (Cocina y Horno - 25A - Cable 6 mm²)
+ ├── C4 (Lavadora, Lavavajillas, Termo - 20A - Cable 4 mm²)
+ └── C5 (Baños y Cocina tomas auxiliares - 16A - Cable 2.5 mm²)"""
+    st.code(esquema_basica, language="text")
+
+    st.markdown("### 🏢 3. Esquema Unifilar - Vivienda de Electrificación Elevada y Desdobles (ITC-BT-25)")
+    esquema_elevada = """IGM (Interruptor General Automático) 40A + ID (Diferencial 40A / 30mA)
+ ├── C1 (Iluminación Principal - 10A - Cable 1.5 mm²)
+ ├── C1 bis (Iluminación Adicional / Terrazas - 10A - Cable 1.5 mm²)
+ ├── C2 (Tomas de corriente general - 16A - Cable 2.5 mm²)
+ ├── C2 bis (Tomas adicionales / Habitaciones - 16A - Cable 2.5 mm²)
+ ├── C3 (Cocina y Horno - 25A - Cable 6 mm²)
+ ├── C4 (Lavadora, Lavavajillas, Secadora - 20A - Cable 4 mm²)
+ ├── C5 (Baños y Cocina tomas auxiliares - 16A - Cable 2.5 mm²)
+ ├── C6 (Calefacción / Climatización - 25A - Cable 6 mm²)
+ ├── C7 (Aire Acondicionado - 16/20A - Cable 2.5 / 4 mm²)
+ ├── C8 (Secadora independiente - 16A - Cable 2.5 mm²)
+ └── C9/C10/C11 (Domótica, Alarma, Circuitos adicionales)"""
+    st.code(esquema_elevada, language="text")
 
 elif seleccion_modulo.startswith("📄"):
     st.title("📄 Informe Técnico Formal MTD")
@@ -919,7 +1001,7 @@ elif seleccion_modulo.startswith("💡"):
 
 elif seleccion_modulo.startswith("🛡️"):
     st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
-    st.write("Selecciona el caso de examen o problema tipo para ver el desarrollo analítico completo paso a paso con fórmulas y verificación reglamentaria.")
+    st.write("Selecciona el caso de examen o problema tipo para ver el desarrollo analítico completo.")
 
     sub_exam = st.tabs([
         "📝 Caso 1: Edificio Plurifamiliar Completo",
@@ -934,7 +1016,7 @@ elif seleccion_modulo.startswith("🛡️"):
         Se desea calcular la LGA de un edificio de 24 viviendas de 9.200 W (grado de electrificación elevado), con un local comercial de 150 m², ascensor de 4 kW y garaje con 10 plazas IRVE (Esquema 1.5). Longitud de la LGA: 35 metros, enterrada bajo tubo (Método D), conductor de Cobre XLPE (90ºC).
 
         **1. Previsión de Cargas (ITC-BT-10):**  
-        * $P_1$ (Viviendas): $24 \\times 9.200 \\times [15,3 + (24-21) \\times 0,5] = 24 \\times 9.200 \\times 16,8 = \\mathbf{{3.701.760\\text{{ W}}}}$  
+        * $P_1$ (Viviendas): $24 \\times 9.200 \\times [15,3 + (24-21) \\times 0,5] = \\mathbf{{3.701.760\\text{{ W}}}}$  
         * $P_2$ (Local comercial): $150\\text{{ m}}^2 \\times 100\\text{{ W/m}}^2 = \\mathbf{{15.000\\text{{ W}}}}$  
         * $P_3$ (Servicios generales - Ascensor): $4.000\\text{{ W}} \\times 1,30 = \\mathbf{{5.200\\text{{ W}}}}$  
         * $P_4$ (IRVE - 10 plazas): $10 \\times 3.680 \\times 0,3 = \\mathbf{{11.040\\text{{ W}}}}$  
@@ -952,7 +1034,7 @@ elif seleccion_modulo.startswith("🛡️"):
         """)
 
     with sub_exam[2]:
-        st.subheader("Desarrollo Caso 3: Verificación de Cortocircuito y Poder de Corte")
+        st.subheader("Desarrollo Caso 3: Verificación de Cortocircuito y Fusibles")
         st.markdown("""
         **Enunciado del Problema:**  
         Comprobación de la corriente de cortocircuito mínima y máxima al final de una línea de 50 metros con Icc en origen de 15 kA.
