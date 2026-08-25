@@ -250,13 +250,17 @@ if 'nombre_proyecto' not in st.session_state:
 if 'grupos_viviendas' not in st.session_state:
     st.session_state.grupos_viviendas = [{"nombre": "Viviendas Estándar", "qty": 10, "pot": 5750, "nocturna": False}]
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = []
+    st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 3000.0, "factor": 1.0}]
 if 'locales' not in st.session_state:
-    st.session_state.locales = []
+    st.session_state.locales = [{"nombre": "Local Comercial A", "qty": 1, "superficie": 100.0}]
+if 'irve_config' not in st.session_state:
+    st.session_state.irve_config = {"con_irve": True, "tipo_esquema": "Esquema 1.5 (Recarga vinculada)", "num_plazas": 5, "pot_plaza": 3680.0}
+
 if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 20.0
 if 'nombre_archivo_guardado' not in st.session_state: st.session_state.nombre_archivo_guardado = ultimo_archivo_db
 if 'carpeta_trabajo_input' not in st.session_state: st.session_state.carpeta_trabajo_input = carpeta_trabajo_db
 
+# --- BARRA LATERAL COMPLETA (VENTANA LATERAL IZQUIERDA) ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", use_container_width=True)
@@ -284,6 +288,42 @@ with st.sidebar:
             guardar_datos_instalador(inst_nombre, inst_nif, inst_empresa, inst_carnet, inst_tel, inst_email, inst_cat, inst_tipo, inst_num, "Región de Murcia")
             st.success("✅ ¡Guardado!")
             st.rerun()
+
+    st.markdown("---")
+    st.header("📂 Gestión de Proyectos (JSON)")
+    st.session_state.nombre_proyecto = st.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        if st.button("💾 Guardar JSON"):
+            datos_json = {
+                "proyecto": st.session_state.nombre_proyecto,
+                "grupos_viviendas": st.session_state.grupos_viviendas,
+                "locales": st.session_state.locales,
+                "servicios_generales": st.session_state.servicios_generales,
+                "irve": st.session_state.irve_config,
+                "lga_long": st.session_state.lga_long_val
+            }
+            nombre_f = st.session_state.nombre_archivo_guardado
+            with open(nombre_f, "w", encoding="utf-8") as f:
+                json.dump(datos_json, f, indent=4, ensure_ascii=False)
+            st.success(f"✅ Guardado en {nombre_f}")
+    with col_p2:
+        if st.button("📂 Cargar JSON"):
+            nombre_f = st.session_state.nombre_archivo_guardado
+            if os.path.exists(nombre_f):
+                with open(nombre_f, "r", encoding="utf-8") as f:
+                    data_j = json.load(f)
+                    st.session_state.nombre_proyecto = data_j.get("proyecto", st.session_state.nombre_proyecto)
+                    st.session_state.grupos_viviendas = data_j.get("grupos_viviendas", [])
+                    st.session_state.locales = data_j.get("locales", [])
+                    st.session_state.servicios_generales = data_j.get("servicios_generales", [])
+                    st.session_state.irve_config = data_j.get("irvees", {"con_irve": True, "tipo_esquema": "Esquema 1.5 (Recarga vinculada)", "num_plazas": 5, "pot_plaza": 3680.0})
+                    st.session_state.lga_long_val = data_j.get("lga_long", 20.0)
+                st.success("✅ ¡Cargado!")
+                st.rerun()
+            else:
+                st.warning("⚠️ Archivo no encontrado.")
 
     st.markdown("---")
     st.header("⚡ Carga Rápida de Enunciados Típicos")
@@ -318,7 +358,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS
+# PESTAÑA 1: PREVISIÓN DE CARGAS (CON IRVE Y TODOS LOS APARTADOS)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -331,6 +371,7 @@ with pestanas[0]:
             st.session_state.grupos_viviendas = []
             st.session_state.locales = []
             st.session_state.servicios_generales = []
+            st.session_state.irve_config = {"con_irve": False, "tipo_esquema": "Esquema 1.5", "num_plazas": 0, "pot_plaza": 3680.0}
             st.session_state.lga_long_val = 20.0
             st.rerun()
 
@@ -398,7 +439,7 @@ with pestanas[0]:
         pot_total_locales += pot_local_unit * loc["qty"]
 
     # 3. Servicios Generales (P3)
-    st.subheader("3. Servicios Generales del Edificio (P3 - Ascensores, Alumbrado, Bomba)")
+    st.subheader("3. Servicios Generales del Edificio (P3)")
     if st.button("➕ Añadir Servicio General"):
         st.session_state.servicios_generales.append({"nombre": f"Servicio {len(st.session_state.servicios_generales)+1}", "qty": 1, "potencia": 3000.0, "factor": 1.0})
 
@@ -415,7 +456,32 @@ with pestanas[0]:
                 st.rerun()
         pot_total_servicios += serv["potencia"] * serv["qty"] * serv["factor"]
 
-    pt_total_calc = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios)
+    # 4. Infraestructura para Recarga de Vehículos (IRVE - ITC-BT-52)
+    st.subheader("4. Infraestructura de Recarga de Vehículos - IRVE (ITC-BT-52)")
+    st.session_state.irve_config["con_irve"] = st.checkbox("Incluir preinstalación / instalación IRVE en el edificio", value=st.session_state.irve_config["con_irve"])
+    pot_total_irve = 0.0
+    if st.session_state.irve_config["con_irve"]:
+        ic1, ic2, ic3 = st.columns(3)
+        with ic1:
+            st.session_state.irve_config["tipo_esquema"] = st.selectbox("Esquema de instalación (ITC-BT-52)", [
+                "Esquema 1.5a (Circuito individual con contador principal)",
+                "Esquema 1.5b (Estación principal con contadores secundarios)",
+                "Esquema 1.4 (Línea troncal con derivaciones para plazas)"
+            ], index=0)
+        with ic2:
+            st.session_state.irve_config["num_plazas"] = st.number_input("Nº de plazas de garaje con preinstalación", min_value=1, value=int(st.session_state.irve_config["num_plazas"]))
+        with ic3:
+            st.session_state.irve_config["pot_plaza"] = st.number_input("Potencia por plaza (W)", value=float(st.session_state.irve_config["pot_plaza"]))
+        
+        # Cálculo de potencia IRVE aplicando coeficientes reglamentarios
+        n_plazas = st.session_state.irve_config["num_plazas"]
+        p_plaz = st.session_state.irve_config["pot_plaza"]
+        if "1.5a" in st.session_state.irve_config["tipo_esquema"]:
+            pot_total_irve = n_plazas * p_plaz * 0.3  # Factor estimado de simultaneidad colectivo
+        else:
+            pot_total_irve = n_plazas * p_plaz * 0.5
+
+    pt_total_calc = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios) + int(pot_total_irve)
 
     st.markdown(f"""
         <div class="resumen-parciales-box">
@@ -424,6 +490,7 @@ with pestanas[0]:
                 <li><b>P1 (Viviendas):</b> {pot_total_viviendas:,} W</li>
                 <li><b>P2 (Locales / Oficinas):</b> {int(pot_total_locales):,} W</li>
                 <li><b>P3 (Servicios Generales):</b> {int(pot_total_servicios):,} W</li>
+                <li><b>P4 (IRVE - ITC-BT-52):</b> {int(pot_total_irve):,} W</li>
             </ul>
         </div>
     """, unsafe_allow_html=True)
@@ -448,7 +515,7 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = st.number_input("Potencia de cálculo LGA (W)", min_value=0.0, value=112500.0, step=500.0, key="lga_pot_manual")
+        lga_pot = st.number_input("Potencia de cálculo LGA (W)", min_value=0.0, value=float(pt_total_calc if pt_total_calc > 0 else 112500.0), step=500.0, key="lga_pot_manual")
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -527,7 +594,7 @@ with pestanas[1]:
 
     st.markdown(f"""
         <div class="resultado-destacado">
-            ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
+            ⚡ SECCIÓN A ADOPATAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
             Neutro: <b>{70.0 if s_final_lga >= 70 else s_final_lga} mm²</b> | Tubo: <b>160 mm</b> | CDT Real: <b>{dv_real_lga_pct:.3f}%</b> | <b>Fusible CGP: {in_lga_auto} A</b>
             </span>
@@ -535,13 +602,29 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (DI)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
     di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
     di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
-    st.info(f"Derivación Individual estándar configurada para {di_pot} W a {di_long} metros.")
+    
+    gamma_di = 56.0 # Cobre PVC / XLPE habitual
+    ib_di = di_pot / (230.0 * 1.0)
+    dv_max_di = 230.0 * 0.01 # 1% para contadores concentrados
+    s_di_calc = (di_long * di_pot) / (gamma_di * dv_max_di * 230.0)
+    s_di_opt = seleccionar_seccion_optima(max(s_di_calc, 6.0)) # Mínimo reglamentario viviendas 6 mm2
+    
+    st.markdown(f"""
+    **Desgloses reglamentarios de la Derivación Individual (ITC-BT-15):**
+    * Intensidad de cálculo ($I_b$): {ib_di:.2f} A
+    * Sección teórica por caída de tensión: {s_di_calc:.2f} mm²
+    """)
+    st.markdown(f"""
+        <div class="resultado-destacado">
+            🔌 SECCIÓN DE LA DERIVACIÓN INDIVIDUAL: <span style="color: #ff4b4b; font-size: 22px;">{s_di_opt} mm²</span> de Cobre
+        </div>
+    """, unsafe_allow_html=True)
 
 # =========================================================================
 # PESTAÑA 4: RESOLUCIÓN AVANZADA Y EXÁMENES
@@ -626,21 +709,8 @@ with pestanas[3]:
         Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**
     """)
 
-    st.markdown(f"""
-    ### b) Sección del Neutro y Diámetro del Tubo
-    * **Sección del Neutro (SN):** Según la tabla de la ITC-BT-14 para fases de 120 mm² de cobre, se reduce reglamentariamente a **70 mm²**.
-    * **Diámetro del Tubo:** Acudiendo a la tabla de ocupación de tubos enterrados de la ITC-BT-14, se selecciona un **tubo de diámetro nominal de 160 mm**.
-
-    ### c) Intensidad Nominal del Interruptor General de Maniobra (IGM)
-    * El IGM situado en la centralización de contadores se dimensiona para cortar la corriente total prevista del edificio (Ib = {ib_univ:.2f} A), adoptando un calibre comercial normalizado de **250 A**.
-
-    ### d) Caída de Tensión Real
-    * Con la sección definitiva adoptada de 120 mm², la caída de tensión absoluta es de Delta V = 1.065 V.
-    * Porcentaje real: Delta V% = 0.266% (Cumple holguramente el límite del 0.5%).
-    """)
-
 # =========================================================================
-# PESTAÑAS RESTANTES (4 a 10) RECUPERADAS Y FUNCIONALES
+# PESTAÑAS 4 A 10 (RECUPERADAS Y TOTALMENTE OPERATIVAS)
 # =========================================================================
 with pestanas[4]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
@@ -658,7 +728,7 @@ with pestanas[5]:
 
 with pestanas[6]:
     st.title("📐 Esquemas Unifilares")
-    st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\\nLGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm\\nIcc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\nLGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm\nIcc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A</div>', unsafe_allow_html=True)
 
 with pestanas[7]:
     st.title("📝 Asistente de Generación de Boletines Oficiales")
