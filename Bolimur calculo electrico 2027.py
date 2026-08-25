@@ -169,6 +169,14 @@ st.markdown("""
         margin: 15px 0;
         color: #004085;
     }
+    .badge-destacado {
+        background-color: #ff4b4b;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -177,11 +185,6 @@ COEF_SIMULTANEIDAD_VIVIENDAS = {
     10: 8.5, 11: 9.2, 12: 9.9, 13: 10.6, 14: 11.3, 15: 11.9, 
     16: 12.5, 17: 13.1, 18: 13.7, 19: 14.3, 20: 14.8, 21: 15.3
 }
-
-def get_coef_simultaneidad(num):
-    if num <= 0: return 0.0
-    if num <= 21: return COEF_SIMULTANEIDAD_VIVIENDAS.get(num, 15.3)
-    return float(round(15.3 + (num - 21) * 0.5, 1))
 
 METODOS_INSTALACION = {
     "B1 (Bajo tubo empotrado en pared aislante - Habitual Viviendas)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas / empotrado"},
@@ -333,14 +336,12 @@ with st.sidebar:
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
     st.write("Bienvenido al panel de cálculo eléctrico REBT. Despliega el menú lateral izquierdo para seleccionar cualquier módulo de cálculo.")
-    st.info("💡 **Consejo de navegación:** En teléfonos y tablets, la barra lateral se oculta automáticamente para ofrecerte una visión 100% despejada.")
 
 elif seleccion_modulo.startswith("🧮"):
-    st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos.")
+    st.title("🧮 Cálculo Rápido Avanzado")
 
 elif seleccion_modulo.startswith("🏢"):
-    st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
+    st.title("Previsión de Cargas (ITC-BT-10)")
 
 elif seleccion_modulo.startswith("⚡"):
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -349,123 +350,142 @@ elif seleccion_modulo.startswith("🔌"):
     st.title("Derivación Individual - DI (ITC-BT-15)")
 
 # =========================================================================
-# MÓDULO: TABLAS ITC-BT SEGÚN REBT Y GUÍAS (CON EXPLICACIONES Y RECOMENDACIONES)
+# MÓDULO: TABLAS ITC-BT SEGÚN REBT Y GUÍAS (CON FILTRO Y SELECCIÓN DE VISIBILIDAD)
 # =========================================================================
 elif seleccion_modulo.startswith("📚"):
-    st.title("📚 Compendio de Tablas ITC-BT según REBT y Guías Técnicas")
-    st.write("Centro de documentación técnica oficial con explicaciones de uso y recomendaciones normativas para instalaciones en obra.")
+    st.title("📚 Compendio General de Tablas REBT y Guías Técnicas")
+    st.write("Biblioteca técnica completa con todas las tablas reglamentarias. Utiliza el selector lateral dentro de la página para marcar las tablas que deseas mostrar u ocultar.")
 
+    # Panel de control de visibilidad (Checkboxes para marcar qué tablas ver)
+    with st.expander("🎛️ Filtrar y Seleccionar Tablas Visibles (Marcar para ver / Desmarcar para ocultar)", expanded=True):
+        st.markdown("##### Selecciona las tablas que quieres tener visibles en pantalla:")
+        col_chk1, col_chk2, col_chk3 = st.columns(3)
+        
+        with col_chk1:
+            ver_t_di = st.checkbox("🔌 ITC-BT-15: Cálculo Directo DI", value=True)
+            ver_t_pat = st.checkbox("🏗️ ITC-BT-15: Canaladuras y Patinillos", value=True)
+            ver_t_car = st.checkbox("🏢 ITC-BT-10: Coeficientes de Simultaneidad", value=True)
+        with col_chk2:
+            ver_t_lga = st.checkbox("⚡ ITC-BT-14: Criterios LGA", value=True)
+            ver_t_int = st.checkbox("🏠 ITC-BT-25: Alturas y Recomendaciones Interiores", value=True)
+            ver_t_adm = st.checkbox("🛡️ UNE-HD 60364-5-52: Intensidades Admisibles (Iz)", value=True)
+        with col_chk3:
+            ver_t_tierra = st.checkbox("🌱 ITC-BT-08: Secciones Puestas a Tierra", value=False)
+            ver_t_sub = st.checkbox("🚇 ITC-BT-07: Redes Subterráneas e Iz en Zanjas", value=False)
+            ver_t_loc = st.checkbox("💧 ITC-BT-27/30: Locales Húmedos e IP", value=False)
+
+    st.markdown("---")
+
+    # Pestañas principales por ITC / Ámbito
     sub_itc = st.tabs([
-        "🔌 ITC-BT-15 (Derivaciones Individuales)",
-        "🏢 ITC-BT-10 (Previsión de Cargas)",
-        "⚡ ITC-BT-14 (Línea General LGA)",
-        "🏠 ITC-BT-25 y Guías (Instalaciones Interiores y Alturas)",
-        "🛡️ UNE-HD 60364-5-52 (Admisibilidad)"
+        "🔌 ITC-BT-15 (Derivaciones)",
+        "🏢 ITC-BT-10 y 14 (Cargas y LGA)",
+        "🏠 ITC-BT-25 (Interiores y Alturas)",
+        "🛡️ UNE-HD / Otras ITC (Admisibilidad y Tierras)"
     ])
 
     with sub_itc[0]:
         st.subheader("📑 ITC-BT-15: Derivaciones Individuales (DI)")
-        
-        st.markdown("""
-        <div class="info-box-tecnico">
-            <b>📖 ¿Para qué sirve y cómo se utiliza esta tabla?</b><br>
-            Esta tabla permite realizar un dimensionamiento directo de la sección de los conductores de la DI en función del calibre del Interruptor General Automático (IGA) y la longitud del trazado. Se debe comprobar que la caída de tensión no supere los límites reglamentarios (1% para contadores concentrados o 0,5% según modelo).
-        </div>
-        """, unsafe_allow_html=True)
 
-        st.markdown("#### 1. Cálculo Directo de Derivaciones Individuales (Cobre C = 48)")
-        st.markdown("""
-        | Sección Mínima DI | Diámetro Tubo (mm) | CDT Máxima | Calibre IGA: 25 A | Calibre IGA: 32 A | Calibre IGA: 40 A | Calibre IGA: 50 A | Calibre IGA: 63 A |
-        | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-        | **6 mm²** | 32 mm | 0,5% / 1,0% / 1,5% | 5,75 kW / 6 m / 13 m / 19 m | 7,32 kW / 5 m / 10 m / 18 m | 9,2 kW / 6 m / 13 m | 11,5 kW / - | 14,49 kW / - |
-        | **10 mm²** | 32 mm | 0,5% / 1,0% / 1,5% | 22 m / 33 m / 44 m | 17 m / 25 m / 34 m | 13 m / 20 m / 27 m | 8 m / 17 m / 22 m | 7 m / 14 m / - |
-        | **16 mm²** | 40 mm | 0,5% / 1,0% / 1,5% | 35 m / 53 m / 70 m | 27 m / 41 m / 55 m | 21 m / 31 m / 42 m | 17 m / 26 m / 35 m | 14 m / 21 m / 28 m |
-        | **25 mm²** | 50 mm | 0,5% / 1,0% / 1,5% | 55 m / 83 m / 110 m | 43 m / 65 m / 86 m | 34 m / 51 m / 69 m | 27 m / 41 m / 55 m | 21 m / 32 m / 43 m |
-        | **35 mm²** | 50 mm | 0,5% / 1,0% / 1,5% | 77 m / 116 m / 154 m | 60 m / 91 m / 121 m | 48 m / 72 m / 96 m | 38 m / 58 m / 77 m | 31 m / 46 m / 61 m |
-        """)
+        if ver_t_di:
+            st.markdown('### 📊 Cálculo Directo de Derivaciones Individuales <span class="badge-destacado">🔥 Más utilizada en obra</span>', unsafe_allow_html=True)
+            st.markdown("""
+            <div class="info-box-tecnico">
+                <b>📖 Uso:</b> Dimensionamiento directo de conductores de Cobre (C=48) en función del IGA y longitud para cumplir CDT.
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown("""
+            | Sección Mínima DI | Diámetro Tubo (mm) | CDT Máxima | Calibre IGA: 25 A | Calibre IGA: 32 A | Calibre IGA: 40 A | Calibre IGA: 50 A | Calibre IGA: 63 A |
+            | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+            | **6 mm²** | 32 mm | 0,5% / 1,0% / 1,5% | 5,75 kW / 6 m / 13 m / 19 m | 7,32 kW / 5 m / 10 m / 18 m | 9,2 kW / 6 m / 13 m | 11,5 kW / - | 14,49 kW / - |
+            | **10 mm²** | 32 mm | 0,5% / 1,0% / 1,5% | 22 m / 33 m / 44 m | 17 m / 25 m / 34 m | 13 m / 20 m / 27 m | 8 m / 17 m / 22 m | 7 m / 14 m / - |
+            | **16 mm²** | 40 mm | 0,5% / 1,0% / 1,5% | 35 m / 53 m / 70 m | 27 m / 41 m / 55 m | 21 m / 31 m / 42 m | 17 m / 26 m / 35 m | 14 m / 21 m / 28 m |
+            | **25 mm²** | 50 mm | 0,5% / 1,0% / 1,5% | 55 m / 83 m / 110 m | 43 m / 65 m / 86 m | 34 m / 51 m / 69 m | 27 m / 41 m / 55 m | 21 m / 32 m / 43 m |
+            | **35 mm²** | 50 mm | 0,5% / 1,0% / 1,5% | 77 m / 116 m / 154 m | 60 m / 91 m / 121 m | 48 m / 72 m / 96 m | 38 m / 58 m / 77 m | 31 m / 46 m / 61 m |
+            """)
 
-        st.markdown("""
-        <div class="info-box-tecnico">
-            <b>🏗️ Dimensionamiento de Canaladuras (Patinillos de Obra):</b><br>
-            Establece la anchura (L) y profundidad (P) de los conductos de fábrica según el número de derivaciones individuales.
-        </div>
-        """, unsafe_allow_html=True)
+        if ver_t_pat:
+            st.markdown("### 🏗️ Dimensiones Mínimas de la Canaladura o Conducto de Obra (Patinillos)")
+            st.markdown("""
+            | Número de Derivaciones | Anchura L (Profundidad P = 0,15 m, una fila) | Anchura L (Profundidad P = 0,30 m, dos filas) |
+            | :---: | :---: | :---: |
+            | **Hasta 12** | 0,65 m | 0,50 m |
+            | **13 a 24** | 1,25 m | 0,65 m |
+            | **25 a 36** | 1,85 m | 0,95 m |
+            | **37 a 48** | 2,45 m | 1,35 m |
+            """)
 
-        st.markdown("""
-        | Número de Derivaciones | Anchura L (Profundidad P = 0,15 m, una fila) | Anchura L (Profundidad P = 0,30 m, dos filas) |
-        | :---: | :---: | :---: |
-        | **Hasta 12** | 0,65 m | 0,50 m |
-        | **13 a 24** | 1,25 m | 0,65 m |
-        | **25 a 36** | 1,85 m | 0,95 m |
-        | **37 a 48** | 2,45 m | 1,35 m |
-        """)
+        if not ver_t_di and not ver_t_pat:
+            st.info("ℹ️ Has ocultado todas las tablas de esta pestaña mediante el filtro superior.")
 
     with sub_itc[1]:
-        st.subheader("🏢 ITC-BT-10: Previsión de Cargas para Edificios")
-        st.markdown("""
-        <div class="info-box-tecnico">
-            <b>📖 ¿Para qué sirve?</b><br>
-            Define los coeficientes de simultaneidad (K) aplicables al conjunto de viviendas y locales de un edificio para calcular la potencia total prevista (Pt) de la centralización y la LGA.
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("🏢 ITC-BT-10 y 14: Previsión de Cargas y LGA")
 
-        st.markdown("""
-        | Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |
-        | :---: | :---: |
-        | **1** | 1,0 |
-        | **2** | 2,0 |
-        | **3** | 3,0 |
-        | **4** | 3,8 |
-        | **5 - 21** | Escalonado reglamentario oficial |
-        | **> 21** | $15,3 + (n - 21) \\times 0,5$ |
-        """)
+        if ver_t_car:
+            st.markdown('### 🏢 ITC-BT-10: Coeficientes de Simultaneidad (K) <span class="badge-destacado">🔥 Más utilizada en obra</span>', unsafe_allow_html=True)
+            st.markdown("""
+            | Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |
+            | :---: | :---: |
+            | **1** | 1,0 |
+            | **2** | 2,0 |
+            | **3** | 3,0 |
+            | **4** | 3,8 |
+            | **5 - 21** | Escalonado reglamentario oficial |
+            | **> 21** | $15,3 + (n - 21) \\times 0,5$ |
+            """)
+
+        if ver_t_lga:
+            st.markdown("### ⚡ ITC-BT-14: Criterios y Secciones de la Línea General de Alimentación (LGA)")
+            st.markdown("""
+            <div class="info-box-tecnico">
+                <b>📖 Criterio:</b> Secciones mínimas obligatorias de $10\\text{ mm}^2$ (Cobre) y $16\\text{ mm}^2$ (Aluminio). Límite de caída de tensión 0,5% o 1,0%.
+            </div>
+            """, unsafe_allow_html=True)
+
+        if not ver_t_car and not ver_t_lga:
+            st.info("ℹ️ Has ocultado las tablas de esta pestaña.")
 
     with sub_itc[2]:
-        st.subheader("⚡ ITC-BT-14: Línea General de Alimentación (LGA)")
-        st.markdown("""
-        <div class="info-box-tecnico">
-            <b>📖 ¿Para qué sirve?</b><br>
-            Establece los requisitos obligatorios de sección mínima ($10\\text{ mm}^2$ en Cobre y $16\\text{ mm}^2$ en Aluminio) y los límites de caída de tensión máxima (0,5% o 1,0%) para la línea que alimenta las centralizaciones de contadores.
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("🏠 ITC-BT-25: Instalaciones Interiores y Alturas Reglamentarias")
+
+        if ver_t_int:
+            st.markdown("""
+            <div class="recomendacion-box">
+                <h4 style="margin-top: 0; color: #004085;">📌 RECOMENDACIONES IMPORTANTES Y ALTURAS DE INSTALACIÓN EN VIVIENDAS</h4>
+                <ul>
+                    <li><b>Cajas de Registro:</b> Parte superior a $\\ge 0,20\\text{ m}$ del techo.</li>
+                    <li><b>Enchufes generales:</b> Altura de $0,20\\text{ m} - 0,30\\text{ m}$ sobre el suelo. En cocinas a más de $0,50\\text{ m}$ de fregaderos.</li>
+                    <li><b>Interruptores y Conmutadores:</b> Altura entre $0,90\\text{ m} y 1,10\\text{ m}$ sobre el suelo.</li>
+                    <li><b>Cuadro General (CGMP):</b> Eje situado entre $1,40\\text{ m} y 2,00\\text{ m}$ de altura.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
     with sub_itc[3]:
-        st.subheader("🏠 ITC-BT-25 y Guías: Instalaciones Interiores y Alturas Reglamentarias")
-        
-        st.markdown("""
-        <div class="recomendacion-box">
-            <h4 style="margin-top: 0; color: #004085;">📌 RECOMENDACIONES IMPORTANTES Y ALTURAS DE INSTALACIÓN EN VIVIENDAS</h4>
-            <ul>
-                <li><b>Cajas de Registro:</b> Su parte superior debe quedar instalada a un mínimo de <b>0,20 m del techo</b>. Las tapas de registro deben ser accesibles y nunca ocultas por falsos techos fijos sin trampilla.</li>
-                <li><b>Tomas de Corriente (Enchufes):</b> 
-                    <ul>
-                        <li>Altura habitual en paredes secas: Entre <b>0,20 m y 0,30 m</b> sobre el suelo.</li>
-                        <li>En cocinas y baños: A más de <b>0,50 m</b> del fregadero o encimeras de cocción y respetando los volúmenes de protección de baños (Volumen 1 y 2).</li>
-                    </ul>
-                </li>
-                <li><b>Interruptores y Conmutadores:</b> Altura recomendada entre <b>0,90 m y 1,10 m</b> sobre el suelo (facilitando el acceso a personas con movilidad reducida).</li>
-                <li><b>Cuadros Generales de Mando y Protección (CGMP):</b> El eje del cuadro de protecciones se colocará generalmente entre <b>1,40 m y 2,00 m</b> sobre el suelo.</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("🛡️ UNE-HD y Otras ITC (Tierras, Subterráneas, Locales Húmedos)")
 
-    with sub_itc[4]:
-        st.subheader("🛡️ UNE-HD 60364-5-52: Intensidades Admisibles ($I_z$)")
-        st.markdown("""
-        <div class="info-box-tecnico">
-            <b>📖 ¿Para qué sirve?</b><br>
-            Proporciona la corriente máxima admisible que soporta un cable sin sobrepasar su temperatura límite de servicio según el tipo de aislamiento y modo de instalación.
-        </div>
-        """, unsafe_allow_html=True)
+        if ver_t_adm:
+            st.markdown('### 🛡️ UNE-HD 60364-5-52: Intensidades Admisibles ($I_z$) <span class="badge-destacado">🔥 Más utilizada en obra</span>', unsafe_allow_html=True)
+            st.markdown("""
+            | Tipo de Cable e Instalación | Sistema | 6 mm² | 10 mm² | 16 mm² | 25 mm² | 35 mm² | 50 mm² |
+            | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+            | **ES07Z1-K (450/750V) - Tubos empotrados** | Monofásico (`sm`) | 36 A | 50 A | 66 A | 84 A | 104 A | - |
+            | **ES07Z1-K (450/750V) - Tubos empotrados** | Trifásico (`st`) | 32 A | 44 A | 59 A | 77 A | 96 A | 117 A |
+            | **RZ1-K (0,6/1kV) - Tubos enterrados** | Monofásico (`sm`) | 71 A | 94 A | 122 A | 157 A | 186 A | - |
+            | **RZ1-K (0,6/1kV) - Tubos enterrados** | Trifásico (`st`) | 58 A | 77 A | 100 A | 128 A | 152 A | 184 A |
+            """)
 
-        st.markdown("""
-        | Tipo de Cable e Instalación | Sistema | 6 mm² | 10 mm² | 16 mm² | 25 mm² | 35 mm² | 50 mm² |
-        | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-        | **ES07Z1-K (450/750V) - Tubos empotrados** | Monofásico (`sm`) | 36 A | 50 A | 66 A | 84 A | 104 A | - |
-        | **ES07Z1-K (450/750V) - Tubos empotrados** | Trifásico (`st`) | 32 A | 44 A | 59 A | 77 A | 96 A | 117 A |
-        | **RZ1-K (0,6/1kV) - Tubos enterrados** | Monofásico (`sm`) | 71 A | 94 A | 122 A | 157 A | 186 A | - |
-        | **RZ1-K (0,6/1kV) - Tubos enterrados** | Trifásico (`st`) | 58 A | 77 A | 100 A | 128 A | 152 A | 184 A |
-        """)
+        if ver_t_tierra:
+            st.markdown("### 🌱 ITC-BT-08: Secciones de Conductores de Protección y Puesta a Tierra")
+            st.markdown("*(Tabla de dimensionamiento de picas y conductores equipotenciales según sección de alimentación)*")
+
+        if ver_t_sub:
+            st.markdown("### 🚇 ITC-BT-07: Redes Subterráneas de Distribución")
+            st.markdown("*(Factores de corrección por resistividad térmica del terreno y agrupamiento de zanjas)*")
+
+        if ver_t_loc:
+            st.markdown("### 💧 ITC-BT-27 / 30: Locales Húmedos, mojados y Grados de Protección IP")
+            st.markdown("*(Exigencias de protección IP mínimas para baños, duchas, piscinas y locales de pública concurrencia)*")
 
 elif seleccion_modulo.startswith("📐"):
     st.title("📐 Esquemas Unifilares")
