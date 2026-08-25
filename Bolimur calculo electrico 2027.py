@@ -360,8 +360,19 @@ elif seleccion_modulo.startswith("🧮"):
         ais_q = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
         cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%) [Fuerza/Motores max 3-5%]", value=3.0, step=0.5, key="cdt_q")
         
-        # CAMPO DE ICC EN ORIGEN (USAR PUNTO EN LUGAR DE COMA EN EL VALOR POR DEFECTO)
-        icc_orig_q = st.number_input("Icc de cortocircuito en el origen de la línea (kA) [Ej: 6.0 o 10.0]", value=10.0, step=0.5, format="%.2f", key="icc_orig_q")
+        # CASILLA DE ICC EN ORIGEN CON POPOVER (DESPLEGABLE DE AYUDA TÉCNICA)
+        col_icc_inp, col_icc_btn = st.columns([3, 1])
+        with col_icc_inp:
+            icc_orig_q = st.number_input("Icc de cortocircuito en el origen (kA)", value=10.0, step=0.5, format="%.2f", key="icc_orig_q")
+        with col_icc_btn:
+            st.write("") # Espaciador vertical
+            st.write("")
+            with st.popover("📖 Guía Icc"):
+                st.markdown("### ⚡ Guía Rápida de Icc en Origen")
+                st.write("• **¿Qué es?** La corriente de cortocircuito máxima entregada por el cuadro de donde parte tu cable.")
+                st.write("• **Valores habituales en viviendas/locales:** Entre **6.0 kA y 10.0 kA**.")
+                st.write("• **¿Por qué da Icc insuficiente?** Si pones un valor muy bajo (ej. 0.16 kA) o la línea es muy larga, la Icc final cae por debajo de $10 \\cdot I_n$ del PIA, impidiendo el disparo magnético instantáneo.")
+                st.write("• **Solución:** Introduce la Icc real de tu cuadro (6-10 kA) o aumenta la sección del cable (ej. a 6 mm² o superior).")
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     dv_max_q = v_nom_calc * (cdt_lim_q / 100.0)
@@ -471,7 +482,7 @@ elif seleccion_modulo.startswith("🧮"):
         </div>
     """, unsafe_allow_html=True)
 
-# Resto de módulos (Cargas, LGA, DI, etc.)
+# Resto de módulos
 elif seleccion_modulo.startswith("🏢"):
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
 elif seleccion_modulo.startswith("⚡"):
