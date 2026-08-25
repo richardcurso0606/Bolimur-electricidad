@@ -102,7 +102,7 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS (REJILLAS Y CELDAS ACENTUADAS PARA TABLETS) ---
+# --- DISEÑO CORPORATIVO Y ESTILOS ---
 st.markdown("""
     <style>
     table {
@@ -151,25 +151,6 @@ st.markdown("""
         margin: 15px 0;
         box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
         border: 2px solid #ffffff;
-    }
-    .fusible-vistoso {
-        background: linear-gradient(135deg, #ff4b4b, #ff8c00);
-        color: #ffffff;
-        padding: 15px 25px;
-        border-radius: 8px;
-        font-size: 20px;
-        font-weight: bold;
-        text-align: center;
-        margin: 15px 0;
-        box-shadow: 0 4px 10px rgba(255, 75, 75, 0.3);
-    }
-    .resumen-parciales-box {
-        background-color: #f1f3f5;
-        border: 2px solid #ced4da;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
-        color: #212529;
     }
     .formula-box {
         background-color: #f8f9fa;
@@ -248,7 +229,7 @@ if 'lga_long_val' not in st.session_state:
 if 'carpeta_trabajo_val' not in st.session_state:
     st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
 
-# --- MENÚ LATERAL COMPLETO (SIDEBAR) ---
+# --- MENÚ LATERAL ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", use_container_width=True)
@@ -337,17 +318,17 @@ with st.sidebar:
                 st.warning("⚠️ No encontrado")
 
 # =========================================================================
-# CONTENIDO DE LAS PANTALLAS SEGÚN SELECCIÓN EN SIDEBAR
+# CONTENIDO PRINCIPAL
 # =========================================================================
 
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
-    st.write("Bienvenido al panel de cálculo eléctrico REBT. Despliega el menú lateral izquierdo (pulsando las ☰ arriba a la izquierda si estás en el móvil o tablet) para seleccionar cualquier módulo de cálculo de forma limpia y sin ocupar espacio en pantalla.")
-    st.info("💡 **Consejo de navegación:** En teléfonos y tablets, la barra lateral se oculta automáticamente para ofrecerte una visión 100% despejada de los cálculos y tablas.")
+    st.write("Bienvenido al panel de cálculo eléctrico REBT. Despliega el menú lateral izquierdo para seleccionar cualquier módulo de cálculo.")
+    st.info("💡 **Consejo de navegación:** En teléfonos y tablets, la barra lateral se oculta automáticamente para ofrecerte una visión 100% despejada.")
 
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
+    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos, evaluando Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
 
     rc1, rc2 = st.columns(2)
     with rc1:
@@ -378,7 +359,9 @@ elif seleccion_modulo.startswith("🧮"):
         mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"], key="m_q")
         ais_q = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
         cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%) [Fuerza/Motores max 3-5%]", value=3.0, step=0.5, key="cdt_q")
-        icc_orig_q = st.number_input("Icc de cortocircuito en el origen de la línea (kA)", value=10.0, step=0.5, key="icc_orig_q")
+        
+        # CAMPO DE ICC EN ORIGEN (USAR PUNTO EN LUGAR DE COMA EN EL VALOR POR DEFECTO)
+        icc_orig_q = st.number_input("Icc de cortocircuito en el origen de la línea (kA) [Ej: 6.0 o 10.0]", value=10.0, step=0.5, format="%.2f", key="icc_orig_q")
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     dv_max_q = v_nom_calc * (cdt_lim_q / 100.0)
@@ -438,11 +421,11 @@ elif seleccion_modulo.startswith("🧮"):
         <b>3. Comprobación por Calentamiento y Cortocircuito (Icc min):</b><br>
         • Intensidad admisible del cable elegido ({s_opt_q} mm²): <b>{tabla_iz_q.get(s_opt_q, 0)} A</b>.<br>
         • Corriente de cortocircuito al final de los {long_q} metros: <b>{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)</b>.<br>
-        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCION: Icc insuficiente'}</b>.
+        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCION: Icc insuficiente (Aumentar sección de cable o revisar Icc origen)'}</b>.
     </div>
     """, unsafe_allow_html=True)
 
-    # RECOMENDACIÓN DE PROTECCIÓN DESTACADA CON LETRAS GRANDES
+    # PROTECCIÓN RECOMENDADA
     st.markdown(f"""
         <div class="pia-destacado">
             🛡️ PROTECCIÓN MAGNETOTÉRMICA RECOMENDADA (PIA): {prot_q} A (Curva C) + Diferencial 30 mA
@@ -473,46 +456,35 @@ elif seleccion_modulo.startswith("🧮"):
         tabla_q_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
-    # EXPLICACIÓN DETALLADA DE POR QUÉ CUMPLE TODO (CORREGIDO SIN CARACTERES DE ESCAPE)
+    # CONCLUSIÓN Y EXPLICACIÓN
     st.markdown(f"""
         <div class="resultado-destacado">
             ⚡ CONCLUSIÓN Y SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
             <hr style="border: 1px solid #444; margin: 10px 0;">
             <span style="font-size: 15px; color: #e0e0e0; font-weight: normal; line-height: 1.6;">
             <b>🔍 Explicación detallada de por qué cumple con todos los requisitos:</b><br>
-            1. <b>Intensidad de Servicio (Ib):</b> El circuito absorbe <b>{ib_q:.2f} A</b>. La sección elegida de <b>{s_opt_q} mm²</b> soporta una corriente admisible (Iz) muy superior, evitando cualquier riesgo de calentamiento o sobrecalentamiento del conductor.<br>
-            2. <b>Caída de Tensión (Delta V):</b> Con una longitud de <b>{long_q} m</b>, la caída de tensión real se queda en el <b>{dv_real_pct_q:.3f}%</b>, cumpliendo holgadamente el límite estricto fijado del <b>{cdt_lim_q}%</b>.<br>
-            3. <b>Coordinación de Protecciones (In <= 0.91 * Iz):</b> El magnetotérmico seleccionado de <b>{prot_q} A</b> protege perfectamente al cable frente a sobrecargas cumpliendo la condición reglamentaria.<br>
-            4. <b>Seguridad ante Cortocircuito en el Extremo (Icc min):</b> Evaluando la corriente de cortocircuito al final de los {long_q} metros (estimada en <b>{icc_fin_q * 1000:.1f} A</b> a partir de los {icc_orig_q} kA en origen), el sistema confirma que la corriente de defecto es lo suficientemente intensa como para accionar de forma instantánea el disparo magnético del PIA de {prot_q} A, garantizando una protección integral de la línea y de los equipos.
+            1. <b>Intensidad de Servicio (Ib):</b> El circuito absorbe <b>{ib_q:.2f} A</b>. La sección elegida de <b>{s_opt_q} mm²</b> soporta una corriente admisible (Iz) muy superior, evitando cualquier riesgo de calentamiento.<br>
+            2. <b>Caída de Tensión (Delta V):</b> Con una longitud de <b>{long_q} m</b>, la caída de tensión real se queda en el <b>{dv_real_pct_q:.3f}%</b>, cumpliendo holgadamente el límite fijado del <b>{cdt_lim_q}%</b>.<br>
+            3. <b>Coordinación de Protecciones (In <= 0.91 * Iz):</b> El magnetotérmico seleccionado de <b>{prot_q} A</b> protege perfectamente al cable frente a sobrecargas.<br>
+            4. <b>Seguridad ante Cortocircuito en el Extremo (Icc min):</b> Evaluando la corriente de cortocircuito al final de los {long_q} metros (estimada en <b>{icc_fin_q * 1000:.1f} A</b> a partir de los {icc_orig_q} kA introducidos en origen), el sistema confirma que la corriente de defecto es la adecuada para accionar el disparo magnético del PIA de {prot_q} A.
             </span>
         </div>
     """, unsafe_allow_html=True)
 
+# Resto de módulos (Cargas, LGA, DI, etc.)
 elif seleccion_modulo.startswith("🏢"):
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
-    # (Resto de módulos idénticos)
-
 elif seleccion_modulo.startswith("⚡"):
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
-
 elif seleccion_modulo.startswith("🔌"):
     st.title("Derivación Individual - DI (ITC-BT-15)")
-
 elif seleccion_modulo.startswith("📊"):
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-
 elif seleccion_modulo.startswith("📐"):
     st.title("📐 Esquemas Unifilares")
-    texto_esquema = f"""PROYECTO: {st.session_state.nombre_proyecto}
-LGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm
-Icc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A"""
-    st.code(texto_esquema, language="text")
-
 elif seleccion_modulo.startswith("📄"):
     st.title("📄 Informe Técnico Formal MTD")
-
 elif seleccion_modulo.startswith("💡"):
     st.title("💡 Simulador Consumo Eléctrico")
-
 elif seleccion_modulo.startswith("🛡️"):
     st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
