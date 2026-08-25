@@ -229,7 +229,7 @@ elif seleccion_modulo.startswith("🧮"):
     iz_opt_val = tabla_iz_q.get(s_opt_q, 0.0)
 
     if "Monofásico" in tipo_red_q: dv_real_v_q = (2.0 * val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * v_nom_calc > 0 else 0.0
-    else: dv_real_v_q = (val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * v_nom_calc > 0 else 0.0
+    else: dv_real_v_q = (val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * s_opt_q > 0 else 0.0
     dv_real_pct_q = (dv_real_v_q / v_nom_calc) * 100.0 if v_nom_calc > 0 else 0.0
 
     rho_q = 1.0 / gamma_q if gamma_q > 0 else 0.0
@@ -293,9 +293,9 @@ elif seleccion_modulo.startswith("🧮"):
     
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
-    **Sustitución detallada con los datos actualizados de tu cálculo:** 
-    * Impedancia de red ($Z_{{origen}}$): **`{z_origen:.4f}` $\\Omega$**
-    * Resistencia del cable ($R_{{cable}}$): **`{r_cable_total:.4f}` $\\Omega$**
+    **Origen de los parámetros de impedancia y resistencia:**
+    * **Impedancia de red ($Z_{{origen}}$):** Se calcula como $Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$, resultando en **`{z_origen:.4f}` $\\Omega$**.
+    * **Resistencia del cable ($R_{{cable}}$):** Se calcula mediante la ley de ohm para conductores $R = \\frac{{\\rho \\cdot L}}{{S}}$ (multiplicado por 2 en monofásico por ida y vuelta), resultando en **`{r_cable_total:.4f}` $\\Omega$** con los {long_q} m y la sección de {s_opt_q} mm².
     
     $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
 
@@ -303,15 +303,19 @@ elif seleccion_modulo.startswith("🧮"):
     * **Veredicto:** {estado_icc}
     """)
 
-    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES LIMPIA ---
+    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES CON ESTILO DE CUADRO ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
-        st.markdown("| Material Conductor | Aislamiento | Temp. Servicio | Conductividad (gamma) | Resistividad aprox. (rho) |")
-        st.markdown("| :--- | :--- | :--- | :--- | :--- |")
-        st.markdown("| **Cobre** | XLPE / EPR | 90 ºC | **44.0 m/(Ω·mm²)** | ~0.0227 Ω·mm²/m |")
-        st.markdown("| **Cobre** | PVC | 70 ºC | **48.5 m/(Ω·mm²)** | ~0.0206 Ω·mm²/m |")
-        st.markdown("| **Aluminio** | XLPE / EPR | 90 ºC | **28.0 m/(Ω·mm²)** | ~0.0357 Ω·mm²/m |")
-        st.markdown("| **Aluminio** | PVC | 70 ºC | **31.0 m/(Ω·mm²)** | ~0.0323 Ω·mm²/m |")
+        
+        tabla_gamma_md = """
+| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\\gamma$) [$\\mathrm{m / (\\Omega \\cdot mm^2)}$] | RESISTIVIDAD APRISIMADA ($\\rho$) [$\\mathrm{\\Omega \\cdot mm^2 / m}$] |
+| :--- | :--- | :--- | :--- | :--- |
+| **Cobre** | XLPE / EPR | 90 ºC | **44.0** | ~0.0227 |
+| **Cobre** | PVC | 70 ºC | **48.5** | ~0.0206 |
+| **Aluminio** | XLPE / EPR | 90 ºC | **28.0** | ~0.0357 |
+| **Aluminio** | PVC | 70 ºC | **31.0** | ~0.0323 |
+        """
+        st.markdown(tabla_gamma_md)
         st.markdown("*Nota:* El programa selecciona automáticamente este valor según la selección superior.")
 
     st.markdown(f"""
@@ -345,6 +349,9 @@ elif seleccion_modulo.startswith("🧮"):
 
 
 
+# =========================================================================
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================# =========================================================================# =========================================================================
