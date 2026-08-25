@@ -308,11 +308,11 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: CÁLCULO RÁPIDO AVANZADO (CON TABLA EXTENSA DE VERIFICACIÓN)
+# PESTAÑA 1: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 with pestanas[0]:
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e $I_{cc\_min}$.")
+    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
 
     rc1, rc2 = st.columns(2)
     with rc1:
@@ -384,31 +384,31 @@ with pestanas[0]:
     salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo_magnetico
 
     st.markdown("---")
-    st.subheader("📋 Memoria Justificativa Analítica y Fórmulas Desarrolladas")
+    st.subheader("Memoria Justificativa Analítica y Fórmulas Desarrolladas")
 
     st.markdown(f"""
     <div class="formula-box">
         <b>1. Intensidad de Diseño (Ib):</b><br>
-        • Fórmula: $I_b = \\frac{{P}}{{{'V \\cdot \\cos\\varphi' if 'Monofásico' in tipo_red_q else '\\sqrt{3} \\cdot V \\cdot \cos\\varphi'}}}$.<br>
+        • Fórmula general de corriente alterna.<br>
         • Sustitución: {val_pot_q:,.1f} / ({v_nom_calc} * {cos_q}) = <b>{ib_q:.2f} A</b>
     </div>
 
     <div class="formula-box">
-        <b>2. Sección por Caída de Tensión ($\Delta V$):</b><br>
-        • Fórmula: $S = \\frac{{{'2 \\cdot P \\cdot L' if 'Monofásico' in tipo_red_q else 'P \\cdot L'}}}{{\\gamma \\cdot \\Delta V \\cdot V}}$ (Límite max: {cdt_lim_q}% -> {dv_max_q:.2f} V).<br>
+        <b>2. Sección por Caída de Tensión (Delta V):</b><br>
+        • Límite max: {cdt_lim_q}% -> {dv_max_q:.2f} V.<br>
         • Cálculo teórico puro: <b>{s_cdt_q:.2f} mm²</b>
     </div>
 
     <div class="formula-box">
-        <b>3. Comprobación por Calentamiento y Cortocircuito ($I_{cc\_min}$):</b><br>
+        <b>3. Comprobación por Calentamiento y Cortocircuito (Icc min):</b><br>
         • Intensidad admisible del cable elegido ({s_opt_q} mm²): <b>{tabla_iz_q.get(s_opt_q, 0)} A</b>.<br>
         • Corriente de cortocircuito al final de los {long_q} metros: <b>{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)</b>.<br>
-        • Comprobación de disparo magnético del PIA ({prot_q} A): Se requiere al menos ~{corriente_disparo_magnetico} A. Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCIÓN: Icc insuficiente para disparo magnético rápido'}</b>.
+        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'GARANTIZADO EL DISPARO' if salta_proteccion else 'ATENCION: Icc insuficiente'}</b>.
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📊 Tabla Detallada de Verificación y Coordinación (Sobrecarga e $I_z \ge I_b$)")
-    tabla_q_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga ($I_n \\le 0.91 \\cdot I_z$) |\n| :---: | :---: | :---: | :--- |\n"
+    st.markdown("### Tabla Detallada de Verificación y Coordinación (Sobrecarga e Iz >= Ib)")
+    tabla_q_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :---: | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         if "Monofásico" in tipo_red_q:
@@ -418,13 +418,13 @@ with pestanas[0]:
 
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q:
-            est_v = f"❌ No cumple por calentamiento ($I_z = {iz_c} A < I_b = {ib_q:.2f} A$)"
+            est_v = f"No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_q:.2f} A)"
         elif prot_q > cond_sobrecarga:
-            est_v = f"❌ No cumple la 2ª condición ($I_n = {prot_q} A > 0.91 \\times {iz_c} = {cond_sobrecarga:.2f} A$)"
+            est_v = f"No cumple la 2ª condición (In = {prot_q} A > 0.91 * {iz_c} = {cond_sobrecarga:.2f} A)"
         elif dv_c_pct > cdt_lim_q:
-            est_v = f"❌ No cumple caída de tensión ({dv_c_pct:.3f}% > {cdt_lim_q}%)"
+            est_v = f"No cumple caída de tensión ({dv_c_pct:.3f}% > {cdt_lim_q}%)"
         elif sec_com == s_opt_q:
-            est_v = f"✅ **CUMPLE PERFECTAMENTE** ($I_z = {iz_c} A \\rightarrow I_n = {prot_q} A \\le 0.91 \\times {iz_c} = {cond_sobrecarga:.2f} A$)"
+            est_v = f"CUMPLE PERFECTAMENTE (Iz = {iz_c} A -> In = {prot_q} A <= 0.91 * {iz_c} = {cond_sobrecarga:.2f} A)"
         else:
             est_v = "Válido pero superior"
 
@@ -435,7 +435,7 @@ with pestanas[0]:
         <div class="resultado-destacado">
             ⚡ CONCLUSIÓN Y SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación detallada de por qué se aumenta la sección:</b> Aunque la fórmula estricta de caída de tensión arroje una sección menor, la sección final se eleva obligatoriamente a <b>{s_opt_q} mm²</b> para garantizar tres pilares de seguridad: 1) Soportar la intensidad de servicio sin sobrecalentamiento ($I_z \\ge I_b$), 2) Cumplir la condición de protección frente a sobrecargas ($I_n \\le 0.91 \\cdot I_z$), y 3) Asegurar que la corriente de cortocircuito al final de la línea sea suficientemente alta para disparar instantáneamente el magnetotérmico de {prot_q} A.
+            <b>Justificación detallada de por qué se aumenta la sección:</b> Aunque la fórmula estricta de caída de tensión arroje una sección menor, la sección final se eleva obligatoriamente a <b>{s_opt_q} mm²</b> para garantizar tres pilares de seguridad: 1) Soportar la intensidad de servicio sin sobrecalentamiento, 2) Cumplir la condición de protección frente a sobrecargas (In <= 0.91 * Iz), y 3) Asegurar que la corriente de cortocircuito al final de la línea sea suficientemente alta para disparar instantáneamente el magnetotérmico.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -707,16 +707,16 @@ with pestanas[2]:
     st.subheader("📋 Memoria de Justificación Técnica Detallada (LGA)")
 
     st.markdown("### 📊 Consultamos la tabla de corrientes admisibles para cable enterrado en instalaciones interiores D1/D2 de la ITC-BT 19")
-    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) [Enterrado Cu 90ºC] | Estado de Verificación frente a Sobrecarga ($I_n \\le 0.91 \\cdot I_z$) |\n| :---: | :---: | :--- |\n"
+    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) [Enterrado Cu 90ºC] | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :--- |\n"
     for s_com in [70, 95, 120, 150, 185]:
         iz_val_t = tabla_iz.get(s_com, 0)
         cond_s_lga = 0.91 * iz_val_t
         if s_com < 95 and iz_val_t < ib_lga:
-            est = f"❌ No cumple por calentamiento ($I_z = {iz_val_t} A < I_b = {ib_lga:.2f} A$)"
+            est = f"No cumple por calentamiento (Iz = {iz_val_t} A < Ib = {ib_lga:.2f} A)"
         elif in_lga_auto > cond_s_lga:
-            est = f"❌ No cumple la 2ª condición ($I_n = {in_lga_auto} A > 0.91 \\times {iz_val_t} = {cond_s_lga:.2f} A$)"
+            est = f"No cumple la 2ª condición (In = {in_lga_auto} A > 0.91 * {iz_val_t} = {cond_s_lga:.2f} A)"
         elif s_com == 120:
-            est = f"✅ **CUMPLE PERFECTAMENTE** ($I_z = {iz_val_t} A \\rightarrow I_n = {in_lga_auto} A \\le 0.91 \\times {iz_val_t} = {cond_s_lga:.2f} A$)"
+            est = f"CUMPLE PERFECTAMENTE (Iz = {iz_val_t} A -> In = {in_lga_auto} A <= 0.91 * {iz_val_t} = {cond_s_lga:.2f} A)"
         else:
             est = "Válido pero superior"
         tabla_markdown += f"| {s_com} mm² | {iz_val_t} A | {est} |\n"
@@ -739,7 +739,7 @@ with pestanas[2]:
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
-    * **Justificación de por qué se descartan 70 y 95 mm² y se llega a 120 mm²:** Con 70 mm² no cumple calentamiento. Con 95 mm² cumple térmicamente pero **falla en la segunda condición de sobrecarga** ($I_n \\le 0.91 \\cdot I_z$). Por tanto, se eleva obligatoriamente a **120 mm²** (Iz = 230 A), donde la coordinación de protecciones **sí cumple**.
+    * **Justificación de por qué se descartan 70 y 95 mm² y se llega a 120 mm²:** Con 70 mm² no cumple calentamiento. Con 95 mm² cumple térmicamente pero **falla en la segunda condición de sobrecarga** (In <= 0.91 * Iz). Por tanto, se eleva obligatoriamente a **120 mm²** (Iz = 230 A), donde la coordinación de protecciones **sí cumple**.
 
     **3. Verificación de Cortocircuito (Manual MT 2.80.12 de Iberdrola):**
     * 1ª Condición (Poder de Corte): PdC = 50 kA > {lga_icc_max} kA --> **Cumple**.
@@ -756,7 +756,7 @@ with pestanas[2]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 4: DERIVACIÓN INDIVIDUAL (CON TABLA EXTENSA DE VERIFICACIÓN)
+# PESTAÑA 4: DERIVACIÓN INDIVIDUAL
 # =========================================================================
 with pestanas[3]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -818,23 +818,23 @@ with pestanas[3]:
     """)
     st.info(f"Cálculo numérico: (2 x {di_pot} W x {di_long} m) / ({gamma_di} x {dv_max_di:.2f} V x 230 V) = **{s_cdt_di:.2f} mm²**")
 
-    st.markdown("### 📊 Tabla Detallada de Verificación y Coordinación (Sobrecarga e $I_z \ge I_b$) - DI")
-    tabla_di_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga ($I_n \\le 0.91 \\cdot I_z$) |\n| :---: | :---: | :---: | :--- |\n"
+    st.markdown("### 📊 Tabla Detallada de Verificación y Coordinación (Sobrecarga e Iz >= Ib) - DI")
+    tabla_di_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :---: | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25]:
         iz_c = tabla_iz_di.get(sec_com, 100.0)
         dv_c_pct = ((2.0 * di_pot * di_long) / (gamma_di * sec_com * 230.0) / 230.0) * 100
         cond_s_di = 0.91 * iz_c
         
         if sec_com < min_reg_di:
-            est_v = f"❌ No cumple mínimo ITC-BT-15 ($6\\text{{ mm}}^2$)"
+            est_v = f"No cumple mínimo ITC-BT-15 (6 mm²)"
         elif iz_c < ib_di:
-            est_v = f"❌ No cumple por calentamiento ($I_z = {iz_c} A < I_b = {ib_di:.2f} A$)"
+            est_v = f"No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_di:.2f} A)"
         elif prot_di > cond_s_di:
-            est_v = f"❌ No cumple la 2ª condición ($I_n = {prot_di} A > 0.91 \\times {iz_c} = {cond_s_di:.2f} A$)"
+            est_v = f"No cumple la 2ª condición (In = {prot_di} A > 0.91 * {iz_c} = {cond_s_di:.2f} A)"
         elif dv_c_pct > dv_pct_di:
-            est_v = f"❌ No cumple caída de tensión ({dv_c_pct:.3f}% > {dv_pct_di}%)"
+            est_v = f"No cumple caída de tensión ({dv_c_pct:.3f}% > {dv_pct_di}%)"
         elif sec_com == s_optima_di:
-            est_v = f"✅ **CUMPLE PERFECTAMENTE** ($I_z = {iz_c} A \\rightarrow I_n = {prot_di} A \\le 0.91 \\times {iz_c} = {cond_s_di:.2f} A$)"
+            est_v = f"CUMPLE PERFECTAMENTE (Iz = {iz_c} A -> In = {prot_di} A <= 0.91 * {iz_c} = {cond_s_di:.2f} A)"
         else:
             est_v = "Válido pero superior"
 
