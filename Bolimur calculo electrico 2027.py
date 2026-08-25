@@ -173,6 +173,9 @@ if seleccion_modulo.startswith("🏠"):
 # =========================================================================
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
+# =========================================================================
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
+# =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Cálculo Rápido Avanzado")
 
@@ -290,9 +293,9 @@ elif seleccion_modulo.startswith("🧮"):
     
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
-    **Origen de los parámetros de resistencia y cálculo:**
-    * **Impedancia de red ($Z_{{origen}}$):** Se calcula a partir de la Icc de origen configurada ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$), obteniendo **`{z_origen:.4f}` $\\Omega$**.
-    * **Resistencia del cable ($R_{{cable}}$):** Se obtiene aplicando la ley de resistencia de materiales reglamentaria ($R = \\frac{{\\rho \\cdot L}}{{S}}$). Con una conductividad de referencia de $\\gamma = {gamma_q}$ ({mat_q} con aislamiento {ais_q}), una longitud de $L = {long_q} \\text{{ m}}$ y una sección óptima de $S = {s_opt_q} \\text{{ mm²}}$ (multiplicado por 2 en monofásico por ida y vuelta), resulta en **`{r_cable_total:.4f}` $\\Omega$**.
+    **Sustitución detallada con los datos actualizados de tu cálculo:** 
+    * Impedancia de red ($Z_{{origen}}$): **`{z_origen:.4f}` $\\Omega$**
+    * Resistencia del cable ($R_{{cable}}$): **`{r_cable_total:.4f}` $\\Omega$**
     
     $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
 
@@ -300,27 +303,23 @@ elif seleccion_modulo.startswith("🧮"):
     * **Veredicto:** {estado_icc}
     """)
 
-    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES Y RESISTIVIDADES REBT ---
+    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES LIMPIA ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
-        st.markdown("""
-        De acuerdo con la norma UNE-HD 60364-5-52 y las guías técnicas del REBT, los valores oficiales de conductividad ($\gamma$) a la temperatura máxima de servicio del aislamiento son:
-        
-        | Material Conductor | Aislamiento | Temp. Servicio | Conductividad ($\gamma$) [$\mathrm{m / (\Omega \cdot mm^2)}$] | Resistividad unitaria aproximada ($\rho = 1/\gamma$) [$\mathrm{\Omega \cdot mm^2 / m}$] |
-        | :--- | :--- | :--- | :--- | :--- |
-        | **Cobre** | XLPE / EPR | 90 ºC | **44.0** | ~0.0227 |
-        | **Cobre** | PVC | 70 ºC | **48.5** | ~0.0206 |
-        | **Aluminio** | XLPE / EPR | 90 ºC | **28.0** | ~0.0357 |
-        | **Aluminio** | PVC | 70 ºC | **31.0** | ~0.0323 |
-        
-        *Nota:* El programa selecciona automáticamente la conductividad correspondiente en función del material y aislamiento elegidos en los selectores superiores.
-        """)
+        st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
+        st.markdown("| Material Conductor | Aislamiento | Temp. Servicio | Conductividad (gamma) | Resistividad aprox. (rho) |")
+        st.markdown("| :--- | :--- | :--- | :--- | :--- |")
+        st.markdown("| **Cobre** | XLPE / EPR | 90 ºC | **44.0 m/(Ω·mm²)** | ~0.0227 Ω·mm²/m |")
+        st.markdown("| **Cobre** | PVC | 70 ºC | **48.5 m/(Ω·mm²)** | ~0.0206 Ω·mm²/m |")
+        st.markdown("| **Aluminio** | XLPE / EPR | 90 ºC | **28.0 m/(Ω·mm²)** | ~0.0357 Ω·mm²/m |")
+        st.markdown("| **Aluminio** | PVC | 70 ºC | **31.0 m/(Ω·mm²)** | ~0.0323 Ω·mm²/m |")
+        st.markdown("*Nota:* El programa selecciona automáticamente este valor según la selección superior.")
 
     st.markdown(f"""
     <div class="pia-destacado">
         🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
         <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
         <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \\le 0.91 \\cdot I_z$</b> (siendo $I_z$ = {iz_opt_val} A).
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>In <= 0.91 * Iz</b> (siendo Iz = {iz_opt_val} A).
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -348,8 +347,7 @@ elif seleccion_modulo.startswith("🧮"):
 
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
-# =========================================================================
-# =========================================================================
+# =========================================================================# =========================================================================# =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
 
