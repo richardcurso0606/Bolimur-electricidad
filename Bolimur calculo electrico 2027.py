@@ -527,7 +527,6 @@ with pestanas[1]:
         lga_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"], key="lga_ais")
         lga_cos = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.9, key="lga_cos")
         
-        # CASILLAS ESPECÍFICAS DE ICC REQUERIDAS
         st.markdown("##### 🛡️ Parámetros de Cortocircuito (Icc)")
         lga_icc_max = st.number_input("Icc máxima en origen / CGP (kA)", value=12.0, key="lga_icc_max_input")
         lga_icc_min = st.number_input("Icc mínima al final / Centralización CC (kA)", value=7.5, key="lga_icc_min_input")
@@ -540,7 +539,6 @@ with pestanas[1]:
         dv_max_lga = 400 * (dv_pct_lga / 100.0)
         s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400)
         
-        # Selección según método (enterrado o tubo normal)
         tabla_iz = IZ_COBRE_ENTERRADO if "D (" in metodo_lga_key else IZ_COBRE_TUBO
         s_cal_lga = 1.5
         for sec, iz_val in tabla_iz.items():
@@ -561,16 +559,16 @@ with pestanas[1]:
         
         st.markdown(f"""
         **1. Intensidad de Diseño (Ib):**  
-        $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{lga_pot:,.2f}}}{{\\sqrt{{3}} \\cdot 400 \\cdot {lga_cos}}} = \\mathbf{{{ib_lga:.2f}\\text{{ A}}}$$
+        Ib = P / ( sqrt(3) * V * cos phi ) = {lga_pot:,.2f} / ( 1.732 * 400 * {lga_cos} ) = **{ib_lga:.2f} A**
 
         **2. Criterio de Calentamiento (Iz >= Ib):**  
         Con conductor de cobre {'enterrado' if 'D (' in metodo_lga_key else 'en tubo'} ({lga_aisl}), la sección térmica requerida es de **{s_cal_lga} mm²**.
 
         **3. Criterio de Caída de Tensión (CDT <= {dv_pct_lga}%):**  
-        $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}} = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm²}}}$$
+        S = ( P * L ) / ( gamma * Delta V * V ) = ( {lga_pot:,.2f} * {lga_long} ) / ( {gamma_lga} * {dv_max_lga} * 400 ) = **{s_cdt_lga:.2f} mm²**
 
-        **4. Verificación de Cortocircuito ($I_{{cc\\_max}} = {lga_icc_max}\\text{{ kA}}$ y $I_{{cc\\_min}} = {lga_icc_min}\\text{{ kA}}$):**  
-        Se comprueba que la sección comercial adoptada soporta térmicamente la corriente de cortocircuito mínima al final de la línea ($I^2 t \\le K^2 S^2$) según ITC-BT-24.
+        **4. Verificación de Cortocircuito (Icc_max = {lga_icc_max} kA y Icc_min = {lga_icc_min} kA):**  
+        Se comprueba que la sección comercial adoptada soporta térmicamente la corriente de cortocircuito mínima al final de la línea según ITC-BT-24.
         """)
 
         st.markdown(f"""
@@ -600,9 +598,9 @@ with pestanas[3]:
     ### 📝 Resultados Analíticos Automáticos para el Enunciado:
     * **Potencia Prevista:** {lga_pot:,.2f} W | **Longitud:** {lga_long} m | **Icc máx (CGP):** {lga_icc_max} kA | **Icc mín (CC):** {lga_icc_min} kA
     
-    * **a) Sección de la LGA y Fusibles:** Sección comercial adoptada de **{s_optima_lga} mm² de Cobre RZ1-K**, protegida mediante fusibles tipo gG en CGP con comprobación térmica de cortocircuito ($I_{{{lga_icc_min}}}\\text{{ kA}}$).
+    * **a) Sección de la LGA y Fusibles:** Sección comercial adoptada de **{s_optima_lga} mm² de Cobre RZ1-K**, protegida mediante fusibles tipo gG en CGP con comprobación térmica de cortocircuito ({lga_icc_min} kA).
     * **b) Sección del Neutro y Diámetro del Tubo:** Con fases de {s_optima_lga} mm², se aplica la reducción de neutro reglamentaria y se selecciona el tubo enterrado correspondiente de la ITC-BT-14.
-    * **c) Calibre del I.G.M.:** Interruptor General de Maniobra en la centralización dimensionado para $I_b = {ib_lga:.2f}\\text{{ A}}$ ($\\{prot_lga}\\text{{ A}}$).
+    * **c) Calibre del I.G.M.:** Interruptor General de Maniobra en la centralización dimensionado para Ib = {ib_lga:.2f} A ({prot_lga} A).
     * **d) Caída de Tensión Real:** **{dv_real_lga_pct:.3f}%**.
     """)
 
@@ -611,7 +609,6 @@ with pestanas[3]:
 # =========================================================================
 with pestanas[4]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta horizontal rápida de longitudes máximas admisibles.")
 
 with pestanas[5]:
     st.title("🧮 Ventana de Cálculo Rápido")
