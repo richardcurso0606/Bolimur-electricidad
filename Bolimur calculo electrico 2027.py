@@ -273,23 +273,144 @@ with st.sidebar:
             else:
                 st.warning("⚠️ Archivo no encontrado.")
 
-# --- PESTAÑAS PRINCIPALES ---
+# --- PESTAÑAS PRINCIPALES (CÁLCULO RÁPIDO PUESTO EN PRIMER LUGAR) ---
 pestanas = st.tabs([
+    "🧮 Cálculo Rápido (CDT & Icc)",
     "🏢 Previsión de Cargas (Pt)", 
     "⚡ Línea General (LGA)", 
     "🔌 Derivación Individual (DI)", 
     "🛡️ Resolución Avanzada y Exámenes",
     "📊 Tabla Guía Estilo PLC Madrid",
-    "🧮 Cálculo Rápido (CDT & Icc)",
     "📐 Esquemas Unifilares",
     "📄 Informe Técnico MTD",
     "💡 Simulador Consumo"
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (RESTAURADA AL 100%)
+# PESTAÑA 1: CÁLCULO RÁPIDO (CDT & ICC) - ENRIQUECIDO Y EN PRIMERA POSICIÓN
 # =========================================================================
 with pestanas[0]:
+    st.title("🧮 Ventana de Cálculo Rápido (Justificación Analítica y Fórmulas)")
+    st.write("Calcula cualquier tramo eligiendo libremente el método de instalación reglamentario visualizando las fórmulas y cálculos desarrollados paso a paso.")
+
+    rc1, rc2 = st.columns(2)
+    with rc1:
+        modo_carga = st.radio("Modo de entrada de potencia / corriente:", ["Por Potencia (W)", "Por Intensidad Directa (A)"], key="mod_q")
+        tipo_red_q = st.selectbox("Sistema eléctrico", ["Monofásico (230V)", "Trifásico (400V)"], key="tr_q1")
+        
+        if modo_carga == "Por Potencia (W)":
+            val_pot_q = st.number_input("Potencia activa (W)", value=5750.0, step=250.0, key="vp_q")
+            cos_q = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.95, key="cos_q")
+            v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
+            if "Monofásico" in tipo_red_q:
+                ib_q = val_pot_q / (v_nom_calc * cos_q)
+            else:
+                ib_q = val_pot_q / (math.sqrt(3) * v_nom_calc * cos_q)
+        else:
+            ib_q = st.number_input("Intensidad de diseño Ib (A)", value=25.0, step=1.0, key="ib_q1")
+            cos_q = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.95, key="cos_q_2")
+            v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
+            if "Monofásico" in tipo_red_q:
+                val_pot_q = ib_q * v_nom_calc * cos_q
+            else:
+                val_pot_q = ib_q * math.sqrt(3) * v_nom_calc * cos_q
+
+        long_q = st.number_input("Longitud del circuito (m)", value=20.0, step=1.0, key="l_q")
+
+    with rc2:
+        metodo_q_key = st.selectbox("Método de Instalación (UNE-HD 60364-5-52):", list(METODOS_INSTALACION.keys()), key="met_q")
+        mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"], key="m_q")
+        ais_q = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
+        cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%)", value=3.0, step=0.5, key="cdt_q")
+        icc_orig_q = st.number_input("Icc de cortocircuito en el origen (kA)", value=10.0, step=0.5, key="icc_orig_q")
+
+    gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
+    dv_max_q = v_nom_calc * (cdt_lim_q / 100.0)
+    
+    if "Monofásico" in tipo_red_q:
+        s_cdt_q = (2.0 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc)
+    else:
+        s_cdt_q = (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc)
+
+    tabla_iz_q = IZ_COBRE_ENTERRADO if "D (" in metodo_q_key else IZ_COBRE_TUBO
+    s_cal_q = 1.5
+    for sec, iz_val in tabla_iz_q.items():
+        if iz_val >= ib_q:
+            s_cal_q = sec
+            break
+
+    min_reg_q = 1.5 if mat_q == "cobre" else 10.0
+    s_bruta_q = max(s_cdt_q, s_cal_q, min_reg_q)
+    s_opt_q = seleccionar_seccion_optima(s_bruta_q)
+
+    # Cálculo exacto de Caída de Tensión real
+    if "Monofásico" in tipo_red_q:
+        dv_real_v_q = (2.0 * val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc)
+    else:
+        dv_real_v_q = (val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc)
+    
+    dv_real_pct_q = (dv_real_v_q / v_nom_calc) * 100.0
+
+    # Cálculo de resistencia e Icc
+    rho_q = 1.0 / gamma_q
+    r_q = (rho_q * long_q) / s_opt_q
+    if "Monofásico" in tipo_red_q:
+        z_tot_q = (v_nom_calc / (icc_orig_q * 1000.0)) + (2.0 * r_q)
+    else:
+        z_tot_q = (v_nom_calc / (icc_orig_q * 1000.0)) + r_q
+        
+    icc_fin_q = v_nom_calc / z_tot_q / 1000.0 if z_tot_q > 0 else 0.0
+    prot_q = seleccionar_proteccion(ib_q)
+
+    st.markdown("---")
+    st.subheader("📋 Memoria Justificativa Analítica y Fórmulas Desarrolladas")
+
+    st.markdown(f"""
+    **1. Intensidad de Diseño ($I_b$):**  
+    * Formula aplicable ({tipo_red_q}): $I_b = \\frac{{P}}{{{'V \\cdot \\cos\\varphi' if 'Monofásico' in tipo_red_q else '\\sqrt{3} \\cdot V \\cdot \\cos\\varphi'}}}$
+    """)
+    st.info(f"Cálculo numérico: {val_pot_q:,.1f} W / ({'230 V x ' if 'Monofásico' in tipo_red_q else '1.732 x 400 V x '}{cos_q}) = **{ib_q:.2f} A**")
+
+    st.markdown(f"""
+    **2. Caída de Tensión (Límite $\\Delta V \\le {cdt_lim_q}\\%$):**  
+    * Caída de Tensión absoluta permitida: $\\Delta V = {v_nom_calc:.0f}\\text{{ V}} \\times \\frac{{{cdt_lim_q}}}{{100}} = {dv_max_q:.2f}\\text{{ V}}$
+    * Sección teórica necesaria por caída de tensión: $S = \\frac{{{'2 \\cdot P \\cdot L' if 'Monofásico' in tipo_red_q else 'P \\cdot L'}}}{{\\gamma \\cdot \\Delta V \\cdot V}}$
+    """)
+    st.info(f"Cálculo numérico: ({'2 x ' if 'Monofásico' in tipo_red_q else ''}{val_pot_q:,.1f} W x {long_q} m) / ({gamma_q} x {dv_max_q:.2f} V x {v_nom_calc:.0f} V) = **{s_cdt_q:.2f} mm²**")
+
+    st.markdown("### 📊 Tabla Comparativa y Justificación por Secciones Comercializables")
+    tabla_q_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado Reglamentario |\n| :---: | :---: | :---: | :--- |\n"
+    for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120]:
+        iz_c = tabla_iz_q.get(sec_com, 250.0)
+        if "Monofásico" in tipo_red_q:
+            dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
+        else:
+            dv_c_pct = (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
+            
+        if sec_com >= s_bruta_q:
+            estado_c = "⭐ **SELECCIONADA (ÓPTIMA)**"
+        elif iz_c < ib_q:
+            estado_c = "❌ No cumple por calentamiento"
+        elif dv_c_pct > cdt_lim_q:
+            estado_c = "❌ No cumple caída de tensión"
+        else:
+            estado_c = "Válida pero superior"
+        tabla_q_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {estado_c} |\n"
+    st.markdown(tabla_q_md)
+
+    st.markdown(f"""
+        <div class="resultado-destacado">
+            ⚡ SECCIÓN ÓPTIMA SELECCIONADA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
+            <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
+            Intensidad de diseño: <b>{ib_q:.2f} A</b> | CDT Real: <b>{dv_real_pct_q:.3f}% ({dv_real_v_q:.2f} V)</b> | Icc final estimada: <b>{icc_fin_q:.2f} kA</b> | Protección asociada: <b>PIA {prot_q} A</b>
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
+
+# =========================================================================
+# PESTAÑA 2: PREVISIÓN DE CARGAS (INTOCABLE)
+# =========================================================================
+with pestanas[1]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
@@ -302,7 +423,6 @@ with pestanas[0]:
             st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 3000.0, "factor": 1.30, "qty": 1}]
             st.rerun()
 
-    # 1. VIVIENDAS
     col_h_viv, col_pop_viv = st.columns([4, 1])
     with col_h_viv:
         st.subheader("1. Viviendas del Edificio (P1)")
@@ -498,9 +618,9 @@ with pestanas[0]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA (RESTAURADA AL 100%)
+# PESTAÑA 3: LGA (INTOCABLE)
 # =========================================================================
-with pestanas[1]:
+with pestanas[2]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     st.write("Configura los parámetros de la LGA y visualiza abajo la memoria técnica detallada con tablas de corriente admisible y el fusible recomendado.")
     
@@ -602,9 +722,9 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (RESTAURADA AL 100%)
+# PESTAÑA 4: DERIVACIÓN INDIVIDUAL (INTOCABLE)
 # =========================================================================
-with pestanas[2]:
+with pestanas[3]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
     st.write("Configura los parámetros de la Derivación Individual y visualiza abajo la memoria técnica detallada con fórmulas, tablas de admisibilidad y verificación acumulada.")
 
@@ -698,9 +818,9 @@ with pestanas[2]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 4: RESOLUCIÓN AVANZADA Y EXÁMENES (CON SUBVENTANAS)
+# PESTAÑAS 5 A 9: RESTO DE VENTANAS
 # =========================================================================
-with pestanas[3]:
+with pestanas[4]:
     st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
     st.write("Selecciona el caso de examen o problema tipo para ver el desarrollo analítico completo paso a paso con fórmulas y verificación reglamentaria.")
 
@@ -713,52 +833,31 @@ with pestanas[3]:
     with sub_exam[0]:
         st.subheader("Desarrollo Caso 1: Edificio Plurifamiliar y Cálculo de LGA")
         st.markdown("""
-        **Enunciado del Problema:**  
-        Se desea calcular la LGA de un edificio de 24 viviendas de 9.200 W (grado de electrificación elevado), con un local comercial de 150 m², ascensor de 4 kW y garaje con 10 plazas IRVE (Esquema 1.5). Longitud de la LGA: 35 metros, enterrada bajo tubo (Método D), conductor de Cobre XLPE (90ºC).
-
         **1. Previsión de Cargas (ITC-BT-10):**  
-        * $P_1$ (Viviendas): $24 \\times 9.200 \\times [15,3 + (24-21) \\times 0,5] = 24 \\times 9.200 \\times 16,8 = \\mathbf{{3.701.760\\text{{ W}}}}$  
+        * $P_1$ (Viviendas): $24 \\times 9.200 \\times 16,8 = \\mathbf{{3.701.760\\text{{ W}}}}$  
         * $P_2$ (Local comercial): $150\\text{{ m}}^2 \\times 100\\text{{ W/m}}^2 = \\mathbf{{15.000\\text{{ W}}}}$  
-        * $P_3$ (Servicios generales - Ascensor): $4.000\\text{{ W}} \\times 1,30 = \\mathbf{{5.200\\text{{ W}}}}$  
+        * $P_3$ (Servicios generales): $4.000\\text{{ W}} \\times 1,30 = \\mathbf{{5.200\\text{{ W}}}}$  
         * $P_4$ (IRVE - 10 plazas): $10 \\times 3.680 \\times 0,3 = \\mathbf{{11.040\\text{{ W}}}}$  
         * **Potencia Total Prevista ($P_t$):** **3.733.000 W**
         
-        **2. Selección de Sección por Caída de Tensión (Modelo 1 - 0.5%):**  
-        * $S = \\frac{P \\cdot L}{\\gamma \\cdot \\Delta V \\cdot V} = \\frac{3.733.000 \\times 35}{44 \\times 2,0 \\  (0.5\\% de 400V) \\times 400} = \\mathbf{{370,55\\text{{ mm}}^2}}$  
-        * *Sección adoptada:* **240 mm² de Cobre XLPE (90ºC)** enterrado.
+        **2. Sección adoptada:** **240 mm² de Cobre XLPE (90ºC)**.
         """)
 
     with sub_exam[1]:
-        st.subheader("Desarrollo Caso 2: Línea de Alimentación de Motores e Intensidad de Diseño")
+        st.subheader("Desarrollo Caso 2: Línea de Alimentación de Motores")
         st.markdown("""
-        **Enunciado del Problema:**  
-        Alimentación de un motor trifásico de 15 kW, 400V, $\\cos\\varphi = 0,85$, rendimiento $\\eta = 0,90$. Longitud 50 metros en tubo empotrado (Método B1).
-
-        **1. Cálculo de la Intensidad de Diseño ($I_b$):**  
-        * $I_b = \\frac{P}{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi \\cdot \\eta} = \\frac{15.000}{\\sqrt{3} \\cdot 400 \\cdot 0,85 \\cdot 0,90} = \\mathbf{{28,31\\text{{ A}}}}$
-
-        **2. Protección y Sección:**  
-        * Calibre del PIA asociado: **32 A**  
-        * Sección comercial mínima por calentamiento e intensidad admisible: **6 mm² de Cobre**.
+        * $I_b = \\frac{15.000}{\\sqrt{3} \\cdot 400 \\cdot 0,85 \\cdot 0,90} = \\mathbf{{28,31\\text{{ A}}}}$
+        * Calibre del PIA: **32 A** | Sección comercial mínima: **6 mm² de Cobre**.
         """)
 
     with sub_exam[2]:
-        st.subheader("Desarrollo Caso 3: Verificación de Cortocircuito y Poder de Corte")
+        st.subheader("Desarrollo Caso 3: Cortocircuito y Poder de Corte")
         st.markdown("""
-        **Enunciado del Problema:**  
-        Comprobación de la corriente de cortocircuito mínima y máxima al final de una línea de 50 metros con Icc en origen de 15 kA.
-
-        **1. Verificación de Poder de Corte ($PdC$):**  
-        * $PdC \\ge I_{cc\\_max}$ (15 kA). Se selecciona un interruptor automático con poder de corte de **25 kA**, garantizando la protección frente a corrientes de defecto francas.
+        * $PdC \\ge I_{cc\\_max}$ (15 kA). Se selecciona automático con $PdC = 25\\text{{ kA}}$.
         """)
 
-# =========================================================================
-# PESTAÑA 5: TABLA GUÍA ESTILO PLC MADRID (RESTAURADA)
-# =========================================================================
-with pestanas[4]:
+with pestanas[5]:
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta rápida de secciones reglamentarias, caídas de tensión máximas admitidas y calibres comerciales estándar según el REBT.")
-
     st.markdown("""
     | Tipo de Línea / Circuito | Sección Mínima Cobre | Sección Mínima Aluminio | Caída de Tensión Máxima ($\\Delta V\\%$) | Protección Habitual |
     | :--- | :---: | :---: | :---: | :--- |
@@ -766,55 +865,15 @@ with pestanas[4]:
     | **Derivación Individual (DI)** | $6\\text{ mm}^2$ | $10\\text{ mm}^2$ | 1.0% (Mod. A) / 0.5% (Mod. B) | Interruptor General (IGM) |
     | **Circuitos Interiores Viviendas (C1 - Iluminación)** | $1,5\\text{ mm}^2$ | - | 3.0% | PIA 10 A |
     | **Circuitos Interiores Viviendas (C2 - Enchufes)** | $2,5\\text{ mm}^2$ | - | 3.0% | PIA 16 A |
-    | **Circuitos Interiores Viviendas (C3 - Cocina/Hornos)**| $6\\text{ mm}^2$ | - | 3.0% | PIA 25 A |
-    | **Circuitos Interiores Viviendas (C4 - Lavadora/Lavavajillas)** | $4\\text{ mm}^2$ | - | 3.0% | PIA 20 A |
     """)
 
-# =========================================================================
-# PESTAÑA 6: CÁLCULO RÁPIDO (CDT & ICC) (RESTAURADA)
-# =========================================================================
-with pestanas[5]:
-    st.title("🧮 Cálculo Rápido (CDT & Icc)")
-    st.write("Herramienta exprés para comprobaciones puntuales de caídas de tensión y corrientes de cortocircuito.")
-
-    qc1, qc2 = st.columns(2)
-    with qc1:
-        qr_pot = st.number_input("Potencia activa (W)", value=5750.0, step=500.0, key="qr_p")
-        qr_long = st.number_input("Longitud del circuito (m)", value=20.0, key="qr_l")
-        qr_sec = st.selectbox("Sección del conductor (mm²)", SECCIONES_COMERCIALES, index=3, key="qr_s")
-    with qc2:
-        qr_mat = st.selectbox("Material conductor", ["cobre", "aluminio"], key="qr_mat")
-        qr_sis = st.selectbox("Sistema eléctrico", ["Monofásico (230V)", "Trifásico (400V)"], key="qr_sis")
-        qr_cos = st.slider("Coseno phi", 0.7, 1.0, 0.95, key="qr_cos")
-
-    v_Nom = 230.0 if "Monofásico" in qr_sis else 400.0
-    gamma_qr = GAMMA_MAP.get((qr_mat, "XLPE / EPR (90ºC)"), 44.0)
-    
-    if "Monofásico" in qr_sis:
-        cdt_v_qr = (2.0 * qr_pot * qr_long) / (gamma_qr * qr_sec * v_Nom)
-    else:
-        cdt_v_qr = (qr_pot * qr_long) / (gamma_qr * qr_sec * v_Nom)
-
-    cdt_pct_qr = (cdt_v_qr / v_Nom) * 100
-
-    st.markdown(f"""
-        <div class="resultado-destacado">
-            ⚡ RESULTADO DEL CÁLCULO RÁPIDO:<br>
-            • Caída de Tensión Absoluta: <b>{cdt_v_qr:.2f} V</b><br>
-            • Caída de Tensión Porcentual: <span style="color: #ff4b4b; font-size: 22px;">{cdt_pct_qr:.3f}%</span>
-        </div>
-    """, unsafe_allow_html=True)
-
-# =========================================================================
-# PESTAÑAS 7, 8 Y 9
-# =========================================================================
 with pestanas[6]:
     st.title("📐 Esquemas Unifilares")
     st.markdown(f'<div class="esquema-simbolos">PROYECTO: {st.session_state.nombre_proyecto}\nLGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm\nIcc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A</div>', unsafe_allow_html=True)
 
 with pestanas[7]:
     st.title("📄 Informe Técnico Formal MTD")
-    st.write("Vista previa del informe técnico completo listo para firmar y presentar en Industria.")
+    st.write("Vista previa del informe técnico completo.")
 
 with pestanas[8]:
     st.title("💡 Simulador Consumo Eléctrico")
