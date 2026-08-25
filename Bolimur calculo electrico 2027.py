@@ -471,22 +471,22 @@ elif seleccion_modulo.startswith("🧮"):
     st.markdown("---")
     st.subheader("Memoria Justificativa Analítica y Fórmulas Desarrolladas")
 
-    st.markdown(f"""
+    st.markdown(r"""
     <div class="formula-box">
         <b>1. Intensidad de Diseño (Ib):</b><br>
-        • Fórmula: $I_b = \\frac{P}{V \\cdot \\cos\\varphi}$ (Monofásico) o $I_b = \\frac{P}{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi}$ (Trifásico).<br>
-        • Sustitución: {val_pot_q:,.1f} W / ({v_nom_calc} V * {cos_q}) = <b>{ib_q:.2f} A</b>
+        • Fórmula: $I_b = \frac{P}{V \cdot \cos\varphi}$ (Monofásico) o $I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$ (Trifásico).<br>
+        • Sustitución: """ + f"{val_pot_q:,.1f} W / ({v_nom_calc} V * {cos_q}) = <b>{ib_q:.2f} A</b>" + r"""
     </div>
     <div class="formula-box">
         <b>2. Sección por Caída de Tensión (Delta V):</b><br>
-        • Fórmula: $S = \\frac{2 \\cdot P \\cdot L}{\\gamma \\cdot \\Delta V \\cdot V}$ (Monofásico) o $S = \\frac{P \\cdot L}{\\gamma \\cdot \\Delta V \\cdot V}$ (Trifásico).<br>
-        • Cálculo teórico puro: <b>{s_cdt_q:.2f} mm²</b>
+        • Fórmula: $S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$ (Monofásico) o $S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$ (Trifásico).<br>
+        • Cálculo teórico puro: <b>""" + f"{s_cdt_q:.2f} mm²" + r"""</b>
     </div>
     <div class="formula-box">
         <b>3. Comprobación por Cortocircuito y Disparo Magnético:</b><br>
-        • Icc al final de los {long_q} m: <b>{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)</b>.<br>
-        • Umbral de disparo magnético (Curva C = $10 \\cdot I_n$): {prot_q} A $\\times 10$ = <b>{corriente_disparo_magnetico:.1f} A</b>.<br>
-        • Estado: <b>{'✅ GARANTIZADO EL DISPARO INSTANTÁNEO' if salta_proteccion else '⚠️ ATENCIÓN: Icc insuficiente'}</b>.
+        • Icc al final de los """ + f"{long_q}" + r""" m: <b>""" + f"{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)" + r"""</b>.<br>
+        • Umbral de disparo magnético (Curva C = $10 \cdot I_n$): """ + f"{prot_q}" + r""" A x 10 = <b>""" + f"{corriente_disparo_magnetico:.1f} A" + r"""</b>.<br>
+        • Estado: <b>""" + ('✅ GARANTIZADO EL DISPARO INSTANTÁNEO' if salta_proteccion else '⚠️ ATENCIÓN: Icc insuficiente') + r"""</b>.
     </div>
     """, unsafe_allow_html=True)
 
@@ -497,7 +497,7 @@ elif seleccion_modulo.startswith("🧮"):
     """, unsafe_allow_html=True)
 
     st.markdown("### Tabla Detallada de Verificación y Coordinación (Sobrecarga e Iz >= Ib)")
-    tabla_q_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga ($I_n \\le 0.91 \\cdot I_z$) |\n| :---: | :---: | :---: | :--- |\n"
+    tabla_q_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :---: | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         if "Monofásico" in tipo_red_q:
@@ -524,9 +524,9 @@ elif seleccion_modulo.startswith("🧮"):
             <hr style="border: 1px solid #444; margin: 10px 0;">
             <span style="font-size: 15px; color: #e0e0e0; font-weight: normal; line-height: 1.6;">
             <b>🔍 Justificación Analítica Detallada:</b><br>
-            1. <b>Calentamiento ($I_z \\ge I_b$):</b> La sección de {s_opt_q} mm² soporta {tabla_iz_q.get(s_opt_q, 0)} A frente a los {ib_q:.2f} A de servicio.<br>
+            1. <b>Calentamiento (Iz >= Ib):</b> La sección de {s_opt_q} mm² soporta {tabla_iz_q.get(s_opt_q, 0)} A frente a los {ib_q:.2f} A de servicio.<br>
             2. <b>Caída de Tensión:</b> La caída real es del <b>{dv_real_pct_q:.3f}%</b>, por debajo del límite reglamentario del {cdt_lim_q}%.<br>
-            3. <b>Coordinación con Protecciones:</b> El PIA de {prot_q} A cumple estrictamente la condición $I_n \\le 0.91 \\cdot I_z$, protegiendo el aislamiento del cable frente a sobrecargas prolongadas.
+            3. <b>Coordinación con Protecciones:</b> El PIA de {prot_q} A cumple estrictamente la condición In <= 0.91 * Iz, protegiendo el aislamiento del cable frente a sobrecargas prolongadas.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -580,11 +580,11 @@ elif seleccion_modulo.startswith("🏢"):
         pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
         pot_total_viviendas += pot_parcial_g
 
-        st.markdown(f"""
+        st.markdown(r"""
         <div class="formula-box">
-            <b>Justificación Analítica Grupo #{idx+1} ({viv['nombre']}):</b><br>
-            • Fórmula ITC-BT-10: $P_{{parcial}} = n \\cdot P_{{unitaria}} \\cdot K$<br>
-            • Sustitución: {qty_g} viv. x {pot_unit} W x K({cs_grupo:.2f}) = <b>{pot_parcial_g:,} W</b>
+            <b>Justificación Analítica Grupo """ + f"{idx+1} ({viv['nombre']}):" + r"""</b><br>
+            • Fórmula ITC-BT-10: $P_{parcial} = n \cdot P_{unitaria} \cdot K$<br>
+            • Sustitución: """ + f"{qty_g} viv. x {pot_unit} W x K({cs_grupo:.2f}) = <b>{pot_parcial_g:,} W</b>" + r"""
         </div>
         """, unsafe_allow_html=True)
 
@@ -610,11 +610,11 @@ elif seleccion_modulo.startswith("🏢"):
         pot_parcial_local = pot_unidad * cant_loc
         pot_total_locales += pot_parcial_local
 
-        st.markdown(f"""
+        st.markdown(r"""
         <div class="formula-box">
-            <b>Justificación Analítica Local #{idx+1} ({loc['nombre']}):</b><br>
+            <b>Justificación Analítica Local """ + f"{idx+1} ({loc['nombre']}):" + r"""</b><br>
             • Criterio ITC-BT-10: Mínimo 100 W/m² o 3.450 W por local comercial.<br>
-            • Cálculo: {sup_val} m² x 100 W/m² = {pot_por_sup:,.0f} W (Mínimo aplicado: {pot_unidad:,.0f} W). Total = <b>{pot_parcial_local:,.0f} W</b>
+            • Cálculo: """ + f"{sup_val} m² x 100 W/m² = {pot_por_sup:,.0f} W (Mínimo aplicado: {pot_unidad:,.0f} W). Total = <b>{pot_parcial_local:,.0f} W</b>" + r"""
         </div>
         """, unsafe_allow_html=True)
 
@@ -682,11 +682,11 @@ elif seleccion_modulo.startswith("🏢"):
         p_parcial_serv = serv["potencia"] * serv["qty"] * factor
         pot_total_servicios += p_parcial_serv
 
-        st.markdown(f"""
+        st.markdown(r"""
         <div class="formula-box">
-            <b>Justificación Analítica Servicio #{idx+1} ({serv['nombre']}):</b><br>
-            • Fórmula: $P_s = P_{{unit}} \\cdot n \\cdot K$<br>
-            • Sustitución: {serv['potencia']} W x {serv['qty']} ud(s) x K({factor:.2f}) = <b>{p_parcial_serv:,.1f} W</b>
+            <b>Justificación Analítica Servicio """ + f"{idx+1} ({serv['nombre']}):" + r"""</b><br>
+            • Fórmula: $P_s = P_{unit} \cdot n \cdot K$<br>
+            • Sustitución: """ + f"{serv['potencia']} W x {serv['qty']} ud(s) x K({factor:.2f}) = <b>{p_parcial_serv:,.1f} W</b>" + r"""
         </div>
         """, unsafe_allow_html=True)
 
@@ -713,10 +713,10 @@ elif seleccion_modulo.startswith("🏢"):
     pot_total_irve = int(round(plazas_garaje * 3680.0 * coef_irve))
     pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
 
-    st.markdown(f"""
+    st.markdown(r"""
     <div class="formula-box">
         <b>Justificación Analítica IRVE (ITC-BT-52):</b><br>
-        • Cálculo: {plazas_garaje} plazas x 3.680 W x {coef_irve} = <b>{pot_total_irve:,} W</b>. Total P4 = <b>{pot_total_garaje_irve:,} W</b>
+        • Cálculo: """ + f"{plazas_garaje} plazas x 3.680 W x {coef_irve} = <b>{pot_total_irve:,} W</b>. Total P4 = <b>{pot_total_garaje_irve:,} W</b>" + r"""
     </div>
     """, unsafe_allow_html=True)
 
@@ -749,7 +749,6 @@ elif seleccion_modulo.startswith("⚡"):
 
     dv_pct_lga = 0.5 if "Modelo 1" in tipo_enlace_lga else 1.0
 
-    # LECTURA AUTOMÁTICA SEGURA DE PT
     pt_calculado_automatico = float(calcular_pt_global())
 
     lga_modo_potencia = st.radio("Origen de la potencia para el cálculo de la LGA:", [
@@ -801,15 +800,15 @@ elif seleccion_modulo.startswith("⚡"):
     st.markdown("---")
     st.subheader("📋 Memoria de Justificación Técnica Detallada (LGA)")
 
-    st.markdown(f"""
+    st.markdown(r"""
     <div class="formula-box">
-        <b>1. Intensidad de Diseño ($I_b$) y Caída de Tensión:</b><br>
-        • Fórmula: $I_b = \\frac{P_t}{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi}$ = {lga_pot:,.1f} / (1.732 * 400 * {lga_cos}) = <b>{ib_lga:.2f} A</b><br>
-        • Sección teórica por Caída de Tensión (Límite {dv_pct_lga}%): <b>{s_cdt_lga:.2f} mm²</b>
+        <b>1. Intensidad de Diseño (I_b) y Caída de Tensión:</b><br>
+        • Fórmula: $I_b = \frac{P_t}{\sqrt{3} \cdot V \cdot \cos\varphi}$ = """ + f"{lga_pot:,.1f} / (1.732 * 400 * {lga_cos}) = <b>{ib_lga:.2f} A</b>" + r"""<br>
+        • Sección teórica por Caída de Tensión (Límite """ + f"{dv_pct_lga}" + r"""%): <b>""" + f"{s_cdt_lga:.2f} mm²" + r"""</b>
     </div>
     """, unsafe_allow_html=True)
 
-    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Estado de Verificación frente a Sobrecarga ($I_n \\le 0.91 \\cdot I_z$) |\n| :---: | :---: | :--- |\n"
+    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Estado de Verificación frente a Sobrecarga (In <= 0.91 * Iz) |\n| :---: | :---: | :--- |\n"
     for s_com in [70, 95, 120, 150, 185]:
         iz_val_t = tabla_iz.get(s_com, 0)
         cond_s_lga = 0.91 * iz_val_t
@@ -826,11 +825,11 @@ elif seleccion_modulo.startswith("⚡"):
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(f"""
+    st.markdown(r"""
         <div class="resultado-destacado">
-            ⚡ SECCIÓN A ADOPATAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
+            ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">""" + f"{s_final_lga}" + r""" mm²</span> de Cobre (""" + f"{lga_aisl}" + r""")<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>🔍 Justificación analítica:</b> Conductor dimensionado para soportar los {ib_lga:.2f} A de diseño, con una caída de tensión real del <b>{dv_real_lga_pct:.3f}%</b> y protegido en origen mediante fusible en CGP de <b>{in_lga_auto} A</b> que cumple $I_n \\le 0.91 \\cdot I_z$.
+            <b>🔍 Justificación analítica:</b> Conductor dimensionado para soportar los """ + f"{ib_lga:.2f}" + r""" A de diseño, con una caída de tensión real del <b>""" + f"{dv_real_lga_pct:.3f}" + r"""%</b> y protegido en origen mediante fusible en CGP de <b>""" + f"{in_lga_auto}" + r""" A</b> que cumple $I_n \le 0.91 \cdot I_z$.
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -880,11 +879,11 @@ elif seleccion_modulo.startswith("🔌"):
     st.markdown("---")
     st.subheader("📋 Memoria de Cálculo Justificada y Detallada (Derivación Individual)")
 
-    st.markdown(f"""
+    st.markdown(r"""
     <div class="formula-box">
-        <b>1. Intensidad de Diseño ($I_b$) y Caída de Tensión:</b><br>
-        • Fórmula: $I_b = \\frac{P}{V \\cdot \\cos\\varphi}$ = {di_pot} / (230 * {di_cos}) = <b>{ib_di:.2f} A</b><br>
-        • Sección teórica por Caída de Tensión: <b>{s_cdt_di:.2f} mm²</b>
+        <b>1. Intensidad de Diseño (I_b) y Caída de Tensión:</b><br>
+        • Fórmula: $I_b = \frac{P}{V \cdot \cos\varphi}$ = """ + f"{di_pot} / (230 * {di_cos}) = <b>{ib_di:.2f} A</b>" + r"""<br>
+        • Sección teórica por Caída de Tensión: <b>""" + f"{s_cdt_di:.2f} mm²" + r"""</b>
     </div>
     """, unsafe_allow_html=True)
 
