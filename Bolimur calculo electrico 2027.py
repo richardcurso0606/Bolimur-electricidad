@@ -226,48 +226,63 @@ elif seleccion_modulo.startswith("🧮"):
     corriente_disparo = prot_q * 10.0
     salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo
 
+    # --- PREPARACIÓN DE TEXTOS PARA FÓRMULAS ---
+    txt_formula_ib = r"$$I_b = \frac{P}{V \cdot \cos\varphi}$$" if "Monofásico" in tipo_red_q else r"$$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$"
+    txt_sust_ib = f"{val_pot_q:,.1f} / ({v_nom_calc} · {cos_q})" if "Monofásico" in tipo_red_q else f"{val_pot_q:,.1f} / (1.732 · {v_nom_calc} · {cos_q})"
+    
+    txt_formula_cdt = r"$$S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$$" if "Monofásico" in tipo_red_q else r"$$S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
+    txt_sust_cdt = f"(2 · {val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})" if "Monofásico" in tipo_red_q else f"({val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})"
+    
+    z_origen = v_nom_calc / (icc_orig_q * 1000.0) if icc_orig_q > 0 else 0
+    r_cable_total = (2.0 * r_cable_q) if "Monofásico" in tipo_red_q else r_cable_q
+    txt_sust_icc = f"{v_nom_calc} / ({z_origen:.4f} + {r_cable_total:.4f})"
+
     st.markdown("---")
     st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
 
     st.info(f"""
     #### 1. Intensidad de Diseño ($I_b$)
-    **Justificación:** Cálculo de la corriente nominal base para dimensionar la protección térmica y evitar el calentamiento excesivo.
+    **Justificación:** Se calcula la corriente nominal base a plena carga. Este es el valor que el cable debe soportar térmicamente sin degradarse ($I_z \ge I_b$) y el valor de referencia para elegir la protección magnetotérmica.
     
-    $$I_b = \\frac{{{val_pot_q:,.1f} \\text{{ W}}}}{{{v_nom_calc} \\text{{ V}} \\cdot {cos_q}}}$$
+    {txt_formula_ib}
     
-    **Sustitución y Resultado:** {val_pot_q:,.1f} W / ... = **{ib_q:.2f} A**
+    **Sustitución y Resultado:** 
+    $I_b =$ {txt_sust_ib} = **{ib_q:.2f} A**
     """)
 
     st.info(f"""
     #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Verificamos la sección exigida para no superar el límite reglamentario del {cdt_lim_q}% ({dv_max_q:.2f} V) al final de la línea.
+    **Justificación:** Calculamos el grosor de cobre/aluminio estrictamente necesario para que la resistencia del cable no provoque una pérdida de voltaje superior al límite del {cdt_lim_q}% ({dv_max_q:.2f} V) al final de la línea.
     
-    $$S = \\frac{{2 \cdot P \cdot L}}{{\gamma \cdot \Delta V \cdot V}} \quad \\text{{(M)}} \quad \\text{{o}} \quad S = \\frac{{P \cdot L}}{{\gamma \cdot \Delta V \cdot V}} \quad \\text{{(T)}}$$
+    {txt_formula_cdt}
     
-    **Resultado:** Sección pura requerida = **{s_cdt_q:.2f} mm²**
+    **Sustitución y Resultado:** 
+    $S =$ {txt_sust_cdt} = **{s_cdt_q:.2f} mm²**
     """)
 
     estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
     st.info(f"""
     #### 3. Comprobación Cortocircuito y Disparo Magnético (0.1s)
-    **Justificación:** La Icc final debe superar el umbral de disparo magnético (Curva C = $10 \\cdot I_n$) de la protección de {prot_q} A para garantizar la seguridad frente a cortocircuitos lejanos.
+    **Justificación:** Verificamos la impedancia total (red + cable). La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe ser mayor que el umbral de disparo instantáneo del interruptor (Curva C = $10 \cdot I_n$) para despejar el fallo a tiempo.
     
-    $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
+    $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
-    * **Icc calculada al final:** {icc_fin_q * 1000:.1f} A
-    * **Umbral ({prot_q} A x 10):** {corriente_disparo:.1f} A
+    **Sustitución:** 
+    $I_{{cc,final}} =$ {txt_sust_icc} = **{icc_fin_q * 1000:.1f} A**
+
+    * **Umbral de disparo exigido ({prot_q} A x 10):** {corriente_disparo:.1f} A
     * **Veredicto:** {estado_icc}
     """)
 
     st.markdown("### 📊 Tabla de Verificación de Secciones")
-    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \le 0.91 \cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
         elif prot_q > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\\le$ {cond_sobrecarga:.1f}A)"
+        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\le$ {cond_sobrecarga:.1f}A)"
         else: est_v = "Válido pero sobredimensionado"
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
