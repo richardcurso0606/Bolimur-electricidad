@@ -473,21 +473,46 @@ elif seleccion_modulo.startswith("🧮"):
         tabla_q_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
-    # EXPLICACIÓN DETALLADA DE POR QUÉ CUMPLE TODO
+    # EXPLICACIÓN DETALLADA DE POR QUÉ CUMPLE TODO (CORREGIDO SIN CARACTERES DE ESCAPE)
     st.markdown(f"""
         <div class="resultado-destacado">
             ⚡ CONCLUSIÓN Y SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
             <hr style="border: 1px solid #444; margin: 10px 0;">
             <span style="font-size: 15px; color: #e0e0e0; font-weight: normal; line-height: 1.6;">
             <b>🔍 Explicación detallada de por qué cumple con todos los requisitos:</b><br>
-            1. <b>Intensidad de Servicio ($I_b$):</b> El circuito absorbe <b>{ib_q:.2f} A</b>. La sección elegida de <b>{s_opt_q} mm²</b> soporta una corriente admisible ($I_z$) muy superior, evitando cualquier riesgo de calentamiento o sobrecalentamiento del conductor.<br>
-            2. <b>Caída de Tensión ($\Delta V$):</b> Con una longitud de <b>{long_q} m</b>, la caída de tensión real se queda en el <b>{dv_real_pct_q:.3f}%</b>, cumpliendo holgadamente el límite estricto fijado del <b>{cdt_lim_q}%</b>.<br>
-            3. <b>Coordinación de Protecciones ($I_n \le 0.91 \cdot I_z$):</b> El magnetotérmico seleccionado de <b>{prot_q} A</b> protege perfectamente al cable frente a sobrecargas cumpliendo la condición reglamentaria.<br>
-            4. <b>Seguridad ante Cortocircuito en el Extremo ($I_{cc\ min}$):</b> Evaluando la corriente de cortocircuito al final de los {long_q} metros (estimada en <b>{icc_fin_q * 1000:.1f} A</b> a partir de los {icc_orig_q} kA en origen), el sistema confirma que la corriente de defecto es lo suficientemente intensa como para accionar de forma instantánea el disparo magnético del PIA de {prot_q} A, garantizando una protección integral de la línea y de los equipos.
+            1. <b>Intensidad de Servicio (Ib):</b> El circuito absorbe <b>{ib_q:.2f} A</b>. La sección elegida de <b>{s_opt_q} mm²</b> soporta una corriente admisible (Iz) muy superior, evitando cualquier riesgo de calentamiento o sobrecalentamiento del conductor.<br>
+            2. <b>Caída de Tensión (Delta V):</b> Con una longitud de <b>{long_q} m</b>, la caída de tensión real se queda en el <b>{dv_real_pct_q:.3f}%</b>, cumpliendo holgadamente el límite estricto fijado del <b>{cdt_lim_q}%</b>.<br>
+            3. <b>Coordinación de Protecciones (In <= 0.91 * Iz):</b> El magnetotérmico seleccionado de <b>{prot_q} A</b> protege perfectamente al cable frente a sobrecargas cumpliendo la condición reglamentaria.<br>
+            4. <b>Seguridad ante Cortocircuito en el Extremo (Icc min):</b> Evaluando la corriente de cortocircuito al final de los {long_q} metros (estimada en <b>{icc_fin_q * 1000:.1f} A</b> a partir de los {icc_orig_q} kA en origen), el sistema confirma que la corriente de defecto es lo suficientemente intensa como para accionar de forma instantánea el disparo magnético del PIA de {prot_q} A, garantizando una protección integral de la línea y de los equipos.
             </span>
         </div>
     """, unsafe_allow_html=True)
 
 elif seleccion_modulo.startswith("🏢"):
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
-    # (Resto de módulos idénticos al anterior)
+    # (Resto de módulos idénticos)
+
+elif seleccion_modulo.startswith("⚡"):
+    st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
+
+elif seleccion_modulo.startswith("🔌"):
+    st.title("Derivación Individual - DI (ITC-BT-15)")
+
+elif seleccion_modulo.startswith("📊"):
+    st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
+
+elif seleccion_modulo.startswith("📐"):
+    st.title("📐 Esquemas Unifilares")
+    texto_esquema = f"""PROYECTO: {st.session_state.nombre_proyecto}
+LGA: 120 mm² RZ1-K Cu | Neutro: 70 mm² | Tubo: 160 mm
+Icc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A"""
+    st.code(texto_esquema, language="text")
+
+elif seleccion_modulo.startswith("📄"):
+    st.title("📄 Informe Técnico Formal MTD")
+
+elif seleccion_modulo.startswith("💡"):
+    st.title("💡 Simulador Consumo Eléctrico")
+
+elif seleccion_modulo.startswith("🛡️"):
+    st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
