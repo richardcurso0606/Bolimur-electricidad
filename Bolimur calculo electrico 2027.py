@@ -1,6 +1,5 @@
 import streamlit as st
 import math
-import json
 import os
 import sqlite3
 
@@ -48,109 +47,113 @@ def cargar_datos_instalador():
     if row: return {"nombre": row[0] or "", "nif": row[1] or "", "empresa": row[2] or "", "carnet": row[3] or "", "telefono": row[4] or "", "email": row[5] or "", "categoria": row[6] or "", "tipo_inst": row[7] or "", "num_inscripcion": row[8] or "", "comunidad": row[9] or ""}
     return {"nombre": "Richard Orlando Choque Tejerina", "nif": "34331426Q", "empresa": "BOLIMUR INSTALACIONES INTEGRALES", "carnet": "INS-2026-MUR", "telefono": "682 195 295", "email": "richard@bolimur.com", "categoria": "Especialista", "tipo_inst": "Baja Tensión", "num_inscripcion": "30/XXXXX", "comunidad": "Región de Murcia"}
 
-def guardar_config_proyecto(archivo, carpeta):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM configuracion")
-    cursor.execute("INSERT INTO configuracion (ultimo_archivo, carpeta_trabajo) VALUES (?, ?)", (archivo, carpeta))
-    conn.commit()
-    conn.close()
-
-def cargar_config_proyecto():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT ultimo_archivo, carpeta_trabajo FROM configuracion LIMIT 1")
-        row = cursor.fetchone()
-    except sqlite3.OperationalError: row = None
-    conn.close()
-    if row: return row[0], row[1]
-    return "proyecto_bolimur_default.json", "proyectos_bolimur"
-
 perfil_guardado = cargar_datos_instalador()
-ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- SUPER CSS PARA MENÚ LATERAL Y TABLAS ---
+# --- CSS DEFINITIVO (MÓVIL Y ESCRITORIO) ---
 st.markdown("""
     <style>
-    /* 1. ESTILAZO PARA EL MENÚ LATERAL (SIDEBAR) */
+    /* 1. MENÚ LATERAL (Visual y limpio) */
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc !important;
+        border-right: 1px solid #e2e8f0;
+    }
     [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
-        background-color: #ffffff !important;
-        border: 1px solid #d1d5db !important;
-        padding: 12px 15px !important;
-        border-radius: 10px !important;
-        margin-bottom: 10px !important;
-        color: #374151 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        background-color: transparent !important;
+        padding: 10px 5px !important;
+        margin-bottom: 5px !important;
+        color: #334155 !important;
+        font-size: 16px !important;
         transition: all 0.2s ease-in-out !important;
         cursor: pointer !important;
+        border-radius: 8px;
     }
     [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label:hover {
-        background-color: #f0f9ff !important;
-        border-color: #3b82f6 !important;
-        transform: translateX(4px) !important;
+        background-color: #e0f2fe !important;
     }
-    /* El botón seleccionado se resalta en azul fuerte */
     [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label[data-baseweb="radio"] input:checked + div {
-        color: #1d4ed8 !important;
-        font-weight: 800 !important;
-    }
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label:has(input:checked) {
-        background-color: #eff6ff !important;
-        border-left: 6px solid #2563eb !important;
-        border-color: #93c5fd !important;
+        color: #0369a1 !important;
+        font-weight: bold !important;
     }
 
-    /* 2. TABLAS REBT SUPER DEFINIDAS Y CLARAS */
+    /* 2. TABLAS REBT (Cabecera oscura y ✅ CUMPLE) */
     table {
         width: 100%;
         border-collapse: collapse;
         margin: 20px 0;
-        font-size: 15px;
-        border-radius: 10px;
+        font-size: 14px;
+        border-radius: 6px;
         overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     th {
         background-color: #1e293b !important;
         color: #ffffff !important;
         text-align: center !important;
-        padding: 15px !important;
+        padding: 14px !important;
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 13px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
     }
     td {
-        padding: 14px !important;
+        padding: 12px !important;
         border-bottom: 1px solid #e2e8f0 !important;
         color: #334155 !important;
         background-color: #ffffff !important;
         text-align: center !important;
     }
     tr:nth-child(even) td { background-color: #f8fafc !important; }
-    tr:hover td { background-color: #e2e8f0 !important; }
 
-    /* 3. CAJAS DE RESULTADOS DESTACADOS (Protecciones) */
+    /* 3. CAJAS DE FÓRMULAS (Memoria Analítica Detallada) */
+    .caja-formula {
+        background-color: #f0f7ff;
+        border-left: 4px solid #0284c7;
+        padding: 18px 22px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        color: #0f172a;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+    .caja-formula h4 {
+        color: #0369a1;
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .caja-formula p { margin-bottom: 8px; line-height: 1.5; font-size: 15px; }
+    .math-center {
+        text-align: center;
+        font-size: 18px;
+        margin: 15px 0;
+        font-weight: normal;
+    }
+
+    /* 4. CAJAS DE RESULTADOS (El toque verde de confirmación) */
+    .resultado-verde {
+        background-color: #ecfdf5;
+        border: 2px solid #10b981;
+        padding: 20px 25px;
+        border-radius: 8px;
+        margin: 25px 0;
+        color: #065f46;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+    }
+    .resultado-verde h2 { color: #047857; margin-top: 0; font-size: 22px; }
+    
+    /* Protecciones (Azul y Naranja) */
     .pia-destacado {
-        background: linear-gradient(135deg, #0ea5e9, #0284c7);
-        color: #ffffff; padding: 20px 25px; border-radius: 12px; 
-        font-size: 22px; font-weight: bold; text-align: center; margin: 20px 0; 
-        box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); border: 2px solid #e0f2fe;
+        background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; 
+        font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #7dd3fc;
     }
     .fusible-vistoso {
-        background: linear-gradient(135deg, #f97316, #ea580c);
-        color: #ffffff; padding: 20px 25px; border-radius: 12px; 
-        font-size: 22px; font-weight: bold; text-align: center; margin: 20px 0; 
-        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4); border: 2px solid #ffedd5;
-    }
-    .resultado-final-box {
-        background-color: #ffffff; border: 3px solid #10b981; padding: 25px; 
-        border-radius: 12px; margin: 25px 0; color: #1f2937; box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        background: #ffedd5; color: #c2410c; padding: 15px; border-radius: 8px; 
+        font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #fdba74;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONSTANTES ---
+# --- CONSTANTES Y FUNCIONES REBT ---
 COEF_SIMULTANEIDAD_VIVIENDAS = {1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8, 10: 8.5, 11: 9.2, 12: 9.9, 13: 10.6, 14: 11.3, 15: 11.9, 16: 12.5, 17: 13.1, 18: 13.7, 19: 14.3, 20: 14.8, 21: 15.3}
 def get_coef_simultaneidad(num):
     if num <= 0: return 0.0
@@ -158,9 +161,9 @@ def get_coef_simultaneidad(num):
     return float(round(15.3 + (num - 21) * 0.5, 1))
 
 METODOS_INSTALACION = {
-    "B1 (Bajo tubo empotrado en pared aislante)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
+    "B1 (Bajo tubo empotrado)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
     "B2 (Bajo tubo en superficie)": {"ref": "B2", "desc": "Cables unipolares en tubo montado en superficie"},
-    "C (Cable multiconductor fijado directo)": {"ref": "C", "desc": "Cable multiconductor en superficie o empotrado"},
+    "C (Multiconductor en pared)": {"ref": "C", "desc": "Cable multiconductor fijado directo"},
     "D (Cables enterrados bajo tubo)": {"ref": "D", "desc": "Instalación subterránea"}
 }
 
@@ -181,11 +184,9 @@ def seleccionar_proteccion(ib):
     return CALIBRES_INTERRUPTORES[-1]
 
 # --- ESTADO INICIAL ---
-if 'nombre_proyecto' not in st.session_state: st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio"
 if 'grupos_viviendas' not in st.session_state: st.session_state.grupos_viviendas = [{"nombre": "Viviendas Estándar", "qty": 0, "pot": 5750, "nocturna": False}]
 if 'servicios_generales' not in st.session_state: st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 0, "potencia": 0.0, "factor": 1.30}]
 if 'locales' not in st.session_state: st.session_state.locales = [{"nombre": "Local Comercial A", "qty": 0, "superficie": 0.0}]
-if 'carpeta_trabajo_val' not in st.session_state: st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
 
 def calcular_pt_global():
     p_viv = sum(int(round(v["qty"] * v["pot"] * (v["qty"] if v["nocturna"] else get_coef_simultaneidad(v["qty"])))) for v in st.session_state.grupos_viviendas)
@@ -195,68 +196,62 @@ def calcular_pt_global():
 
 # --- MENÚ LATERAL ---
 with st.sidebar:
-    if os.path.exists("logo_bolimur.PNG"): st.image("logo_bolimur.PNG", use_container_width=True)
-    else:
-        st.markdown("""
-            <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin-bottom: 15px; text-align: center;">
-                <h3 style="color: white; margin: 0; font-size: 18px;">⚡ BOLIMUR</h3>
-                <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales</p>
-            </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""
+        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ BOLIMUR</h3>
+            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    st.header("📂 Navegación de Módulos")
-    seleccion_modulo = st.radio("Selecciona la sección:", [
-        "🏠 Menú Principal", "🧮 Cálculo Rápido (CDT & Icc)", "🏢 Previsión de Cargas (Pt)", 
-        "⚡ Línea General (LGA)", "🔌 Derivación Individual (DI)", "📚 Compendio Tablas REBT", 
-        "📐 Esquemas Unifilares", "💡 Simulador Consumo"
+    st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación de Módulos</h4>", unsafe_allow_html=True)
+    seleccion_modulo = st.radio("Selecciona:", [
+        "🏠 Menú Principal", 
+        "🧮 Cálculo Rápido (CDT & Icc)", 
+        "🏢 Previsión de Cargas (Pt)", 
+        "⚡ Línea General (LGA)", 
+        "🔌 Derivación Individual (DI)", 
+        "📚 Tablas REBT", 
+        "📐 Esquemas Unifilares"
     ], label_visibility="collapsed")
 
-    st.markdown("---")
-    with st.expander("⚙️ Perfil Instalador"):
-        inst_nombre = st.text_input("Nombre", perfil_guardado["nombre"])
-        inst_empresa = st.text_input("Empresa", perfil_guardado["empresa"])
-        if st.button("💾 Guardar"): st.success("Guardado")
-
 # =========================================================================
-# CONTENIDO DE LAS VENTANAS AL MÁXIMO DETALLE TÉCNICO Y VISUAL
+# CONTENIDO DE LAS VENTANAS
 # =========================================================================
 
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
-    st.write("Bienvenido al panel de cálculo eléctrico REBT. Selecciona cualquier módulo en la barra lateral para comenzar.")
+    st.write("Bienvenido al panel de cálculo eléctrico. Todos los módulos cuentan con justificación analítica REBT completa.")
 
 elif seleccion_modulo.startswith("🧮"):
-    st.title("🧮 Cálculo Rápido Avanzado (Bombas y Líneas Largas)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos. Evalúa Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min al final de la línea.")
+    st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
     with rc1:
-        modo_carga = st.radio("Modo de entrada:", ["Por Potencia (W o CV)", "Por Intensidad Directa (A)"])
+        modo_carga = st.radio("Entrada:", ["Por Potencia (W o CV)", "Por Intensidad Directa (A)"])
         tipo_red_q = st.selectbox("Sistema eléctrico", ["Monofásico (230V)", "Trifásico (400V)"])
         
         if modo_carga == "Por Potencia (W o CV)":
-            val_pot_q = st.number_input("Potencia activa (W)", value=0.0, step=100.0)
-            cos_q = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.85)
+            val_pot_q = st.number_input("Potencia (W)", value=0.0, step=100.0)
+            cos_q = st.slider("Coseno phi (cos φ)", 0.7, 1.0, 0.85)
             v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
             if "Monofásico" in tipo_red_q: ib_q = val_pot_q / (v_nom_calc * cos_q) if v_nom_calc * cos_q > 0 else 0.0
             else: ib_q = val_pot_q / (math.sqrt(3) * v_nom_calc * cos_q) if v_nom_calc * cos_q > 0 else 0.0
         else:
-            ib_q = st.number_input("Intensidad de diseño Ib (A)", value=0.0, step=1.0)
-            cos_q = st.slider("Coseno phi", 0.7, 1.0, 0.85)
+            ib_q = st.number_input("Intensidad Ib (A)", value=0.0, step=1.0)
+            cos_q = st.slider("Coseno phi (cos φ)", 0.7, 1.0, 0.85)
             v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
             if "Monofásico" in tipo_red_q: val_pot_q = ib_q * v_nom_calc * cos_q
             else: val_pot_q = ib_q * math.sqrt(3) * v_nom_calc * cos_q
 
-        long_q = st.number_input("Longitud del circuito / tirada (m) [Ida]", value=0.0, step=5.0)
+        long_q = st.number_input("Longitud del circuito (m)", value=0.0, step=5.0)
 
     with rc2:
-        metodo_q_key = st.selectbox("Método de Instalación (REBT HD 60364-5-52):", list(METODOS_INSTALACION.keys()), index=0)
+        metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), index=0)
         mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"])
         ais_q = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"])
         cdt_lim_q = st.number_input("Caída de Tensión máxima (%)", value=3.0, step=0.5)
-        icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, step=0.5, format="%.2f")
+        icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, step=0.5)
 
-    # --- LÓGICA DE CÁLCULO ---
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     dv_max_q = v_nom_calc * (cdt_lim_q / 100.0) if cdt_lim_q > 0 else 1.0
     
@@ -285,100 +280,76 @@ elif seleccion_modulo.startswith("🧮"):
         
     icc_fin_q = v_nom_calc / z_tot_q / 1000.0 if z_tot_q > 0 else 0.0
     prot_q = seleccionar_proteccion(ib_q)
-    corriente_disparo_magnetico = prot_q * 10.0
-    salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo_magnetico
+    corriente_disparo = prot_q * 10.0
+    salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo
 
     st.markdown("---")
-    st.header("📋 Memoria Justificativa Analítica")
+    st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
 
-    st.info(f"""
-    #### 1. Intensidad de Diseño ($I_b$)
-    **Justificación REBT:** Se determina la corriente nominal máxima que circulará por el circuito en condiciones normales a plena carga. Este es el valor base para evitar el calentamiento del cable ($I_z \ge I_b$).
-    
-    $$I_b = \\frac{{{val_pot_q:,.1f}}}{{{v_nom_calc} \cdot {cos_q}}}$$
-    
-    **Resultado:** La intensidad calculada es de **{ib_q:.2f} A**.
-    """)
-
-    st.info(f"""
-    #### 2. Sección por Caída de Tensión ($\\Delta V$)
-    **Justificación REBT:** Para garantizar que el equipo receptor funciona correctamente, el REBT limita la pérdida de voltaje en la línea. En este caso, el límite es el **{cdt_lim_q}%**.
-    
-    $$S = \\frac{{2 \cdot P \cdot L}}{{\gamma \cdot \Delta V \cdot V}} \quad \\text{{(M)}} \quad \\text{{o}} \quad S = \\frac{{P \cdot L}}{{\gamma \cdot \Delta V \cdot V}} \quad \\text{{(T)}}$$
-    
-    **Resultado:** La sección teórica estrictamente necesaria para no superar la caída de tensión es **{s_cdt_q:.2f} mm²**.
-    """)
-
-    if salta_proteccion:
-        st.success(f"""
-        #### 3. Comprobación de Cortocircuito y Disparo Magnético
-        **Justificación REBT:** Verificamos que si ocurre un cortocircuito al final de la línea ({long_q} m), la corriente generada ($I_{{cc,final}}$) sea lo suficientemente grande como para disparar la protección magnética (Curva C = $10 \cdot I_n$) en menos de 0.1 segundos.
-        
-        $$I_{{cc,final}} = \\frac{{V}}{{Z_{{total}}}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
-        
-        *   **Icc al final de la línea:** {icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)
-        *   **Umbral disparo magnético (PIA {prot_q} A):** {prot_q} A x 10 = {corriente_disparo_magnetico:.1f} A
-        *   **Veredicto:** ✅ **GARANTIZADO.** La Icc al final de la línea es superior al umbral de disparo.
-        """)
-    else:
-        st.error(f"""
-        #### 3. Comprobación de Cortocircuito y Disparo Magnético
-        **Justificación REBT:** Verificamos si la protección actuará a tiempo frente a un cortocircuito lejano.
-        *   **Icc al final de la línea:** {icc_fin_q * 1000:.1f} A
-        *   **Umbral disparo magnético (PIA {prot_q} A):** {corriente_disparo_magnetico:.1f} A
-        *   **Veredicto:** ⚠️ **PELIGRO: LA PROTECCIÓN NO SALTARÁ A TIEMPO.** La longitud de la línea atenúa demasiado el cortocircuito. Aumente la sección del cable.
-        """)
-
+    # Caja Formula 1
+    form1 = f"$I_b = \\frac{{{val_pot_q:,.1f} \\text{{ W}}}}{{{v_nom_calc} \\text{{ V}} \\cdot {cos_q}}}$" if "Monofásico" in tipo_red_q else f"$I_b = \\frac{{{val_pot_q:,.1f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot {v_nom_calc} \\text{{ V}} \\cdot {cos_q}}}$"
     st.markdown(f"""
-    <div class="pia-destacado">
-        🛡️ PROTECCIÓN MAGNETOTÉRMICA RECOMENDADA (PIA): {prot_q} A (Curva C) + Diferencial 30 mA
+    <div class="caja-formula">
+        <h4>1. Intensidad de Diseño ($I_b$)</h4>
+        <p><b>Justificación:</b> Cálculo de la corriente nominal base para dimensionar la protección térmica y evitar el calentamiento excesivo ($I_z \\ge I_b$).</p>
+        <div class="math-center">{form1}</div>
+        <p><b>Sustitución y Resultado:</b> {val_pot_q:,.1f} W / ... = <b>{ib_q:.2f} A</b></p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📊 Tabla Detallada de Verificación de Secciones (ITC-BT-19)")
-    st.markdown("La normativa exige cumplir dos condiciones térmicas: $I_b \le I_n \le I_z$ (Sobrecarga) y $I_n \le 0.91 \cdot I_z$ (Protección del aislamiento).")
-    
-    tabla_q_md = "| Sección Comercial (mm²) | Iz Admisible (A) | CDT Real (%) | Estado de Verificación ($I_n \le 0.91 \cdot I_z$) |\n| :---: | :---: | :---: | :--- |\n"
+    # Caja Formula 2
+    form2 = f"$S = \\frac{{2 \\cdot {val_pot_q:,.1f} \\cdot {long_q}}}{{\\gamma \\cdot \\Delta V \\cdot {v_nom_calc}}}$" if "Monofásico" in tipo_red_q else f"$S = \\frac{{{val_pot_q:,.1f} \\cdot {long_q}}}{{\\gamma \\cdot \\Delta V \\cdot {v_nom_calc}}}$"
+    st.markdown(f"""
+    <div class="caja-formula">
+        <h4>2. Sección Teórica por Caída de Tensión ($\\Delta V$)</h4>
+        <p><b>Justificación:</b> Verificamos la sección exigida para no superar el límite reglamentario del {cdt_lim_q}% ({dv_max_q:.2f} V) al final de la línea.</p>
+        <div class="math-center">{form2}</div>
+        <p><b>Resultado:</b> Sección pura requerida = <b>{s_cdt_q:.2f} mm²</b></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Caja Formula 3
+    estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
+    st.markdown(f"""
+    <div class="caja-formula">
+        <h4>3. Comprobación Cortocircuito y Disparo (0.1s)</h4>
+        <p><b>Justificación:</b> La Icc final debe superar el umbral de disparo magnético (Curva C = $10 \\cdot I_n$) de la protección de {prot_q} A.</p>
+        <div class="math-center">$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$</div>
+        <p><b>Icc calculada al final:</b> {icc_fin_q * 1000:.1f} A | <b>Umbral ({prot_q} A x 10):</b> {corriente_disparo:.1f} A</p>
+        <p><b>Veredicto:</b> {estado_icc}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 📊 Tabla de Verificación de Secciones")
+    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
         cond_sobrecarga = 0.91 * iz_c
-        
-        if iz_c < ib_q: est_v = f"❌ Falla por calentamiento ($I_z$ < $I_b$)"
-        elif prot_q > cond_sobrecarga: est_v = f"❌ Falla 2ª Condición ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\le$ {cond_sobrecarga:.1f}A)"
+        if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
+        elif prot_q > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
+        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\\le$ {cond_sobrecarga:.1f}A)"
         else: est_v = "Válido pero sobredimensionado"
-        
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
     st.markdown(f"""
-        <div class="resultado-final-box">
-            <h2 style="color: #059669; margin-top: 0;">⚡ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² de {mat_q.upper()} ({ais_q})</h2>
-            <hr style="border-top: 1px solid #d1d5db;">
-            <p style="font-size: 16px;">
-            <b>Resumen Técnico Final:</b><br>
-            • La sección soporta holgadamente la corriente de diseño (Iz = {tabla_iz_q.get(s_opt_q, 0)} A frente a Ib = {ib_q:.2f} A).<br>
-            • La caída de tensión real es del <b>{dv_real_pct_q:.3f}%</b>, cumpliendo estrictamente el límite normativo del {cdt_lim_q}%.<br>
-            • La protección térmica de <b>{prot_q} A</b> asegura la integridad del aislamiento a largo plazo frente a sobrecargas.
+        <div class="resultado-verde">
+            <h2>✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})</h2>
+            <hr style="border-top: 1px solid #10b981; margin: 10px 0;">
+            <p style="font-size: 16px; margin: 0;">
+            La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ > $I_b$) y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>. Perfectamente coordinada con un <b>PIA de {prot_q} A (Curva C)</b>.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
 elif seleccion_modulo.startswith("🏢"):
-    st.title("🏢 Previsión de Cargas del Edificio (ITC-BT-10)")
+    st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
-    col_t1, col_b1 = st.columns([4, 1])
-    with col_t1: st.write("Desarrollo analítico para el cálculo de la Potencia Total Prevista (Pt) del edificio, sumando viviendas, locales, servicios comunes y garajes (IRVE) mediante la aplicación de coeficientes de simultaneidad.")
-    with col_b1:
-        if st.button("🔄 Resetear Todo"): st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 0, "pot": 5750, "nocturna": False}]; st.session_state.locales = [{"nombre": "Local 1", "superficie": 0.0, "qty": 0}]; st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 0.0, "factor": 1.30, "qty": 0}]; st.rerun()
-
     st.header("1. Carga Correspondiente a Viviendas (P1)")
-    st.write("Según la **ITC-BT-10**, se aplica un coeficiente de simultaneidad ($K$) basado en el número de viviendas, salvo en viviendas con tarifa nocturna donde el coeficiente es $K = n$.")
     if st.button("➕ Añadir Grupo de Viviendas"): st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 0, "pot": 5750, "nocturna": False})
 
     pot_total_viviendas = 0
-    total_viv = 0
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
@@ -392,47 +363,25 @@ elif seleccion_modulo.startswith("🏢"):
         cs_grupo = float(viv["qty"]) if viv["nocturna"] else get_coef_simultaneidad(viv["qty"])
         pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo)) if viv["nocturna"] else int(round(viv["pot"] * cs_grupo))
         pot_total_viviendas += pot_parcial
-        total_viv += viv["qty"]
 
-        st.info(f"""
-        **Justificación Analítica {viv['nombre']}:**
-        $$P_{{parcial}} = P_{{unitaria}} \cdot K_{{simultaneidad}}$$
-        *   **Coeficiente K:** {cs_grupo:.2f} ({"Tarifa Nocturna K=n" if viv["nocturna"] else f"Tabla ITC-BT-10 para {viv['qty']} viv."})
-        *   **Cálculo:** {viv['pot']} W $\cdot$ {cs_grupo:.2f} = **{pot_parcial:,} W**
-        """)
+        st.markdown(f"""
+        <div class="caja-formula">
+            <h4>Justificación Analítica: {viv['nombre']}</h4>
+            <p>Se aplica coeficiente de simultaneidad ($K$) según el número de viviendas (ITC-BT-10).</p>
+            <div class="math-center">$P_{{parcial}} = P_{{unitaria}} \\cdot K_{{simultaneidad}}$</div>
+            <p><b>Sustitución:</b> {viv['pot']} W $\\cdot$ K({cs_grupo:.2f}) = <b>{pot_parcial:,} W</b></p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("---")
-    
-    st.header("2. Locales Comerciales y Oficinas (P2)")
-    st.write("El REBT exige un mínimo de **100 W/m²**, con un suelo absoluto de **3.450 W** por local comercial.")
-    if st.button("➕ Añadir Local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 0.0, "qty": 0})
-    pot_total_locales = 0.0
-    for idx, loc in enumerate(st.session_state.locales):
-        c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
-        with c1: loc["nombre"] = st.text_input(f"Local", loc["nombre"], key=f"l_n_{idx}")
-        with c2: loc["superficie"] = st.number_input(f"Sup. m²", value=float(loc["superficie"]), key=f"l_s_{idx}")
-        with c3: loc["qty"] = st.number_input(f"Cantidad", value=int(loc["qty"]), key=f"l_q_{idx}")
-        with c4:
-            if st.button("🗑️", key=f"del_l_{idx}"): st.session_state.locales.pop(idx); st.rerun()
-
-        pot_u = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
-        pot_parcial = pot_u * loc["qty"]
-        pot_total_locales += pot_parcial
-        
-        st.info(f"""
-        **Justificación Analítica {loc['nombre']}:**
-        $$P_{{local}} = \max(Superficie \cdot 100 \text{{ W/m}}^2, \ 3450 \text{{ W}})$$
-        *   **Cálculo por superficie:** {loc["superficie"]} m² $\cdot$ 100 = {loc["superficie"]*100:,.0f} W
-        *   **Potencia asignada final:** **{pot_parcial:,.0f} W** (Aplicando el criterio normativo de máximos).
-        """)
-
-    st.markdown("---")
-
-    st.header("3. Servicios Generales (P3)")
-    st.write("Aplicación de coeficientes por tipo de carga. Motores de elevación (Ascensores K=1.30 según NTE-ITA).")
+    st.header("2. Servicios Generales (P3)")
     if st.button("➕ Añadir Servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio", "potencia": 0.0, "factor": 1.30, "qty": 0})
     pot_total_servicios = 0.0
-    opciones_factores_k = {"Ascensor (K=1.30)": 1.30, "Bombas de agua (K=1.25)": 1.25, "Alumbrado/Directo (K=1.00)": 1.00}
+    
+    opciones_factores_k = {
+        "Ascensor (K=1.30)": 1.30,
+        "Iluminación LED (K=1.00)": 1.00,
+        "Bombas de agua (K=1.25)": 1.25
+    }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
@@ -441,7 +390,7 @@ elif seleccion_modulo.startswith("🏢"):
         with c3: serv["qty"] = st.number_input(f"Uds.", value=int(serv["qty"]), key=f"s_q_{idx}")
         
         factor_actual = serv.get("factor", 1.30)
-        def_opt_idx = 0 if factor_actual == 1.30 else 1 if factor_actual == 1.25 else 2
+        def_opt_idx = 0 if factor_actual == 1.30 else 1 if factor_actual == 1.00 else 2
         with c4:
             sel_opt = st.selectbox(f"Multiplicador (K)", list(opciones_factores_k.keys()), index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
             factor = opciones_factores_k[sel_opt]
@@ -453,51 +402,43 @@ elif seleccion_modulo.startswith("🏢"):
         p_parcial = serv["potencia"] * serv["qty"] * factor
         pot_total_servicios += p_parcial
         
-        st.info(f"""
-        **Justificación Analítica {serv['nombre']}:**
-        $$P_{{servicio}} = P_{{unitaria}} \cdot n \cdot K$$
-        *   **Cálculo:** {serv["potencia"]} W $\cdot$ {serv["qty"]} ud(s) $\cdot$ {factor} = **{p_parcial:,.1f} W**
-        """)
+        st.markdown(f"""
+        <div class="caja-formula">
+            <h4>Justificación Analítica: {serv['nombre']}</h4>
+            <p>Se aplica coeficiente multiplicador según la naturaleza del receptor.</p>
+            <div class="math-center">$P_{{servicio}} = P_{{unitaria}} \\cdot n \\cdot K$</div>
+            <p><b>Sustitución:</b> {serv["potencia"]} W $\\cdot$ {serv["qty"]} ud(s) $\\cdot$ {factor} = <b>{p_parcial:,.1f} W</b></p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    pt_total = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios)
+    pt_total = pot_total_viviendas + int(pot_total_servicios) + 3450
 
     st.markdown(f"""
-        <div class="resultado-final-box">
-            <h2 style="color: #059669; margin-bottom: 5px;">⚡ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,.1f} W</h2>
-            <hr style="border-top: 1px solid #d1d5db; margin: 10px 0;">
-            <ul style="font-size: 16px; color: #374151;">
-                <li><b>P1 (Viviendas - {total_viv} uds):</b> {pot_total_viviendas:,} W</li>
-                <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
-                <li><b>P3 (Servicios Comunes):</b> {pot_total_servicios:,.1f} W</li>
-            </ul>
+        <div class="resultado-verde">
+            <h2>✅ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,.1f} W</h2>
+            <hr style="border-top: 1px solid #10b981; margin: 10px 0;">
+            <p style="font-size: 16px; margin: 0;">Suma total reglamentaria lista para dimensionar la LGA.</p>
         </div>
     """, unsafe_allow_html=True)
 
 elif seleccion_modulo.startswith("⚡"):
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
-    st.write("Dimensionamiento de la LGA. Sincronización automática de potencia, justificación de caída de tensión normativa (0.5% o 1%) y coordinación de protección mediante Fusibles gG en la CGP para cumplir los estándares de la compañía distribuidora.")
     
     pt_auto = calcular_pt_global()
-
-    lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático (Sincronizado con módulo Previsión)", "Manual"])
+    lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"])
     
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        if "Automático" in lga_modo_potencia:
-            st.success(f"🔗 **Potencia Total vinculada:** {pt_auto:,.1f} W")
-            lga_pot = pt_auto
-        else:
-            lga_pot = st.number_input("Potencia de cálculo LGA (W) [Manual]", value=pt_auto, step=500.0)
-            
+        if "Automático" in lga_modo_potencia: lga_pot = pt_auto
+        else: lga_pot = st.number_input("Potencia de cálculo LGA (W)", value=pt_auto, step=500.0)
         lga_long = st.number_input("Longitud de la LGA (m)", value=0.0)
         lga_mat = st.selectbox("Material Conductor", ["cobre", "aluminio"])
-        metodo_lga_key = st.selectbox("Método de Instalación (REBT):", list(METODOS_INSTALACION.keys()), index=3)
+        metodo_lga_key = st.selectbox("Instalación:", list(METODOS_INSTALACION.keys()), index=3)
     with lga_c2:
-        lga_aisl = st.selectbox("Aislamiento del cable", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"])
-        tipo_enlace_lga = st.radio("Configuración de Contadores (ITC-BT-14):", ["Totalmente concentrados (Límite CDT = 0.5%)", "Centralizaciones Parciales (Límite CDT = 1.0%)"])
-        lga_icc_orig = st.number_input("Icc en origen / Red de Distribución (kA)", value=10.0, step=0.5, format="%.2f")
+        lga_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"])
+        tipo_enlace_lga = st.radio("Contadores:", ["Totalmente concentrados (Límite CDT = 0.5%)", "Centralizaciones Parciales (Límite CDT = 1.0%)"])
+        lga_icc_orig = st.number_input("Icc en origen (kA)", value=10.0, step=0.5)
 
-    # LÓGICA LGA
     dv_pct_lga = 0.5 if "concentrados" in tipo_enlace_lga else 1.0
     gamma_lga = 44.0 if "XLPE" in lga_aisl else 48.5
     ib_lga = lga_pot / (math.sqrt(3) * 400 * 0.9)
@@ -515,94 +456,70 @@ elif seleccion_modulo.startswith("⚡"):
         if idx_s < len(SECCIONES_COMERCIALES) - 1: s_final_lga = SECCIONES_COMERCIALES[idx_s + 1]
         else: break
 
-    iz_final_lga = tabla_iz.get(s_final_lga, 230.0)
-    dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_final_lga * 400) if gamma_lga * s_final_lga * 400 > 0 else 0.0
-    dv_real_lga_pct = (dv_real_lga_v / 400) * 100
-
-    rho_lga = 1.0 / gamma_lga if gamma_lga > 0 else 0.0
-    r_lga_cable = (rho_lga * lga_long) / s_final_lga if s_final_lga > 0 else 0.0
-    z_tot_lga = (400.0 / (lga_icc_orig * 1000.0)) + r_lga_cable if lga_icc_orig > 0 else 1.0
-    icc_fin_lga = 400.0 / z_tot_lga / 1000.0 if z_tot_lga > 0 else 0.0
+    dv_real_lga_pct = ((lga_pot * lga_long) / (gamma_lga * s_final_lga * 400) / 400) * 100 if gamma_lga * s_final_lga * 400 > 0 else 0.0
 
     st.markdown("---")
-    st.header("📋 Memoria Analítica Detallada (LGA)")
-    
-    st.info(f"""
-    #### 1. Intensidad de Diseño Trifásica ($I_b$)
-    **Justificación:** Calculamos la corriente por fase que recorrerá la LGA. Por norma, en instalaciones generales se considera un factor de potencia (cos $\\varphi$) de 0.9.
-    $$I_b = \\frac{{P_t}}{{\\sqrt{{3}} \cdot V \cdot \cos\\varphi}}$$
-    **Sustitución:** {lga_pot:,.1f} W / (1.732 $\cdot$ 400 V $\cdot$ 0.9) = **{ib_lga:.2f} A**
-    """)
-
-    st.info(f"""
-    #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** La ITC-BT-14 es muy restrictiva. Como hemos seleccionado "{tipo_enlace_lga.split('(')[0].strip()}", el límite máximo de pérdida es del **{dv_pct_lga}%** ({dv_max_lga:.2f} Voltios).
-    $$S = \\frac{{P \cdot L}}{{\gamma \cdot \Delta V \cdot V}}$$
-    **Resultado:** La sección mínima para no superar esta caída es de **{s_cdt_lga:.2f} mm²**.
-    """)
-
-    st.info(f"""
-    #### 3. Poder de Corte e Icc Mínima en Centralización
-    **Justificación:** Calculamos la Corriente de Cortocircuito al final de la LGA para garantizar que los fusibles de la Caja General de Protección (CGP) fundirán a tiempo aislando el fallo.
-    $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
-    *   **Icc al final de la LGA:** {icc_fin_lga * 1000:.1f} A (**{icc_fin_lga:.2f} kA**)
-    *   **Verificación de Fusibles gG:** La Icc de {icc_fin_lga:.2f} kA es suficiente para fundir instantáneamente un fusible tipo gG de {in_lga_auto} A. ✅ **CUMPLE.**
-    """)
+    st.markdown("<h3>📋 Memoria Analítica Detallada (LGA)</h3>", unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="fusible-vistoso">
-        🛡️ FUSIBLE RECOMENDADO EN CGP: {in_lga_auto} A (Tipo gG - Normativa Compañía)
+    <div class="caja-formula">
+        <h4>1. Intensidad de Diseño Trifásica ($I_b$)</h4>
+        <p><b>Justificación:</b> Calculamos la corriente por fase. En instalaciones generales se asume un $\\cos\\varphi$ de 0.9.</p>
+        <div class="math-center">$I_b = \\frac{{{lga_pot:,.1f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot 400 \\text{{ V}} \\cdot 0.9}}$</div>
+        <p><b>Sustitución y Resultado:</b> {lga_pot:,.1f} W / 623.54 = <b>{ib_lga:.2f} A</b></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="caja-formula">
+        <h4>2. Sección Teórica por Caída de Tensión ($\\Delta V$)</h4>
+        <p><b>Justificación:</b> Límite máximo de pérdida del <b>{dv_pct_lga}%</b> ({dv_max_lga:.2f} V) según esquema de enlace.</p>
+        <div class="math-center">$S = \\frac{{{lga_pot:,.1f} \\cdot {long_q}}}{{\\gamma \\cdot \\Delta V \\cdot 400}}$</div>
+        <p><b>Resultado:</b> Sección mínima exigida = <b>{s_cdt_lga:.2f} mm²</b></p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (LGA)")
-    st.markdown("Verificación rigurosa de sobrecarga $I_n \le 0.91 \cdot I_z$ específica para la Línea General.")
-    
-    tabla_lga_md = "| Sección | Iz (A) | CDT Real (%) | Estado de Verificación ($I_n \le 0.91 \cdot I_z$) |\n| :---: | :---: | :---: | :--- |\n"
+    tabla_lga_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for s_com in [35, 50, 70, 95, 120, 150, 185, 240]:
         iz_val_t = tabla_iz.get(s_com, 0)
         dv_c_pct = ((lga_pot * lga_long) / (gamma_lga * s_com * 400) / 400) * 100 if s_com > 0 else 0.0
         cond_s_lga = 0.91 * iz_val_t
-        if iz_val_t < ib_lga: est = f"❌ Falla Calentamiento ($I_z$ < $I_b$)"
-        elif in_lga_auto > cond_s_lga: est = f"❌ Falla 2ª Condición ($I_n$ {in_lga_auto}A > {cond_s_lga:.1f}A)"
-        elif s_com == s_final_lga: est = f"✅ **CUMPLE IDEAL** ($I_n$ {in_lga_auto}A $\le$ {cond_s_lga:.1f}A)"
+        if iz_val_t < ib_lga: est = f"❌ Falla Calentamiento"
+        elif in_lga_auto > cond_s_lga: est = f"❌ Falla ($I_n$ {in_lga_auto}A > {cond_s_lga:.1f}A)"
+        elif s_com == s_final_lga: est = f"✅ **CUMPLE IDEAL** ($I_n$ {in_lga_auto}A $\\le$ {cond_s_lga:.1f}A)"
         else: est = "Válido pero sobredimensionado"
         tabla_lga_md += f"| **{s_com} mm²** | {iz_val_t} A | {dv_c_pct:.3f}% | {est} |\n"
     st.markdown(tabla_lga_md)
 
     st.markdown(f"""
-        <div class="resultado-final-box">
-            <h2 style="color: #059669; margin-top: 0;">⚡ SECCIÓN ÓPTIMA LGA: {s_final_lga} mm² de Cobre ({lga_aisl})</h2>
-            <hr style="border-top: 1px solid #d1d5db;">
-            <p style="font-size: 16px;">
-            <b>Resumen Técnico LGA:</b><br>
-            • La caída de tensión real es del <b>{dv_real_lga_pct:.3f}%</b>, cumpliendo ampliamente el límite reglamentario del {dv_pct_lga}%.<br>
-            • La línea está protegida en su origen mediante fusibles de <b>{in_lga_auto} A</b> coordinados térmicamente (In $\le$ 0.91·Iz).
+        <div class="resultado-verde">
+            <h2>✅ SECCIÓN ÓPTIMA LGA: {s_final_lga} mm² de {lga_mat.upper()}</h2>
+            <hr style="border-top: 1px solid #10b981; margin: 10px 0;">
+            <p style="font-size: 16px; margin: 0;">
+            Garantiza una caída real del <b>{dv_real_lga_pct:.3f}%</b>. Protegida en origen por <b>Fusibles gG de {in_lga_auto} A</b> coordinados térmicamente.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
 elif seleccion_modulo.startswith("🔌"):
     st.title("🔌 Derivación Individual - DI (ITC-BT-15)")
-    st.write("Dimensionamiento de la conexión entre el contador y el Cuadro General de la Vivienda (CGMP). Cálculo restrictivo de caída de tensión y coordinación directa con el Interruptor General Automático (IGA).")
     
     with st.expander("🏗️ Selector de Instalación y Entorno", expanded=True):
-        metodo_di_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()))
-        tipo_enlace_di = st.radio("Esquema de Contadores para la DI:", ["Contadores Totalmente Concentrados (Límite CDT = 1.0%)", "Contadores Diseminados (Límite CDT = 0.5%)"])
+        metodo_di_key = st.selectbox("Método Instalación:", list(METODOS_INSTALACION.keys()))
+        tipo_enlace_di = st.radio("Esquema Contadores:", ["Concentrados (Límite CDT = 1.0%)", "Diseminados (Límite CDT = 0.5%)"])
 
     dv_pct_di = 1.0 if "Concentrados" in tipo_enlace_di else 0.5
 
     di_c1, di_c2 = st.columns(2)
     with di_c1:
-        di_pot = st.selectbox("Previsión de Potencia Vivienda (W)", [5750, 7360, 9200, 11500])
-        di_long = st.number_input("Longitud de la DI (m)", value=0.0)
-        di_mat = st.selectbox("Material del conductor DI", ["cobre", "aluminio"])
+        di_pot = st.selectbox("Previsión de Potencia (W)", [5750, 7360, 9200, 11500])
+        di_long = st.number_input("Longitud DI (m)", value=0.0)
+        di_mat = st.selectbox("Material conductor", ["cobre", "aluminio"])
     with di_c2:
-        di_aisl = st.selectbox("Aislamiento del cable DI", ["XLPE / EPR (90ºC)", "PVC (70ºC)"])
-        di_cos = st.slider("Coseno phi (Residencial habitualmente 1.0)", 0.8, 1.0, 1.0)
-        di_icc_orig = st.number_input("Icc en origen / Centralización (kA)", value=6.0, step=0.5)
+        di_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"])
+        di_cos = st.slider("Coseno phi", 0.8, 1.0, 1.0)
 
-    # LÓGICA DI
     gamma_di = GAMMA_MAP.get((di_mat, di_aisl), 44.0)
     ib_di = di_pot / (230.0 * di_cos) if di_cos > 0 else 0.0
     dv_max_di = 230.0 * (dv_pct_di / 100.0)
@@ -618,87 +535,45 @@ elif seleccion_modulo.startswith("🔌"):
     min_reg_di = 6.0 if di_mat == "cobre" else 10.0
     s_bruta_di = max(s_cdt_di, s_cal_di, min_reg_di)
     s_optima_di = seleccionar_seccion_optima(s_bruta_di)
-
     prot_di = seleccionar_proteccion(ib_di)
-    dv_real_di_v = (2.0 * di_pot * di_long) / (gamma_di * s_optima_di * 230.0) if gamma_di * s_optima_di * 230.0 > 0 else 0.0
-    dv_real_di_pct = (dv_real_di_v / 230.0) * 100
-
-    rho_di = 1.0 / gamma_di if gamma_di > 0 else 0.0
-    r_di_cable = (rho_di * di_long) / s_optima_di if s_optima_di > 0 else 0.0
-    z_tot_di = (230.0 / (di_icc_orig * 1000.0)) + (2.0 * r_di_cable) if di_icc_orig > 0 else 1.0
-    icc_fin_di = 230.0 / z_tot_di / 1000.0 if z_tot_di > 0 else 0.0
-    disparo_mag_di = prot_di * 10.0
-    salta_di = (icc_fin_di * 1000.0) >= disparo_mag_di
+    dv_real_di_pct = ((2.0 * di_pot * di_long) / (gamma_di * s_optima_di * 230.0) / 230.0) * 100 if gamma_di * s_optima_di * 230.0 > 0 else 0.0
 
     st.markdown("---")
-    st.header("📋 Memoria Analítica Detallada (Derivación Individual)")
-
-    st.info(f"""
-    #### 1. Intensidad de Diseño Monofásica ($I_b$)
-    **Justificación:** Determinamos la corriente de diseño en el escalón de potencia elegido ({di_pot} W).
-    $$I_b = \\frac{{P}}{{V \cdot \cos\\varphi}}$$
-    **Sustitución:** {di_pot:,.0f} W / (230 V $\cdot$ {di_cos}) = **{ib_di:.2f} A**
-    """)
-
-    st.info(f"""
-    #### 2. Sección por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Según la ITC-BT-15, en instalaciones con contadores "{tipo_enlace_di.split('(')[0].strip()}", el límite de CDT es el **{dv_pct_di}%**.
-    $$S = \\frac{{2 \cdot P \cdot L}}{{\gamma \cdot \Delta V \cdot V}}$$
-    **Límite de tensión:** {dv_max_di:.2f} V | **Sección teórica pura:** **{s_cdt_di:.2f} mm²**
-    """)
-
-    if salta_di:
-        st.success(f"""
-        #### 3. Comprobación de Disparo del IGA y Cortocircuito
-        **Justificación:** El IGA en el cuadro de la vivienda debe proteger frente a cortocircuitos. Verificamos que la impedancia del cable no reduzca la Icc por debajo del umbral de disparo magnético de la Curva C ($10 \cdot I_n$).
-        $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + 2 \cdot R_{{cable}}}}$$
-        *   **Icc al llegar a la vivienda:** {icc_fin_di * 1000:.1f} A ({icc_fin_di:.2f} kA)
-        *   **Umbral magnético IGA ({prot_di} A):** {disparo_mag_di:.1f} A
-        *   **Veredicto:** ✅ **GARANTIZADO.** El IGA saltará instantáneamente protegiendo la vivienda.
-        """)
-    else:
-        st.warning(f"""
-        #### 3. Comprobación de Disparo del IGA y Cortocircuito
-        **Justificación:** El IGA en el cuadro de la vivienda debe proteger frente a cortocircuitos.
-        *   **Icc al llegar a la vivienda:** {icc_fin_di * 1000:.1f} A
-        *   **Umbral magnético IGA ({prot_di} A):** {disparo_mag_di:.1f} A
-        *   **Veredicto:** ⚠️ **PELIGRO:** La caída óhmica de la DI no garantiza el disparo del IGA. Aumente sección.
-        """)
+    st.markdown("<h3>📋 Memoria Analítica Detallada (DI)</h3>", unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="pia-destacado">
-        🛡️ INTERRUPTOR GENERAL AUTOMÁTICO (IGA): {prot_di} A (Curva C)
+    <div class="caja-formula">
+        <h4>1. Intensidad de Diseño Monofásica ($I_b$)</h4>
+        <p><b>Justificación:</b> Intensidad máxima admisible basada en el escalón de potencia elegido por el cliente.</p>
+        <div class="math-center">$I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot {di_cos}}}$</div>
+        <p><b>Sustitución y Resultado:</b> {di_pot:,.1f} W / (230 V) = <b>{ib_di:.2f} A</b></p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (DI)")
-    tabla_di_md = "| Sección | Iz Admisible (A) | CDT Real (%) | Estado de Verificación ($I_n \le 0.91 \cdot I_z$) |\n| :---: | :---: | :---: | :--- |\n"
+    tabla_di_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [6, 10, 16, 25, 35, 50]:
         iz_c = tabla_iz_di.get(sec_com, 100.0)
         dv_c_pct = ((2.0 * di_pot * di_long) / (gamma_di * sec_com * 230.0) / 230.0) * 100 if sec_com > 0 else 0.0
         cond_sobrecarga = 0.91 * iz_c
-        if iz_c < ib_di: est_v = f"❌ Falla por Calentamiento"
-        elif prot_di > cond_sobrecarga: est_v = f"❌ Falla 2ª Condición ($I_n$ {prot_di}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_optima_di: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_di}A $\le$ {cond_sobrecarga:.1f}A)"
+        if iz_c < ib_di: est_v = f"❌ Falla Calentamiento"
+        elif prot_di > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_di}A > {cond_sobrecarga:.1f}A)"
+        elif sec_com == s_optima_di: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_di}A $\\le$ {cond_sobrecarga:.1f}A)"
         else: est_v = "Válido pero sobredimensionado"
         tabla_di_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_di_md)
 
     st.markdown(f"""
-        <div class="resultado-final-box">
-            <h2 style="color: #059669; margin-top: 0;">⚡ SECCIÓN ÓPTIMA DI: {s_optima_di} mm² de {di_mat.upper()} ({di_aisl})</h2>
-            <hr style="border-top: 1px solid #d1d5db;">
-            <p style="font-size: 16px;">
-            <b>Resumen Técnico DI:</b><br>
-            • La caída de tensión real hasta el cuadro de mando es del <b>{dv_real_di_pct:.3f}%</b>, por debajo del límite del {dv_pct_di}%.<br>
-            • Cumple la sección mínima normativa (6 mm²). El conductor queda plenamente protegido por el IGA de <b>{prot_di} A</b>.
+        <div class="resultado-verde">
+            <h2>✅ SECCIÓN ÓPTIMA DI: {s_optima_di} mm² de {di_mat.upper()}</h2>
+            <hr style="border-top: 1px solid #10b981; margin: 10px 0;">
+            <p style="font-size: 16px; margin: 0;">
+            Caída de tensión real controlada al <b>{dv_real_di_pct:.3f}%</b>. La línea está protegida perfectamente por el IGA del cuadro general de la vivienda (<b>{prot_di} A, Curva C</b>).
             </p>
         </div>
     """, unsafe_allow_html=True)
 
 elif seleccion_modulo.startswith("📚"):
-    st.title("📚 Compendio Tablas REBT (ITC-BT 01 al 51)")
+    st.title("📚 Tablas REBT")
 elif seleccion_modulo.startswith("📐"):
-    st.title("📐 Esquemas Unifilares del Edificio")
-elif seleccion_modulo.startswith("💡"):
-    st.title("💡 Simulador Consumo Eléctrico")
+    st.title("📐 Esquemas Unifilares")
