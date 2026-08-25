@@ -174,7 +174,7 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON IMPRESIÓN PDF NATIVA BOLIMUR)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON BOTÓN DE IMPRESIÓN NATIVO JS)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Cálculo Rápido Avanzado")
@@ -294,7 +294,7 @@ elif seleccion_modulo.startswith("🧮"):
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
     **Origen detallado de los parámetros de impedancia y resistencia:**
-    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en **`{z_origen:.4f}` $\\Omega$**.
+    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origin}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en **`{z_origen:.4f}` $\\Omega$**.
     * **Resistencia del cable ($R_{{cable}}$):** Se calcula mediante la ley de resistencia para conductores ($R = \\frac{{\\rho \\cdot L}}{{S}}$), multiplicada por 2 en sistemas monofásicos (ida y vuelta por el neutro). Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en **`{r_cable_total:.4f}` $\\Omega$**.
     
     $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
@@ -347,20 +347,26 @@ elif seleccion_modulo.startswith("🧮"):
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
-    # --- BOTÓN DE IMPRESIÓN Y DESCARGA PDF OFICIAL BOLIMUR ---
+    # --- COMPONENTE HTML/JS SEGURO PARA IMPRESIÓN NATIVA ---
     st.markdown("---")
-    st.markdown("""
-    <div style="background-color: #f0f9ff; padding: 20px; border-radius: 10px; border: 1px solid #bae6fd; text-align: center;">
+    import streamlit.components.v1 as components
+    
+    html_print_code = """
+    <div style="background-color: #f0f9ff; padding: 20px; border-radius: 10px; border: 1px solid #bae6fd; text-align: center; font-family: sans-serif;">
         <h3 style="color: #0369a1; margin-bottom: 5px;">📄 BOLIMUR INSTALACIONES INTEGRALES</h3>
         <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">Memoria Técnica de Cálculo de Secciones lista para archivar o entregar.</p>
-        <button onclick="window.print()" style="background-color: #0284c7; color: white; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">
+        <button onclick="parent.window.print()" style="background-color: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
             🖨️ Imprimir / Guardar Memoria en PDF
         </button>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    components.html(html_print_code, height=140)
 
 
 
+# =========================================================================
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
