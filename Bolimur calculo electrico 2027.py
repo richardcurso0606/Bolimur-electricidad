@@ -290,9 +290,9 @@ elif seleccion_modulo.startswith("🧮"):
     
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
-    **Sustitución detallada con los datos actuales:** 
-    * Impedancia de red ($Z_{{origen}}$): `{z_origen:.4f}` $\\Omega$
-    * Resistencia del cable ($R_{{cable}}$): `{r_cable_total:.4f}` $\\Omega$
+    **Sustitución detallada con los datos actuales de tu cálculo:** 
+    * Impedancia de red ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$): **`{z_origen:.4f}` $\\Omega$**
+    * Resistencia del cable ($R_{{cable}}$): **`{r_cable_total:.4f}` $\\Omega$**
     
     $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
 
@@ -334,12 +334,6 @@ elif seleccion_modulo.startswith("🧮"):
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
-
-
-# =========================================================================
-# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
-# =========================================================================
-
 
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
