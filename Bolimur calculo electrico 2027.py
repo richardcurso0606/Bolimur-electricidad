@@ -102,7 +102,7 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS ---
+# --- DISEÑO CORPORATIVO Y ESTILOS (TARJETAS MÓVILES) ---
 st.markdown("""
     <style>
     .resultado-destacado {
@@ -143,16 +143,17 @@ st.markdown("""
         margin: 10px 0;
         color: #333333;
     }
-    .esquema-simbolos {
-        background-color: #ffffff;
-        border: 3px solid #111111;
-        padding: 25px;
-        border-radius: 10px;
-        font-family: 'Courier New', Courier, monospace;
-        color: #000000;
-        font-size: 14px;
-        line-height: 1.6;
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    .card-menu {
+        background-color: #1e1e1e;
+        color: white;
+        padding: 18px 20px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border-left: 6px solid #ff4b4b;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -222,6 +223,8 @@ if 'lga_long_val' not in st.session_state:
     st.session_state.lga_long_val = 20.0
 if 'carpeta_trabajo_val' not in st.session_state:
     st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
+if 'vista_activa' not in st.session_state:
+    st.session_state.vista_activa = "menu"
 
 # --- MENÚ LATERAL COMPLETO (SIDEBAR) ---
 with st.sidebar:
@@ -235,6 +238,11 @@ with st.sidebar:
             </div>
         """, unsafe_allow_html=True)
 
+    if st.button("🏠 Volver al Menú Principal", use_container_width=True):
+        st.session_state.vista_activa = "menu"
+        st.rerun()
+
+    st.markdown("---")
     st.header("👤 Perfil Instalador (Murcia)")
     with st.expander("⚙️ Configurar Datos Profesionales"):
         inst_nombre = st.text_input("Nombre Instalador", perfil_guardado["nombre"])
@@ -292,27 +300,41 @@ with st.sidebar:
             else:
                 st.warning("⚠️ Archivo no encontrado.")
 
-# --- NAVEGACIÓN PRINCIPAL MEDIANTE MENÚ DESPLEGABLE (CÓMODO PARA MÓVIL Y TABLET) ---
-opciones_modulo = [
-    "🧮 Cálculo Rápido (CDT & Icc Avanzado)",
-    "🏢 Previsión de Cargas (Pt)", 
-    "⚡ Línea General (LGA)", 
-    "🔌 Derivación Individual (DI)", 
-    "📊 Tabla Guía Estilo PLC Madrid",
-    "📐 Esquemas Unifilares",
-    "📄 Informe Técnico MTD",
-    "💡 Simulador Consumo",
-    "🛡️ Resolución Avanzada y Exámenes"
-]
+# =========================================================================
+# PANTALLA PRINCIPAL: MENÚ VERTICAL ESTILO APP MÓVIL (TARJETAS)
+# =========================================================================
+if st.session_state.vista_activa == "menu":
+    st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
+    st.write("Selecciona una herramienta o módulo de cálculo deslizando o pulsando sobre las tarjetas de acceso rápido:")
 
-seleccion_modulo = st.selectbox("📂 Selecciona el Módulo de Cálculo / Sección:", opciones_modulo)
+    modulos = [
+        ("🧮 Cálculo Rápido (CDT & Icc Avanzado)", "Diagnóstico integral para bombas, líneas largas y extremos de circuito.", "calc_rapido"),
+        ("🏢 Previsión de Cargas del Edificio (Pt)", "Cálculo reglamentario ITC-BT-10 para viviendas, locales, servicios e IRVE.", "cargas"),
+        ("⚡ Línea General de Alimentación (LGA)", "Cálculo reglamentario ITC-BT-14, fusibles CGP y cortocircuitos.", "lga"),
+        ("🔌 Derivación Individual (DI)", "Cálculo reglamentario ITC-BT-15, caídas de tensión y protecciones.", "di"),
+        ("📊 Tabla Guía Estilo PLC Madrid", "Consulta directa de secciones reglamentarias y calibres estándar.", "tabla_plc"),
+        ("📐 Esquemas Unifilares", "Representación esquemática y parámetros principales del proyecto.", "unifilares"),
+        ("📄 Informe Técnico Formal MTD", "Generador y vista previa del informe técnico listo para firmar.", "mtd"),
+        ("💡 Simulador Consumo Eléctrico", "Estimación de factura mensual según potencia contratada y energía.", "simulador"),
+        ("🛡️ Resolución Avanzada y Exámenes", "Casos prácticos resueltos paso a paso con fórmulas e Icc.", "examenes")
+    ]
 
-st.markdown("---")
+    for titulo, desc, clave in modulos:
+        st.markdown(f"""
+            <div style="background-color: #1e1e1e; padding: 15px 20px; border-radius: 10px; border-left: 6px solid #ff4b4b; margin-bottom: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.15);">
+                <h3 style="color: white; margin: 0 0 5px 0; font-size: 18px;">{titulo}</h3>
+                <p style="color: #b0b0b0; margin: 0; font-size: 13px;">{desc}</p>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button(f"Abrir {titulo}", key=f"btn_{clave}", use_container_width=True):
+            st.session_state.vista_activa = clave
+            st.rerun()
 
 # =========================================================================
 # MÓDULO 1: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
-if seleccion_modulo.startswith("🧮"):
+elif st.session_state.vista_activa == "calc_rapido":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
     st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
 
@@ -445,7 +467,8 @@ if seleccion_modulo.startswith("🧮"):
 # =========================================================================
 # MÓDULO 2: PREVISIÓN DE CARGAS
 # =========================================================================
-elif seleccion_modulo.startswith("🏢"):
+elif st.session_state.vista_activa == "cargas":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
@@ -655,7 +678,8 @@ elif seleccion_modulo.startswith("🏢"):
 # =========================================================================
 # MÓDULO 3: LGA
 # =========================================================================
-elif seleccion_modulo.startswith("⚡ LGA"):
+elif st.session_state.vista_activa == "lga":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     st.write("Configura los parámetros de la LGA y visualiza abajo la memoria técnica detallada con tablas de corriente admisible y el fusible recomendado.")
     
@@ -760,7 +784,8 @@ elif seleccion_modulo.startswith("⚡ LGA"):
 # =========================================================================
 # MÓDULO 4: DERIVACIÓN INDIVIDUAL
 # =========================================================================
-elif seleccion_modulo.startswith("🔌"):
+elif st.session_state.vista_activa == "di":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("Derivación Individual - DI (ITC-BT-15)")
     st.write("Configura los parámetros de la Derivación Individual y visualiza abajo la memoria técnica detallada con fórmulas, tablas de admisibilidad y verificación ampliada de sobrecargas.")
 
@@ -855,7 +880,8 @@ elif seleccion_modulo.startswith("🔌"):
 # =========================================================================
 # MÓDULO 5: TABLA GUÍA ESTILO PLC MADRID
 # =========================================================================
-elif seleccion_modulo.startswith("📊"):
+elif st.session_state.vista_activa == "tabla_plc":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
     st.write("Consulta rápida de secciones reglamentarias, caídas de tensión máximas admitidas y calibres comerciales estándar según el REBT.")
 
@@ -873,7 +899,8 @@ elif seleccion_modulo.startswith("📊"):
 # =========================================================================
 # MÓDULO 6: ESQUEMAS UNIFILARES
 # =========================================================================
-elif seleccion_modulo.startswith("📐"):
+elif st.session_state.vista_activa == "unifilares":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("📐 Esquemas Unifilares")
     st.write("Representación unifilar esquemática y parámetros principales del proyecto.")
     
@@ -886,14 +913,16 @@ Icc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A"""
 # =========================================================================
 # MÓDULO 7: INFORME TÉCNICO MTD
 # =========================================================================
-elif seleccion_modulo.startswith("📄"):
+elif st.session_state.vista_activa == "mtd":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("📄 Informe Técnico Formal MTD")
     st.write("Vista previa del informe técnico completo listo para firmar y presentar en Industria.")
 
 # =========================================================================
 # MÓDULO 8: SIMULADOR DE CONSUMO
 # =========================================================================
-elif seleccion_modulo.startswith("💡"):
+elif st.session_state.vista_activa == "simulador":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("💡 Simulador Consumo Eléctrico")
     kw_c = st.number_input("kW contratados", value=4.6)
     kwh_m = st.number_input("kWh al mes", value=250.0)
@@ -903,7 +932,8 @@ elif seleccion_modulo.startswith("💡"):
 # =========================================================================
 # MÓDULO 9: RESOLUCIÓN AVANZADA Y EXÁMENES
 # =========================================================================
-elif seleccion_modulo.startswith("🛡️"):
+elif st.session_state.vista_activa == "examenes":
+    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
     st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
     st.write("Selecciona el caso de examen o problema tipo para ver el desarrollo analítico completo paso a paso con fórmulas y verificación reglamentaria.")
 
