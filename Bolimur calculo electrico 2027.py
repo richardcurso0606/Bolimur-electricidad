@@ -165,6 +165,9 @@ if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
     st.write("Bienvenido al panel de cálculo eléctrico. Todos los módulos cuentan con justificación analítica REBT completa. Selecciona un módulo en el menú lateral.")
 
+# =========================================================================
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
+# =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Cálculo Rápido Avanzado")
 
@@ -189,11 +192,15 @@ elif seleccion_modulo.startswith("🧮"):
         long_q = st.number_input("Longitud del circuito (m)", value=0.0, step=5.0)
 
     with rc2:
-        metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), index=0)
+        ayuda_metodo = "B1: Empotrado en pared (habitual en viviendas). \nB2: En superficie bajo tubo/canaleta. \nC: Multiconductor directo a pared. \nD: Enterrado bajo tubo. \n(El método define la capacidad de refrigeración del cable)"
+        metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), index=0, help=ayuda_metodo)
+        
         mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"])
         ais_q = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"])
         cdt_lim_q = st.number_input("Caída de Tensión máxima (%)", value=3.0, step=0.5)
-        icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, step=0.5)
+        
+        ayuda_icc = "Corriente de cortocircuito en el punto donde nace esta línea. Valores habituales: 6 kA en cuadros de vivienda estándar; 10 kA o más cerca de centralizaciones o derivaciones."
+        icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, step=0.5, help=ayuda_icc)
 
     gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
     dv_max_q = v_nom_calc * (cdt_lim_q / 100.0) if cdt_lim_q > 0 else 1.0
@@ -274,6 +281,16 @@ elif seleccion_modulo.startswith("🧮"):
     * **Veredicto:** {estado_icc}
     """)
 
+    st.markdown(f"""
+    <div class="pia-destacado">
+        🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
+        <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
+        <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando simultáneamente la protección del aislamiento del cable frente a sobrecargas persistentes al cumplir la condición In $\le$ 0.91·Iz. (Recomendable acompañar de Diferencial 30 mA para contactos indirectos).
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("### 📊 Tabla de Verificación de Secciones")
     tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \le 0.91 \cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
@@ -293,6 +310,11 @@ elif seleccion_modulo.startswith("🧮"):
     Perfectamente coordinada con un **PIA de {prot_q} A (Curva C)**.
     """)
 
+
+
+# =========================================================================
+# (AQUÍ EMPEZARÍA EL SIGUIENTE MÓDULO: PREVISIÓN DE CARGAS)
+# =========================================================================
 elif seleccion_modulo.startswith("🏢"):
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
