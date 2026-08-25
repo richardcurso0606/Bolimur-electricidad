@@ -102,7 +102,7 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS (TARJETAS MÓVILES LIMPIAS) ---
+# --- DISEÑO CORPORATIVO Y ESTILOS ---
 st.markdown("""
     <style>
     .resultado-destacado {
@@ -142,22 +142,6 @@ st.markdown("""
         border-radius: 8px;
         margin: 10px 0;
         color: #333333;
-    }
-    /* Estilo limpio para los botones tipo tarjeta estilo app */
-    .stButton > button {
-        background-color: #1e1e1e;
-        color: #ffffff;
-        border: 1px solid #333333;
-        border-radius: 10px;
-        text-align: left;
-        padding: 15px 20px;
-        font-weight: 600;
-        transition: all 0.2s ease-in-out;
-    }
-    .stButton > button:hover {
-        background-color: #2b2b2b;
-        border-color: #ff4b4b;
-        color: #ffffff;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -227,8 +211,6 @@ if 'lga_long_val' not in st.session_state:
     st.session_state.lga_long_val = 20.0
 if 'carpeta_trabajo_val' not in st.session_state:
     st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
-if 'vista_activa' not in st.session_state:
-    st.session_state.vista_activa = "menu"
 
 # --- MENÚ LATERAL COMPLETO (SIDEBAR) ---
 with st.sidebar:
@@ -242,36 +224,50 @@ with st.sidebar:
             </div>
         """, unsafe_allow_html=True)
 
-    if st.button("🏠 Volver al Menú Principal", use_container_width=True):
-        st.session_state.vista_activa = "menu"
-        st.rerun()
+    st.header("📂 Navegación de Módulos")
+    seleccion_modulo = st.radio(
+        "Selecciona la sección:",
+        [
+            "🏠 Menú Principal",
+            "🧮 Cálculo Rápido (CDT & Icc)",
+            "🏢 Previsión de Cargas (Pt)",
+            "⚡ Línea General (LGA)",
+            "🔌 Derivación Individual (DI)",
+            "📊 Tabla Guía PLC Madrid",
+            "📐 Esquemas Unifilares",
+            "📄 Informe Técnico MTD",
+            "💡 Simulador Consumo",
+            "🛡️ Resolución y Exámenes"
+        ],
+        label_visibility="collapsed"
+    )
 
     st.markdown("---")
     st.header("👤 Perfil Instalador (Murcia)")
-    with st.expander("⚙️ Configurar Datos Profesionales"):
+    with st.expander("⚙️ Configurar Datos"):
         inst_nombre = st.text_input("Nombre Instalador", perfil_guardado["nombre"])
         inst_nif = st.text_input("NIF", perfil_guardado["nif"])
         inst_empresa = st.text_input("Empresa", perfil_guardado["empresa"])
-        inst_carnet = st.text_input("Nº Carné Profesional", perfil_guardado["carnet"])
+        inst_carnet = st.text_input("Nº Carné", perfil_guardado["carnet"])
         inst_cat = st.text_input("Categoría", perfil_guardado["categoria"])
         inst_tipo = st.text_input("Tipo", perfil_guardado["tipo_inst"])
-        inst_num = st.text_input("Nº Inscripción CARM", perfil_guardado["num_inscripcion"])
+        inst_num = st.text_input("Nº Inscripción", perfil_guardado["num_inscripcion"])
         inst_tel = st.text_input("Teléfono", perfil_guardado["telefono"])
         inst_email = st.text_input("Email", perfil_guardado["email"])
 
-        if st.button("💾 Guardar Perfil en BD"):
+        if st.button("💾 Guardar Perfil"):
             guardar_datos_instalador(inst_nombre, inst_nif, inst_empresa, inst_carnet, inst_tel, inst_email, inst_cat, inst_tipo, inst_num, "Región de Murcia")
             st.success("✅ ¡Guardado!")
             st.rerun()
 
     st.markdown("---")
-    st.header("📂 Gestión de Proyectos (JSON)")
-    st.session_state.nombre_proyecto = st.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
-    st.session_state.carpeta_trabajo_val = st.text_input("Carpeta de Trabajo", st.session_state.carpeta_trabajo_val)
+    st.header("📂 Proyectos (JSON)")
+    st.session_state.nombre_proyecto = st.text_input("Nombre Proyecto", st.session_state.nombre_proyecto)
+    st.session_state.carpeta_trabajo_val = st.text_input("Carpeta Trabajo", st.session_state.carpeta_trabajo_val)
 
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        if st.button("💾 Guardar JSON"):
+        if st.button("💾 Guardar"):
             datos_proyecto = {
                 "nombre_proyecto": st.session_state.nombre_proyecto,
                 "grupos_viviendas": st.session_state.grupos_viviendas,
@@ -286,9 +282,9 @@ with st.sidebar:
             with open(nombre_f, "w", encoding="utf-8") as f:
                 json.dump(datos_proyecto, f, indent=4, ensure_ascii=False)
             guardar_config_proyecto("proyecto_bolimur_default.json", st.session_state.carpeta_trabajo_val)
-            st.success("✅ ¡Guardado con éxito!")
+            st.success("✅ Guardado")
     with col_p2:
-        if st.button("📂 Cargar JSON"):
+        if st.button("📂 Cargar"):
             nombre_f = os.path.join(st.session_state.carpeta_trabajo_val, "proyecto_bolimur_default.json")
             if os.path.exists(nombre_f):
                 with open(nombre_f, "r", encoding="utf-8") as f:
@@ -299,40 +295,22 @@ with st.sidebar:
                     st.session_state.locales = proyecto_cargado.get("locales", [])
                     st.session_state.irve_config = proyecto_cargado.get("irve", {"con_irve": True, "tipo_esquema": "Esquema 1.5", "num_plazas": 5, "pot_plaza": 3680.0})
                     st.session_state.lga_long_val = proyecto_cargado.get("lga_long", 20.0)
-                st.success("✅ ¡Cargado!")
+                st.success("✅ Cargado")
                 st.rerun()
             else:
-                st.warning("⚠️ Archivo no encontrado.")
+                st.warning("⚠️ No encontrado")
 
 # =========================================================================
-# PANTALLA PRINCIPAL: MENÚ VERTICAL ESTILO APP MÓVIL (SIN "ABRIR" Y CON FLECHA)
+# CONTENIDO DE LAS PANTALLAS SEGÚN SELECCIÓN EN SIDEBAR
 # =========================================================================
-if st.session_state.vista_activa == "menu":
+
+if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
-    st.write("Selecciona una herramienta o módulo de cálculo pulsando directamente sobre la tarjeta deseada:")
+    st.write("Bienvenido al panel de cálculo eléctrico REBT. Despliega el menú lateral izquierdo (pulsando las ☰ arriba a la izquierda si estás en el móvil o tablet) para seleccionar cualquier módulo de cálculo de forma limpia y sin ocupar espacio en pantalla.")
+    
+    st.info("💡 **Consejo de navegación:** En teléfonos y tablets, la barra lateral se oculta automáticamente para ofrecerte una visión 100% despejada de los cálculos y tablas.")
 
-    modulos = [
-        ("🧮 Cálculo Rápido (CDT & Icc Avanzado)", "Diagnóstico integral para bombas, líneas largas y extremos de circuito.", "calc_rapido"),
-        ("🏢 Previsión de Cargas del Edificio (Pt)", "Cálculo reglamentario ITC-BT-10 para viviendas, locales, servicios e IRVE.", "cargas"),
-        ("⚡ Línea General de Alimentación (LGA)", "Cálculo reglamentario ITC-BT-14, fusibles CGP y cortocircuitos.", "lga"),
-        ("🔌 Derivación Individual (DI)", "Cálculo reglamentario ITC-BT-15, caídas de tensión y protecciones.", "di"),
-        ("📊 Tabla Guía Estilo PLC Madrid", "Consulta directa de secciones reglamentarias y calibres estándar.", "tabla_plc"),
-        ("📐 Esquemas Unifilares", "Representación esquemática y parámetros principales del proyecto.", "unifilares"),
-        ("📄 Informe Técnico Formal MTD", "Generador y vista previa del informe técnico listo para firmar.", "mtd"),
-        ("💡 Simulador Consumo Eléctrico", "Estimación de factura mensual según potencia contratada y energía.", "simulador"),
-        ("🛡️ Resolución Avanzada y Exámenes", "Casos prácticos resueltos paso a paso con fórmulas e Icc.", "examenes")
-    ]
-
-    for titulo, desc, clave in modulos:
-        if st.button(f"{titulo}   ➔", key=f"btn_{clave}", use_container_width=True):
-            st.session_state.vista_activa = clave
-            st.rerun()
-
-# =========================================================================
-# MÓDULO 1: CÁLCULO RÁPIDO AVANZADO
-# =========================================================================
-elif st.session_state.vista_activa == "calc_rapido":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
     st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos (como motores de piscina o líneas largas en extremos), evaluando simultáneamente Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
 
@@ -457,16 +435,12 @@ elif st.session_state.vista_activa == "calc_rapido":
         <div class="resultado-destacado">
             ⚡ CONCLUSIÓN Y SECCIÓN ÓPTIMA: <span style="color: #ff4b4b; font-size: 24px;">{s_opt_q} mm²</span> de {mat_q.upper()} ({ais_q})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            <b>Justificación detallada de por qué se aumenta la sección:</b> Aunque la fórmula estricta de caída de tensión arroje una sección menor, la sección final se eleva obligatoriamente a <b>{s_opt_q} mm²</b> para garantizar tres pilares de seguridad: 1) Soportar la intensidad de servicio sin sobrecalentamiento, 2) Cumplir la condición de protección frente a sobrecargas (In <= 0.91 * Iz), y 3) Asegurar que la corriente de cortocircuito al final de la línea seja suficientemente alta para disparar instantáneamente el magnetotérmico.
+            <b>Justificación detallada de por qué se aumenta la sección:</b> Aunque la fórmula estricta de caída de tensión arroje una sección menor, la sección final se eleva obligatoriamente a <b>{s_opt_q} mm²</b> para garantizar tres pilares de seguridad: 1) Soportar la intensidad de servicio sin sobrecalentamiento, 2) Cumplir la condición de protección frente a sobrecargas (In <= 0.91 * Iz), y 3) Asegurar que la corriente de cortocircuito al final de la línea sea suficientemente alta para disparar instantáneamente el magnetotérmico.
             </span>
         </div>
     """, unsafe_allow_html=True)
 
-# =========================================================================
-# MÓDULO 2: PREVISIÓN DE CARGAS
-# =========================================================================
-elif st.session_state.vista_activa == "cargas":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("🏢"):
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
@@ -673,11 +647,7 @@ elif st.session_state.vista_activa == "cargas":
         </div>
     """, unsafe_allow_html=True)
 
-# =========================================================================
-# MÓDULO 3: LGA
-# =========================================================================
-elif st.session_state.vista_activa == "lga":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("⚡"):
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
     st.write("Configura los parámetros de la LGA y visualiza abajo la memoria técnica detallada con tablas de corriente admisible y el fusible recomendado.")
     
@@ -772,18 +742,14 @@ elif st.session_state.vista_activa == "lga":
 
     st.markdown(f"""
         <div class="resultado-destacado">
-            ⚡ SECCIÓN A ADOPATAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
+            ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
             Neutro: <b>{70.0 if s_final_lga >= 70 else s_final_lga} mm²</b> | Tubo: <b>160 mm</b> | CDT Real: <b>{dv_real_lga_pct:.3f}%</b> | <b>Fusible CGP: {in_lga_auto} A</b>
             </span>
         </div>
     """, unsafe_allow_html=True)
 
-# =========================================================================
-# MÓDULO 4: DERIVACIÓN INDIVIDUAL
-# =========================================================================
-elif st.session_state.vista_activa == "di":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("🔌"):
     st.title("Derivación Individual - DI (ITC-BT-15)")
     st.write("Configura los parámetros de la Derivación Individual y visualiza abajo la memoria técnica detallada con fórmulas, tablas de admisibilidad y verificación ampliada de sobrecargas.")
 
@@ -875,11 +841,7 @@ elif st.session_state.vista_activa == "di":
         </div>
     """, unsafe_allow_html=True)
 
-# =========================================================================
-# MÓDULO 5: TABLA GUÍA ESTILO PLC MADRID
-# =========================================================================
-elif st.session_state.vista_activa == "tabla_plc":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("📊"):
     st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
     st.write("Consulta rápida de secciones reglamentarias, caídas de tensión máximas admitidas y calibres comerciales estándar según el REBT.")
 
@@ -894,11 +856,7 @@ elif st.session_state.vista_activa == "tabla_plc":
     | **Circuitos Interiores Viviendas (C4 - Lavadora/Lavavajillas)** | $4\\text{ mm}^2$ | - | 3.0% | PIA 20 A |
     """)
 
-# =========================================================================
-# MÓDULO 6: ESQUEMAS UNIFILARES
-# =========================================================================
-elif st.session_state.vista_activa == "unifilares":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("📐"):
     st.title("📐 Esquemas Unifilares")
     st.write("Representación unifilar esquemática y parámetros principales del proyecto.")
     
@@ -908,30 +866,18 @@ Icc máx: 12 kA | Icc mín: 7.5 kA | Fusibles CGP: 200 A gG | IGM: 250 A"""
     
     st.code(texto_esquema, language="text")
 
-# =========================================================================
-# MÓDULO 7: INFORME TÉCNICO MTD
-# =========================================================================
-elif st.session_state.vista_activa == "mtd":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("📄"):
     st.title("📄 Informe Técnico Formal MTD")
     st.write("Vista previa del informe técnico completo listo para firmar y presentar en Industria.")
 
-# =========================================================================
-# MÓDULO 8: SIMULADOR DE CONSUMO
-# =========================================================================
-elif st.session_state.vista_activa == "simulador":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("💡"):
     st.title("💡 Simulador Consumo Eléctrico")
     kw_c = st.number_input("kW contratados", value=4.6)
     kwh_m = st.number_input("kWh al mes", value=250.0)
     total_con_impuestos = ((kw_c * 0.11 * 30) + (kwh_m * 0.18)) * 1.051127 * 1.10
     st.metric("Estimación Factura Mensual", f"{total_con_impuestos:.2f} €")
 
-# =========================================================================
-# MÓDULO 9: RESOLUCIÓN AVANZADA Y EXÁMENES
-# =========================================================================
-elif st.session_state.vista_activa == "examenes":
-    if st.button("⬅️ Volver al Menú Principal"): st.session_state.vista_activa = "menu"; st.rerun()
+elif seleccion_modulo.startswith("🛡️"):
     st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
     st.write("Selecciona el caso de examen o problema tipo para ver el desarrollo analítico completo paso a paso con fórmulas y verificación reglamentaria.")
 
