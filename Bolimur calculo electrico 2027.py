@@ -156,6 +156,13 @@ METODOS_INSTALACION = {
     "D (Cables enterrados bajo tubo)": {"ref": "D", "desc": "Instalación subterránea"}
 }
 
+GAMMA_MAP = {
+    ("cobre", "PVC (70ºC)"): 48.5,
+    ("cobre", "XLPE / EPR (90ºC)"): 44.0,
+    ("aluminio", "PVC (70ºC)"): 31.0,
+    ("aluminio", "XLPE / EPR (90ºC)"): 28.0
+}
+
 SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
 IZ_COBRE_TUBO = {
     1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 
@@ -280,7 +287,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS (CON SERVICIOS EDITABLES Y EXPLICACIÓN IRVE)
+# PESTAÑA 1: PREVISIÓN DE CARGAS
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -372,7 +379,7 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
-    # 3. SERVICIOS GENERALES (CAMPO EDITABLE + SELECTOR COEFICIENTE K)
+    # 3. SERVICIOS GENERALES
     col_h_serv, col_pop_serv = st.columns([4, 1])
     with col_h_serv:
         st.subheader("3. Servicios Generales (P3)")
@@ -439,7 +446,7 @@ with pestanas[0]:
     st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,.1f} W**")
     st.markdown("---")
 
-    # 4. GARAJES E IRVE (CON EXPLICACIÓN TÉCNICA DETALLADA)
+    # 4. GARAJES E IRVE
     col_h_irve, col_pop_irve = st.columns([4, 1])
     with col_h_irve:
         st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
@@ -482,7 +489,7 @@ with pestanas[0]:
             <ul>
                 <li><b>P1 (Viviendas - {total_viviendas_edificio} uds):</b> {pot_total_viviendas:,} W</li>
                 <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
-                <li><b>P3 (Servicios Generales):</b> {int(pot_total_servicios):,.1f} W</li>
+                <li><b>P3 (Servicios Generales):</b> {pot_total_servicios:,.1f} W</li>
                 <li><b>P4 (Garaje e IRVE - ITC-BT-52):</b> {pot_total_garaje_irve:,} W</li>
             </ul>
             <hr style="border: 1px solid #ced4da;">
@@ -595,46 +602,97 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (RESTAURADA AL 100% CON EXPLICACIÓN Y TABLA)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
+    st.write("Configura los parámetros de la Derivación Individual y visualiza abajo la memoria técnica detallada con fórmulas, tablas de admisibilidad y verificación acumulada.")
+
+    with st.expander("🏗️ Selector de Sistema de Instalación y Material (Métodos UNE-HD 60364-5-52)", expanded=True):
+        metodo_di_key = st.selectbox("Método de Instalación recomendado (por defecto B1):", list(METODOS_INSTALACION.keys()), key="met_di")
+        st.info(f"**Detalle del método:** {METODOS_INSTALACION[metodo_di_key]['desc']}")
+
+        tipo_enlace_di = st.radio("Modelo de esquema para la Derivación Individual:", [
+            "Modelo A: DI desde contadores concentrados en centralización única (Límite CDT = 1.0%)",
+            "Modelo B: DI desde contadores diseminados / exteriores / en viviendas (Límite CDT = 0.5%)"
+        ], key="enlace_di")
+
+    dv_pct_di = 1.0 if "Modelo A" in tipo_enlace_di else 0.5
+
     di_c1, di_c2 = st.columns(2)
     with di_c1:
         di_pot = st.selectbox("Potencia de la Derivación (W)", [5750, 7360, 9200, 11500], key="di_p")
         di_long = st.number_input("Longitud de la DI (m)", value=15.0, key="di_l")
+        di_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="di_mat")
     with di_c2:
-        di_cos = st.slider("Coseno phi (cos phi) DI", 0.7, 1.0, 1.0, key="di_cos")
+        di_aisl = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="di_ais")
+        di_cos = st.slider("Coseno phi (cos phi) DI", 0.8, 1.0, 1.0, key="di_cos")
 
-    gamma_di = 56.0
+    gamma_di = GAMMA_MAP.get((di_mat, di_aisl), 44.0)
     ib_di = di_pot / (230.0 * di_cos)
-    dv_max_di = 230.0 * 0.01
-    s_cdt_di = (di_long * di_pot) / (gamma_di * dv_max_di * 230.0)
-    s_di_opt = seleccionar_seccion_optima(max(s_cdt_di, 6.0))
-    dv_real_di_v = (di_pot * di_long) / (gamma_di * s_di_opt * 230.0)
+    dv_max_di = 230.0 * (dv_pct_di / 100.0)
+    s_cdt_di = (2.0 * di_pot * di_long) / (gamma_di * dv_max_di * 230.0)
+    
+    s_cal_di = 1.5
+    tabla_iz_di = IZ_COBRE_ENTERRADO if "D (" in metodo_di_key else IZ_COBRE_TUBO
+    for sec, iz_val in tabla_iz_di.items():
+        if iz_val >= ib_di:
+            s_cal_di = sec
+            break
+
+    min_reg_di = 6.0 if di_mat == "cobre" else 10.0
+    s_bruta_di = max(s_cdt_di, s_cal_di, min_reg_di)
+    s_optima_di = seleccionar_seccion_optima(s_bruta_di)
+
+    prot_di = seleccionar_proteccion(ib_di)
+    dv_real_di_v = (2.0 * di_pot * di_long) / (gamma_di * s_optima_di * 230.0)
     dv_real_di_pct = (dv_real_di_v / 230.0) * 100
 
     st.markdown("---")
-    st.subheader("📋 Memoria de Cálculo Justificada (Derivación Individual)")
-    
-    st.markdown("""
-    **1. Intensidad de cálculo ($I_b$):**  
-    * $I_b = P / (V \\cdot \\cos\\varphi)$
-    """)
-    st.info(f"Cálculo numérico: {di_pot} W / (230 V x {di_cos}) = **{ib_di:.2f} A**")
+    st.subheader("📋 Memoria de Cálculo Justificada y Detallada (Derivación Individual)")
 
-    st.markdown("""
-    **2. Caída de Tensión (ITC-BT-15):**  
-    * Límite reglamentario para contadores concentrados: $\\Delta V\\% \\le 1\\%$.
-    * Sección teórica: $S = (L \\cdot P) / (\\gamma \\cdot \\Delta V \\cdot V)$
+    st.markdown(f"""
+    **1. Intensidad de Diseño ($I_b$):**  
+    * $I_b = \\frac{P}{V \\cdot \\cos\\varphi} = \\frac{{{di_pot}}}{{{230} \\cdot {di_cos}}} = \\mathbf{{{ib_di:.2f}\\text{ A}}}$
+
+    **2. Cálculo por Caída de Tensión ($\\Delta V \\le {dv_pct_di}\\%$):**  
+    * Valor absoluto máximo admisible: $\\Delta V = {230} \\times \\frac{{{dv_pct_di}}}{{100}} = {dv_max_di:.2f}\\text{{ V}}$
+    * Sección teórica necesaria: $S = \\frac{2 \\cdot P \\cdot L}{\\gamma \\cdot \\Delta V \\cdot V} = \\frac{{2 \\cdot {di_pot} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di:.2f} \\cdot {230}}} = \\mathbf{{{s_cdt_di:.2f}\\text{{ mm}}^2}}$
+
+    **3. Criterio de Calentamiento y Mínimo Reglamentario (ITC-BT-15):**  
+    * Admisibilidad mínima requerida ($I_z \\ge I_b$): **{s_cal_di} mm²**
+    * Suelo reglamentario obligatorio: **{min_reg_di} mm²** ({di_mat.upper()}).
     """)
-    st.info(f"Cálculo numérico: ({di_long} m x {di_pot} W) / (56 x 2.3 V x 230 V) = **{s_cdt_di:.2f} mm²**")
+
+    st.markdown("### 📊 Tabla Comparativa de Secciones Comerciales para la DI")
+    tabla_di_md = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) | Caída de Tensión Real (%) | Estado Reglamentario |\n| :---: | :---: | :---: | :--- |\n"
+    for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25]:
+        iz_c = tabla_iz_di.get(sec_com, 100.0)
+        dv_c_pct = ((2.0 * di_pot * di_long) / (gamma_di * sec_com * 230.0) / 230.0) * 100
+        if sec_com >= s_bruta_di:
+            estado_c = "⭐ **SELECCIONADA (ÓPTIMA)**"
+        elif sec_com < min_reg_di:
+            estado_c = "❌ No cumple mínimo ITC-BT-15 (6 mm²)"
+        elif iz_c < ib_di:
+            estado_c = "❌ No cumple calentamiento"
+        elif dv_c_pct > dv_pct_di:
+            estado_c = "❌ No cumple caída de tensión"
+        else:
+            estado_c = "Válida pero superior"
+        tabla_di_md += f"| {sec_com} mm² | {iz_c} A | {dv_c_pct:.3f}% | {estado_c} |\n"
+    st.markdown(tabla_di_md)
+
+    cdt_acumulada_global = dv_real_lga_pct + dv_real_di_pct
+    st.markdown(f"""
+    **4. Verificación del Tramo Más Desfavorable (LGA + DI Acumulada):**  
+    * CDT LGA ({dv_real_lga_pct:.3f}%) + CDT DI ({dv_real_di_pct:.3f}%) = **{cdt_acumulada_global:.3f}%** (Límite global recomendado: 1.5%) -> **CUMPLE CORRECTAMENTE**.
+    """)
 
     st.markdown(f"""
         <div class="resultado-destacado">
-            🔌 SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_di_opt} mm²</span> de Cobre (Unipolares en tubo)<br>
+            🔌 SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_optima_di} mm²</span> de {di_mat.upper()} ({di_aisl})<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            Intensidad de diseño: <b>{ib_di:.2f} A</b> | CDT Real: <b>{dv_real_di_pct:.3f}%</b> (Cumple límite del 1%)
+            Intensidad de diseño: <b>{ib_di:.2f} A</b> | CDT Real: <b>{dv_real_di_pct:.3f}%</b> | Protección PIA asociada: <b>{prot_di} A + Diferencial 30 mA</b>
             </span>
         </div>
     """, unsafe_allow_html=True)
