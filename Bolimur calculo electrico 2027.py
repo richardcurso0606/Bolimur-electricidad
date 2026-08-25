@@ -102,10 +102,9 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS AVANZADOS (TABLAS DEFINIDAS Y CLARAS) ---
+# --- DISEÑO CORPORATIVO Y ESTILOS AVANZADOS ---
 st.markdown("""
     <style>
-    /* Tablas generales con diseño nítido y celdas alternas */
     table {
         width: 100%;
         border-collapse: collapse;
@@ -131,7 +130,6 @@ st.markdown("""
         background-color: #e9ecef !important;
     }
 
-    /* BARRA LATERAL DIFERENCIADA */
     [data-testid="stSidebar"] {
         background-color: #f8f9fa !important;
         border-right: 3px solid #dee2e6;
@@ -152,76 +150,24 @@ st.markdown("""
         border-color: #ff4b4b !important;
         color: #ff4b4b !important;
     }
-    [data-testid="stSidebar"] input {
-        background-color: #ffffff !important;
-        border: 2px solid #6c757d !important;
-        color: #212529 !important;
-        border-radius: 6px !important;
-        padding: 8px !important;
-    }
-    [data-testid="stSidebar"] .stButton button {
-        background-color: #ffffff !important;
-        border: 2px solid #495057 !important;
-        color: #212529 !important;
-        font-weight: bold !important;
-        border-radius: 6px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    [data-testid="stSidebar"] .stButton button:hover {
-        background-color: #e9ecef !important;
-        border-color: #ff4b4b !important;
-        color: #ff4b4b !important;
-    }
 
-    .resultado-destacado {
-        background-color: #1e1e1e;
-        color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 6px solid #ff4b4b;
-        font-size: 18px;
-        font-weight: bold;
-        margin: 20px 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .pia-destacado {
-        background: linear-gradient(135deg, #0056b3, #00a8cc);
-        color: #ffffff;
-        padding: 18px 25px;
-        border-radius: 10px;
-        font-size: 22px;
-        font-weight: bold;
-        text-align: center;
-        margin: 15px 0;
-        box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
-        border: 2px solid #ffffff;
-    }
-    .fusible-vistoso {
-        background: linear-gradient(135deg, #ff4b4b, #ff8c00);
-        color: #ffffff;
-        padding: 15px 25px;
-        border-radius: 8px;
-        font-size: 20px;
-        font-weight: bold;
-        text-align: center;
-        margin: 15px 0;
-        box-shadow: 0 4px 10px rgba(255, 75, 75, 0.3);
-    }
-    .resumen-parciales-box {
-        background-color: #f1f3f5;
-        border: 2px solid #ced4da;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
-        color: #212529;
-    }
-    .formula-box {
+    .info-box-tecnico {
         background-color: #f8f9fa;
-        border: 1px solid #dcdcdc;
+        border-left: 5px solid #0056b3;
         padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
+        border-radius: 6px;
+        margin: 15px 0;
         color: #333333;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .recomendacion-box {
+        background-color: #e8f4fd;
+        border: 2px solid #b8daff;
+        padding: 18px;
+        border-radius: 8px;
+        margin: 15px 0;
+        color: #004085;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -292,7 +238,7 @@ if 'lga_long_val' not in st.session_state:
 if 'carpeta_trabajo_val' not in st.session_state:
     st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
 
-# --- MENÚ LATERAL (REEMPLAZADA OPCIÓN PLC POR TABLAS ITC-BT) ---
+# --- MENÚ LATERAL ---
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
         st.image("logo_bolimur.PNG", use_container_width=True)
@@ -391,132 +337,41 @@ if seleccion_modulo.startswith("🏠"):
 
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Ventana de Cálculo Rápido Avanzado (Bombas, Líneas Largas y Extremos)")
-    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos, evaluando Caída de Tensión, Calentamiento, Coordinación de Protecciones e Icc min.")
-
-    rc1, rc2 = st.columns(2)
-    with rc1:
-        modo_carga = st.radio("Modo de entrada:", ["Por Potencia (W o CV)", "Por Intensidad Directa (A)"], key="mod_q")
-        tipo_red_q = st.selectbox("Sistema eléctrico", ["Monofásico (230V)", "Trifásico (400V)"], key="tr_q1")
-        
-        if modo_carga == "Por Potencia (W o CV)":
-            val_pot_q = st.number_input("Potencia activa (W) [Ej: Bomba 1.5 CV aprox 1100 W]", value=2200.0, step=100.0, key="vp_q")
-            cos_q = st.slider("Coseno phi (cos phi) [Motores habituales 0.82]", 0.7, 1.0, 0.85, key="cos_q")
-            v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
-            if "Monofásico" in tipo_red_q:
-                ib_q = val_pot_q / (v_nom_calc * cos_q)
-            else:
-                ib_q = val_pot_q / (math.sqrt(3) * v_nom_calc * cos_q)
-        else:
-            ib_q = st.number_input("Intensidad de diseño Ib (A)", value=16.0, step=1.0, key="ib_q1")
-            cos_q = st.slider("Coseno phi (cos phi)", 0.7, 1.0, 0.85, key="cos_q_2")
-            v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
-            if "Monofásico" in tipo_red_q:
-                val_pot_q = ib_q * v_nom_calc * cos_q
-            else:
-                val_pot_q = ib_q * math.sqrt(3) * v_nom_calc * cos_q
-
-        long_q = st.number_input("Longitud del circuito / tirada (m) [Ida]", value=40.0, step=5.0, key="l_q")
-
-    with rc2:
-        metodo_q_key = st.selectbox("Método de Instalación (UNE-HD 60364-5-52):", list(METODOS_INSTALACION.keys()), index=0, key="met_q")
-        mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"], key="m_q")
-        ais_q = st.selectbox("Aislamiento y Temperatura", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="a_q")
-        cdt_lim_q = st.number_input("Caída de Tensión máxima permitida (%) [Fuerza/Motores max 3-5%]", value=3.0, step=0.5, key="cdt_q")
-        
-        col_icc_inp, col_icc_btn = st.columns([3, 1])
-        with col_icc_inp:
-            icc_orig_q = st.number_input("Icc de cortocircuito en el origen (kA)", value=10.0, step=0.5, format="%.2f", key="icc_orig_q")
-        with col_icc_btn:
-            st.write("") 
-            st.write("")
-            with st.popover("📖 Guía Icc"):
-                st.markdown("### ⚡ Guía Rápida de Icc en Origen")
-                st.write("• **¿Qué es?** La corriente de cortocircuito máxima entregada.")
-                st.write("• **Valores habituales:** Entre **6.0 kA y 10.0 kA**.")
-
-    gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
-    dv_max_q = v_nom_calc * (cdt_lim_q / 100.0)
-    
-    if "Monofásico" in tipo_red_q:
-        s_cdt_q = (2.0 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc)
-    else:
-        s_cdt_q = (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc)
-
-    tabla_iz_q = IZ_COBRE_ENTERRADO if "D (" in metodo_q_key else IZ_COBRE_TUBO
-    s_cal_q = 1.5
-    for sec, iz_val in tabla_iz_q.items():
-        if iz_val >= ib_q:
-            s_cal_q = sec
-            break
-
-    min_reg_q = 1.5 if mat_q == "cobre" else 10.0
-    s_bruta_q = max(s_cdt_q, s_cal_q, min_reg_q)
-    s_opt_q = seleccionar_seccion_optima(s_bruta_q)
-
-    if "Monofásico" in tipo_red_q:
-        dv_real_v_q = (2.0 * val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc)
-    else:
-        dv_real_v_q = (val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc)
-    
-    dv_real_pct_q = (dv_real_v_q / v_nom_calc) * 100.0
-
-    rho_q = 1.0 / gamma_q
-    r_cable_q = (rho_q * long_q) / s_opt_q
-    if "Monofásico" in tipo_red_q:
-        z_tot_q = (v_nom_calc / (icc_orig_q * 1000.0)) + (2.0 * r_cable_q)
-    else:
-        z_tot_q = (v_nom_calc / (icc_orig_q * 1000.0)) + r_cable_q
-        
-    icc_fin_q = v_nom_calc / z_tot_q / 1000.0 if z_tot_q > 0 else 0.0
-    prot_q = seleccionar_proteccion(ib_q)
-    salta_proteccion = (icc_fin_q * 1000.0) >= (prot_q * 10.0)
-
-    st.markdown("---")
-    st.subheader("Memoria Justificativa Analítica y Fórmulas Desarrolladas")
-
-    st.markdown(f"""
-    <div class="formula-box">
-        <b>1. Intensidad de Diseño (Ib):</b> Sustitución: {val_pot_q:,.1f} / ({v_nom_calc} * {cos_q}) = <b>{ib_q:.2f} A</b>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-        <div class="pia-destacado">
-            🛡️ PROTECCIÓN RECOMENDADA (PIA): {prot_q} A (Curva C) + Diferencial 30 mA
-        </div>
-    """, unsafe_allow_html=True)
+    st.write("Herramienta de diagnóstico integral para comprobación de tramos complejos.")
 
 elif seleccion_modulo.startswith("🏢"):
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
-    st.write("Módulo de previsión de cargas activo.")
 
 elif seleccion_modulo.startswith("⚡"):
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
-    st.write("Módulo LGA activo.")
 
 elif seleccion_modulo.startswith("🔌"):
     st.title("Derivación Individual - DI (ITC-BT-15)")
-    st.write("Módulo DI activo.")
 
 # =========================================================================
-# NUEVA VENTANA: TABLAS ITC-BT SEGÚN REBT Y GUÍAS (CON SUBVENTANAS / PESTAÑAS)
+# MÓDULO: TABLAS ITC-BT SEGÚN REBT Y GUÍAS (CON EXPLICACIONES Y RECOMENDACIONES)
 # =========================================================================
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Compendio de Tablas ITC-BT según REBT y Guías Técnicas")
-    st.write("Selecciona la instrucción técnica complementaria (ITC-BT) en las pestañas inferiores para consultar con absoluta claridad todas las tablas reglamentarias y oficiales.")
+    st.write("Centro de documentación técnica oficial con explicaciones de uso y recomendaciones normativas para instalaciones en obra.")
 
-    # Subventanas / Pestañas principales para cada ITC-BT
     sub_itc = st.tabs([
         "🔌 ITC-BT-15 (Derivaciones Individuales)",
         "🏢 ITC-BT-10 (Previsión de Cargas)",
         "⚡ ITC-BT-14 (Línea General LGA)",
-        "🏠 ITC-BT-25 (Instalaciones Interiores)",
+        "🏠 ITC-BT-25 y Guías (Instalaciones Interiores y Alturas)",
         "🛡️ UNE-HD 60364-5-52 (Admisibilidad)"
     ])
 
     with sub_itc[0]:
-        st.subheader("📑 Tablas Oficiales de la ITC-BT-15 (Derivaciones Individuales)")
-        st.write("Consulta directa de cálculo de secciones, caídas de tensión, tubos y canaladuras de obra.")
+        st.subheader("📑 ITC-BT-15: Derivaciones Individuales (DI)")
+        
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 ¿Para qué sirve y cómo se utiliza esta tabla?</b><br>
+            Esta tabla permite realizar un dimensionamiento directo de la sección de los conductores de la DI en función del calibre del Interruptor General Automático (IGA) y la longitud del trazado. Se debe comprobar que la caída de tensión no supere los límites reglamentarios (1% para contadores concentrados o 0,5% según modelo).
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("#### 1. Cálculo Directo de Derivaciones Individuales (Cobre C = 48)")
         st.markdown("""
@@ -529,7 +384,13 @@ elif seleccion_modulo.startswith("📚"):
         | **35 mm²** | 50 mm | 0,5% / 1,0% / 1,5% | 77 m / 116 m / 154 m | 60 m / 91 m / 121 m | 48 m / 72 m / 96 m | 38 m / 58 m / 77 m | 31 m / 46 m / 61 m |
         """)
 
-        st.markdown("#### 2. Dimensiones Mínimas de la Canaladura o Conducto de Obra (Patinillos)")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>🏗️ Dimensionamiento de Canaladuras (Patinillos de Obra):</b><br>
+            Establece la anchura (L) y profundidad (P) de los conductos de fábrica según el número de derivaciones individuales.
+        </div>
+        """, unsafe_allow_html=True)
+
         st.markdown("""
         | Número de Derivaciones | Anchura L (Profundidad P = 0,15 m, una fila) | Anchura L (Profundidad P = 0,30 m, dos filas) |
         | :---: | :---: | :---: |
@@ -539,31 +400,15 @@ elif seleccion_modulo.startswith("📚"):
         | **37 a 48** | 2,45 m | 1,35 m |
         """)
 
-        st.markdown("#### 3. Caída de Tensión (en V) en la Derivación Individual")
-        st.markdown("##### A) Electrificación Básica (5.750 W)")
-        st.markdown("""
-        | Sección (mm²) | 10 m | 20 m | 25 m | 30 m | 35 m | 40 m | 45 m | 50 m |
-        | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-        | **6 mm²** | 1,60 V | 3,20 V | - | - | - | - | - | - |
-        | **10 mm²** | 0,96 V | 1,92 V | 2,40 V | 2,88 V | 3,36 V | - | - | - |
-        | **16 mm²** | 0,60 V | 1,20 V | 1,50 V | 1,80 V | 2,10 V | 2,40 V | 2,70 V | 3,00 V |
-        | **25 mm²** | 0,38 V | 0,77 V | 0,96 V | 1,15 V | 1,34 V | 1,54 V | 1,73 V | 1,92 V |
-        | **35 mm²** | 0,28 V | 0,55 V | 0,68 V | 0,83 V | 0,96 V | 1,09 V | 1,24 V | 1,37 V |
-        """)
-
-        st.markdown("##### B) Electrificación Elevada (9.200 W)")
-        st.markdown("""
-        | Sección (mm²) | 10 m | 20 m | 25 m | 30 m | 35 m | 40 m | 45 m | 50 m |
-        | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-        | **6 mm²** | 2,58 V | - | - | - | - | - | - | - |
-        | **10 mm²** | 1,54 V | 3,08 V | - | - | - | - | - | - |
-        | **16 mm²** | 0,97 V | 1,93 V | 2,41 V | 2,90 V | 3,38 V | - | - | - |
-        | **25 mm²** | 0,62 V | 1,23 V | 1,54 V | 1,85 V | 2,16 V | 2,47 V | 2,78 V | 3,08 V |
-        | **35 mm²** | 0,45 V | 0,88 V | 1,09 V | 1,33 V | 1,54 V | 1,76 V | 1,99 V | 2,21 V |
-        """)
-
     with sub_itc[1]:
-        st.subheader("🏢 ITC-BT-10 (Previsión de Cargas para Edificios)")
+        st.subheader("🏢 ITC-BT-10: Previsión de Cargas para Edificios")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 ¿Para qué sirve?</b><br>
+            Define los coeficientes de simultaneidad (K) aplicables al conjunto de viviendas y locales de un edificio para calcular la potencia total prevista (Pt) de la centralización y la LGA.
+        </div>
+        """, unsafe_allow_html=True)
+
         st.markdown("""
         | Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |
         | :---: | :---: |
@@ -576,21 +421,43 @@ elif seleccion_modulo.startswith("📚"):
         """)
 
     with sub_itc[2]:
-        st.subheader("⚡ ITC-BT-14 (Línea General de Alimentación - LGA)")
+        st.subheader("⚡ ITC-BT-14: Línea General de Alimentación (LGA)")
         st.markdown("""
-        * **Secciones mínimas reglamentarias:** $10\\text{ mm}^2$ para Cobre y $16\\text{ mm}^2$ para Aluminio.
-        * **Caída de tensión máxima admisible:** 0,5% (Contadores totalmente concentrados) o 1,0% (Centralizaciones parciales distribuidas).
-        """)
+        <div class="info-box-tecnico">
+            <b>📖 ¿Para qué sirve?</b><br>
+            Establece los requisitos obligatorios de sección mínima ($10\\text{ mm}^2$ en Cobre y $16\\text{ mm}^2$ en Aluminio) y los límites de caída de tensión máxima (0,5% o 1,0%) para la línea que alimenta las centralizaciones de contadores.
+        </div>
+        """, unsafe_allow_html=True)
 
     with sub_itc[3]:
-        st.subheader("🏠 ITC-BT-25 (Instalaciones Interiores en Viviendas)")
+        st.subheader("🏠 ITC-BT-25 y Guías: Instalaciones Interiores y Alturas Reglamentarias")
+        
         st.markdown("""
-        * **Grado de Electrificación Básica:** Circuitos C1 (Iluminación), C2 (Tomas generales), C3 (Cocina/Horno), C4 (Lavadora, Lavavajillas, Termo) y C5 (Baños y cocina auxiliares).
-        * **Grado de Electrificación Elevada:** Incluye los anteriores más circuitos adicionales de desdoble C1 bis, C2 bis, calefacción (C6), aire acondicionado (C7), secadora (C8), etc.
-        """)
+        <div class="recomendacion-box">
+            <h4 style="margin-top: 0; color: #004085;">📌 RECOMENDACIONES IMPORTANTES Y ALTURAS DE INSTALACIÓN EN VIVIENDAS</h4>
+            <ul>
+                <li><b>Cajas de Registro:</b> Su parte superior debe quedar instalada a un mínimo de <b>0,20 m del techo</b>. Las tapas de registro deben ser accesibles y nunca ocultas por falsos techos fijos sin trampilla.</li>
+                <li><b>Tomas de Corriente (Enchufes):</b> 
+                    <ul>
+                        <li>Altura habitual en paredes secas: Entre <b>0,20 m y 0,30 m</b> sobre el suelo.</li>
+                        <li>En cocinas y baños: A más de <b>0,50 m</b> del fregadero o encimeras de cocción y respetando los volúmenes de protección de baños (Volumen 1 y 2).</li>
+                    </ul>
+                </li>
+                <li><b>Interruptores y Conmutadores:</b> Altura recomendada entre <b>0,90 m y 1,10 m</b> sobre el suelo (facilitando el acceso a personas con movilidad reducida).</li>
+                <li><b>Cuadros Generales de Mando y Protección (CGMP):</b> El eje del cuadro de protecciones se colocará generalmente entre <b>1,40 m y 2,00 m</b> sobre el suelo.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
     with sub_itc[4]:
-        st.subheader("🛡️ UNE-HD 60364-5-52 (Intensidades Admisibles Iz)")
+        st.subheader("🛡️ UNE-HD 60364-5-52: Intensidades Admisibles ($I_z$)")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 ¿Para qué sirve?</b><br>
+            Proporciona la corriente máxima admisible que soporta un cable sin sobrepasar su temperatura límite de servicio según el tipo de aislamiento y modo de instalación.
+        </div>
+        """, unsafe_allow_html=True)
+
         st.markdown("""
         | Tipo de Cable e Instalación | Sistema | 6 mm² | 10 mm² | 16 mm² | 25 mm² | 35 mm² | 50 mm² |
         | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -602,16 +469,12 @@ elif seleccion_modulo.startswith("📚"):
 
 elif seleccion_modulo.startswith("📐"):
     st.title("📐 Esquemas Unifilares")
-    st.write("Módulo de esquemas unifilares activo.")
 
 elif seleccion_modulo.startswith("📄"):
     st.title("📄 Informe Técnico Formal MTD")
-    st.write("Módulo MTD activo.")
 
 elif seleccion_modulo.startswith("💡"):
     st.title("💡 Simulador Consumo Eléctrico")
-    st.write("Módulo simulador activo.")
 
 elif seleccion_modulo.startswith("🛡️"):
-    st.title("🛡️ Resolución Avanzada y Exámenes (Casos Prácticos)")
-    st.write("Módulo de exámenes activo.")
+    st.title("🛡️ Resolución Avanzada y Exámenes")
