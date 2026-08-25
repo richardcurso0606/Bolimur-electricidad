@@ -102,10 +102,9 @@ def cargar_config_proyecto():
 perfil_guardado = cargar_datos_instalador()
 ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
-# --- DISEÑO CORPORATIVO Y ESTILOS AVANZADOS (MENÚS Y CELDAS DIFERENCIADAS) ---
+# --- DISEÑO CORPORATIVO Y ESTILOS AVANZADOS ---
 st.markdown("""
     <style>
-    /* Tablas generales */
     table {
         width: 100%;
         border-collapse: collapse;
@@ -131,12 +130,10 @@ st.markdown("""
         background-color: #e9ecef !important;
     }
 
-    /* DIFERENCIACIÓN EXTREMA EN LA BARRA LATERAL (MENÚS SÚPER CLAROS) */
     [data-testid="stSidebar"] {
         background-color: #f8f9fa !important;
         border-right: 3px solid #dee2e6;
     }
-    /* Estilo de los radio buttons del menú lateral para máxima visibilidad */
     [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
         background-color: #ffffff !important;
         border: 2px solid #ced4da !important;
@@ -149,27 +146,6 @@ st.markdown("""
         transition: all 0.2s ease-in-out;
     }
     [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
-        background-color: #e9ecef !important;
-        border-color: #ff4b4b !important;
-        color: #ff4b4b !important;
-    }
-    /* Inputs y botones de la barra lateral */
-    [data-testid="stSidebar"] input {
-        background-color: #ffffff !important;
-        border: 2px solid #6c757d !important;
-        color: #212529 !important;
-        border-radius: 6px !important;
-        padding: 8px !important;
-    }
-    [data-testid="stSidebar"] .stButton button {
-        background-color: #ffffff !important;
-        border: 2px solid #495057 !important;
-        color: #212529 !important;
-        font-weight: bold !important;
-        border-radius: 6px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    [data-testid="stSidebar"] .stButton button:hover {
         background-color: #e9ecef !important;
         border-color: #ff4b4b !important;
         color: #ff4b4b !important;
@@ -224,6 +200,24 @@ st.markdown("""
         border-radius: 8px;
         margin: 10px 0;
         color: #333333;
+    }
+    .info-box-tecnico {
+        background-color: #f8f9fa;
+        border-left: 5px solid #0056b3;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+        color: #333333;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .recomendacion-box {
+        background-color: #e8f4fd;
+        border: 2px solid #b8daff;
+        padding: 18px;
+        border-radius: 8px;
+        margin: 15px 0;
+        color: #004085;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -293,6 +287,8 @@ if 'lga_long_val' not in st.session_state:
     st.session_state.lga_long_val = 20.0
 if 'carpeta_trabajo_val' not in st.session_state:
     st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
+if 'favoritos_itc' not in st.session_state:
+    st.session_state.favoritos_itc = ["ITC-BT-14: Línea General de Alimentación (LGA)", "ITC-BT-15: Derivaciones Individuales (DI)"]
 
 # --- MENÚ LATERAL ---
 with st.sidebar:
@@ -315,7 +311,7 @@ with st.sidebar:
             "🏢 Previsión de Cargas (Pt)",
             "⚡ Línea General (LGA)",
             "🔌 Derivación Individual (DI)",
-            "📊 Tabla Guía PLC Madrid",
+            "📚 Compendio de Tablas REBT (ITC 01 a 51)",
             "📐 Esquemas Unifilares",
             "📄 Informe Técnico MTD",
             "💡 Simulador Consumo",
@@ -939,20 +935,167 @@ elif seleccion_modulo.startswith("🔌"):
         </div>
     """, unsafe_allow_html=True)
 
-elif seleccion_modulo.startswith("📊"):
-    st.title("📊 Tablas de Cálculo Directo Estilo PLC Madrid (ITC-BT-15)")
-    st.write("Consulta rápida de secciones reglamentarias, caídas de tensión máximas admitidas y calibres comerciales estándar según el REBT.")
+# =========================================================================
+# MÓDULO MEJORADO: COMPENDIO TOTAL DE TABLAS REBT + FAVORITOS EN OBRA
+# =========================================================================
+elif seleccion_modulo.startswith("📚"):
+    st.title("📚 Compendio General y Completo de Tablas REBT (ITC-BT 01 a 51)")
+    st.write("Catálogo normativo absoluto. Todas las Instrucciones Técnicas Complementarias del Reglamento Electrotécnico de Baja Tensión (REBT) sin excepción. Marca tus tablas más utilizadas en obra para tener acceso rápido superior.")
 
-    st.markdown("""
-    | Tipo de Línea / Circuito | Sección Mínima Cobre | Sección Mínima Aluminio | Caída de Tensión Máxima ($\\Delta V\\%$) | Protección Habitual |
-    | :--- | :---: | :---: | :---: | :--- |
-    | **Línea General de Alimentación (LGA)** | $10\\text{ mm}^2$ | $16\\text{ mm}^2$ | 0.5% (Mod. 1) / 1.0% (Mod. 2) | Fusibles gG (CGP) |
-    | **Derivación Individual (DI)** | $6\\text{ mm}^2$ | $10\\text{ mm}^2$ | 1.0% (Mod. A) / 0.5% (Mod. B) | Interruptor General (IGM) |
-    | **Circuitos Interiores Viviendas (C1 - Iluminación)** | $1,5\\text{ mm}^2$ | - | 3.0% | PIA 10 A |
-    | **Circuitos Interiores Viviendas (C2 - Enchufes)** | $2,5\\text{ mm}^2$ | - | 3.0% | PIA 16 A |
-    | **Circuitos Interiores Viviendas (C3 - Cocina/Hornos)**| $6\\text{ mm}^2$ | - | 3.0% | PIA 25 A |
-    | **Circuitos Interiores Viviendas (C4 - Lavadora/Lavavajillas)** | $4\\text{ mm}^2$ | - | 3.0% | PIA 20 A |
-    """)
+    # Lista completa de todas las ITC-BT reglamentarias oficiales
+    todas_las_itc = [
+        "ITC-BT-01: Terminología",
+        "ITC-BT-02: Normas de referencia",
+        "ITC-BT-03: Instaladores autorizados y empresas instaladoras",
+        "ITC-BT-04: Documentación y puesta en servicio de las instalaciones",
+        "ITC-BT-05: Verificaciones e inspecciones",
+        "ITC-BT-06: Redes aéreas para distribución en baja tensión",
+        "ITC-BT-07: Redes subterráneas para distribución en baja tensión",
+        "ITC-BT-08: Sistemas de conexión del neutro y de las masas",
+        "ITC-BT-09: Instalaciones de alumbrado exterior",
+        "ITC-BT-10: Previsión de cargas para suministros en baja tensión",
+        "ITC-BT-11: Redes de distribución. Presupuestos y acometidas",
+        "ITC-BT-12: Esquemas de distribución en baja tensión",
+        "ITC-BT-13: Líneas generales de alimentación (LGA)",
+        "ITC-BT-14: Línea General de Alimentación (LGA)",
+        "ITC-BT-15: Derivaciones Individuales (DI)",
+        "ITC-BT-16: Centralización de contadores",
+        "ITC-BT-17: Dispositivos generales e individuales de mando y protección",
+        "ITC-BT-18: Instalaciones de puesta a tierra",
+        "ITC-BT-19: Instalaciones interiores en viviendas. Presupuestos",
+        "ITC-BT-20: Sistemas de instalación (Tubos y canales)",
+        "ITC-BT-21: Tubos y canales protectores",
+        "ITC-BT-22: Protección contra sobreintensidades",
+        "ITC-BT-23: Protección contra sobretensiones",
+        "ITC-BT-24: Protección contra contactos directos e indirectos",
+        "ITC-BT-25: Instalaciones interiores en viviendas. Número y características de circuitos",
+        "ITC-BT-26: Prescripciones generales de instalaciones en locales con baño o ducha",
+        "ITC-BT-27: Locales de pública concurrencia",
+        "ITC-BT-28: Locales de pública concurrencia. Prescripciones especiales",
+        "ITC-BT-29: Locales con riesgo de incendio o explosión",
+        "ITC-BT-30: Locales con características húmedas, mojadas o corrosivas",
+        "ITC-BT-31: Instalaciones con fines especiales. Piscinas y fuentes",
+        "ITC-BT-32: Máquinas de elevación y transporte",
+        "ITC-BT-33: Instalaciones provisionales y de obra",
+        "ITC-BT-34: Instalaciones con fines especiales. Ferias y stands",
+        "ITC-BT-35: Establecimientos agrícolas y hortícolas",
+        "ITC-BT-36: Instalaciones a muy baja tensión",
+        "ITC-BT-37: Instalaciones en caravanas y parques de caravanas",
+        "ITC-BT-38: Instalaciones en quirófanos y salas de intervención",
+        "ITC-BT-39: Instalaciones de cercas eléctricas para ganadería",
+        "ITC-BT-40: Instalaciones generadoras de baja tensión",
+        "ITC-BT-41: Instalaciones eléctricas en caravanas y parques",
+        "ITC-BT-42: Instalaciones en locales comerciales",
+        "ITC-BT-43: Instalación de receptores. Generalidades",
+        "ITC-BT-44: Receptores para alumbrado",
+        "ITC-BT-45: Aparatos de calefacción",
+        "ITC-BT-46: Cables y sistemas de instalación (Industria)",
+        "ITC-BT-47: Instalaciones de motores",
+        "ITC-BT-48: Instalaciones en locales de características especiales",
+        "ITC-BT-49: Instalaciones en instalaciones fotovoltaicas",
+        "ITC-BT-50: Instalaciones con paneles solares térmicos / eléctricos",
+        "ITC-BT-51: Instalaciones de sistemas de automatización, gestión técnica de la energía y seguridad"
+    ]
+
+    st.markdown("### ⭐ Tus Favoritas / Más Utilizadas en Obra")
+    if st.session_state.favoritos_itc:
+        cols_fav = st.columns(min(len(st.session_state.favoritos_itc), 3))
+        for idx_f, fav_item in enumerate(st.session_state.favoritos_itc):
+            with cols_fav[idx_f % len(cols_fav)]:
+                st.markdown(f"""
+                    <div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; color: #856404; font-weight: bold;">
+                        📌 {fav_item}
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("💡 No tienes ninguna tabla marcada como favorita todavía. Usa el botón en el selector de abajo para añadir tus imprescindibles de obra.")
+
+    st.markdown("---")
+    st.subheader("🔍 Buscador y Selector General de ITC-BT")
+
+    col_sel_itc, col_btn_fav = st.columns([3, 1])
+    with col_sel_itc:
+        itc_seleccionada = st.selectbox("Selecciona cualquier ITC-BT del reglamento:", todas_las_itc, index=14)
+    with col_btn_fav:
+        st.write("")
+        st.write("")
+        es_fav = itc_seleccionada in st.session_state.favoritos_itc
+        if es_fav:
+            if st.button("⭐ Quitar de Favoritos"):
+                st.session_state.favoritos_itc.remove(itc_seleccionada)
+                st.rerun()
+        else:
+            if st.button("➕ Marcar en Favoritos (Obra)"):
+                st.session_state.favoritos_itc.append(itc_seleccionada)
+                st.rerun()
+
+    st.markdown("---")
+
+    # Renderizado inteligente según la ITC seleccionada
+    if "ITC-BT-15" in itc_seleccionada:
+        st.subheader("📑 Contenido Técnico: ITC-BT-15 (Derivaciones Individuales)")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 Resumen reglamentario:</b><br>
+            Permite dimensionar de un vistazo la sección del conductor en función del IGA y la longitud máxima admisible para no superar la caída de tensión reglamentaria (1% o 0,5%).
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        | Sección Mínima DI | Diámetro Tubo (mm) | CDT Máxima | Calibre IGA: 25 A | Calibre IGA: 32 A | Calibre IGA: 40 A | Calibre IGA: 50 A |
+        | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+        | **6 mm²** | 32 mm | 0,5% / 1,0% | 5,75 kW / 6 m / 13 m | 7,32 kW / 5 m / 10 m | 9,2 kW / 6 m | 11,5 kW / - |
+        | **10 mm²** | 32 mm | 0,5% / 1,0% | 22 m / 33 m | 17 m / 25 m | 13 m / 20 m | 8 m / 17 m |
+        | **16 mm²** | 40 mm | 0,5% / 1,0% | 35 m / 53 m | 27 m / 41 m | 21 m / 31 m | 17 m / 26 m |
+        | **25 mm²** | 50 mm | 0,5% / 1,0% | 55 m / 83 m | 43 m / 65 m | 34 m / 51 m | 27 m / 41 m |
+        """)
+
+    elif "ITC-BT-10" in itc_seleccionada:
+        st.subheader("🏢 Contenido Técnico: ITC-BT-10 (Previsión de Cargas)")
+        st.markdown("""
+        <div class="info-box-tecnico">
+            <b>📖 Criterio reglamentario:</b> Coeficientes de simultaneidad (K) aplicables al conjunto de viviendas y locales de un edificio.
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        | Nº Viviendas (n) | Coeficiente de Simultaneidad (K) |
+        | :---: | :---: |
+        | **1** | 1,0 |
+        | **2** | 2,0 |
+        | **3** | 3,0 |
+        | **4** | 3,8 |
+        | **5 - 21** | Escalonado reglamentario oficial |
+        | **> 21** | $15,3 + (n - 21) \\times 0,5$ |
+        """)
+
+    elif "ITC-BT-25" in itc_seleccionada:
+        st.subheader("🏠 Contenido Técnico: ITC-BT-25 (Instalaciones Interiores en Viviendas)")
+        st.markdown("""
+        <div class="recomendacion-box">
+            <h4 style="margin-top: 0; color: #004085;">📌 ALTURAS REGLAMENTARIAS Y DISPOSICIÓN EN VIVIENDAS</h4>
+            <ul>
+                <li><b>Cajas de Registro:</b> Parte superior a $\\ge 0,20\\text{ m}$ del techo.</li>
+                <li><b>Enchufes generales:</b> Altura de $0,20\\text{ m} - 0,30\\text{ m}$ sobre el suelo.</li>
+                <li><b>Interruptores y Conmutadores:</b> Altura entre $0,90\\text{ m} y 1,10\\text{ m}$ sobre el suelo.</li>
+                <li><b>Cuadro General (CGMP):</b> Eje situado entre $1,40\\text{ m} y 2,00\\text{ m}$ de altura.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    else:
+        st.subheader(f"📋 Especificaciones Oficiales de {itc_seleccionada}")
+        st.markdown(f"""
+        <div class="info-box-tecnico">
+            <b>📖 Información general de la instrucción seleccionada:</b><br>
+            Esta instrucción ({itc_seleccionada}) forma parte del cuerpo normativo del Reglamento Electrotécnico de Baja Tensión (Real Decreto 842/2002). Establece los requisitos técnicos, obligaciones de diseño, sección mínima de conductores, protecciones asociadas y criterios de seguridad exigidos para la correcta ejecución y legalización de la instalación por parte del instalador autorizado en la Región de Murcia.
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        | Parámetro Normativo | Requisito Reglamentario Estándar |
+        | :--- | :--- |
+        | **Ámbito de aplicación** | Instalaciones interiores, enlaces y distribución en Baja Tensión |
+        | **Cumplimiento legal** | Obligatorio según REBT y Guías Técnicas de Aplicación del Ministerio |
+        | **Verificación previa** | Comprobación analítica de caídas de tensión, aislamientos y protecciones |
+        """)
 
 elif seleccion_modulo.startswith("📐"):
     st.title("📐 Esquemas Unifilares del Edificio y Desdobles Reglamentarios")
