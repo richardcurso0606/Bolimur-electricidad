@@ -15,12 +15,14 @@ except ImportError:
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES - Calculadora REBT", page_icon="⚡", layout="wide")
 
-# --- GESTIÓN DE BASE DE DATOS LOCAL (PERFIL Y CLIENTES) ---
+# --- GESTIÓN DE BASE DE DATOS LOCAL (PERFIL, CLIENTES Y CONFIGURACIÓN) ---
 DB_NAME = "bolimur_database.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    
+    # Tabla instalador
     cursor.execute("PRAGMA table_info(instalador)")
     cols_inst = [col[1] for col in cursor.fetchall()]
     if not cols_inst:
@@ -32,11 +34,8 @@ def init_db():
                 tipo_inst TEXT, num_inscripcion TEXT, comunidad TEXT
             )
         ''')
-    else:
-        for col_nombre, col_tipo in [("categoria", "TEXT"), ("tipo_inst", "TEXT"), ("num_inscripcion", "TEXT"), ("comunidad", "TEXT")]:
-            if col_nombre not in cols_inst:
-                cursor.execute(f"ALTER TABLE instalador ADD COLUMN {col_nombre} {col_tipo}")
 
+    # Tabla clientes
     cursor.execute("PRAGMA table_info(clientes)")
     cols_cli = [col[1] for col in cursor.fetchall()]
     if not cols_cli:
@@ -48,10 +47,20 @@ def init_db():
                 telefono_cliente TEXT, email_cliente TEXT
             )
         ''')
-    else:
-        for col_nombre, col_tipo in [("provincia", "TEXT"), ("cp", "TEXT"), ("telefono_cliente", "TEXT"), ("email_cliente", "TEXT")]:
-            if col_nombre not in cols_cli:
-                cursor.execute(f"ALTER TABLE clientes ADD COLUMN {col_nombre} {col_tipo}")
+
+    # Tabla proyectos / última ubicacion / config
+    cursor.execute("PRAGMA table_info(configuracion)")
+    cols_conf = [col[1] for col in cursor.fetchall()]
+    if not cols_conf:
+        cursor.execute('''
+            CREATE TABLE configuracion (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ultimo_archivo TEXT,
+                carpeta_trabajo TEXT
+            )
+        ''')
+        cursor.execute("INSERT INTO configuracion (ultimo_archivo, carpeta_trabajo) VALUES (?, ?)", 
+                       ("proyecto_bolimur_default.json", "proyectos_bolimur"))
 
     conn.commit()
     conn.close()
@@ -92,6 +101,27 @@ def cargar_datos_instalador():
         "num_inscripcion": "30/XXXXX", "comunidad": "Región de Murcia"
     }
 
+def guardar_config_proyecto(archivo, carpeta):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM configuracion")
+    cursor.execute("INSERT INTO configuracion (ultimo_archivo, carpeta_trabajo) VALUES (?, ?)", (archivo, carpeta))
+    conn.commit()
+    conn.close()
+
+def cargar_config_proyecto():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT ultimo_archivo, carpeta_trabajo FROM configuracion LIMIT 1")
+        row = cursor.fetchone()
+    except sqlite3.OperationalError:
+        row = None
+    conn.close()
+    if row:
+        return row[0], row[1]
+    return "proyecto_bolimur_default.json", "proyectos_bolimur"
+
 def guardar_cliente_db(cliente, nif_cliente, direccion, municipio, provincia, cp, telefono_cliente, email_cliente):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -124,6 +154,7 @@ def obtener_todos_clientes():
     return rows
 
 perfil_guardado = cargar_datos_instalador()
+ultimo_archivo_db, carpeta_trabajo_db = cargar_config_proyecto()
 
 # --- DISEÑO CORPORATIVO Y ESTILOS ---
 st.markdown("""
@@ -225,6 +256,8 @@ if 'cliente_actual' not in st.session_state:
 
 if 'lga_long_val' not in st.session_state: st.session_state.lga_long_val = 25.0
 if 'di_long_val' not in st.session_state: st.session_state.di_long_val = 15.0
+if 'nombre_archivo_guardado' not in st.session_state: st.session_state.nombre_archivo_guardado = ultimo_archivo_db
+if 'carpeta_trabajo_input' not in st.session_state: st.session_state.carpeta_trabajo_input = carpeta_trabajo_db
 
 with st.sidebar:
     if os.path.exists("logo_bolimur.PNG"):
@@ -344,8 +377,15 @@ with st.sidebar:
                 st.error("Introduce el nombre.")
 
     st.markdown("---")
-    st.header("📁 Gestión de Proyectos")
+    st.header("📁 Gestión de Proyectos y Rutas")
     st.session_state.nombre_proyecto = st.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
+
+    st.session_state.carpeta_trabajo_input = st.text_input("📂 Carpeta de Trabajo", st.session_state.carpeta_trabajo_input)
+    st.session_state.nombre_archivo_guardado = st.text_input("📄 Nombre de Archivo JSON", st.session_state.nombre_archivo_guardado)
+
+    if st.button("💾 Actualizar Ruta / Recordar Ubicación"):
+        guardar_config_proyecto(st.session_state.nombre_archivo_guardado, st.session_state.carpeta_trabajo_input)
+        st.success("✅ ¡Ubicación recordada en BD!")
 
     datos_proyecto = {
         "nombre_proyecto": st.session_state.nombre_proyecto,
@@ -354,10 +394,11 @@ with st.sidebar:
         "locales": st.session_state.locales
     }
     json_str = json.dumps(datos_proyecto, indent=4)
+    
     st.download_button(
-        label="💾 Guardar Proyecto (JSON)",
+        label="💾 Guardar / Sobrescribir Proyecto",
         data=json_str,
-        file_name=f"{st.session_state.nombre_proyecto.replace(' ', '_')}.json",
+        file_name=st.session_state.nombre_archivo_guardado,
         mime="application/json"
     )
 
@@ -555,7 +596,7 @@ with pestanas[0]:
     pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
 
     st.markdown("---")
-    pt_total = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + int(pot_garaje_adjudicada) + pot_total_irve
+    pt_total_calc = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + int(pot_garaje_adjudicada) + pot_total_irve
 
     st.markdown(f"""
         <div class="resumen-parciales-box">
@@ -568,12 +609,12 @@ with pestanas[0]:
                 <li><b>P5 (IRVE):</b> {pot_total_irve:,} W</li>
             </ul>
             <hr style="border: 1px solid #ced4da;">
-            <h2 style="color: #ff4b4b; margin-bottom: 0;">⚡ SUMA TOTAL PREVISTA (Pt): {pt_total:,} W ({pt_total/1000:,.2f} kW)</h2>
+            <h2 style="color: #ff4b4b; margin-bottom: 0;">⚡ SUMA TOTAL PREVISTA (Pt): {pt_total_calc:,} W ({pt_total_calc/1000:,.2f} kW)</h2>
         </div>
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 2: LGA
+# PESTAÑA 2: LGA (CON OPCIÓN DE POTENCIA AUTOMÁTICA O MANUAL)
 # =========================================================================
 with pestanas[1]:
     st.title("Línea General de Alimentación - LGA (ITC-BT-14)")
@@ -589,8 +630,13 @@ with pestanas[1]:
 
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        lga_pot = float(pt_total)
-        st.metric("Potencia de cálculo LGA (W) [Automática desde Previsión]", f"{lga_pot:,.2f} W")
+        modo_potencia_lga = st.radio("Origen de la Potencia de Cálculo LGA:", ["Automática (Desde Previsión de Cargas)", "Manual (Libre / Pruebas)"], key="mod_pot_lga")
+        if "Automática" in modo_potencia_lga:
+            lga_pot = float(pt_total_calc)
+            st.metric("Potencia de cálculo LGA (W) [Automática]", f"{lga_pot:,.2f} W")
+        else:
+            lga_pot = st.number_input("Introduce Potencia de cálculo LGA (W) manual", min_value=0.0, value=float(pt_total_calc if pt_total_calc > 0 else 57500.0), step=1000.0, key="lga_pot_manual")
+
         lga_long = st.number_input("Longitud de la LGA (m)", value=float(st.session_state.lga_long_val), key="lga_l")
         st.session_state.lga_long_val = lga_long
         lga_mat = st.selectbox("Material del conductor", ["cobre", "aluminio"], key="lga_mat")
@@ -658,7 +704,6 @@ with pestanas[1]:
             
             cumple_reg = "✅ Sí" if sec >= min_reg_lga else f"❌ No"
             
-            # Corrección lógica de selección única exacta
             if sec == s_optima_lga:
                 estado = "⭐ SELECCIONADA (Óptima)"
             else:
@@ -885,7 +930,7 @@ with pestanas[6]:
         <h3 style="color: #ff4b4b; margin-top: 0;">⚡ CERTIFICADO DE INSTALACIÓN ELÉCTRICA (CIE)</h3>
         <p><b>Titular:</b> {st.session_state.cliente_actual['nombre']} | <b>NIF:</b> {st.session_state.cliente_actual['nif']}</p>
         <p><b>Empresa Instaladora:</b> {perfil_guardado["empresa"]} | <b>Carné:</b> {perfil_guardado["carnet"]}</p>
-        <p><b>Potencia Total:</b> {pt_total:,} W</p>
+        <p><b>Potencia Total:</b> {pt_total_calc:,} W</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -899,7 +944,7 @@ with pestanas[7]:
         <h2 style="text-align: center; font-family: serif; color: #000;">MEMORIA TÉCNICA DE DISEÑO (BAJA TENSIÓN)</h2>
         <p style="text-align: center; font-size: 14px;"><b>Comunidad Autónoma de la Región de Murcia</b></p>
         <hr style="border: 1px solid #000;">
-        <p>Potencia Total Prevista: <b>{pt_total:,} W</b> ({pt_total/1000:,.2f} kW)</p>
+        <p>Potencia Total Prevista: <b>{pt_total_calc:,} W</b> ({pt_total_calc/1000:,.2f} kW)</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -908,7 +953,7 @@ with pestanas[7]:
 # =========================================================================
 with pestanas[8]:
     st.title("📄 Informe Técnico Formal MTD")
-    informe_txt = f"PROYECTO: {st.session_state.nombre_proyecto}\nPt: {pt_total:,} W"
+    informe_txt = f"PROYECTO: {st.session_state.nombre_proyecto}\nPt: {pt_total_calc:,} W"
     st.text(informe_txt)
     st.download_button("📥 Descargar Informe Técnico", data=informe_txt, file_name="Informe_MTD.txt", mime="text/plain")
 
