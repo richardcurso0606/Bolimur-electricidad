@@ -174,7 +174,7 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON EXPORTACIÓN PDF BOLIMUR)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON IMPRESIÓN PDF NATIVA BOLIMUR)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Cálculo Rápido Avanzado")
@@ -347,91 +347,23 @@ elif seleccion_modulo.startswith("🧮"):
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
-    # --- BOTÓN DE DESCARGA PDF CORPORATIVO BOLIMUR ---
+    # --- BOTÓN DE IMPRESIÓN Y DESCARGA PDF OFICIAL BOLIMUR ---
     st.markdown("---")
-    st.markdown("### 📄 Exportar Memoria Técnica")
-    
-    if st.button("📥 Generar y Descargar PDF (BOLIMUR INSTALACIONES INTEGRALES)"):
-        try:
-            from fpdf import FPDF
-            
-            class PDFBolimur(FPDF):
-                def header(self):
-                    # Cabecera corporativa
-                    self.set_fill_of_color = (15, 23, 42) if hasattr(self, 'set_fill_of_color') else None
-                    self.set_font('Arial', 'B', 12)
-                    self.set_text_color(15, 23, 42)
-                    self.cell(0, 8, "BOLIMUR INSTALACIONES INTEGRALES", 0, 1, "L")
-                    self.set_font('Arial', '', 9)
-                    self.set_text_color(100, 116, 139)
-                    self.cell(0, 5, "Memoria Técnica de Cálculo de Secciones - REBT", 0, 1, "L")
-                    self.set_draw_color(203, 213, 225)
-                    self.line(10, 22, 200, 22)
-                    self.ln(5)
-
-                def footer(self):
-                    self.set_y(-15)
-                    self.set_font('Arial', 'I', 8)
-                    self.set_text_color(148, 163, 184)
-                    self.cell(0, 10, f"Página {self.page_no()} | Generado por BOLIMUR App", 0, 0, "C")
-
-            pdf = PDFBolimur()
-            pdf.add_page()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            
-            # Título del documento
-            pdf.set_font('Arial', 'B', 14)
-            pdf.set_text_color(30, 41, 59)
-            pdf.cell(0, 10, "RESULTADOS DE CÁLCULO ELÉCTRICO RÁPIDO", 0, 1, "L")
-            pdf.ln(3)
-
-            # Datos de entrada
-            pdf.set_font('Arial', 'B', 10)
-            pdf.cell(0, 6, "1. Datos de Partida:", 0, 1, "L")
-            pdf.set_font('Arial', '', 10)
-            pdf.cell(0, 6, f"- Sistema: {tipo_red_q}", 0, 1, "L")
-            pdf.cell(0, 6, f"- Potencia / Intensidad: {val_pot_q:,.1f} W (Ib: {ib_q:.2f} A) | cos phi: {cos_q}", 0, 1, "L")
-            pdf.cell(0, 6, f"- Longitud: {long_q} m | Método: {metodo_q_key}", 0, 1, "L")
-            pdf.cell(0, 6, f"- Conductor: {mat_q.upper()} | Aislamiento: {ais_q}", 0, 1, "L")
-            pdf.ln(4)
-
-            # Resultados y Sección Óptima
-            pdf.set_font('Arial', 'B', 10)
-            pdf.cell(0, 6, "2. Resultados y Conclusiones:", 0, 1, "L")
-            pdf.set_font('Arial', '', 10)
-            pdf.cell(0, 6, f"- Seccion Optima Adoptada: {s_opt_q} mm2", 0, 1, "L")
-            pdf.cell(0, 6, f"- Caida de Tension Real: {dv_real_pct_q:.3f}% (Permitida: {cdt_lim_q}%)", 0, 1, "L")
-            pdf.cell(0, 6, f"- Corriente Admisible (Iz): {iz_opt_val} A", 0, 1, "L")
-            pdf.cell(0, 6, f"- Proteccion Magnetotermica: PIA {prot_q} A (Curva C)", 0, 1, "L")
-            pdf.cell(0, 6, f"- Cortocircuito Final (Icc): {icc_fin_q * 1000:.1f} A (Disparo exigido: {corriente_disparo:.1f} A)", 0, 1, "L")
-            pdf.ln(6)
-
-            # Nota legal / pie de firma
-            pdf.set_font('Arial', 'I', 9)
-            pdf.set_text_color(100, 116, 139)
-            pdf.multi_cell(0, 5, "Nota: Calculo realizado conforme a las prescripciones del Reglamento Electrotecnico de Baja Tension (REBT) y la norma UNE-HD 60364-5-52.")
-
-            # Guardar en bytes para descarga
-            pdf_output = pdf.output(dest='S').encode('latin1')
-            
-            st.download_button(
-                label="📥 Descargar PDF Oficial",
-                data=pdf_output,
-                file_name=f"Memoria_Calculo_Bolimur_{s_opt_q}mm2.pdf",
-                mime="application/pdf"
-            )
-            st.success("¡PDF generado con éxito listo para descargar!")
-        except Exception as e:
-            st.error(f"Error al generar el PDF: {e}")
+    st.markdown("""
+    <div style="background-color: #f0f9ff; padding: 20px; border-radius: 10px; border: 1px solid #bae6fd; text-align: center;">
+        <h3 style="color: #0369a1; margin-bottom: 5px;">📄 BOLIMUR INSTALACIONES INTEGRALES</h3>
+        <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">Memoria Técnica de Cálculo de Secciones lista para archivar o entregar.</p>
+        <button onclick="window.print()" style="background-color: #0284c7; color: white; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">
+            🖨️ Imprimir / Guardar Memoria en PDF
+        </button>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
-# =========================================================================# =========================================================================
-# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
-# =========================================================================# =========================================================================# =========================================================================
-# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
 
 
