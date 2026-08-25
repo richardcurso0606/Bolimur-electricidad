@@ -403,7 +403,7 @@ with pestanas[0]:
         <b>3. Comprobación por Calentamiento y Cortocircuito (Icc min):</b><br>
         • Intensidad admisible del cable elegido ({s_opt_q} mm²): <b>{tabla_iz_q.get(s_opt_q, 0)} A</b>.<br>
         • Corriente de cortocircuito al final de los {long_q} metros: <b>{icc_fin_q * 1000:.1f} A ({icc_fin_q:.2f} kA)</b>.<br>
-        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'GARANTIZADO EL DISPARO' if salta_proteccion else 'ATENCION: Icc insuficiente'}</b>.
+        • Comprobación de disparo magnético del PIA ({prot_q} A): Estado: <b>{'✅ GARANTIZADO EL DISPARO' if salta_proteccion else '⚠️ ATENCION: Icc insuficiente'}</b>.
     </div>
     """, unsafe_allow_html=True)
 
@@ -418,13 +418,13 @@ with pestanas[0]:
 
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q:
-            est_v = f"No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_q:.2f} A)"
+            est_v = f"❌ No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_q:.2f} A)"
         elif prot_q > cond_sobrecarga:
-            est_v = f"No cumple la 2ª condición (In = {prot_q} A > 0.91 * {iz_c} = {cond_sobrecarga:.2f} A)"
+            est_v = f"❌ No cumple la 2ª condición (In = {prot_q} A > 0.91 * {iz_c} = {cond_sobrecarga:.2f} A)"
         elif dv_c_pct > cdt_lim_q:
-            est_v = f"No cumple caída de tensión ({dv_c_pct:.3f}% > {cdt_lim_q}%)"
+            est_v = f"❌ No cumple caída de tensión ({dv_c_pct:.3f}% > {cdt_lim_q}%)"
         elif sec_com == s_opt_q:
-            est_v = f"CUMPLE PERFECTAMENTE (Iz = {iz_c} A -> In = {prot_q} A <= 0.91 * {iz_c} = {cond_sobrecarga:.2f} A)"
+            est_v = f"✅ **CUMPLE PERFECTAMENTE** (Iz = {iz_c} A -> In = {prot_q} A <= 0.91 * {iz_c} = {cond_sobrecarga:.2f} A)"
         else:
             est_v = "Válido pero superior"
 
@@ -712,11 +712,11 @@ with pestanas[2]:
         iz_val_t = tabla_iz.get(s_com, 0)
         cond_s_lga = 0.91 * iz_val_t
         if s_com < 95 and iz_val_t < ib_lga:
-            est = f"No cumple por calentamiento (Iz = {iz_val_t} A < Ib = {ib_lga:.2f} A)"
+            est = f"❌ No cumple por calentamiento (Iz = {iz_val_t} A < Ib = {ib_lga:.2f} A)"
         elif in_lga_auto > cond_s_lga:
-            est = f"No cumple la 2ª condición (In = {in_lga_auto} A > 0.91 * {iz_val_t} = {cond_s_lga:.2f} A)"
+            est = f"❌ No cumple la 2ª condición (In = {in_lga_auto} A > 0.91 * {iz_val_t} = {cond_s_lga:.2f} A)"
         elif s_com == 120:
-            est = f"CUMPLE PERFECTAMENTE (Iz = {iz_val_t} A -> In = {in_lga_auto} A <= 0.91 * {iz_val_t} = {cond_s_lga:.2f} A)"
+            est = f"✅ **CUMPLE PERFECTAMENTE** (Iz = {iz_val_t} A -> In = {in_lga_auto} A <= 0.91 * {iz_val_t} = {cond_s_lga:.2f} A)"
         else:
             est = "Válido pero superior"
         tabla_markdown += f"| {s_com} mm² | {iz_val_t} A | {est} |\n"
@@ -826,15 +826,15 @@ with pestanas[3]:
         cond_s_di = 0.91 * iz_c
         
         if sec_com < min_reg_di:
-            est_v = f"No cumple mínimo ITC-BT-15 (6 mm²)"
+            est_v = f"❌ No cumple mínimo ITC-BT-15 (6 mm²)"
         elif iz_c < ib_di:
-            est_v = f"No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_di:.2f} A)"
+            est_v = f"❌ No cumple por calentamiento (Iz = {iz_c} A < Ib = {ib_di:.2f} A)"
         elif prot_di > cond_s_di:
-            est_v = f"No cumple la 2ª condición (In = {prot_di} A > 0.91 * {iz_c} = {cond_s_di:.2f} A)"
+            est_v = f"❌ No cumple la 2ª condición (In = {prot_di} A > 0.91 * {iz_c} = {cond_s_di:.2f} A)"
         elif dv_c_pct > dv_pct_di:
-            est_v = f"No cumple caída de tensión ({dv_c_pct:.3f}% > {dv_pct_di}%)"
+            est_v = f"❌ No cumple caída de tensión ({dv_c_pct:.3f}% > {dv_pct_di}%)"
         elif sec_com == s_optima_di:
-            est_v = f"CUMPLE PERFECTAMENTE (Iz = {iz_c} A -> In = {prot_di} A <= 0.91 * {iz_c} = {cond_s_di:.2f} A)"
+            est_v = f"✅ **CUMPLE PERFECTAMENTE** (Iz = {iz_c} A -> In = {prot_di} A <= 0.91 * {iz_c} = {cond_s_di:.2f} A)"
         else:
             est_v = "Válido pero superior"
 
