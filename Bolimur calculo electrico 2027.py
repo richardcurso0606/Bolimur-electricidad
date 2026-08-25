@@ -188,8 +188,6 @@ st.markdown("""
         overflow-x: auto;
         box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
-    .mtd-oficial-box { background-color: #ffffff; border: 2px solid #111111; padding: 30px; border-radius: 8px; color: #000000; font-family: 'Times New Roman', Times, serif; }
-    .boletin-box { background-color: #ffffff; border: 2px solid #333333; padding: 25px; border-radius: 8px; color: #111111; font-family: Arial, sans-serif; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -433,11 +431,20 @@ with pestanas[1]:
                 s_cal_lga = sec
                 break
 
-        min_reg_lga = 10.0 if lga_mat == "cobre" else 16.0
-        s_bruta_lga = max(s_cdt_lga, s_cal_lga, min_reg_lga)
-        s_optima_lga = seleccionar_seccion_optima(s_bruta_lga)
+        # Bucle automático verificando condición de sobrecarga In <= 0.91 * Iz
+        in_lga_auto = seleccionar_proteccion(ib_lga)
+        s_final_lga = seleccionar_seccion_optima(max(s_cdt_lga, s_cal_lga, 10.0))
+        while True:
+            iz_a = tabla_iz.get(s_final_lga, 230.0)
+            if in_lga_auto <= 0.91 * iz_a and iz_a >= ib_lga:
+                break
+            idx_s = SECCIONES_COMERCIALES.index(s_final_lga) if s_final_lga in SECCIONES_COMERCIALES else 5
+            if idx_s < len(SECCIONES_COMERCIALES) - 1:
+                s_final_lga = SECCIONES_COMERCIALES[idx_s + 1]
+            else:
+                break
 
-        dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_optima_lga * 400)
+        dv_real_lga_v = (lga_pot * lga_long) / (gamma_lga * s_final_lga * 400)
         dv_real_lga_pct = (dv_real_lga_v / 400) * 100
 
         st.markdown("---")
@@ -447,18 +454,15 @@ with pestanas[1]:
         **1. Intensidad de Diseño (Ib):**  
         Ib = P / ( sqrt(3) * V * cos phi ) = {lga_pot:,.2f} / ( 1.732 * 400 * {lga_cos} ) = **{ib_lga:.2f} A**
 
-        **2. Criterio de Calentamiento (Iz >= Ib):**  
-        Con conductor de cobre {'enterrado' if 'D (' in metodo_lga_key else 'en tubo'} ({lga_aisl}), la sección térmica requerida es de **{s_cal_lga} mm²**.
-
-        **3. Criterio de Caída de Tensión (CDT <= {dv_pct_lga}%):**  
-        S = ( P * L ) / ( gamma * Delta V * V ) = ( {lga_pot:,.2f} * {lga_long} ) / ( {gamma_lga} * {dv_max_lga} * 400 ) = **{s_cdt_lga:.2f} mm²**
+        **2. Criterio de Calentamiento y Sobrecarga (Iz >= Ib y In <= 0.91*Iz):**  
+        Con conductor de cobre enterrado ({lga_aisl}), se selecciona una sección preliminar y se verifica frente a sobrecargas con fusible comercial de {in_lga_auto} A.
         """)
 
         st.markdown(f"""
             <div class="resultado-destacado">
-                ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_optima_lga} mm²</span> de Cobre ({lga_aisl})<br>
+                ⚡ SECCIÓN A ADOPTAR (LGA): <span style="color: #ff4b4b; font-size: 24px;">{s_final_lga} mm²</span> de Cobre ({lga_aisl})<br>
                 <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-                Justificación Analítica: S CDT = <b>{s_cdt_lga:.2f} mm²</b> | Calentamiento = <b>{s_cal_lga} mm²</b> | Mínimo REBT = <b>{min_reg_lga} mm²</b>. CDT Real: <b>{dv_real_lga_pct:.3f}%</b>.
+                Justificación Analítica: S CDT = <b>{s_cdt_lga:.2f} mm²</b> | Calentamiento = <b>{s_cal_lga} mm²</b> | Verificado por Sobrecarga (In <= 0.91*Iz). CDT Real: <b>{dv_real_lga_pct:.3f}%</b>.
                 </span>
             </div>
         """, unsafe_allow_html=True)
@@ -521,7 +525,19 @@ with pestanas[3]:
     dv_real_pct_univ = (dv_real_v_univ / 400) * 100
 
     st.markdown("---")
-    st.subheader("📋 Desarrollo Completo de la Memoria de Cálculo:")
+    st.subheader("📋 Desarrollo Completo de la Memoria de Cálculo y Tablas Comerciales:")
+
+    st.markdown(f"""
+    ### 📊 Tablas de Secciones Comerciales y Corrientes Admisibles (ITC-BT-19 - Cable Enterrado Tipo D)
+    """)
+    
+    # Tabla visual de secciones y corrientes admisibles en enterrado
+    tabla_markdown = "| Sección Comercial (mm²) | Corriente Admisible Iz (A) [Enterrado Cu 90ºC] |\n| :---: | :---: |\n"
+    for s_com in [70, 95, 120, 150, 185]:
+        iz_val_t = IZ_COBRE_ENTERRADO.get(s_com, 0)
+        destacar = " 👈 **(Elegida final)**" if s_com == s_final_ex else (" ❌ (Descartada por sobrecarga)" if s_com == 95 else "")
+        tabla_markdown += f"| {s_com} mm² | {iz_val_t} A{destacar} |\n"
+    st.markdown(tabla_markdown)
 
     st.markdown(f"""
     ### a) Sección de la LGA y Calibre de los Fusibles
@@ -531,28 +547,28 @@ with pestanas[3]:
     * Valor absoluto: Delta V = ({cdt_lim_ex} / 100) * 400 = {dv_max_univ:.2f} V
     * Sección teórica: S = ( L * P ) / ( gamma * Delta V * V ) = ( {l_ex} * {p_ex:,.2f} ) / ( {gamma_univ} * {dv_max_univ:.2f} * 400 ) = {s_cdt_univ:.2f} mm² --> **70 mm²**
 
-    **2. Cálculo por Calentamiento y Consulta de Tabla de Corrientes Admisibles (ITC-BT-19 - Cable Enterrado Tipo D):**
+    **2. Cálculo por Calentamiento y Consulta de Tabla de Corrientes Admisibles:**
     * Intensidad de diseño (Ib):
       Ib = P / ( sqrt(3) * V * cos phi ) = {p_ex:,.2f} / ( 1.732 * 400 * {cos_ex} ) = **{ib_univ:.2f} A**
     * **Consulta de tabla para verificar Iz >= Ib:**
       * Para S = 70 mm²: Iz = 170 A < 180.42 A --> **No cumple** (Aumentamos sección).
       * Para S = 95 mm²: Iz = 202 A > 180.42 A --> **Cumple térmicamente inicialmente**.
 
-    **3. Selección de Fusibles y Verificación por Sobrecarga:**
-      * Tomamos fusibles en la CGP con intensidad nominal In = {in_univ} A (superior a Ib = {ib_univ:.2f} A).
-      * Aplicamos las dos condiciones reglamentarias de protección a sobrecargas:
+    **3. Selección de Fusibles Comerciales y Verificación por Sobrecarga:**
+      * Calibre comercial de los fusibles en la CGP: **In = {in_univ} A** (normalizado comercialmente dentro de la serie gG).
+      * Aplicación estricta de las dos condiciones reglamentarias de protección a sobrecargas:
         1. Ib <= In <= Iz --> {ib_univ:.2f} <= {in_univ} <= 202 --> **Sí cumple**.
         2. In <= 0.91 * Iz:
-           * Con S = 95 mm² (Iz = 202 A): {in_univ} <= 0.91 * 202 = 183.82 A --> **No cumple** (200 no es <= 183.82).
-           * **Elevamos sección a S = 120 mm²** (Iz = 230 A): 
-             {in_univ} <= 0.91 * 230 = 209.3 A --> **Sí cumple**
-      * **Conclusión Sobrecarga:** La sección de fases queda fijada en **S = 120 mm²**.
+           * Con S = 95 mm² (Iz = 202 A): {in_univ} <= 0.91 * 202 = 183.82 A --> **No cumple** (200 A no es menor o igual a 183.82 A).
+           * **Justificación de por qué llega a 120 mm²:** Al no cumplir la segunda condición de sobrecarga con 95 mm², se incrementa reglamentariamente la sección a **S = 120 mm²** (Iz = 230 A).
+           * Comprobación con 120 mm²: {in_univ} <= 0.91 * 230 = 209.3 A --> **Sí cumple** (200 A es menor o igual a 209.3 A).
+      * **Conclusión Sobrecarga:** La sección de fases queda fijada definitivamente en **S = 120 mm²**.
 
     **4. Verificación de Cortocircuito (Procedimiento Manual MT 2.80.12 de Iberdrola):**
       * **1ª Condición (Poder de Corte):** PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**.
       * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) es superior a la intensidad de fusión del fusible en 5 segundos (If aprox. 1.250 A para 200 A):
         Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**
-      * Esto garantiza que el fusible fundirá en menos de 5 segundos protegiendo el aislamiento del cable. Por tanto, la sección definitiva adoptada para las fases de la LGA es **120 mm²**.
+      * Esto garantiza que el fusible fundirá en menos de 5 segundos protegiendo térmicamente el cable. Por tanto, la sección de las fases de la LGA es **120 mm²**.
     """)
 
     st.markdown(f"""
