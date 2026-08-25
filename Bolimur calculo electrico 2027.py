@@ -176,7 +176,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- TABLA OFICIAL Y FÓRMULA DE SIMULTANEIDAD VIVIENDAS (ITC-BT-10) ---
 COEF_SIMULTANEIDAD_VIVIENDAS = {
     1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8,
     10: 8.5, 11: 9.2, 12: 9.9, 13: 10.6, 14: 11.3, 15: 11.9, 
@@ -224,15 +223,17 @@ def seleccionar_proteccion(ib):
 if 'nombre_proyecto' not in st.session_state:
     st.session_state.nombre_proyecto = "Estudio Eléctrico Edificio Plurifamiliar"
 if 'grupos_viviendas' not in st.session_state:
-    st.session_state.grupos_viviendas = [{"nombre": "Viviendas Básicas", "qty": 10, "pot": 5750, "nocturna": False}]
+    st.session_state.grupos_viviendas = [{"nombre": "Viviendas Estándar", "qty": 10, "pot": 5750, "nocturna": False}]
 if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 3000, "factor": 1.30, "qty": 1}]
+    st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 3000.0, "factor": 1.30}]
 if 'locales' not in st.session_state:
-    st.session_state.locales = [{"nombre": "Local Comercial A", "superficie": 100, "qty": 1}]
+    st.session_state.locales = [{"nombre": "Local Comercial A", "qty": 1, "superficie": 100.0}]
 if 'irve_config' not in st.session_state:
-    st.session_state.irve_config = {"con_irve": True, "tipo_esquema": "Esquema 1.5", "num_plazas": 5, "pot_plaza": 3680.0}
+    st.session_state.irve_config = {"con_irve": True, "tipo_esquema": "Esquema 1.5 (Recarga vinculada)", "num_plazas": 5, "pot_plaza": 3680.0}
 if 'lga_long_val' not in st.session_state:
     st.session_state.lga_long_val = 20.0
+if 'carpeta_trabajo_val' not in st.session_state:
+    st.session_state.carpeta_trabajo_val = carpeta_trabajo_db
 
 # --- MENÚ LATERAL COMPLETO (SIDEBAR) ---
 with st.sidebar:
@@ -266,6 +267,7 @@ with st.sidebar:
     st.markdown("---")
     st.header("📂 Gestión de Proyectos (JSON)")
     st.session_state.nombre_proyecto = st.text_input("Nombre del Proyecto", st.session_state.nombre_proyecto)
+    st.session_state.carpeta_trabajo_val = st.text_input("Carpeta de Trabajo", st.session_state.carpeta_trabajo_val)
 
     col_p1, col_p2 = st.columns(2)
     with col_p1:
@@ -278,14 +280,18 @@ with st.sidebar:
                 "irve": st.session_state.irve_config,
                 "lga_long": st.session_state.lga_long_val
             }
-            json_str = json.dumps(datos_proyecto, indent=4, ensure_ascii=False)
-            with open("proyecto_bolimur_default.json", "w", encoding="utf-8") as f:
-                f.write(json_str)
-            st.success("✅ ¡Guardado en proyecto_bolimur_default.json!")
+            if not os.path.exists(st.session_state.carpeta_trabajo_val):
+                os.makedirs(st.session_state.carpeta_trabajo_val)
+            nombre_f = os.path.join(st.session_state.carpeta_trabajo_val, "proyecto_bolimur_default.json")
+            with open(nombre_f, "w", encoding="utf-8") as f:
+                json.dump(datos_proyecto, f, indent=4, ensure_ascii=False)
+            guardar_config_proyecto("proyecto_bolimur_default.json", st.session_state.carpeta_trabajo_val)
+            st.success("✅ ¡Guardado con éxito!")
     with col_p2:
         if st.button("📂 Cargar JSON"):
-            if os.path.exists("proyecto_bolimur_default.json"):
-                with open("proyecto_bolimur_default.json", "r", encoding="utf-8") as f:
+            nombre_f = os.path.join(st.session_state.carpeta_trabajo_val, "proyecto_bolimur_default.json")
+            if os.path.exists(nombre_f):
+                with open(nombre_f, "r", encoding="utf-8") as f:
                     proyecto_cargado = json.load(f)
                     st.session_state.nombre_proyecto = proyecto_cargado.get("nombre_proyecto", "Proyecto")
                     st.session_state.grupos_viviendas = proyecto_cargado.get("grupos_viviendas", [])
@@ -296,7 +302,7 @@ with st.sidebar:
                 st.success("✅ ¡Cargado!")
                 st.rerun()
             else:
-                st.warning("⚠️ No hay archivo guardado.")
+                st.warning("⚠️ Archivo no encontrado.")
 
     st.markdown("---")
     st.header("⚡ Carga Rápida de Enunciados Típicos")
@@ -313,7 +319,7 @@ with st.sidebar:
             elif "Caso Examen" in tipo_caso:
                 st.session_state.grupos_viviendas = []
                 st.session_state.lga_long_val = 20.0
-            st.success("✅ ¡Datos del caso cargados con éxito!")
+            st.success("✅ ¡Datos cargados con éxito!")
             st.rerun()
 
 # --- PESTAÑAS PRINCIPALES ---
@@ -330,7 +336,7 @@ pestanas = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: PREVISIÓN DE CARGAS
+# PESTAÑA 1: PREVISIÓN DE CARGAS (CON TABLA SERVICIOS Y JUSTIFICACIONES)
 # =========================================================================
 with pestanas[0]:
     st.title("Previsión de Cargas del Edificio (ITC-BT-10)")
@@ -341,8 +347,8 @@ with pestanas[0]:
     with col_b1:
         if st.button("🔄 Resetear Cargas"):
             st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 10, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Local 1", "superficie": 100, "qty": 1}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 3000, "factor": 1.30, "qty": 1}]
+            st.session_state.locales = [{"nombre": "Local 1", "superficie": 100.0, "qty": 1}]
+            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 3000.0, "factor": 1.30, "qty": 1}]
             st.rerun()
 
     # 1. VIVIENDAS
@@ -378,22 +384,24 @@ with pestanas[0]:
         qty_g = viv["qty"]
         pot_unit = viv["pot"]
         noct = viv["nocturna"]
-
-        if noct:
-            cs_grupo = float(qty_g)
-        else:
-            cs_grupo = get_coef_simultaneidad(qty_g)
-
+        cs_grupo = float(qty_g) if noct else get_coef_simultaneidad(qty_g)
         pot_parcial_g = int(round(qty_g * pot_unit * cs_grupo))
         pot_total_viviendas += pot_parcial_g
+
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #0066cc; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Justificación Grupo #{idx+1} ({viv['nombre']}):</b> Coeficiente K = {cs_grupo:.2f} ({'Tarifa nocturna' if noct else 'ITC-BT-10'}).<br>
+            Cálculo parcial: {qty_g} viviendas x {pot_unit} W x {cs_grupo} = <b>{pot_parcial_g:,} W</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.info(f"💡 Viviendas totales: **{total_viviendas_edificio}** | **Total Parcial P1 (Viviendas): {pot_total_viviendas:,} W**")
     st.markdown("---")
     
     # 2. LOCALES COMERCIALES
     st.subheader("2. Locales Comerciales y Oficinas (P2)")
-    if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 100, "qty": 1})
-    pot_total_locales = 0
+    if st.button("➕ Añadir local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 100.0, "qty": 1})
+    pot_total_locales = 0.0
 
     for idx, loc in enumerate(st.session_state.locales):
         c1, c2, c3, c4 = st.columns([3, 3, 2, 1])
@@ -405,18 +413,49 @@ with pestanas[0]:
 
         sup_val = loc["superficie"]
         cant_loc = loc["qty"]
-        pot_por_superficie = sup_val * 100.0
-        pot_unidad_local = max(pot_por_superficie, 3450.0 if sup_val > 0 else 0.0)
-        pot_parcial_local = pot_unidad_local * cant_loc
+        pot_por_sup = sup_val * 100.0
+        pot_unidad = max(pot_por_sup, 3450.0 if sup_val > 0 else 0.0)
+        pot_parcial_local = pot_unidad * cant_loc
         pot_total_locales += pot_parcial_local
+
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Análisis Local #{idx+1} ({loc['nombre']}):</b> {sup_val} m² x 100 W/m² = {pot_por_sup:,.0f} W (Suelo mínimo reglamentario: 3.450 W).<br>
+            Total Parcial Local: {cant_loc} x {pot_unidad:,.0f} W = <b>{pot_parcial_local:,.0f} W</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.info(f"💡 **Total Parcial P2 (Locales Comerciales): {int(pot_total_locales):,} W**")
     st.markdown("---")
 
-    # 3. SERVICIOS GENERALES
-    st.subheader("3. Servicios Generales (P3)")
-    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Ascensor principal", "potencia": 3000, "factor": 1.30, "qty": 1})
-    pot_total_servicios = 0
+    # 3. SERVICIOS GENERALES (CON TABLA NTE-ITA Y SELECTOR DE K)
+    col_h_serv, col_pop_serv = st.columns([4, 1])
+    with col_h_serv:
+        st.subheader("3. Servicios Generales (P3)")
+    with col_pop_serv:
+        with st.popover("📖 Clasificación NTE-ITA (Ascensores)"):
+            st.markdown("### Tabla Oficial NTE-ITA (Instalaciones de Transporte)")
+            st.markdown("""
+            | Código | Capacidad y Velocidad | Potencia Estimada Aprox. |
+            | :--- | :--- | :---: |
+            | **ITA-01** | Carga 5 personas / Vel. 0.63 m/s | ~ 2.2 kW |
+            | **ITA-02** | Carga 5 personas / Vel. 1.00 m/s | ~ 3.0 kW |
+            | **ITA-03** | Carga 8 personas / Vel. 1.00 m/s | ~ 4.0 kW |
+            | **ITA-04** | Carga 8 personas / Vel. 1.60 m/s | ~ 5.5 kW |
+            | **ITA-05** | Carga 13 personas / Vel. 1.60 m/s | ~ 7.5 kW |
+            """)
+
+    if st.button("➕ Añadir servicio"): st.session_state.servicios_generales.append({"nombre": "Ascensor principal", "potencia": 3000.0, "factor": 1.30, "qty": 1})
+    pot_total_servicios = 0.0
+
+    opciones_factores_k = {
+        "Ascensor Principal (K = 1.30)": 1.30,
+        "Motores / Bombas secundarias (K = 1.25)": 1.25,
+        "Ascensor Secundario (K = 1.15)": 1.15,
+        "Lámparas / Descarga (K = 1.80)": 1.80,
+        "Servicios directos / LED (K = 1.00)": 1.00,
+        "Personalizado (Valor libre)": -1.0
+    }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
@@ -426,22 +465,44 @@ with pestanas[0]:
                 "Alumbrado portal y escalera", "Grupo de presión / Bomba de agua", 
                 "Ventilación / Extracción de humos", "Puerta automática de garaje", "Otro servicio general"
             ], index=0, key=f"serv_nom_{idx}")
-        with c2: serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0, value=int(serv["potencia"]), key=f"serv_pot_{idx}")
+        with c2: serv["potencia"] = st.number_input(f"Potencia W #{idx+1}", min_value=0.0, value=float(serv["potencia"]), key=f"serv_pot_{idx}")
         with c3: serv["qty"] = st.number_input(f"Cant #{idx+1}", min_value=1, value=int(serv["qty"]), key=f"serv_qty_{idx}")
-        with c4: serv["factor"] = st.number_input(f"Coeficiente K #{idx+1}", min_value=0.1, value=float(serv.get("factor", 1.30)), key=f"serv_k_{idx}")
+        
+        factor_actual = serv.get("factor", 1.30)
+        def_opt_idx = 0
+        for i, (k_text, v_val) in enumerate(opciones_factores_k.items()):
+            if v_val == factor_actual:
+                def_opt_idx = i
+                break
+
+        with c4:
+            sel_opt = st.selectbox(f"Coeficiente K #{idx+1}", list(opciones_factores_k.keys()), index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
+            if sel_opt.startswith("Personalizado"):
+                factor = st.number_input(f"Valor K personalizado #{idx+1}", min_value=0.1, value=float(factor_actual if factor_actual > 0 else 1.25), key=f"serv_k_pers_{idx}")
+            else:
+                factor = opciones_factores_k[sel_opt]
+            serv["factor"] = factor
+
         with c5:
             if st.button("🗑️", key=f"del_serv_{idx}"): st.session_state.servicios_generales.pop(idx); st.rerun()
 
-        p_parcial_serv = int(serv["potencia"] * serv["qty"] * serv["factor"])
+        p_parcial_serv = serv["potencia"] * serv["qty"] * factor
         pot_total_servicios += p_parcial_serv
 
-    st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,} W**")
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; color: #333;">
+            <b>Justificación Técnica Servicio #{idx+1} ({serv['nombre']}):</b> Coeficiente <b>K = {factor:.2f}</b> (NTE-ITA / ITC-BT-10).<br>
+            Cálculo: {serv['potencia']} W x {serv['qty']} ud(s) x {factor:.2f} = <b>{p_parcial_serv:,.1f} W</b>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.info(f"💡 **Total Parcial P3 (Servicios Generales): {pot_total_servicios:,.1f} W**")
     st.markdown("---")
 
     # 4. GARAJES E IRVE
     st.subheader("4. Garajes e Infraestructura de Recarga de Vehículos Eléctricos - IRVE (ITC-BT-52)")
     gc1, gc2, gc3 = st.columns(3)
-    with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300)
+    with gc1: sup_garaje = st.number_input("Sup. Garaje m²", value=300.0)
     with gc2: plazas_garaje = st.number_input("Plazas Garaje", value=5)
     with gc3: opcion_irve = st.selectbox("Sistema de Recarga IRVE (ITC-BT-52)", ["Esquema 1.5 (Recarga vinculada en plazas de garaje)", "Esquema 1.4 (Línea troncal con derivaciones para plazas)"])
 
@@ -450,7 +511,7 @@ with pestanas[0]:
     pot_total_irve = int(round(plazas_garaje * 3680 * 0.3)) if "1.5" in opcion_irve else int(round(plazas_garaje * 3680 * 0.5))
     pot_total_garaje_irve = int(pot_garaje_adjudicada) + pot_total_irve
 
-    pt_total = pot_total_viviendas + int(pot_total_locales) + pot_total_servicios + pot_total_garaje_irve
+    pt_total = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios) + pot_total_garaje_irve
 
     st.markdown(f"""
         <div class="resumen-parciales-box">
@@ -458,7 +519,7 @@ with pestanas[0]:
             <ul>
                 <li><b>P1 (Viviendas - {total_viviendas_edificio} uds):</b> {pot_total_viviendas:,} W</li>
                 <li><b>P2 (Locales Comerciales):</b> {int(pot_total_locales):,} W</li>
-                <li><b>P3 (Servicios Generales):</b> {pot_total_servicios:,} W</li>
+                <li><b>P3 (Servicios Generales):</b> {int(pot_total_servicios):,} W</li>
                 <li><b>P4 (Garaje e IRVE - ITC-BT-52):</b> {pot_total_garaje_irve:,} W</li>
             </ul>
             <hr style="border: 1px solid #ced4da;">
@@ -571,7 +632,7 @@ with pestanas[1]:
     """, unsafe_allow_html=True)
 
 # =========================================================================
-# PESTAÑA 3: DERIVACIÓN INDIVIDUAL
+# PESTAÑA 3: DERIVACIÓN INDIVIDUAL (CON FÓRMULAS SEGURAS SIN ERROR)
 # =========================================================================
 with pestanas[2]:
     st.title("Derivación Individual - DI (ITC-BT-15)")
@@ -592,22 +653,26 @@ with pestanas[2]:
 
     st.markdown("---")
     st.subheader("📋 Memoria de Cálculo Justificada (Derivación Individual)")
-    st.markdown(f"""
+    
+    # Texto seguro sin llaves problemáticas en f-strings
+    st.markdown("""
     **1. Intensidad de cálculo ($I_b$):**  
-    * $I_b = P / (V \\cdot \\cos\\varphi) = {di_pot} / (230 \\cdot {di_cos}) = \\mathbf{{{ib_di:.2f}\\text{ A}}}$
+    * $I_b = P / (V \\cdot \\cos\\varphi)$
+    """)
+    st.info(f"Cálculo numérico: {di_pot} W / (230 V x {di_cos}) = **{ib_di:.2f} A**")
 
+    st.markdown("""
     **2. Caída de Tensión (ITC-BT-15):**  
     * Límite reglamentario para contadores concentrados: $\\Delta V\\% \\le 1\\%$.
-    * Sección teórica: $S = (L \\cdot P) / (\\gamma \\cdot \\Delta V \\cdot V) = ({di_long} \\cdot {di_pot}) / (56 \\cdot 2.3 \\cdot 230) = \\mathbf{{{s_cdt_di:.2f}\\text{ mm}^2}}$
-    * Aplicando el mínimo reglamentario para viviendas ($6\\text{ mm}^2$ de cobre) y sección comercial adoptada: **{s_di_opt} mm²**.
-    * Caída de tensión real: **{dv_real_di_pct:.3f}%** (Cumple el límite del 1%).
+    * Sección teórica: $S = (L \\cdot P) / (\\gamma \\cdot \\Delta V \\cdot V)$
     """)
+    st.info(f"Cálculo numérico: ({di_long} m x {di_pot} W) / (56 x 2.3 V x 230 V) = **{s_cdt_di:.2f} mm²**")
 
     st.markdown(f"""
         <div class="resultado-destacado">
             🔌 SECCIÓN ADOPTADA PARA LA DI: <span style="color: #ff4b4b; font-size: 24px;">{s_di_opt} mm²</span> de Cobre (Unipolares en tubo)<br>
             <span style="font-size: 14px; color: #b0b0b0; font-weight: normal;">
-            Intensidad de diseño: <b>{ib_di:.2f} A</b> | CDT Real: <b>{dv_real_di_pct:.3f}%</b>
+            Intensidad de diseño: <b>{ib_di:.2f} A</b> | CDT Real: <b>{dv_real_di_pct:.3f}%</b> (Cumple límite del 1%)
             </span>
         </div>
     """, unsafe_allow_html=True)
