@@ -174,7 +174,7 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON EXPORTACIÓN PDF BOLIMUR)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     st.title("🧮 Cálculo Rápido Avanzado")
@@ -293,9 +293,9 @@ elif seleccion_modulo.startswith("🧮"):
     
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
-    **Origen de los parámetros de impedancia y resistencia:**
-    * **Impedancia de red ($Z_{{origen}}$):** Se calcula como $Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$, resultando en **`{z_origen:.4f}` $\\Omega$**.
-    * **Resistencia del cable ($R_{{cable}}$):** Se calcula mediante la ley de ohm para conductores $R = \\frac{{\\rho \\cdot L}}{{S}}$ (multiplicado por 2 en monofásico por ida y vuelta), resultando en **`{r_cable_total:.4f}` $\\Omega$** con los {long_q} m y la sección de {s_opt_q} mm².
+    **Origen detallado de los parámetros de impedancia y resistencia:**
+    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en **`{z_origen:.4f}` $\\Omega$**.
+    * **Resistencia del cable ($R_{{cable}}$):** Se calcula mediante la ley de resistencia para conductores ($R = \\frac{{\\rho \\cdot L}}{{S}}$), multiplicada por 2 en sistemas monofásicos (ida y vuelta por el neutro). Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en **`{r_cable_total:.4f}` $\\Omega$**.
     
     $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
 
@@ -308,7 +308,7 @@ elif seleccion_modulo.startswith("🧮"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
         
         tabla_gamma_md = """
-| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\\gamma$) [$\\mathrm{m / (\\Omega \\cdot mm^2)}$] | RESISTIVIDAD APRISIMADA ($\\rho$) [$\\mathrm{\\Omega \\cdot mm^2 / m}$] |
+| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\\gamma$) [$\\mathrm{m / (\\Omega \\cdot mm^2)}$] | RESISTIVIDAD APROXIMADA ($\\rho$) [$\\mathrm{\\Omega \\cdot mm^2 / m}$] |
 | :--- | :--- | :--- | :--- | :--- |
 | **Cobre** | XLPE / EPR | 90 ºC | **44.0** | ~0.0227 |
 | **Cobre** | PVC | 70 ºC | **48.5** | ~0.0206 |
@@ -347,12 +347,88 @@ elif seleccion_modulo.startswith("🧮"):
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
+    # --- BOTÓN DE DESCARGA PDF CORPORATIVO BOLIMUR ---
+    st.markdown("---")
+    st.markdown("### 📄 Exportar Memoria Técnica")
+    
+    if st.button("📥 Generar y Descargar PDF (BOLIMUR INSTALACIONES INTEGRALES)"):
+        try:
+            from fpdf import FPDF
+            
+            class PDFBolimur(FPDF):
+                def header(self):
+                    # Cabecera corporativa
+                    self.set_fill_of_color = (15, 23, 42) if hasattr(self, 'set_fill_of_color') else None
+                    self.set_font('Arial', 'B', 12)
+                    self.set_text_color(15, 23, 42)
+                    self.cell(0, 8, "BOLIMUR INSTALACIONES INTEGRALES", 0, 1, "L")
+                    self.set_font('Arial', '', 9)
+                    self.set_text_color(100, 116, 139)
+                    self.cell(0, 5, "Memoria Técnica de Cálculo de Secciones - REBT", 0, 1, "L")
+                    self.set_draw_color(203, 213, 225)
+                    self.line(10, 22, 200, 22)
+                    self.ln(5)
+
+                def footer(self):
+                    self.set_y(-15)
+                    self.set_font('Arial', 'I', 8)
+                    self.set_text_color(148, 163, 184)
+                    self.cell(0, 10, f"Página {self.page_no()} | Generado por BOLIMUR App", 0, 0, "C")
+
+            pdf = PDFBolimur()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            
+            # Título del documento
+            pdf.set_font('Arial', 'B', 14)
+            pdf.set_text_color(30, 41, 59)
+            pdf.cell(0, 10, "RESULTADOS DE CÁLCULO ELÉCTRICO RÁPIDO", 0, 1, "L")
+            pdf.ln(3)
+
+            # Datos de entrada
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(0, 6, "1. Datos de Partida:", 0, 1, "L")
+            pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 6, f"- Sistema: {tipo_red_q}", 0, 1, "L")
+            pdf.cell(0, 6, f"- Potencia / Intensidad: {val_pot_q:,.1f} W (Ib: {ib_q:.2f} A) | cos phi: {cos_q}", 0, 1, "L")
+            pdf.cell(0, 6, f"- Longitud: {long_q} m | Método: {metodo_q_key}", 0, 1, "L")
+            pdf.cell(0, 6, f"- Conductor: {mat_q.upper()} | Aislamiento: {ais_q}", 0, 1, "L")
+            pdf.ln(4)
+
+            # Resultados y Sección Óptima
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(0, 6, "2. Resultados y Conclusiones:", 0, 1, "L")
+            pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 6, f"- Seccion Optima Adoptada: {s_opt_q} mm2", 0, 1, "L")
+            pdf.cell(0, 6, f"- Caida de Tension Real: {dv_real_pct_q:.3f}% (Permitida: {cdt_lim_q}%)", 0, 1, "L")
+            pdf.cell(0, 6, f"- Corriente Admisible (Iz): {iz_opt_val} A", 0, 1, "L")
+            pdf.cell(0, 6, f"- Proteccion Magnetotermica: PIA {prot_q} A (Curva C)", 0, 1, "L")
+            pdf.cell(0, 6, f"- Cortocircuito Final (Icc): {icc_fin_q * 1000:.1f} A (Disparo exigido: {corriente_disparo:.1f} A)", 0, 1, "L")
+            pdf.ln(6)
+
+            # Nota legal / pie de firma
+            pdf.set_font('Arial', 'I', 9)
+            pdf.set_text_color(100, 116, 139)
+            pdf.multi_cell(0, 5, "Nota: Calculo realizado conforme a las prescripciones del Reglamento Electrotecnico de Baja Tension (REBT) y la norma UNE-HD 60364-5-52.")
+
+            # Guardar en bytes para descarga
+            pdf_output = pdf.output(dest='S').encode('latin1')
+            
+            st.download_button(
+                label="📥 Descargar PDF Oficial",
+                data=pdf_output,
+                file_name=f"Memoria_Calculo_Bolimur_{s_opt_q}mm2.pdf",
+                mime="application/pdf"
+            )
+            st.success("¡PDF generado con éxito listo para descargar!")
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {e}")
+
 
 
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
-# =========================================================================
-# =========================================================================
+# =========================================================================# =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================# =========================================================================# =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
