@@ -224,7 +224,6 @@ IZ_COBRE_TUBO = {
     25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 
     120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0
 }
-# Intensidades admisibles aproximadas para cobre enterrado bajo tubo (Método D)
 IZ_COBRE_ENTERRADO = {
     1.5: 22.0, 2.5: 29.0, 4: 38.0, 6: 48.0, 10: 65.0, 16: 85.0, 
     25: 110.0, 35: 135.0, 50: 160.0, 70: 200.0, 95: 240.0, 
@@ -864,13 +863,11 @@ with pestanas[3]:
         ex_icc_min = st.number_input("Icc mín al final / CC (kA)", value=7.5)
         ex_cdt_lim = st.selectbox("Límite CDT admisible (%)", [0.5, 1.0], index=0)
 
-    # Cálculos analíticos
     gamma_ex = 44.0 if "XLPE" in ex_ais else 48.5
     ib_ex = ex_pot / (math.sqrt(3) * 400 * ex_cos)
     dv_max_ex = 400 * (ex_cdt_lim / 100.0)
     s_cdt_ex = (ex_pot * ex_long) / (gamma_ex * dv_max_ex * 400)
 
-    # Calentamiento método D (enterrado)
     s_cal_ex = 1.5
     for sec, iz_val in IZ_COBRE_ENTERRADO.items():
         if iz_val >= ib_ex:
@@ -881,12 +878,8 @@ with pestanas[3]:
     s_bruta_ex = max(s_cdt_ex, s_cal_ex, min_reg_ex)
     s_opt_ex = seleccionar_seccion_optima(s_bruta_ex)
 
-    # Caída de tensión real
     dv_real_v = (ex_pot * ex_long) / (gamma_ex * s_opt_ex * 400)
     dv_real_pct = (dv_real_v / 400) * 100
-
-    # Calibre del IGM (Interruptor General de Maniobra de Centralización)
-    # Se dimensiona con la corriente de diseño de la potencia prevista
     igm_calibre = seleccionar_proteccion(ib_ex)
 
     st.markdown("---")
@@ -894,35 +887,33 @@ with pestanas[3]:
 
     st.markdown(f"""
     ### a) Sección de la LGA y calibre de los fusibles (comprobando sobrecargas y c.c.)
-    1. **Intensidad de Diseño ($I_b$):**  
-       $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{ex_pot:,.2f}}}{{\\sqrt{{3}} \\cdot 400 \\cdot {ex_cos}}} = \\mathbf{{{ib_ex:.2f}\\text{{ A}}}$$
+    1. **Intensidad de Diseño (Ib):**  
+       Ib = P / ( sqrt(3) x V x cos phi ) = {ex_pot:,.2f} / ( 1.732 x 400 x {ex_cos} ) = **{ib_ex:.2f} A**
     
-    2. **Criterio de Calentamiento ($I_z \\ge I_b$):**  
+    2. **Criterio de Calentamiento (Iz >= Ib):**  
        Para conductor de cobre enterrado bajo tubo (RZ1-K 90ºC), se requiere una sección térmica mínima de **{s_cal_ex} mm²** (intensidad admisible superior a {ib_ex:.2f} A).
     
-    3. **Criterio de Caída de Tensión (CDT $\\le {ex_cdt_lim}\\%$):**  
-       $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}} = \\frac{{{ex_pot:,.2f} \\cdot {ex_long}}}{{{gamma_ex} \\cdot {dv_max_ex} \\cdot 400}} = \\mathbf{{{s_cdt_ex:.2f}\\text{{ mm²}}}$$
+    3. **Criterio de Caída de Tensión (CDT <= {ex_cdt_lim}%):**  
+       S = ( P x L ) / ( gamma x Delta V x V ) = ( {ex_pot:,.2f} x {ex_long} ) / ( {gamma_ex} x {dv_max_ex} x 400 ) = **{s_cdt_ex:.2f} mm²**
     
     4. **Sección Óptima Adoptada:**  
-       Teniendo en cuenta el mínimo reglamentario ITC-BT-14 ($10\\text{{ mm}}^2$ para cobre), la sección comercial adoptada es de **{s_opt_ex} mm² de Cobre (RZ1-K)**.
+       Teniendo en cuenta el mínimo reglamentario ITC-BT-14 (10 mm² para cobre), la sección comercial adoptada es de **{s_opt_ex} mm² de Cobre (RZ1-K)**.
     
-    5. **Protección y Cortocircuito ($I^2 t \\le K^2 S^2$):**  
+    5. **Protección y Cortocircuito:**  
        * **Fusibles en CGP:** Se seleccionan fusibles de tipo gG dimensionados para proteger la LGA frente a sobrecargas y cortocircuitos.  
-       * **Comprobación de Cortocircuito Mínimo ($I_{{cc\\_min}} = {ex_icc_min}\\text{{ kA}}$):** Se verifica que la corriente de cortocircuito al final de la línea despeja la protección en un tiempo inferior a $5\\text{{ s}}$ según ITC-BT-24, garantizando que el conductor no supere su temperatura límite de cortocircuito ($160^\circ\\text{{C}}$ para XLPE).
+       * **Comprobación de Cortocircuito Mínimo (Icc_min = {ex_icc_min} kA):** Se verifica que la corriente de cortocircuito al final de la línea despeja la protección en un tiempo inferior a 5 s según ITC-BT-24, garantizando que el conductor no supere su temperatura límite de cortocircuito (160 ºC para XLPE).
     """)
 
     st.markdown(f"""
     ### b) Sección del neutro de la LGA y diámetro del tubo
     1. **Sección del Neutro (ITC-BT-14):**  
-       Dado que la sección de las fases es de **{s_opt_ex} mm²** (que es superior a $25\\text{{ mm}}^2$), la sección del conductor neutro reglamentaria se reduce según la norma:  
-       * Para fases $> 25\\text{{ mm}}^2$ y $\\le 50\\text{{ mm}}^2$, el neutro será de $25\\text{{ mm}}^2$.  
-       * (Nota: Si adoptamos {s_opt_ex} mm², aplicamos la tabla oficial de reducción de neutro de la ITC-BT-14).
+       Dado que la sección de las fases es de **{s_opt_ex} mm²** (que es superior a 25 mm²), la sección del conductor neutro reglamentaria se reduce según la norma:  
+       * Para fases > 25 mm² y <= 50 mm², el neutro será de 25 mm².
     
     2. **Diámetro del Tubo Protector (Tabla Oficial ITC-BT-14):**  
        Para alojar los 4 conductores unipolares (3 fases + Neutro) de {s_opt_ex} mm², acudimos a la tabla reglamentaria de ocupación de tubos enterrados.
     """)
 
-    # Tabla reglamentaria ITC-BT-14 de tubos
     tabla_tubos_itc14 = [
         {"Sección Conductores (mm²)": "Hasta 10 mm²", "Diámetro Interior Mínimo (mm)": "50 mm", "Diámetro Nominal Tubo (mm)": "60 mm"},
         {"Sección Conductores (mm²)": "16 a 35 mm²", "Diámetro Interior Mínimo (mm)": "90 mm", "Diámetro Nominal Tubo (mm)": "110 mm"},
@@ -934,7 +925,7 @@ with pestanas[3]:
     st.markdown(f"""
     ### c) Intensidad nominal del interruptor de la centralización de contadores
     * El Interruptor General de Maniobra (I.G.M.) situado en cabecera de la centralización de contadores debe soportar la corriente total prevista del edificio.  
-    * Con una intensidad de diseño $I_b = {ib_ex:.2f}\\text{{ A}}$, el calibre comercial normalizado inmediatamente superior adoptado es de **{igm_calibre} A**.
+    * Con una intensidad de diseño Ib = {ib_ex:.2f} A, el calibre comercial normalizado inmediatamente superior adoptado es de **{igm_calibre} A**.
 
     ### d) Caída de Tensión Real
     * CDT Real (%) = **{dv_real_pct:.3f}%** (Cumple estrictamente el límite reglamentario inferior al {ex_cdt_lim}%).
