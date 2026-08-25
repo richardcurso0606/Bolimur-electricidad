@@ -1,0 +1,13 @@
+
+ Elécxel-BTE demo funciona en PCs que tengan instalado el Excel en versión para Windows, ambos de MIcrosoft.
+
+ La versión demo tiene completas varias de las prestaciones: cálculo de Lineas Generales de Alimentación y de factor de potencia; otras reducidas: previsión de cargas (no se pueden introducir listas) y en conductos, sólo tubos; y algunas anuladas: No se calculan derivaciones individuales, circuitos receptores ni puesta a tierra, aunque si están disponibles sus formularios de ayuda.
+
+ El fichero caduca al año de su primera ejecución, si lo desea puede Vd. descargárselo de nuevo, actualizado, de http://elecxel.com .
+
+ No duden en escribir a info@elecxel.com para consultar dudas, hacer sugerencias o cualquier otra cuestión, serán rápidamente atendidos. 
+
+
+ Muchas gracias por probar la versión demo de Elécxel-BTE.
+
+   Elécxel 
