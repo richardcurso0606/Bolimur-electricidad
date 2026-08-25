@@ -449,12 +449,9 @@ with pestanas[1]:
         st.markdown("---")
         st.subheader("📋 Memoria de Justificación Técnica (LGA)")
         
-        st.markdown(f"""
+        st.markdown("""
         **1. Intensidad de Diseño (Ib):**  
-        Ib = P / ( sqrt(3) * V * cos phi ) = {lga_pot:,.2f} / ( 1.732 * 400 * {lga_cos} ) = **{ib_lga:.2f} A**
-
-        **2. Criterio de Calentamiento y Sobrecarga (Iz >= Ib y In <= 0.91*Iz):**  
-        Con conductor de cobre enterrado ({lga_aisl}), se selecciona una sección preliminar y se verifica frente a sobrecargas con fusible comercial de {in_lga_auto} A.
+        Ib = P / ( 1.732 * V * cos phi )
         """)
 
         st.markdown(f"""
@@ -508,7 +505,7 @@ with pestanas[3]:
     st.markdown("---")
     st.subheader("📋 Memoria de Cálculo Justificada Paso a Paso:")
 
-    st.markdown(f"""
+    st.markdown("""
     ### 📊 Tabla de Corrientes Admisibles (ITC-BT-19 - Cable Enterrado Tipo D)
     """)
     
@@ -529,53 +526,52 @@ with pestanas[3]:
     st.markdown(f"""
     ### a) Sección de la LGA y Calibre de los Fusibles
     
-    **1. Cálculo por Caída de Tensión ($\\Delta V$):**
-    * Límite reglamentario para contadores concentrados: $\\Delta V\\% \\le {cdt_lim_ex}\\%$[cite: 1]
-    * Valor en voltios: $\\Delta V = \\frac{{{cdt_lim_ex}}}{{100}} \\cdot 400 = {dv_max_univ:.2f}\\text{{ V}}$[cite: 1]
-    * Sección teórica: 
-      $$S = \\frac{{L \\cdot P}}{{\\gamma \\cdot \\Delta V \\cdot V}} = \\frac{{{l_ex} \\cdot {p_ex:,.2f}}}{{{gamma_univ} \\cdot {dv_max_univ:.2f} \\cdot 400}} = {s_cdt_univ:.2f}\\text{{ mm}}^2 \\implies \\mathbf{{70\\text{{ mm}}^2}}$$[cite: 1]
+    **1. Cálculo por Caída de Tensión (Delta V):**
+    * Límite reglamentario para contadores concentrados: Delta V% <= {cdt_lim_ex}%[cite: 1]
+    * Valor en voltios: Delta V = ({cdt_lim_ex} / 100) * 400 = {dv_max_univ:.2f} V[cite: 1]
+    * Sección teórica: S = ( L * P ) / ( gamma * Delta V * V ) = ( {l_ex} * {p_ex:,.2f} ) / ( {gamma_univ} * {dv_max_univ:.2f} * 400 ) = {s_cdt_univ:.2f} mm² --> **70 mm²**[cite: 1]
 
-    **2. Cálculo por Calentamiento ($I_z \\ge I_b$):**
-    * Intensidad de diseño ($I_b$):
-      $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}} = \\frac{{{p_ex:,.2f}}}{{\\sqrt{{3}} \\cdot 400 \\cdot {cos_ex}}} = \\mathbf{{{ib_univ:.2f}\\text{{ A}}}$$[cite: 1]
+    **2. Cálculo por Calentamiento (Iz >= Ib):**
+    * Intensidad de diseño (Ib):
+      Ib = P / ( 1.732 * V * cos phi ) = {p_ex:,.2f} / ( 1.732 * 400 * {cos_ex} ) = **{ib_univ:.2f} A**[cite: 1]
     * **Consulta de tablas (ITC-BT-19):**
-      * Para $S = 70\\text{{ mm}}^2$: $I_z = 170\\text{{ A}} < 180,42\\text{{ A}} \\implies$ **No cumple** por calentamiento, se incrementa la sección[cite: 1].
-      * Para $S = 95\\text{{ mm}}^2$: $I_z = 202\\text{{ A}} > 180,42\\text{{ A}}$[cite: 1].
+      * Para S = 70 mm²: Iz = 170 A < 180.42 A --> **No cumple** por calentamiento, se incrementa la sección[cite: 1].
+      * Para S = 95 mm²: Iz = 202 A > 180.42 A[cite: 1].
 
     **3. Selección de Fusibles y Verificación por Sobrecarga:**
-      * Calibre comercial de los fusibles en la CGP: **$I_n = {in_univ}\\text{{ A}}$** (superior a $180,42\\text{{ A}}$)[cite: 1].
+      * Calibre comercial de los fusibles en la CGP: **In = {in_univ} A** (superior a 180.42 A)[cite: 1].
       * Comprobación de las dos condiciones reglamentarias de sobrecarga:
-        1. $I_b \\le I_n \\le I_z \\implies {ib_univ:.2f} \\le {in_univ} \\le 202 \\implies$ **Sí cumple**[cite: 1].
-        2. $I_n \\le 0,91 \\cdot I_z$:
-           * Con $S = 95\\text{{ mm}}^2$ ($I_z = 202\\text{{ A}}$): ${in_univ} \\le 0,91 \\cdot 202 = 183,82\\text{{ A}} \\implies$ **No cumple** ($200$ no es $\\le 183,82$)[cite: 1].
-           * **Justificación de por qué llega a $120\\text{{ mm}}^2$:** Al no cumplir la segunda condición de sobrecarga, aumentamos la sección a $S = 120\\text{{ mm}}^2$ ($I_z = 230\\text{{ A}}$).
-           * Reevaluando con $S = 120\\text{{ mm}}^2$: ${in_univ} \\le 0,91 \\cdot 230 = 209,3\\text{{ A}} \\implies$ **Sí cumple**[cite: 1].
-      * **Conclusión Sobrecarga:** La sección definitiva adoptada para las fases de la LGA es de **$S = 120\\text{{ mm}}^2$**[cite: 1].
+        1. Ib <= In <= Iz --> {ib_univ:.2f} <= {in_univ} <= 202 --> **Sí cumple**[cite: 1].
+        2. In <= 0.91 * Iz:
+           * Con S = 95 mm² (Iz = 202 A): {in_univ} <= 0.91 * 202 = 183.82 A --> **No cumple** (200 no es <= 183.82)[cite: 1].
+           * **Justificación de por qué llega a 120 mm²:** Al no cumplir la segunda condición de sobrecarga, aumentamos la sección a S = 120 mm² (Iz = 230 A).
+           * Reevaluando con S = 120 mm²: {in_univ} <= 0.91 * 230 = 209.3 A --> **Sí cumple**[cite: 1].
+      * **Conclusión Sobrecarga:** La sección definitiva adoptada para las fases de la LGA es de **S = 120 mm²**[cite: 1].
 
     **4. Verificación de Cortocircuito (Procedimiento Manual MT 2.80.12 de Iberdrola):**
-      * **1ª Condición (Poder de Corte):** $PdC = 50\\text{{ kA}} > {icc_max_ex}\\text{{ kA}}$ ($I_{cc\\_max}$) $\\implies$ **Cumple**[cite: 1].
-      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea ($I_{cc\\_min} = {icc_min_ex * 1000:,.0f}\\text{{ A}}$) es superior a la intensidad de fusión del fusible en 5 segundos ($I_f \\approx 1.250\\text{{ A}}$ para $200\\text{{ A}}$)[cite: 1]:
-        $$I_{cc\\_min} > I_f \\implies {icc_min_ex * 1000:,.0f} > 1.250\\text{{ A}} \\implies \\textbf{{Sí cumple}}$$[cite: 1]
+      * **1ª Condición (Poder de Corte):** PdC = 50 kA > {icc_max_ex} kA (Icc_max) --> **Cumple**[cite: 1].
+      * **2ª Condición (Protección Térmica frente a C.C. mínimas):** Se comprueba que la corriente de cortocircuito mínima al final de la línea (Icc_min = {icc_min_ex * 1000:,.0f} A) es superior a la intensidad de fusión del fusible en 5 segundos (If aprox. 1.250 A para 200 A)[cite: 1]:
+        Icc_min > If --> {icc_min_ex * 1000:,.0f} > 1.250 A --> **Sí cumple**[cite: 1]
       * Esto garantiza que el fusible fundirá en menos de 5 segundos protegiendo térmicamente el aislamiento del cable.
     """)
 
     st.markdown(f"""
     ### b) Sección del Neutro y Diámetro del Tubo
-    * **Sección del Neutro ($S_N$):** Según la tabla de la ITC-BT-14 para fases de $120\\text{{ mm}}^2$ de cobre, se reduce reglamentariamente a **$70\\text{{ mm}}^2$**[cite: 1].
-    * **Diámetro del Tubo:** Acudiendo a la tabla de ocupación de tubos enterrados de la ITC-BT-14, se selecciona un **tubo de diámetro nominal de $160\\text{{ mm}}$**[cite: 1].
+    * **Sección del Neutro (SN):** Según la tabla de la ITC-BT-14 para fases de 120 mm² de cobre, se reduce reglamentariamente a **70 mm²**[cite: 1].
+    * **Diámetro del Tubo:** Acudiendo a la tabla de ocupación de tubos enterrados de la ITC-BT-14, se selecciona un **tubo de diámetro nominal de 160 mm**[cite: 1].
     """)
 
     st.markdown(f"""
     ### c) Intensidad Nominal del Interruptor General de Maniobra (IGM)
-    * El IGM situado en la centralización de contadores se dimensiona para cortar la corriente total prevista del edificio ($I_b = {ib_univ:.2f}\\text{{ A}}$), adoptando un calibre comercial normalizado de **$250\\text{{ A}}$**[cite: 1].
+    * El IGM situado en la centralización de contadores se dimensiona para cortar la corriente total prevista del edificio (Ib = {ib_univ:.2f} A), adoptando un calibre comercial normalizado de **250 A**[cite: 1].
     """)
 
     st.markdown(f"""
     ### d) Caída de Tensión Real
-    * Con la sección definitiva adoptada de $120\\text{{ mm}}^2$, la caída de tensión absoluta es de $\\Delta V = 1,065\\text{{ V}}$[cite: 1].
+    * Con la sección definitiva adoptada de 120 mm², la caída de tensión absoluta es de Delta V = 1.065 V[cite: 1].
     * Porcentaje real:
-      $$\\Delta V\\% = \\frac{{1,065}}{{400}} \\cdot 100 = \\mathbf{{0,266\\%}}$$[cite: 1]
-      *(Este valor cumple holguramente el límite reglamentario del $0,5\\%$)*[cite: 1].
+      Delta V% = ( 1.065 / 400 ) * 100 = **0.266%**[cite: 1]
+      *(Este valor cumple holguramente el límite reglamentario del 0.5%)*[cite: 1].
     """)
 
 # =========================================================================
