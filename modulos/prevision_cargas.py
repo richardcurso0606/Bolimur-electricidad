@@ -132,7 +132,7 @@ def renderizar():
                         f"${viv['qty']} \\times {viv['pot']:,} \\times \\left( \\frac{{{k_diurno}}}{{ {viviendas_diurnas_qty} }} \\right) = \\mathbf{{{pot_parcial:,}\\text{{ W}}}}$"
                     )
 
-    # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
+# --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
     st.markdown("---")
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
     
@@ -141,7 +141,7 @@ def renderizar():
             f"**Criterio normativo (ITC-BT-10):**\n"
             f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad $K$ correspondiente al número total de viviendas diurnas del edificio ($n = {viviendas_diurnas_qty}$), obteniendo un coeficiente $K = {k_diurno}$.\n\n"
             f"**Fórmula General:**\n"
-            f"$$P_1 = \\sum \\left( n_i \\times P_{{u,i}} \\right) \\times \\frac{K}{n_{text{{diurnas}}}} + \\sum P_{{\\text{{nocturnas}}}}\n$$\n\n"
+            f"$$P_1 = \\sum \\left( n_i \\times P_{{u,i}} \\right) \\times \\frac{K}{n_{{diurnas}}} + \\sum P_{{nocturnas}}$$\n\n"
             f"**Resumen de Parámetros Aplicados:**\n"
             f"- Total viviendas diurnas de cálculo ($n$): **{viviendas_diurnas_qty}**\n"
             f"- Coeficiente $K$ obtenido de la tabla ITC-BT-10: **{k_diurno}**\n"
