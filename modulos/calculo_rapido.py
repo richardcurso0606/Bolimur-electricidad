@@ -230,7 +230,7 @@ def renderizar():
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</div>""", unsafe_allow_html=True)
 
-    # --- AYUDA TÉCNICA DESPLEGABLE CON HTML PURO (CORREGIDO) ---
+    # --- AYUDA TÉCNICA DESPLEGABLE CON HTML PURO ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-52:")
         
@@ -318,11 +318,34 @@ def renderizar():
     """
     st.markdown(html_tabla_secciones, unsafe_allow_html=True)
 
+    # --- LÓGICA DE TUBOS PARA EL CÁLCULO RÁPIDO ---
+    if s_opt_q <= 2.5:
+        tubo_diam_q = "Ø 20 mm o Ø 25 mm"
+        razon_tubo_q = "Suficiente para albergar los conductores de alumbrado o tomas de corriente habituales."
+    elif s_opt_q <= 6:
+        tubo_diam_q = "Ø 25 mm o Ø 32 mm"
+        razon_tubo_q = "Requerido para facilitar el cableado y curvado de circuitos de fuerza o potencia media."
+    elif s_opt_q <= 16:
+        tubo_diam_q = "Ø 32 mm o Ø 40 mm"
+        razon_tubo_q = "Adecuado para secciones principales respetando los factores de llenaje del REBT."
+    elif s_opt_q <= 35:
+        tubo_diam_q = "Ø 50 mm o Ø 63 mm"
+        razon_tubo_q = "Requerido para alojar conductores de gran sección sin sobrepresión en la canalización."
+    else:
+        tubo_diam_q = "Ø 90 mm, Ø 110 mm o Bandeja técnica"
+        razon_tubo_q = "Secciones muy pesadas que requieren tubos de gran calibre o bandejas registrables."
+
     st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
+    
     La sección de **{s_opt_q} mm²** garantiza el cumplimiento térmico 
-    (**<i>I<sub>z</sub></i> = {iz_opt_val} A &ge; <i>I<sub>b</sub></i> = {ib_q:.2f} A**) 
+    (**I<sub>z</sub> = {iz_opt_val} A &ge; I<sub>b</sub> = {ib_q:.2f} A**) 
     y una caída de tensión real del **{dv_real_pct_q:.3f}%**.
     
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
+    
+    ---
+    🛠️ **Dimensionamiento del Tubo Protector Recomendado:**
+    * **Diámetro exterior del tubo:** **{tubo_diam_q}**
+    * **Criterio técnico:** {razon_tubo_q}
     """)
