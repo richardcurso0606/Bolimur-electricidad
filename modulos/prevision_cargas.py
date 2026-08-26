@@ -132,7 +132,7 @@ def renderizar():
                         f"${viv['qty']} \\times {viv['pot']:,} \\times \\left( \\frac{{{k_diurno}}}{{ {viviendas_diurnas_qty} }} \\right) = \\mathbf{{{pot_parcial:,}\\text{{ W}}}}$"
                     )
 
-# --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
+    # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
     st.markdown("---")
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
     
