@@ -318,34 +318,95 @@ def renderizar():
     """
     st.markdown(html_tabla_secciones, unsafe_allow_html=True)
 
-    # --- LÓGICA DE TUBOS PARA EL CÁLCULO RÁPIDO ---
-    if s_opt_q <= 2.5:
+    # --- LÓGICA DINÁMICA DE TUBOS PARA EL CÁLCULO RÁPIDO ---
+    if s_opt_q <= 4:
         tubo_diam_q = "Ø 20 mm o Ø 25 mm"
-        razon_tubo_q = "Suficiente para albergar los conductores de alumbrado o tomas de corriente habituales."
-    elif s_opt_q <= 6:
-        tubo_diam_q = "Ø 25 mm o Ø 32 mm"
-        razon_tubo_q = "Requerido para facilitar el cableado y curvado de circuitos de fuerza o potencia media."
+        razon_tubo_q = "Suficiente para albergar hilos de menor calibre respetando el espacio de llenaje permitido."
     elif s_opt_q <= 16:
         tubo_diam_q = "Ø 32 mm o Ø 40 mm"
-        razon_tubo_q = "Adecuado para secciones principales respetando los factores de llenaje del REBT."
+        razon_tubo_q = "Requerido para alojar sin apretar los conductores de sección media en circuitos de fuerza."
     elif s_opt_q <= 35:
         tubo_diam_q = "Ø 50 mm o Ø 63 mm"
-        razon_tubo_q = "Requerido para alojar conductores de gran sección sin sobrepresión en la canalización."
+        razon_tubo_q = "Ideal para cumplir el factor de llenaje del 30-40% en secciones principales."
+    elif s_opt_q <= 95:
+        tubo_diam_q = "Ø 90 mm"
+        razon_tubo_q = "Tubo corrugado de gran calibre para hilos pesados, rígidos y acometidas de gran potencia."
     else:
-        tubo_diam_q = "Ø 90 mm, Ø 110 mm o Bandeja técnica"
-        razon_tubo_q = "Secciones muy pesadas que requieren tubos de gran calibre o bandejas registrables."
+        tubo_diam_q = "Ø 110 mm o Bandeja técnica"
+        razon_tubo_q = "Canales de obra o bandejas registrables por imposibilidad de curvado en tubo convencional."
+
+    # --- BLOQUE ANALÍTICO DETALLADO DEL TUBO ---
+    st.markdown("---")
+    st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-21)")
+    st.info(
+        f"**Análisis del Tubo para tu sección óptima de cable de {s_opt_q} mm²:**\n\n"
+        f"* **Diámetro exterior del tubo recomendado:** **{tubo_diam_q}**\n"
+        f"* **¿Por qué se elige este tamaño? (Explicación técnica):** {razon_tubo_q}\n"
+        f"* **Normativa aplicable:** ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
+    )
+
+    # --- TABLA HTML ESTILADA DE REFERENCIA RÁPIDA DE TUBOS DINÁMICA ---
+    st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo")
+    
+    tag_4 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (s_opt_q <= 4) else ""
+    tag_16 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (6 <= s_opt_q <= 16) else ""
+    tag_35 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (25 <= s_opt_q <= 35) else ""
+    tag_95 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (50 <= s_opt_q <= 95) else ""
+    tag_120 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (s_opt_q >= 120) else ""
+
+    bg_4 = "background-color: #f0fdf4; font-weight: bold;" if s_opt_q <= 4 else ""
+    bg_16 = "background-color: #f0fdf4; font-weight: bold;" if (6 <= s_opt_q <= 16) else ""
+    bg_35 = "background-color: #f0fdf4; font-weight: bold;" if (25 <= s_opt_q <= 35) else ""
+    bg_95 = "background-color: #f0fdf4; font-weight: bold;" if (50 <= s_opt_q <= 95) else ""
+    bg_120 = "background-color: #f0fdf4; font-weight: bold;" if s_opt_q >= 120 else ""
+
+    html_tabla_tubos_q = f"""
+    <div style="overflow-x: auto; margin-bottom: 20px;">
+    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <thead>
+            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
+                <th style="padding: 12px 16px;">SECCIÓN DEL CABLE</th>
+                <th style="padding: 12px 16px;">DIÁMETRO EXTERIOR DEL TUBO</th>
+                <th style="padding: 12px 16px;">MOTIVO TÉCNICO / REGLAMENTARIO</th>
+            </tr>
+        </thead>
+        <tbody style="font-size: 14px; color: #334155;">
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg_4}">
+                <td style="padding: 12px 16px;">1.5 mm² a 4 mm² {tag_4}</td>
+                <td style="padding: 12px 16px;">Ø 20 mm o Ø 25 mm</td>
+                <td style="padding: 12px 16px;">Espacio adecuado para hilos finos en circuitos interiores.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; {bg_16}">
+                <td style="padding: 12px 16px;">6 mm² a 16 mm² {tag_16}</td>
+                <td style="padding: 12px 16px;">Ø 32 mm o Ø 40 mm</td>
+                <td style="padding: 12px 16px;">Capacidad para conductores de sección media en derivaciones.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg_35}">
+                <td style="padding: 12px 16px;">25 mm² a 35 mm² {tag_35}</td>
+                <td style="padding: 12px 16px;">Ø 50 mm o Ø 63 mm</td>
+                <td style="padding: 12px 16px;">El tamaño ideal para cumplir el factor de llenaje del 30-40%.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; {bg_95}">
+                <td style="padding: 12px 16px;">50 mm² a 95 mm² {tag_95}</td>
+                <td style="padding: 12px 16px;">Ø 90 mm</td>
+                <td style="padding: 12px 16px;">Tubo corrugado de gran calibre para hilos pesados y rígidos.</td>
+            </tr>
+            <tr style="{bg_120}">
+                <td style="padding: 12px 16px;">≥ 120 mm² {tag_120}</td>
+                <td style="padding: 12px 16px;">Ø 110 mm o Bandeja / Canaladura</td>
+                <td style="padding: 12px 16px;">Canales de obra o bandejas registrables por imposibilidad de curvado.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    """
+    st.markdown(html_tabla_tubos_q, unsafe_allow_html=True)
 
     st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
-    
     La sección de **{s_opt_q} mm²** garantiza el cumplimiento térmico 
     (**I<sub>z</sub> = {iz_opt_val} A &ge; I<sub>b</sub> = {ib_q:.2f} A**) 
     y una caída de tensión real del **{dv_real_pct_q:.3f}%**.
     
-    Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
-    
-    ---
-    🛠️ **Dimensionamiento del Tubo Protector Recomendado:**
-    * **Diámetro exterior del tubo:** **{tubo_diam_q}**
-    * **Criterio técnico:** {razon_tubo_q}
+    Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)** y canalización bajo **tubo de {tubo_diam_q}**.
     """)
