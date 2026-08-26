@@ -174,9 +174,33 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON BOTÓN DE IMPRESIÓN NATIVO JS)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON ESTILO DE IMPRESIÓN PROFESIONAL)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
+    # --- ESTILO CSS PARA OCULTAR MENÚS Y DEJAR SOLO LA MEMORIA AL IMPRIMIR ---
+    st.markdown("""
+    <style>
+    @media print {
+        /* Ocultar elementos de la interfaz de Streamlit al imprimir */
+        [data-testid="stSidebar"], header, footer, .stButton, .stRadio, .stSelectbox, .stNumberInput, div[data-testid="stHorizontalBlock"] {
+            display: none !important;
+        }
+        /* Mostrar y estructurar de forma limpia la memoria para PDF/Impresión */
+        body, html {
+            background-color: white !important;
+            color: black !important;
+            font-size: 12pt !important;
+        }
+        .memoria-impresion {
+            display: block !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
@@ -257,6 +281,18 @@ elif seleccion_modulo.startswith("🧮"):
     txt_sust_cdt = f"(2 · {val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})" if "Monofásico" in tipo_red_q else f"({val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})"
 
     st.markdown("---")
+    
+    # --- CONTENEDOR PRINCIPAL DE LA MEMORIA TÉCNICA ---
+    st.markdown('<div class="memoria-impresion">', unsafe_allow_html=True)
+    
+    # Cabecera formal corporativa exclusiva para impresión/PDF
+    st.markdown("""
+    <div style="border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 style="color: #0369a1; margin: 0;">BOLIMUR INSTALACIONES INTEGRALES</h2>
+        <p style="color: #64748b; font-size: 13px; margin: 2px 0 0 0;">Memoria Técnica de Justificación de Secciones - REBT</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
 
     st.info(f"""
@@ -294,7 +330,7 @@ elif seleccion_modulo.startswith("🧮"):
     $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
     
     **Origen detallado de los parámetros de impedancia y resistencia:**
-    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origin}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en **`{z_origen:.4f}` $\\Omega$**.
+    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en **`{z_origen:.4f}` $\\Omega$**.
     * **Resistencia del cable ($R_{{cable}}$):** Se calcula mediante la ley de resistencia para conductores ($R = \\frac{{\\rho \\cdot L}}{{S}}$), multiplicada por 2 en sistemas monofásicos (ida y vuelta por el neutro). Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en **`{r_cable_total:.4f}` $\\Omega$**.
     
     $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
@@ -346,16 +382,18 @@ elif seleccion_modulo.startswith("🧮"):
     La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
+    
+    st.markdown('</div>', unsafe_allow_html=True) # Fin del contenedor de impresión
 
-    # --- COMPONENTE HTML/JS SEGURO PARA IMPRESIÓN NATIVA ---
+    # --- COMPONENTE HTML/JS PARA IMPRESIÓN COMPATIBLE CON TABLET Y PC ---
     st.markdown("---")
     import streamlit.components.v1 as components
     
     html_print_code = """
     <div style="background-color: #f0f9ff; padding: 20px; border-radius: 10px; border: 1px solid #bae6fd; text-align: center; font-family: sans-serif;">
         <h3 style="color: #0369a1; margin-bottom: 5px;">📄 BOLIMUR INSTALACIONES INTEGRALES</h3>
-        <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">Memoria Técnica de Cálculo de Secciones lista para archivar o entregar.</p>
-        <button onclick="parent.window.print()" style="background-color: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">Memoria Técnica lista para imprimir de forma ordenada y estructurada.</p>
+        <button onclick="window.print()" style="background-color: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
             🖨️ Imprimir / Guardar Memoria en PDF
         </button>
     </div>
@@ -367,9 +405,11 @@ elif seleccion_modulo.startswith("🧮"):
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
+
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
-# =========================================================================# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
+# =========================================================================#
+🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
 
 
