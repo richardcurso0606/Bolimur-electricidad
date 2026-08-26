@@ -215,4 +215,16 @@ def renderizar():
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
-    
+    st.markdown(f"""
+    <div style="background-color: #dcfce7; border: 2px solid #86efac; color: #166534; padding: 20px; border-radius: 8px; margin-top: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 10px; color: #166534;">✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})</h3>
+        <p style="font-size: 15px; margin-bottom: 8px; color: #166534;">
+            La sección de <b>{s_opt_q} mm²</b> garantiza el cumplimiento térmico 
+            (<b><i>I<sub>z</sub></i> = {iz_opt_val} A &ge; <i>I<sub>b</sub></i> = {ib_q:.2f} A</b>) 
+            y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>.
+        </p>
+        <p style="font-size: 15px; margin: 0; color: #166534;">
+            Coordinada perfectamente con un <b>PIA de {prot_q} A (Curva C)</b>.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
