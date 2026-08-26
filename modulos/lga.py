@@ -22,10 +22,14 @@ def seleccionar_proteccion(ib):
         if cal >= ib: return cal
     return CALIBRES_INTERRUPTORES[-1]
 
-def renderizar(calcular_pt_global):
+def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    pt_auto = calcular_pt_global()
+    # Cálculo interno seguro de la potencia total prevista
+    p_viv = sum(int(round(v["qty"] * v["pot"] * v["qty"])) for v in st.session_state.get('grupos_viviendas', []))
+    p_loc = sum(max(l.get("superficie", 0) * 100.0, 3450.0) * l.get("qty", 1) for l in st.session_state.get('locales', []))
+    pt_auto = float(p_viv + int(p_loc) + 10000.0)
+
     lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], key="lga_modo")
     
     lga_c1, lga_c2 = st.columns(2)
