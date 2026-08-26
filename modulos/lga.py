@@ -1,4 +1,4 @@
-[source: 3]import streamlit as st
+import streamlit as st
 import math
 
 METODOS_INSTALACION = {
