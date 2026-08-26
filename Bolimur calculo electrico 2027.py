@@ -7,7 +7,8 @@ import sqlite3
 # Le decimos a Python que busque en la carpeta 'modulos' nuestro archivo
 from modulos import calculo_rapido
 from modulos import prevision_cargas
-
+from modulos import lga
+from modulos import di
 
 # Cuando aísles los demás, quitarás el '#' para importarlos así:
 # from modulos import prevision_cargas
@@ -107,10 +108,11 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     
 
 elif seleccion_modulo.startswith("⚡"):
-    st.info("🛠️ Módulo LGA en construcción...")
-    
+    lga.renderizar(calcular_pt_global, METODOS_INSTALACION, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO, SECCIONES_COMERCIALES, seleccionar_seccion_optima, seleccionar_proteccion)
+
 elif seleccion_modulo.startswith("🔌"):
-    st.info("🛠️ Módulo DI en construcción...")
+    di.renderizar(METODOS_INSTALACION, GAMMA_MAP, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO, seleccionar_seccion_optima, seleccionar_proteccion)
+    
 
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Tablas REBT")
