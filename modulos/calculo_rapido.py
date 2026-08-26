@@ -45,16 +45,54 @@ def renderizar():
                 </script>
             """, unsafe_allow_html=True)
 
-    # --- Estilos exclusivos para las tablas de este módulo y para la impresión ---
+
+
+    
+# --- Estilos exclusivos profesionales para impresión y PDF (PC y Tablet) ---
     st.markdown("""
     <style>
     @media print {
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details { display: none !important; }
+        /* Ocultar elementos de la interfaz que no deben salir en el papel */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details { 
+            display: none !important; 
+        }
         h1 { display: none !important; }
-        body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] { background-color: white !important; color: black !important; font-family: "Helvetica", "Arial", sans-serif !important; font-size: 10pt !important; }
-        table { width: 100% !important; border-collapse: collapse !important; }
-        th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 9pt !important; color: black !important; }
+        
+        /* Configuración de página limpia y tipografía adaptada para impresión */
+        body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] { 
+            background-color: white !important; 
+            color: black !important; 
+            font-family: "Helvetica", "Arial", sans-serif !important; 
+            font-size: 10pt !important; 
+        }
+        
+        /* Evitar cortes extraños en mitad de los bloques de contenido o cajas */
+        .stInfo, div[style*="background-color"], .pia-destacado {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            margin-bottom: 15px !important;
+            border: 1px solid #94a3b8 !important;
+        }
+
+        /* Optimización absoluta para tablas (evitar que se corten filas) */
+        table { 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            break-inside: auto !important;
+        }
+        tr { 
+            break-inside: avoid !important; 
+            page-break-inside: avoid !important; 
+        }
+        th, td { 
+            border: 1px solid #cbd5e1 !important; 
+            padding: 6px 8px !important; 
+            font-size: 9pt !important; 
+            color: black !important; 
+        }
     }
+    
+    /* Estilos visuales en pantalla */
     .pia-destacado { background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #7dd3fc; }
     table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     th { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; padding: 14px !important; font-weight: 700; text-transform: uppercase; font-size: 12px; }
@@ -62,6 +100,7 @@ def renderizar():
     tr:nth-child(even) td { background-color: #f8fafc !important; }
     </style>
     """, unsafe_allow_html=True)
+ 
 
     rc1, rc2 = st.columns(2)
     with rc1:
