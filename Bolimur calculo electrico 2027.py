@@ -1,4 +1,36 @@
 import streamlit as st
+# ... (aquí tus otros import como pandas, etc., si los tienes)
+
+# =========================================================================
+# CONFIGURACIÓN GENERAL DE LA PÁGINA
+# =========================================================================
+st.set_page_config(page_title="BOLIMUR Instalaciones Integrales", page_icon="⚡", layout="wide")
+
+# =========================================================================
+# ESTILOS CSS GLOBALES DE ALTO CONTRASTE (PARA TODAS LAS VENTANAS Y TABLET)
+# =========================================================================
+st.markdown("""
+    <style>
+        /* Forzar bordes muy oscuros, gruesos y fondo destacado en todos los inputs y selects de la app */
+        input, select, div[data-baseweb="select"] > div, div[data-baseweb="input"] > div {
+            border: 2.5px solid #1e3a8a !important;
+            border-radius: 6px !important;
+            background-color: #ffffff !important;
+        }
+        /* Resaltar aún más al escribir o pulsar sobre cualquier casilla en la tablet */
+        input:focus, div[data-baseweb="select"] > div:focus-within, div[data-baseweb="input"] > div:focus-within {
+            border: 3px solid #000000 !important;
+            box-shadow: 0 0 8px rgba(30, 58, 138, 0.6) !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# =========================================================================
+# INICIO DE LA APLICACIÓN Y MENÚS
+# =========================================================================
+seleccion_modulo = st.sidebar.radio("Navegación de Módulos", [...])
+
+import streamlit as st
 import math
 import os
 import sqlite3
