@@ -15,7 +15,7 @@ def get_coef_simultaneidad(num):
 # =========================================================================
 def renderizar():
 
-    # Inicialización de seguridad para evitar errores de sesión
+ # Blindaje total de variables de sesión
     if 'grupos_viviendas' not in st.session_state:
         st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
     if 'locales' not in st.session_state:
