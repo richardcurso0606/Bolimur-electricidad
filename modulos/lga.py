@@ -25,17 +25,58 @@ def seleccionar_proteccion(ib):
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # Cálculo interno seguro de la potencia total prevista
-    p_viv = sum(int(round(v["qty"] * v["pot"] * v["qty"])) for v in st.session_state.get('grupos_viviendas', []))
-    p_loc = sum(max(l.get("superficie", 0) * 100.0, 3450.0) * l.get("qty", 1) for l in st.session_state.get('locales', []))
-    pt_auto = float(p_viv + int(p_loc) + 10000.0)
+    # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
+    viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
+    
+    tabla_k = {1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8, 10: 8.5, 
+               11: 9.1, 12: 9.8, 13: 10.5, 14: 11.2, 15: 11.9, 16: 12.6, 17: 13.3, 18: 14.0, 19: 14.7, 20: 15.4}
+    n_viv_calc = max(viviendas_diurnas_qty, 1)
+    k_val = tabla_k.get(n_viv_calc, 15.4 if n_viv_calc <= 20 else float(round(15.4 + (n_viv_calc - 20) * 0.7, 2)))
 
+    # P1: Viviendas
+    p_viv_total = 0
+    for v in st.session_state.get('grupos_viviendas', []):
+        if v.get("nocturna", False):
+            p_viv_total += v["qty"] * v["pot"]
+        else:
+            if viviendas_diurnas_qty > 0:
+                p_viv_total += int(round(v["qty"] * v["pot"] * (k_val / viviendas_diurnas_qty)))
+
+    # P2: Locales Comerciales
+    p_loc_total = sum(max(l.get("superficie", 0.0) * 100.0, 3450.0) * l.get("qty", 1) for l in st.session_state.get('locales', []))
+
+    # P3: Servicios Generales
+    p_serv_total = 0.0
+    for s in st.session_state.get('servicios_generales', []):
+        f_serv = s.get("factor", 1.30)
+        c_serv = s.get("cos_phi", 1.0)
+        if f_serv == 1.80 and c_serv < 1.0:
+            p_serv_total += s.get("potencia", 0.0) * s.get("qty", 1) * f_serv * c_serv
+        else:
+            p_serv_total += s.get("potencia", 0.0) * s.get("qty", 1) * f_serv
+
+    # P4: Garajes e IRVE
+    garaje_data = st.session_state.get('garajes', {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"})
+    sup_gar = garaje_data.get("sup", 0.0)
+    p_gar_vent = max(sup_gar * 20.0, 3450.0 if sup_gar > 0 else 0.0)
+    factor_irve = 0.10 if "10%" in garaje_data.get("tipo_irve", "") else 0.05
+    p_gar_irve = (garaje_data.get("plazas_irve", 0) * factor_irve) * 3680.0
+    p_gar_total = p_gar_vent + p_gar_irve
+
+    # Potencia total automática real extraída de la previsión
+    pt_auto = float(p_viv_total + p_loc_total + p_serv_total + p_gar_total)
+
+    # --- CONTROLES DE ENTRADA ---
     lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], key="lga_modo")
     
     lga_c1, lga_c2 = st.columns(2)
     with lga_c1:
-        if "Automático" in lga_modo_potencia: lga_pot = pt_auto
-        else: lga_pot = st.number_input("Potencia de cálculo LGA (W)", value=pt_auto, step=500.0, key="lga_pot_man")
+        if "Automático" in lga_modo_potencia: 
+            lga_pot = pt_auto
+            st.info(f"ℹ️ **Valor Automático (Previsión de Cargas):** **{lga_pot:,.2f} W**\n\n*(P1 Viviendas: {p_viv_total:,} W | P2 Locales: {p_loc_total:,.0f} W | P3 Servicios: {p_serv_total:,.2f} W | P4 Garajes: {p_gar_total:,.2f} W)*")
+        else: 
+            lga_pot = st.number_input("Potencia de cálculo LGA (W)", value=pt_auto, step=500.0, key="lga_pot_man")
+            
         lga_long = st.number_input("Longitud de la LGA (m)", value=0.0, key="lga_long")
         lga_mat = st.selectbox("Material Conductor", ["cobre", "aluminio"], key="lga_mat")
         metodo_lga_key = st.selectbox("Instalación:", list(METODOS_INSTALACION.keys()), index=3, key="lga_met")
