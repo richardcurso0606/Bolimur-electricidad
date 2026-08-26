@@ -176,17 +176,16 @@ if seleccion_modulo.startswith("🏠"):
 # =========================================================================
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN INFORME PROFESIONAL)
 # =========================================================================
+# =========================================================================
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (ALTA COMPATIBILIDAD TABLET/PC)
+# =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN (SALTOS DE PÁGINA Y MÁRGENES) ---
+    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN (SEGURO PARA TABLETS) ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de navegación, menús, selectores */
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe) {
-            display: none !important;
-        }
-        /* Ocultar explícitamente los expanders (Ayuda) y el aviso inferior */
-        details, .ocultar-impresion {
+        /* Ocultar elementos de navegación, menús y selectores de forma segura */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], .ocultar-impresion, details {
             display: none !important;
         }
         /* Forzar fondo blanco y tipografía formal */
@@ -195,17 +194,11 @@ elif seleccion_modulo.startswith("🧮"):
             color: black !important;
             font-size: 11pt !important;
         }
-        /* Configuración de márgenes oficiales y numeración */
+        /* Configuración de márgenes oficiales */
         @page {
-            margin: 2cm;
-            @bottom-right {
-                content: "Página " counter(page) " de " counter(pages);
-                font-family: sans-serif;
-                font-size: 9pt;
-                color: #64748b;
-            }
+            margin: 20mm;
         }
-        /* EVITAR QUE LAS CAJAS Y TABLAS SE PARTAN A LA MITAD DE LA PÁGINA */
+        /* Evitar que las cajas y tablas se partan a la mitad de la página */
         .stInfo, .pia-destacado, table, div[data-testid="stTable"] {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -223,6 +216,9 @@ elif seleccion_modulo.startswith("🧮"):
     </style>
     """, unsafe_allow_html=True)
 
+    st.title("🧮 Cálculo Rápido Avanzado")
+    
+    # ... (AQUÍ CONTINÚA EXACTAMENTE EL MISMO CÓDIGO QUE YA TIENES: rc1, rc2 = st.columns(2), etc.) ...
     st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
