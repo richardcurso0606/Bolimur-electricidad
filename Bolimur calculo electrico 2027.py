@@ -174,28 +174,38 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (CON ESTILO DE IMPRESIÓN PROFESIONAL)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (ESTILO IMPRESIÓN LIMPIO)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PARA OCULTAR MENÚS Y DEJAR SOLO LA MEMORIA AL IMPRIMIR ---
+    # --- ESTILO CSS PROFESIONAL PARA OCULTAR TODO EXCEPTO LA MEMORIA AL IMPRIMIR ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de la interfaz de Streamlit al imprimir */
-        [data-testid="stSidebar"], header, footer, .stButton, .stRadio, .stSelectbox, .stNumberInput, div[data-testid="stHorizontalBlock"] {
+        /* Ocultar barra lateral, cabeceras de Streamlit, botones y los selectores superiores de entrada */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"] {
             display: none !important;
         }
-        /* Mostrar y estructurar de forma limpia la memoria para PDF/Impresión */
-        body, html {
+        /* Forzar fondo blanco y eliminar márgenes innecesarios */
+        body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
             background-color: white !important;
             color: black !important;
-            font-size: 12pt !important;
+            font-size: 11pt !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
+        /* Mostrar y estructurar de forma limpia la memoria para PDF/Impresión */
         .memoria-impresion {
             display: block !important;
             width: 100% !important;
-            padding: 0 !important;
+            padding: 10px !important;
             margin: 0 !important;
+        }
+        /* Asegurar que las cajas azules se impriman limpias */
+        .stInfo, div[data-baseweb="notification"] {
+            background-color: #f0f9ff !important;
+            border: 1px solid #bae6fd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
     }
     </style>
@@ -377,7 +387,7 @@ elif seleccion_modulo.startswith("🧮"):
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
-  st.success(f"""
+    st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
     La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
@@ -405,9 +415,6 @@ elif seleccion_modulo.startswith("🧮"):
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
 # =========================================================================
-
-
-
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
