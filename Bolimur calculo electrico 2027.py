@@ -549,8 +549,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         * **Elevada (9.200 W o más):** Superficies > 160 m², calefacción eléctrica o domótica/automatización.
         """)
         
-        st.markdown("**Tabla oficial de coeficientes de simultaneidad (K) según nº de viviendas (n):**")
-        
         tabla_k_markdown = """
 | Nº VIVIENDAS (n) | COEFICIENTE K | Nº VIVIENDAS (n) | COEFICIENTE K |
 | :--- | :--- | :--- | :--- |
@@ -592,10 +590,7 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     lista_etiquetas = list(opciones_potencia.keys())
     lista_valores = list(opciones_potencia.values())
 
-
-    
-for idx, viv in enumerate(st.session_state.grupos_viviendas):
-        # Contenedor nativo con borde de Streamlit
+    for idx, viv in enumerate(st.session_state.grupos_viviendas):
         with st.container(border=True):
             st.markdown(f"#### Grupo #{idx+1}: {viv['nombre']}")
 
@@ -638,29 +633,15 @@ for idx, viv in enumerate(st.session_state.grupos_viviendas):
             pot_total_viviendas += pot_parcial
 
             with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
-                texto_justificacion = (
+                st.info(
                     f"**Desarrollo de Cálculo:**\n\n"
                     f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + "\n"
                     f"- Potencia unitaria: **{viv['pot']:,} W**\n"
                     f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
                     f"**Resultado parcial:** **{pot_parcial:,} W**"
                 )
-                st.info(texto_justificacion)
-
-
-                
-
-# <--- A partir de aquí fuera del bucle va tu línea del subtotal:
-# st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
-
-
-                    
-                )
-            
-            st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
-    # =========================================================================
     
     
     # =========================================================================
