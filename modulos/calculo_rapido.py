@@ -31,9 +31,11 @@ def seleccionar_proteccion(ib):
 # =========================================================================
 def renderizar():
     
-# --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
-
-with col_btn:
+    # --- TÍTULO Y BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
+    col_tit, col_btn = st.columns([3, 1])
+    with col_tit:
+        st.title("🧮 Cálculo Rápido Avanzado")
+    with col_btn:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
             st.markdown("""
@@ -43,27 +45,25 @@ with col_btn:
                         window.print();
                     }, 400);
                 </script>
-            """, unsafe_allow_html=True
-                       
-    # --- ESTILOS CSS INYECTADOS DENTRO DEL RENDER (CORRIGE MÁRGENES Y MULTIPÁGINA) ---
-    
-                        
-                     st.markdown("""
+            """, unsafe_allow_html=True)
+
+    # --- ESTILOS CSS INYECTADOS DENTRO DEL RENDER (ELIMINA MÁRGENES Y FUERZA MULTIPÁGINA EN TABLET) ---
+    st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de la interfaz de Streamlit */
+        /* Ocultar elementos de la interfaz de Streamlit que no van en el PDF */
         [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details { 
             display: none !important; 
         }
         h1 { display: none !important; }
         
-        /* Reset absoluto de márgenes y tamaños para tablets y PC */
+        /* Reset absoluto de márgenes y tamaño de página real A4 */
         @page {
             size: A4 portrait;
             margin: 10mm;
         }
         
-        /* Romper los contenedores fijos de Streamlit que limitan la tablet a 1 sola página */
+        /* Romper los contenedores fijos de Streamlit para que la tablet detecte todas las páginas */
         html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
             background-color: white !important; 
             color: black !important; 
@@ -76,7 +76,7 @@ with col_btn:
             display: block !important;
         }
         
-        /* Evitar que las cajas informativas se corten mal entre páginas */
+        /* Evitar que las cajas informativas se corten a mitad entre páginas */
         .stInfo, div[style*="background-color"], .pia-destacado, table, tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
