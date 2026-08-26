@@ -25,11 +25,11 @@ def seleccionar_proteccion(ib):
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # --- AYUDA TÉCNICA DESPLEGABLE CON DISEÑO PROFESIONAL ---
+    # --- AYUDA TÉCNICA DESPLEGABLE CORREGIDA (HTML AISLADO) ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
         
-        html_ayuda_cond = """
+        st.markdown("""
         <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 10px;">
         <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <thead>
@@ -73,8 +73,7 @@ def renderizar():
             </tbody>
         </table>
         </div>
-        """
-        st.markdown(html_ayuda_cond, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
@@ -253,10 +252,10 @@ def renderizar():
         f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
 
-    # --- TABLA HTML ESTILADA DE TUBOS (ESTILO CORPORATIVO UNIFICADO) ---
+    # --- TABLA HTML ESTILADA DE TUBOS (ESTILO CORPORATIVO) ---
     st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
     
-    html_tabla_tubos = """
+    html_tabla_tubos = f"""
     <div style="overflow-x: auto; margin-bottom: 20px;">
     <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <thead>
