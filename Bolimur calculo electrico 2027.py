@@ -1,7 +1,7 @@
 import streamlit as st
 import sqlite3
 
-st.set_page_config(page_title="CALCULOS ELECTRICOS", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="CÁLCULOS ELÉCTRICOS", page_icon="⚡", layout="wide")
 
 # =========================================================================
 # IMPORTACIÓN SEGURA DE MÓDULOS (Para capturar cualquier error interno)
@@ -118,7 +118,6 @@ with st.sidebar:
         st.rerun()
 
     seleccion_modulo = st.session_state.menu_activo
-
 
 # =========================================================================
 # EL ENRUTADOR (CARGA DE VENTANAS)
