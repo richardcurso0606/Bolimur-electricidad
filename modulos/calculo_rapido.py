@@ -1,16 +1,12 @@
 import streamlit as st
 import math
 
-# =========================================================================
-# CONSTANTES Y FUNCIONES EXCLUSIVAS DE ESTE MÓDULO
-# =========================================================================
 METODOS_INSTALACION = {
     "B1 (Bajo tubo empotrado)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
     "B2 (Bajo tubo en superficie)": {"ref": "B2", "desc": "Cables unipolares en tubo montado en superficie"},
     "C (Multiconductor en pared)": {"ref": "C", "desc": "Cable multiconductor fijado directo"},
     "D (Cables enterrados bajo tubo)": {"ref": "D", "desc": "Instalación subterránea"}
 }
-GAMMA_MAP = {("cobre", "PVC (70ºC)"): 48.5, ("cobre", "XLPE / EPR (90ºC)"): 44.0, ("aluminio", "PVC (70ºC)"): 31.0, ("aluminio", "XLPE / EPR (90ºC)"): 28.0}
 SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
 IZ_COBRE_TUBO = {1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0}
 IZ_COBRE_ENTERRADO = {1.5: 22.0, 2.5: 29.0, 4: 38.0, 6: 48.0, 10: 65.0, 16: 85.0, 25: 110.0, 35: 135.0, 50: 160.0, 70: 170.0, 95: 202.0, 120: 230.0, 150: 270.0, 185: 310.0, 240: 360.0}
@@ -26,253 +22,325 @@ def seleccionar_proteccion(ib):
         if cal >= ib: return cal
     return CALIBRES_INTERRUPTORES[-1]
 
-# =========================================================================
-# FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
-# =========================================================================
 def renderizar():
+    st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # --- TÍTULO Y BOTÓN DE IMPRESIÓN NATIVO OPTIMIZADO ---
-    col_tit, col_btn = st.columns([3, 1])
-    with col_tit:
-        st.title("🧮 Cálculo Rápido Avanzado")
-    with col_btn:
-        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        st.markdown("""
-            <div style="text-align: right;">
-                <a href="javascript:window.print();" style="background-color: #0284c7; color: white; padding: 10px 15px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    🖨️ Imprimir / PDF
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
+    # --- AYUDA TÉCNICA DESPLEGABLE CON HTML PURO ---
+    with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
+        st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
+        
+        html_ayuda_cond = """
+        <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <thead>
+                <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 13px;">
+                    <th style="padding: 10px 14px;">MATERIAL CONDUCTOR</th>
+                    <th style="padding: 10px 14px;">AISLAMIENTO</th>
+                    <th style="padding: 10px 14px;">TEMP. SERVICIO</th>
+                    <th style="padding: 10px 14px;">CONDUCTIVIDAD (γ) [m/(Ω·mm²)]</th>
+                    <th style="padding: 10px 14px;">RESISTIVIDAD (ρ) [Ω·mm²/m]</th>
+                </tr>
+            </thead>
+            <tbody style="font-size: 13px; color: #334155;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
+                    <td style="padding: 10px 14px;">PVC</td>
+                    <td style="padding: 10px 14px;">70 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">56.0</td>
+                    <td style="padding: 10px 14px;">~0.0179</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
+                    <td style="padding: 10px 14px;">XLPE / EPR</td>
+                    <td style="padding: 10px 14px;">90 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">44.0</td>
+                    <td style="padding: 10px 14px;">~0.0227</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
+                    <td style="padding: 10px 14px;">PVC</td>
+                    <td style="padding: 10px 14px;">70 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">35.0</td>
+                    <td style="padding: 10px 14px;">~0.0286</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
+                    <td style="padding: 10px 14px;">XLPE / EPR</td>
+                    <td style="padding: 10px 14px;">90 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">28.0</td>
+                    <td style="padding: 10px 14px;">~0.0357</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        """
+        st.markdown(html_ayuda_cond, unsafe_allow_html=True)
 
-# --- ESTILOS CSS CON SOPORTE MULTIPÁGINA PARA HUAWEI Y ANDROID ---
-    st.markdown("""
-    <style>
-    @media print {
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details { 
-            display: none !important; 
-        }
-        h1 { display: none !important; }
-        
-        @page {
-            size: A4 portrait;
-            margin: 10mm;
-        }
-        
-        /* Forzar al navegador de Huawei y móviles a romper la altura fija de pantalla */
-        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
-            background-color: white !important; 
-            color: black !important; 
-            font-family: "Helvetica", "Arial", sans-serif !important; 
-            font-size: 10pt !important;
-            height: 100% !important;
-            min-height: 100% !important;
-            max-height: none !important;
-            overflow: visible !important;
-            position: relative !important;
-            display: block !important;
-        }
-        
-        .stInfo, div[style*="background-color"], .pia-destacado, table, tr {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-        }
-        
-        table { 
-            width: 100% !important; 
-            border-collapse: collapse !important; 
-        }
-        th, td { 
-            border: 1px solid #cbd5e1 !important; 
-            padding: 6px 8px !important; 
-            font-size: 9pt !important; 
-            color: black !important; 
-        }
-    }
+    # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
+    viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
     
-    .pia-destacado { background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #7dd3fc; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    th { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; padding: 14px !important; font-weight: 700; text-transform: uppercase; font-size: 12px; }
-    td { padding: 12px !important; border-bottom: 1px solid #e2e8f0 !important; color: #334155 !important; background-color: #ffffff !important; text-align: center !important; }
-    tr:nth-child(even) td { background-color: #f8fafc !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    tabla_k = {1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8, 10: 8.5, 
+               11: 9.1, 12: 9.8, 13: 10.5, 14: 11.2, 15: 11.9, 16: 12.6, 17: 13.3, 18: 14.0, 19: 14.7, 20: 15.4}
+    n_viv_calc = max(viviendas_diurnas_qty, 1)
+    k_val = tabla_k.get(n_viv_calc, 15.4 if n_viv_calc <= 20 else float(round(15.4 + (n_viv_calc - 20) * 0.7, 2)))
 
-    rc1, rc2 = st.columns(2)
-    with rc1:
-        modo_carga = st.radio("Entrada:", ["Por Potencia (W)", "Por Intensidad Directa (A)"])
-        tipo_red_q = st.selectbox("Sistema eléctrico", ["Monofásico (230V)", "Trifásico (400V)"])
-        
-        if modo_carga == "Por Potencia (W)":
-            val_pot_q = st.number_input("Potencia (W)", value=0.0, step=100.0)
-            cos_q = st.slider("Coseno phi (cos φ)", 0.7, 1.0, 0.85)
-            v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
-            if "Monofásico" in tipo_red_q: ib_q = val_pot_q / (v_nom_calc * cos_q) if v_nom_calc * cos_q > 0 else 0.0
-            else: ib_q = val_pot_q / (math.sqrt(3) * v_nom_calc * cos_q) if math.sqrt(3) * v_nom_calc * cos_q > 0 else 0.0
+    p_viv_total = 0
+    for v in st.session_state.get('grupos_viviendas', []):
+        if v.get("nocturna", False):
+            p_viv_total += v["qty"] * v["pot"]
         else:
-            ib_q = st.number_input("Intensidad Ib (A)", value=0.0, step=1.0)
-            cos_q = st.slider("Coseno phi (cos φ)", 0.7, 1.0, 0.85)
-            v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
-            if "Monofásico" in tipo_red_q: val_pot_q = ib_q * v_nom_calc * cos_q
-            else: val_pot_q = ib_q * math.sqrt(3) * v_nom_calc * cos_q
+            if viviendas_diurnas_qty > 0:
+                p_viv_total += int(round(v["qty"] * v["pot"] * (k_val / viviendas_diurnas_qty)))
 
-        long_q = st.number_input("Longitud del circuito (m)", value=0.0, step=5.0)
+    p_loc_total = sum(max(l.get("superficie", 0.0) * 100.0, 3450.0) * l.get("qty", 1) for l in st.session_state.get('locales', []))
 
-    with rc2:
-        ayuda_metodo = "B1: Empotrado en pared (viviendas). \nB2: En superficie bajo tubo. \nC: Multiconductor directo. \nD: Enterrado bajo tubo."
-        metodo_q_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION.keys()), index=0, help=ayuda_metodo)
-        mat_q = st.selectbox("Material conductor", ["cobre", "aluminio"])
-        ais_q = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC)", "PVC (70ºC)"])
-        cdt_lim_q = st.number_input("Caída de Tensión máxima (%)", value=3.0, step=0.5)
-        ayuda_icc = "Corriente de cortocircuito en origen (ej. 6 kA o 10 kA)."
-        icc_orig_q = st.number_input("Icc en origen (kA)", value=10.0, step=0.5, help=ayuda_icc)
+    p_serv_total = 0.0
+    for s in st.session_state.get('servicios_generales', []):
+        f_serv = s.get("factor", 1.30)
+        c_serv = s.get("cos_phi", 1.0)
+        if f_serv == 1.80 and c_serv < 1.0:
+            p_serv_total += s.get("potencia", 0.0) * s.get("qty", 1) * f_serv * c_serv
+        else:
+            p_serv_total += s.get("potencia", 0.0) * s.get("qty", 1) * f_serv
 
-    gamma_q = GAMMA_MAP.get((mat_q, ais_q), 44.0)
-    dv_max_q = v_nom_calc * (cdt_lim_q / 100.0) if cdt_lim_q > 0 else 1.0
+    garaje_data = st.session_state.get('garajes', {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"})
+    sup_gar = garaje_data.get("sup", 0.0)
+    p_gar_vent = max(sup_gar * 20.0, 3450.0 if sup_gar > 0 else 0.0)
+    factor_irve = 0.10 if "10%" in garaje_data.get("tipo_irve", "") else 0.05
+    p_gar_irve = (garaje_data.get("plazas_irve", 0) * factor_irve) * 3680.0
+    p_gar_total = p_gar_vent + p_gar_irve
+
+    pt_auto = float(p_viv_total + p_loc_total + p_serv_total + p_gar_total)
+
+    # --- CONTROLES DE ENTRADA CON FORMULARIO ---
+    st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
     
-    if "Monofásico" in tipo_red_q: s_cdt_q = (2.0 * val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc) if dv_max_q * v_nom_calc > 0 else 1.5
-    else: s_cdt_q = (val_pot_q * long_q) / (gamma_q * dv_max_q * v_nom_calc) if dv_max_q * v_nom_calc > 0 else 1.5
-
-    tabla_iz_q = IZ_COBRE_ENTERRADO if "D (" in metodo_q_key else IZ_COBRE_TUBO
-    s_cal_q = 1.5
-    for sec, iz_val in tabla_iz_q.items():
-        if iz_val >= ib_q:
-            s_cal_q = sec
-            break
-
-    min_reg_q = 1.5 if mat_q == "cobre" else 10.0
-    s_bruta_q = max(s_cdt_q, s_cal_q, min_reg_q)
-    s_opt_q = seleccionar_seccion_optima(s_bruta_q)
-    iz_opt_val = tabla_iz_q.get(s_opt_q, 0.0)
-
-    if "Monofásico" in tipo_red_q: dv_real_v_q = (2.0 * val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * v_nom_calc > 0 else 0.0
-    else: dv_real_v_q = (val_pot_q * long_q) / (gamma_q * s_opt_q * v_nom_calc) if s_opt_q * s_opt_q > 0 else 0.0
-    dv_real_pct_q = (dv_real_v_q / v_nom_calc) * 100.0 if v_nom_calc > 0 else 0.0
-
-    rho_q = 1.0 / gamma_q if gamma_q > 0 else 0.0
-    r_cable_unitario = (rho_q * long_q) / s_opt_q if s_opt_q > 0 else 0.0
-    
-    if "Monofásico" in tipo_red_q:
-        r_cable_total = 2.0 * r_cable_unitario
-        z_origen = v_nom_calc / (icc_orig_q * 1000.0) if icc_orig_q > 0 else 0
-        z_tot_q = z_origen + r_cable_total
-    else:
-        r_cable_total = r_cable_unitario
-        z_origen = v_nom_calc / (icc_orig_q * 1000.0) if icc_orig_q > 0 else 0
-        z_tot_q = z_origen + r_cable_total
+    with st.form("form_lga_parametros"):
+        lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], horizontal=True, key="lga_modo")
         
-    icc_fin_q = v_nom_calc / z_tot_q / 1000.0 if z_tot_q > 0 else 0.0
-    prot_q = seleccionar_proteccion(ib_q)
-    corriente_disparo = prot_q * 10.0
-    salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo
+        lga_c1, lga_c2 = st.columns(2)
+        with lga_c1:
+            if "Automático" in lga_modo_potencia:
+                lga_pot = pt_auto
+                st.metric(label="Potencia de cálculo LGA (Automática desde Previsión)", value=f"{lga_pot:,.2f} W")
+                st.caption(f"Desglose: Viviendas ({p_viv_total:,}W) + Locales ({p_loc_total:,.0f}W) + Servicios ({p_serv_total:,.2f}W) + Garajes ({p_gar_total:,.2f}W)")
+            else:
+                lga_pot = st.number_input("Potencia de cálculo LGA (Manual en W) - Pulsa Enter para fijar", value=pt_auto, step=500.0, key="lga_pot_man")
+                
+            lga_long = st.number_input("Longitud de la LGA (m) - Pulsa Enter para recalcular", value=0.0, step=1.0, key="lga_long")
+            lga_mat = st.selectbox("Material Conductor", ["cobre", "aluminio"], key="lga_mat")
+            metodo_lga_key = st.selectbox("Instalación:", list(METODOS_INSTALACION.keys()), index=3, key="lga_met")
+
+        with lga_c2:
+            lga_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"], key="lga_aisl")
+            tipo_enlace_lga = st.radio("Contadores:", ["Totalmente concentrados (Límite CDT = 0.5%)", "Centralizaciones Parciales (Límite CDT = 1.0%)"], key="lga_enlace")
+            lga_icc_orig = st.number_input("Icc en origen (kA) - Pulsa Enter para recalcular", value=10.0, step=0.5, key="lga_icc")
+
+        submitted = st.form_submit_button("🔄 Recalcular / Actualizar Cálculo")
+
+    dv_pct_lga = 0.5 if "concentrados" in tipo_enlace_lga else 1.0
+    gamma_lga = 44.0 if "XLPE" in lga_aisl else 48.5
+    ib_lga = lga_pot / (math.sqrt(3) * 400 * 0.9)
+    dv_max_lga = 400 * (dv_pct_lga / 100.0)
+    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if gamma_lga * dv_max_lga * 400 > 0 else 10.0
+    
+    tabla_iz = IZ_COBRE_ENTERRADO if "D (" in metodo_lga_key else IZ_COBRE_TUBO
+    in_lga_auto = seleccionar_proteccion(ib_lga)
+    s_final_lga = seleccionar_seccion_optima(max(s_cdt_lga, 10.0))
+    
+    while True:
+        iz_a = tabla_iz.get(s_final_lga, 230.0)
+        if in_lga_auto <= 0.91 * iz_a and iz_a >= ib_lga: break
+        idx_s = SECCIONES_COMERCIALES.index(s_final_lga) if s_final_lga in SECCIONES_COMERCIALES else 5
+        if idx_s < len(SECCIONES_COMERCIALES) - 1: s_final_lga = SECCIONES_COMERCIALES[idx_s + 1]
+        else: break
+
+    dv_real_lga_pct = ((lga_pot * lga_long) / (gamma_lga * s_final_lga * 400) / 400) * 100 if gamma_lga * s_final_lga * 400 > 0 else 0.0
+
+    rho_lga = 1.0 / gamma_lga if gamma_lga > 0 else 0.0
+    r_lga_cable = (rho_lga * lga_long) / s_final_lga if s_final_lga > 0 else 0.0
+    
+    z_orig_lga_ohms = 400.0 / (lga_icc_orig * 1000.0)
+    z_tot_lga = z_orig_lga_ohms + r_lga_cable
+    icc_fin_lga = 400.0 / z_tot_lga if z_tot_lga > 0 else 0.0
 
     st.markdown("---")
+    st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)</h3>", unsafe_allow_html=True)
+
+    # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
+    st.info(f"""
+    #### 1. Intensidad de Diseño Trifásica ($I_b$)
     
-    st.markdown("""
-    <div style="border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px;">
-        <h2 style="color: #0369a1; margin: 0;">CALCULO INSTALACIONES INTEGRALES</h2>
-        <p style="color: #64748b; font-size: 13px; margin: 2px 0 0 0;">Memoria Técnica de Justificación de Secciones - REBT</p>
-    </div>
-    """, unsafe_allow_html=True)
+    **Criterio y Fórmula Reglamentaria:**
+    $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}}$$
+    
+    **Leyenda y Definición de Variables:**
+    * **I_b**: Intensidad de cálculo o de diseño por fase (A).
+    * **P**: Potencia total prevista de transporte en la línea ($P_t$ = {lga_pot:,.2f} W).
+    * **V**: Tensión nominal compuesta entre fases (400 V).
+    * **cos φ**: Factor de potencia estimado para instalaciones generales (0.9).
+    * **√3**: Constante trifásica ($\\approx 1.732$).
+    
+    **Sustitución Numérica y Resultado:**
+    $$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\frac{{{lga_pot:,.2f}}}{{623.54}} = \\mathbf{{ {ib_lga:.2f} \\text{{ A}} }}$$
+    """)
 
-    st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
+    # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
+    st.info(f"""
+    #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
+    
+    **Criterio y Fórmula Reglamentaria:**
+    $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$
+    
+    **Leyenda y Definición de Variables:**
+    * **S**: Sección teórica mínima exigida del conductor ($\\text{{mm}}^2$).
+    * **P**: Potencia total de cálculo ({lga_pot:,.2f} W).
+    * **L**: Longitud unifilar de la línea ({lga_long} m).
+    * **γ**: Conductividad del material a servicio normal ({gamma_lga} m/(Ω·mm²) para {lga_aisl}).
+    * **ΔV**: Caída de tensión máxima admisible ({dv_pct_lga}% de 400V = {dv_max_lga:.2f} V).
+    * **V**: Tensión nominal (400 V).
+    
+    **Sustitución Numérica y Resultado:**
+    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{ {s_cdt_lga:.2f} \\text{{ mm}}^2 }}$$
+    """)
+    
+    # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
+    st.info(f"""
+    #### 3. Icc Mínima y Fusibles de Compañía (CGP)
+    
+    **Criterio y Fórmula Reglamentaria (ITC-BT-14 / ITC-BT-22):**
+    Verificamos que los fusibles de protección tipo gG situados en la CGP fundirán a tiempo en caso de un cortocircuito franco al final de la Línea General de Alimentación.
+    
+    $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
+    
+    **Leyenda y Definición de Variables:**
+    * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (A).
+    * **V**: Tensión nominal compuesta de referencia (400 V).
+    * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig * 1000:,.0f} A).
+    * **R_cable**: Resistencia activa del conductor en el tramo ($R = \\frac{{\\rho \\cdot L}}{{S}} = {r_lga_cable:.5f}\\ \\Omega$).
+    * **In**: Calibre de los fusibles gG de protección en origen ({in_lga_auto} A).
+    
+    **Sustitución Numérica y Verificación Reglamentaria:**
+    $$I_{{cc,final}} = \\frac{{400}}{{\\left(\\frac{{400}}{{{lga_icc_orig * 1000.0}}}\\right) + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_orig_lga_ohms:.5f} + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_tot_lga:.5f}}} = \\mathbf{{ {icc_fin_lga:.1f} \\text{{ A}} }}$$
+    
+    * **Icc al final de la LGA:** **{icc_fin_lga:.1f} A** ({icc_fin_lga / 1000.0:.2f} kA)
+    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los márgenes reglamentarios exigidos por el REBT.
+    """)
 
-    if "Monofásico" in tipo_red_q:
-        f_ib = r"$$I_b = \frac{P}{V \cdot \cos\varphi}$$"
-        r_ib = f"{val_pot_q:,.1f} W / ({v_nom_calc} V $\cdot$ {cos_q})"
+    st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
+
+    # --- BLOQUE 4: RECOMENDACIÓN DE TUBO Y CANALIZACIÓN (ITC-BT-14) ---
+    st.markdown("---")
+    st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-14 / ITC-BT-21)")
+
+    if s_final_lga <= 16:
+        tubo_diam = "Ø 40 mm o Ø 50 mm"
+        razon_tubo = "Suficiente para albergar hilos de menor calibre respetando el espacio de llenaje permitido."
+    elif s_final_lga <= 35:
+        tubo_diam = "Ø 50 mm o Ø 63 mm"
+        razon_tubo = "Requerido para alojar sin apretar los 4 conductores unipolares de sección media."
+    elif s_final_lga <= 50:
+        tubo_diam = "Ø 63 mm"
+        razon_tubo = f"Para tus hilos de cobre de {s_final_lga} mm² (sección de cable), se exigen al menos 4 hilos en trifásica. Respetando la ley de llenaje (máximo 30-40% del tubo para que no se ahoguen y se puedan pasar tirando en la obra), el tubo exterior comercial perfecto es el de 63 mm."
     else:
-        f_ib = r"$$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$"
-        r_ib = f"{val_pot_q:,.1f} W / (1.732 $\cdot$ {v_nom_calc} V $\cdot$ {cos_q})"
+        tubo_diam = "Ø 90 mm, Ø 110 mm o Bandeja técnica"
+        razon_tubo = "Secciones muy pesadas que requieren tubos de gran calibre o bandejas registrables debido a la rigidez del cable."
 
     st.info(
-        f"#### 1. Intensidad de Diseño ($I_b$)\n"
-        f"**Justificación:** Se calcula la corriente nominal base de la carga para asegurar que el cable soporte la demanda en régimen permanente ($I_z \ge I_b$).\n\n"
-        f"{f_ib}\n\n"
-        f"**Sustitución y Resultado:** {r_ib} = **{ib_q:.2f} A**"
+        f"**Análisis del Tubo para tu sección óptima de cable de {s_final_lga} mm²:**\n\n"
+        f"* **Diámetro exterior del tubo recomendado:** **{tubo_diam}**\n"
+        f"* **¿Por qué se elige este tamaño? (Explicación técnica):** {razon_tubo}\n"
+        f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
 
-    st.info(
-        f"#### 2. Determinación de Sección por Calentamiento ($I_z$)\n"
-        f"**Justificación:** Evaluamos las tablas del REBT (UNE-HD 60364-5-52) según el método de instalación seleccionado para encontrar la sección mínima que garantice una capacidad térmica superior a la corriente de diseño.\n\n"
-        f"* **Corriente de diseño ($I_b$):** {ib_q:.2f} A\n"
-        f"* **Sección requerida por este criterio:** **{s_cal_q} mm²** (Admite una intensidad máxima $I_z =$ {tabla_iz_q.get(s_cal_q, 0)} A)."
-    )
-
-    if "Monofásico" in tipo_red_q:
-        f_cdt = r"$$S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
-        r_cdt = f"(2 $\cdot$ {val_pot_q:,.1f} $\cdot$ {long_q}) / ({gamma_q} $\cdot$ {dv_max_q:.2f} $\cdot$ {v_nom_calc})"
-    else:
-        f_cdt = r"$$S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
-        r_cdt = f"({val_pot_q:,.1f} $\cdot$ {long_q}) / ({gamma_q} $\cdot$ {dv_max_q:.2f} $\cdot$ {v_nom_calc})"
-
-    st.info(
-        f"#### 3. Sección Teórica por Caída de Tensión ($\Delta V$)\n"
-        f"**Justificación:** Se determina el grosor de conductor necesario para que las pérdidas de tensión a lo largo de la línea no superen el límite reglamentario del **{cdt_lim_q}%** ({dv_max_q:.2f} V).\n\n"
-        f"{f_cdt}\n\n"
-        f"**Sustitución y Resultado:** {r_cdt} = **{s_cdt_q:.2f} mm²**"
-    )
-
-    estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
-    f_icc1 = r"$$I_{cc,final} = \frac{V}{Z_{origen} + R_{cable}}$$"
-    f_icc2 = f"$$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f} \text{{ A}}}}$$"
-
-    st.info(
-        f"#### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)\n"
-        f"**Justificación:** La corriente de cortocircuito en el punto más lejano de la línea ($I_{{cc,final}}$) debe tener fuerza suficiente para accionar el umbral magnético de la protección de forma instantánea (Curva C = $10 \cdot I_n$).\n\n"
-        f"{f_icc1}\n\n"
-        f"**Origen detallado de los parámetros de impedancia y resistencia:**\n"
-        f"* **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en cabecera ($I_{{cc,origen}} = {icc_orig_q}$ kA). Aplicando la ley de Ohm ($Z_{{origen}} = V / I_{{cc,origen}}$), resulta en **{z_origen:.4f} $\Omega$**.\n"
-        f"* **Resistencia del cable ($R_{{cable}}$):** Calculada con $R = (\\rho \cdot L) / S$ (multiplicada por 2 en líneas monofásicas por retorno de neutro). Con longitud {long_q} m y sección óptima de {s_opt_q} mm², resulta en **{r_cable_total:.4f} $\Omega$**.\n\n"
-        f"{f_icc2}\n\n"
-        f"* **Umbral de disparo magnético exigido ({prot_q} A $\\times$ 10):** {corriente_disparo:.1f} A\n"
-        f"* **Veredicto:** {estado_icc}"
-    )
-
-    st.markdown(f"""
-    <div class="pia-destacado">
-        <h4 style="margin: 0;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</h4>
-        <hr style="border-top: 1px solid #cbd5e1; margin: 10px 0;">
-        <span style="font-size: 14px; font-weight: normal;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub></b> (siendo I<sub>z</sub> = {iz_opt_val} A).
-        </span>
+    # --- TABLA HTML ESTILADA DE TUBOS ---
+    st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
+    
+    html_tabla_tubos = """
+    <div style="overflow-x: auto; margin-bottom: 20px;">
+    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <thead>
+            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
+                <th style="padding: 12px 16px;">SECCIÓN DEL CABLE (LGA)</th>
+                <th style="padding: 12px 16px;">DIÁMETRO EXTERIOR DEL TUBO</th>
+                <th style="padding: 12px 16px;">MOTIVO TÉCNICO / REGLAMENTARIO</th>
+            </tr>
+        </thead>
+        <tbody style="font-size: 14px; color: #334155;">
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px 16px; font-weight: bold;">10 mm² a 16 mm²</td>
+                <td style="padding: 12px 16px;">Ø 40 mm o Ø 50 mm</td>
+                <td style="padding: 12px 16px;">Espacio adecuado para hilos finos en acometidas pequeñas.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                <td style="padding: 12px 16px; font-weight: bold;">25 mm² a 35 mm²</td>
+                <td style="padding: 12px 16px;">Ø 50 mm o Ø 63 mm</td>
+                <td style="padding: 12px 16px;">Capacidad para 4 conductores de sección media sin sobrepresión.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f0fdf4;">
+                <td style="padding: 12px 16px; font-weight: bold; color: #166534;">50 mm² <span style="font-size: 11px; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">Actual</span></td>
+                <td style="padding: 12px 16px; font-weight: bold; color: #166534;">Ø 63 mm</td>
+                <td style="padding: 12px 16px; color: #166534; font-weight: bold;">El tamaño ideal para cumplir el factor de llenaje del 30-40%.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px 16px; font-weight: bold;">70 mm² a 95 mm²</td>
+                <td style="padding: 12px 16px;">Ø 90 mm</td>
+                <td style="padding: 12px 16px;">Tubo corrugado de gran calibre para hilos pesados y rígidos.</td>
+            </tr>
+            <tr style="background-color: #f8fafc;">
+                <td style="padding: 12px 16px; font-weight: bold;">≥ 120 mm²</td>
+                <td style="padding: 12px 16px;">Bandeja / Canaladura</td>
+                <td style="padding: 12px 16px;">Canales de obra o bandejas registrables por imposibilidad de curvado en tubo.</td>
+            </tr>
+        </tbody>
+    </table>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(html_tabla_tubos, unsafe_allow_html=True)
 
-    with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
-        st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
-        tabla_gamma_md = """
-| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\gamma$) [$\mathrm{m / (\Omega \cdot mm^2)}$] | RESISTIVIDAD APROXIMADA ($\rho$) [$\mathrm{\Omega \cdot mm^2 / m}$] |
-| :--- | :--- | :--- | :--- | :--- |
-| **Cobre** | XLPE / EPR | 90 ºC | **44.0** | ~0.0227 |
-| **Cobre** | PVC | 70 ºC | **48.5** | ~0.0206 |
-| **Aluminio** | XLPE / EPR | 90 ºC | **28.0** | ~0.0357 |
-| **Aluminio** | PVC | 70 ºC | **31.0** | ~0.0323 |
-        """
-        st.markdown(tabla_gamma_md)
-
+    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES (GARANTIZADA SIN TEXTO PLANO) ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
-    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN (I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub>) |\n| :--- | :--- | :--- | :--- |\n"
-    for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
-        iz_c = tabla_iz_q.get(sec_com, 250.0)
-        dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
-        cond_sobrecarga = 0.91 * iz_c
-        if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
-        elif prot_q > cond_sobrecarga: est_v = f"❌ Falla (I<sub>n</sub> {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** (I<sub>n</sub> {prot_q} A &le; {cond_sobrecarga:.1f} A)"
-        else: est_v = "Válido pero sobredimensionado"
-        tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
-    st.markdown(tabla_q_md)
+    
+    filas_lista = []
+    for s_com in SECCIONES_COMERCIALES:
+        iz_val_t = tabla_iz.get(s_com, 0)
+        dv_c_pct = ((lga_pot * lga_long) / (gamma_lga * s_com * 400) / 400) * 100 if s_com > 0 else 0.0
+        cond_s_lga = 0.91 * iz_val_t
+        
+        bg_row = "background-color: #f0fdf4;" if s_com == s_final_lga else ""
+        
+        if iz_val_t < ib_lga:
+            est = "❌ Falla Calentamiento"
+        elif in_lga_auto > cond_s_lga:
+            est = f"❌ Falla (I<sub>n</sub> {in_lga_auto}A > {cond_s_lga:.1f}A)"
+        elif s_com == s_final_lga:
+            est = f"✅ <b>CUMPLE IDEAL</b> (I<sub>n</sub> {in_lga_auto}A ≤ {cond_s_lga:.1f}A)"
+        else:
+            est = "Válido pero sobredimensionado"
+            
+        fila_str = f'<tr style="border-bottom: 1px solid #e2e8f0; {bg_row}"><td style="padding: 12px 16px; font-weight: bold;">{s_com} mm²</td><td style="padding: 12px 16px;">{iz_val_t} A</td><td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px;">{est}</td></tr>'
+        filas_lista.append(fila_str)
 
-    st.markdown(f"""
-    <div style="background-color: #dcfce7; border: 2px solid #86efac; color: #166534; padding: 20px; border-radius: 8px; margin-top: 20px;">
-        <h3 style="margin-top: 0; margin-bottom: 10px; color: #166534;">✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})</h3>
-        <p style="font-size: 15px; margin-bottom: 8px; color: #166534;">
-            La sección de <b>{s_opt_q} mm²</b> garantiza el cumplimiento térmico 
-            (<b><i>I<sub>z</sub></i> = {iz_opt_val} A &ge; <i>I<sub>b</sub></i> = {ib_q:.2f} A</b>) 
-            y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>.
-        </p>
-        <p style="font-size: 15px; margin: 0; color: #166534;">
-            Coordinada perfectamente con un <b>PIA de {prot_q} A (Curva C)</b>.
-        </p>
+    html_tabla_secciones = f"""
+    <div style="overflow-x: auto; margin-bottom: 20px;">
+    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <thead>
+            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
+                <th style="padding: 12px 16px;">SECCIÓN</th>
+                <th style="padding: 12px 16px;">IZ ADMISIBLE (A)</th>
+                <th style="padding: 12px 16px;">CDT REAL (%)</th>
+                <th style="padding: 12px 16px;">ESTADO DE VERIFICACIÓN (I<sub>n</sub> ≤ 0.91 · I<sub>z</sub>)</th>
+            </tr>
+        </thead>
+        <tbody style="font-size: 14px; color: #334155;">
+            {"".join(filas_lista)}
+        </tbody>
+    </table>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(html_tabla_secciones, unsafe_allow_html=True)
+
+    st.success(f"""
+    ### ✅ SECCIÓN ÓPTIMA LGA: {s_final_lga} mm² de {lga_mat.upper()}
+    Garantiza una caída real del **{dv_real_lga_pct:.3f}%**. Protegida en origen por **Fusibles gG de {in_lga_auto} A** y canalizada bajo **tubo de {tubo_diam}**.
+    """)
