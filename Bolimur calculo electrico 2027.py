@@ -6,6 +6,9 @@ import sqlite3
 # =========================================================================
 # Le decimos a Python que busque en la carpeta 'modulos' nuestro archivo
 from modulos import calculo_rapido
+from modulos import prevision_cargas
+
+
 # Cuando aísles los demás, quitarás el '#' para importarlos así:
 # from modulos import prevision_cargas
 # from modulos import lga
@@ -100,8 +103,8 @@ elif seleccion_modulo.startswith("🧮"):
     calculo_rapido.renderizar()
 
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
-    # Mientras separas los demás, puedes pegar aquí el código gigante de Previsión temporalmente.
-    st.info("🛠️ Aquí va el código de Previsión de Cargas. ¡Haz con él lo mismo que hicimos con Cálculo Rápido!")
+    prevision_cargas.renderizar()
+    
 
 elif seleccion_modulo.startswith("⚡"):
     st.info("🛠️ Módulo LGA en construcción...")
