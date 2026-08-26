@@ -440,28 +440,28 @@ elif seleccion_modulo.startswith("🧮"):
 
 # =========================================================================
 
-
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10) - VERSIÓN TÉCNICA AVANZADA
 # =========================================================================
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     
-    # --- ESTILOS CSS PARA ENMARCAR LAS CASILLAS Y MEJORAR LA VISIBILIDAD ---
+    # --- ESTILOS CSS REFORZADOS PARA ENMARCAR LAS CASILLAS EN TABLET Y PC ---
     st.markdown("""
         <style>
-            /* Enmarcar y dar relieve visible a los inputs y selects */
+            /* Bordes súper marcados y visibles para tablets y PC */
             div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-                border: 2px solid #b0c4de !important;
+                border: 2.5px solid #2563eb !important;
                 border-radius: 8px !important;
-                background-color: #fafbfc !important;
+                background-color: #f8fafc !important;
             }
-            /* Efecto al hacer clic o escribir en la casilla */
+            /* Reforzar el marco al hacer clic o enfocar en la casilla */
             div[data-baseweb="input"] > div:focus-within, div[data-baseweb="select"] > div:focus-within {
-                border: 2px solid #1e3a8a !important;
-                box-shadow: 0 0 5px rgba(30, 58, 138, 0.3) !important;
+                border: 3px solid #1e40af !important;
+                background-color: #ffffff !important;
+                box-shadow: 0 0 8px rgba(37, 99, 235, 0.5) !important;
             }
         </style>
-    """, unsafe_allow_html=True,)
+    """, unsafe_allow_html=True)
 
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
@@ -470,17 +470,11 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         st.write("Desarrollo analítico y reglamentario para el cálculo de la Potencia Total Prevista ($P_t$) del edificio.")
     with col_b1:
         if st.button("🔄 Resetear Todo"): 
-            ...
-
-
-
-            
             st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
             st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1}]
             st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
             st.rerun()
-
     # Inicializar estado si no existe
     if "grupos_viviendas" not in st.session_state:
         st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
