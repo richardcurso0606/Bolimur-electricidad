@@ -301,7 +301,10 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.markdown("---")
     
-    # --- CABECERA DE LA MEMORIA TÉCNICA ---
+  # =========================================================================
+    # MEMORIA ANALÍTICA DETALLADA (CÁLCULO RÁPIDO)
+    # =========================================================================
+    st.markdown("---")
     st.markdown("""
     <div style="border-bottom: 2.5px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px;">
         <h2 style="color: #0369a1; margin: 0;">BOLIMUR INSTALACIONES INTEGRALES</h2>
@@ -321,10 +324,10 @@ elif seleccion_modulo.startswith("🧮"):
     
     if "Monofásico" in tipo_red_q:
         st.latex(r"I_b = \frac{P}{V \cdot \cos\varphi}")
-        sust_ib_str = f"{val_pot_q:,.1f} / ({v_nom_calc} \cdot {cos_q})"
+        sust_ib_str = f"{val_pot_q:,.1f} / ({v_nom_calc} · {cos_q})"
     else:
         st.latex(r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}")
-        sust_ib_str = f"{val_pot_q:,.1f} / (1.732 \cdot {v_nom_calc} \cdot {cos_q})"
+        sust_ib_str = f"{val_pot_q:,.1f} / (1.732 · {v_nom_calc} · {cos_q})"
         
     st.markdown(f"""
     <div class="bloque-calculo">
@@ -351,10 +354,10 @@ elif seleccion_modulo.startswith("🧮"):
     
     if "Monofásico" in tipo_red_q:
         st.latex(r"S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}")
-        sust_cdt_str = f"(2 \cdot {val_pot_q:,.1f} \cdot {long_q}) / ({gamma_q} \cdot {dv_max_q:.2f} \cdot {v_nom_calc})"
+        sust_cdt_str = f"(2 · {val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})"
     else:
         st.latex(r"S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}")
-        sust_cdt_str = f"({val_pot_q:,.1f} \cdot {long_q}) / ({gamma_q} \cdot {dv_max_q:.2f} \cdot {v_nom_calc})"
+        sust_cdt_str = f"({val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})"
         
     st.markdown(f"""
     <div class="bloque-calculo">
@@ -378,7 +381,7 @@ elif seleccion_modulo.startswith("🧮"):
         <p><b>Origen detallado de los parámetros de impedancia y resistencia:</b></p>
         <ul>
             <li><b>Impedancia de red en origen (<i>Z<sub>origen</sub></i>):</b> Se obtiene a partir de la corriente de cortocircuito configurada en origen (<i>I<sub>cc,origen</sub></i> = {icc_orig_q} kA). Aplicando la ley de Ohm, resulta en <b>{z_origen:.4f} &Omega;</b>.</li>
-            <li><b>Resistencia del cable (<i>R<sub>cable</sub></i>):</b> Se calcula mediante la ley de resistencia para conductores, multiplicada por 2 en sistemas monofásicos. Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en <b>{r_cable_total:.4f} &Omega;</b>.</li>
+            <li><b>Resistencia del cable (<i>R<sub>cable</sub></i>):</b> Se calcula mediante la ley de resistencia para conductores. Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en <b>{r_cable_total:.4f} &Omega;</b>.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -391,7 +394,6 @@ elif seleccion_modulo.startswith("🧮"):
         <p>• <b>Veredicto:</b> {estado_icc}</p>
     </div>
     """, unsafe_allow_html=True)
-
     # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA ---
     st.markdown(f"""
     <div class="pia-destacado" style="background-color: #f8fafc; border: 2px solid #94a3b8; color: #334155; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
