@@ -2,11 +2,11 @@ import streamlit as st
 import sqlite3
 
 # =========================================================================
-# CONFIGURACIÓN DE PÁGINA (TÍTULO Y ICONO PERSONALIZADO)
+# CONFIGURACIÓN DE PÁGINA (TÍTULO Y ICONO NITIDO PARA MÓVIL)
 # =========================================================================
 st.set_page_config(
     page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
-    page_icon="icono_bolimur.PNG",
+    page_icon="⚡",
     layout="wide"
 )
 
