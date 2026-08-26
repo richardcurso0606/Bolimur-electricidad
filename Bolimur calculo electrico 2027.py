@@ -119,11 +119,14 @@ with st.sidebar:
 
     seleccion_modulo = st.session_state.menu_activo
 
+
+
+
 # =========================================================================
 # EL ENRUTADOR (CARGA DE VENTANAS)
 # =========================================================================
 if seleccion_modulo.startswith("🏠"):
-    st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
+    st.title("⚡ CALULOS ELECTRICOS")
     st.write("Bienvenido al panel de cálculo eléctrico. Selecciona una opción en el menú lateral para empezar.")
 
 elif seleccion_modulo.startswith("🧮"):
