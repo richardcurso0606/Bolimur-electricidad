@@ -577,13 +577,12 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     lista_etiquetas = list(opciones_potencia.keys())
     lista_valores = list(opciones_potencia.values())
 
-    for idx, viv in enumerate(st.session_state.grupos_viviendas):
-        # Contenedor enmarcado en forma de tarjeta técnica sólida para cada grupo
-        with st.container():
-            st.markdown(f"""
-                <div style="border: 2px solid #cbd5e1; border-radius: 10px; padding: 15px; margin-bottom: 15px; background-color: #ffffff;">
-                <h4 style="margin-top: 0; color: #1e3a8a;">Grupo #{idx+1}: {viv['nombre']}</h4>
-            """, unsafe_allow_html=True)
+
+    
+for idx, viv in enumerate(st.session_state.grupos_viviendas):
+        # Usamos el contenedor nativo con borde de Streamlit para que los desplegables no se corten
+        with st.container(border=True):
+            st.markdown(f"#### Grupo #{idx+1}: {viv['nombre']}")
 
             c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
             with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
@@ -619,7 +618,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
             pot_total_viviendas += pot_parcial
 
-            # Justificación analítica dentro de un expander desplegable y ocultable
             with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
                 st.info(
                     f"**Desarrollo de Cálculo:**\n\n"
@@ -627,6 +625,13 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
                     f"- Potencia unitaria: **{viv['pot']:,} W**\n"
                     f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
                     f"**Resultado parcial:** **{pot_parcial:,} W**"
+                )
+
+# <--- A partir de aquí fuera del bucle va tu línea del subtotal:
+# st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
+
+
+                    
                 )
             
             st.markdown("</div>", unsafe_allow_html=True)
