@@ -30,9 +30,12 @@ def seleccionar_proteccion(ib):
 # FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
 # =========================================================================
 def renderizar():
-    # --- BOTÓN DE IMPRESIÓN DIRECTA ---
-    col_imprimir_1, col_imprimir_2 = st.columns([3, 1])
-    with col_imprimir_2:
+    # --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
+    col_tit, col_btn = st.columns([3, 1])
+    with col_tit:
+        st.title("🧮 Cálculo Rápido Avanzado")
+    with col_btn:
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
             st.markdown("""
                 <script>
@@ -40,16 +43,6 @@ def renderizar():
                 </script>
             """, unsafe_allow_html=True)
 
-    # --- Estilos exclusivos para las tablas de este módulo y para la impresión ---
-    st.markdown("""
-    <style>
-    @media print {
-...
-
-# =========================================================================
-# FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
-# =========================================================================
-def renderizar():
     # --- Estilos exclusivos para las tablas de este módulo y para la impresión ---
     st.markdown("""
     <style>
@@ -67,8 +60,6 @@ def renderizar():
     tr:nth-child(even) td { background-color: #f8fafc !important; }
     </style>
     """, unsafe_allow_html=True)
-
-    st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
     with rc1:
