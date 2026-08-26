@@ -469,6 +469,9 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     # =========================================================================
     # 1. VIVIENDAS (P1)
     # =========================================================================
+# =========================================================================
+    # 1. VIVIENDAS (P1)
+    # =========================================================================
     st.header("1. Viviendas ($P_1$)")
     if st.button("➕ Añadir Grupo de Viviendas"): 
         st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 5750, "nocturna": False})
@@ -503,7 +506,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
     pot_total_viviendas = 0
     
-    # Separar viviendas normales (diurnas) y con tarifa nocturna para el cálculo exacto
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.grupos_viviendas if not v["nocturna"])
     
     def obtener_K_total(n):
@@ -519,7 +521,8 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         "5.750 W (Básica - Estándar)": 5750,
         "7.360 W (Elevada - Moderada)": 7360,
         "9.200 W (Elevada - Domótica / Clima)": 9200,
-        "11.500 W (Elevada - Gran Superficie)": 11500
+        "11.500 W (Elevada - Gran Superficie)": 11500,
+        "✏️ Personalizada (Introducir W)": -1
     }
     lista_etiquetas = list(opciones_potencia.keys())
     lista_valores = list(opciones_potencia.values())
@@ -529,12 +532,18 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
         with c2: viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
         
-        try: curr_idx = lista_valores.index(viv["pot"])
-        except ValueError: curr_idx = 0
+        pot_actual = viv["pot"]
+        if pot_actual in lista_valores:
+            curr_idx = lista_valores.index(pot_actual)
+        else:
+            curr_idx = 4
             
         with c3: 
             sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
-            viv["pot"] = opciones_potencia[sel_etiqueta]
+            if sel_etiqueta.startswith("✏️"):
+                viv["pot"] = st.number_input(f"Valor personalizado (W)", min_value=0, value=int(pot_actual if pot_actual > 0 else 7000), step=100, key=f"v_custom_{idx}")
+            else:
+                viv["pot"] = opciones_potencia[sel_etiqueta]
             
         with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
         with c5:
@@ -553,16 +562,17 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
         pot_total_viviendas += pot_parcial
 
-        st.info(
-            f"**Justificación Analítica (Viviendas): {viv['nombre']}**\n\n"
-            f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
-            f"- Potencia unitaria: **{viv['pot']} W**\n"
-            f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
-            f"**Resultado parcial:** **{pot_parcial:,} W**"
-        )
+        # --- JUSTIFICACIÓN ANALÍTICA OCULTABLE / DESPLEGABLE ---
+        with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
+            st.info(
+                f"**Desarrollo de Cálculo:**\n\n"
+                f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
+                f"- Potencia unitaria: **{viv['pot']:,} W**\n"
+                f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
+                f"**Resultado parcial:** **{pot_parcial:,} W**"
+            )
 
-    st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
-    
+    st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")    
     
     # =========================================================================
     
