@@ -84,10 +84,10 @@ def renderizar():
 
     # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
     if es_trifasico:
-        formula_ib_str = f"I_b = \\frac{{P}}{{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi}}"
+        formula_ib_str = r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}"
         sust_ib_str = f"I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\frac{{{di_pot:,.1f}}}{{692.82}} = \\mathbf{{{ib_di:.2f}\\text{{ A}}}}"
     else:
-        formula_ib_str = f"I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}}"
+        formula_ib_str = r"I_b = \frac{P}{V \cdot \cos\varphi}"
         sust_ib_str = f"I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\frac{{{di_pot:,.1f}}}{{230}} = \\mathbf{{{ib_di:.2f}\\text{{ A}}}}"
 
     st.info(f"""
@@ -108,10 +108,10 @@ def renderizar():
 
     # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
     if es_trifasico:
-        formula_s_str = f"S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}"
+        formula_s_str = r"S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}"
         sust_s_str = f"S = \\frac{{{di_pot:,.1f} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_di:.2f}\\text{{ mm}}^2}}"
     else:
-        formula_s_str = f"S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}"
+        formula_s_str = r"S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}"
         sust_s_str = f"S = \\frac{{2 \\cdot {di_pot:,.1f} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di:.2f} \\cdot 230}} = \\mathbf{{{s_cdt_di:.2f}\\text{{ mm}}^2}}"
 
     st.info(f"""
@@ -148,7 +148,7 @@ def renderizar():
     * **Umbral Magnético Curva C ($10 \\cdot I_n$)**: Intensidad requerida para asegurar el disparo instantáneo del IGA de {in_iga_auto} A $\\rightarrow$ $10 \\times {in_iga_auto} = \\mathbf{{{umbral_magnetico_iga:.1f}\\text{{ A}}}}$.
     
     **Sustitución Numérica y Verificación Reglamentaria:**
-    $$I_{{cc,final}} = \\frac{{{v_tension}}}{{\\left(\\frac{{{v_tension}}}{{{di_icc_orig * 1000.0}}}\\right) + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{z_orig_ohms:.5f} + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{{z_tot_di:.5f}}}} = \\mathbf{{{icc_fin_di:.1f}\\text{{ A}}}}$$
+    $$I_{{cc,final}} = \\frac{{{v_tension}}}{{\\left(\\frac{{{v_tension}}}{{{di_icc_orig * 1000.0}}}\\right) + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{z_orig_ohms:.5f} + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{z_tot_di:.5f}}} = \\mathbf{{{icc_fin_di:.1f}\\text{{ A}}}}$$
     
     * **Icc estimada al final de la DI:** **{icc_fin_di:,.1f} A** ({icc_fin_di / 1000:.2f} kA)
     * **Umbral de disparo magnético exigido ($10 \\cdot I_n$):** **{umbral_magnetico_iga:.1f} A**
@@ -171,7 +171,81 @@ def renderizar():
         tabla_di_md += f"| **{s_com} mm²** | {iz_val_di} A | {dv_c_di_pct:.3f}% | {est} |\n"
     st.markdown(tabla_di_md)
 
+    # --- LÓGICA DINÁMICA DE TUBOS PARA LA DI (ITC-BT-15 / ITC-BT-21) ---
+    if s_final_di <= 6:
+        tubo_diam_di = "Ø 25 mm o Ø 32 mm"
+        razon_tubo_di = "Adecuado para alojar conductores unipolares de hasta 6 mm² cumpliendo factores de llenaje en interior de viviendas."
+    elif s_final_di <= 16:
+        tubo_diam_di = "Ø 40 mm"
+        razon_tubo_di = "Requerido para cableado de 10 mm² o 16 mm² en derivaciones individuales estándar de edificios plurifamiliares."
+    elif s_final_di <= 35:
+        tubo_diam_di = "Ø 50 mm o Ø 63 mm"
+        razon_tubo_di = "Necesario para secciones elevadas en suministros de gran potencia o locales comerciales."
+    else:
+        tubo_diam_di = "Ø 90 mm o Bandeja técnica"
+        razon_tubo_di = "Secciones muy pesadas que requieren tubos de gran calibre o canales protectoras."
+
+    # --- BLOQUE ANALÍTICO DETALLADO DEL TUBO ---
+    st.markdown("---")
+    st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-15 / ITC-BT-21)")
+    st.info(
+        f"**Análisis del Tubo para tu sección óptima de cable de {s_final_di} mm²:**\n\n"
+        f"* **Diámetro exterior del tubo recomendado:** **{tubo_diam_di}**\n"
+        f"* **¿Por qué se elige este tamaño? (Explicación técnica):** {razon_tubo_di}\n"
+        f"* **Normativa aplicable:** ITC-BT-15 e ITC-BT-21 (Protección mecánica e interior de tubos)."
+    )
+
+    # --- TABLA HTML ESTILADA DE REFERENCIA RÁPIDA DE TUBOS DINÁMICA PARA LA DI ---
+    st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (DI)")
+    
+    tag_6 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (s_final_di <= 6) else ""
+    tag_16 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (10 <= s_final_di <= 16) else ""
+    tag_35 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (25 <= s_final_di <= 35) else ""
+    tag_95 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (s_final_di >= 50) else ""
+
+    bg_6 = "background-color: #f0fdf4; font-weight: bold;" if s_final_di <= 6 else ""
+    bg_16 = "background-color: #f0fdf4; font-weight: bold;" if (10 <= s_final_di <= 16) else ""
+    bg_35 = "background-color: #f0fdf4; font-weight: bold;" if (25 <= s_final_di <= 35) else ""
+    bg_95 = "background-color: #f0fdf4; font-weight: bold;" if s_final_di >= 50 else ""
+
+    html_tabla_tubos_di = f"""
+    <div style="overflow-x: auto; margin-bottom: 20px;">
+    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <thead>
+            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
+                <th style="padding: 12px 16px;">SECCIÓN DEL CABLE (DI)</th>
+                <th style="padding: 12px 16px;">DIÁMETRO EXTERIOR DEL TUBO</th>
+                <th style="padding: 12px 16px;">MOTIVO TÉCNICO / REGLAMENTARIO</th>
+            </tr>
+        </thead>
+        <tbody style="font-size: 14px; color: #334155;">
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg_6}">
+                <td style="padding: 12px 16px;">Hasta 6 mm² {tag_6}</td>
+                <td style="padding: 12px 16px;">Ø 25 mm o Ø 32 mm</td>
+                <td style="padding: 12px 16px;">Suficiente para viviendas con grado de electrificación básico.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; {bg_16}">
+                <td style="padding: 12px 16px;">10 mm² a 16 mm² {tag_16}</td>
+                <td style="padding: 12px 16px;">Ø 40 mm</td>
+                <td style="padding: 12px 16px;">Estándar obligatorio en derivaciones individuales de grado elevado.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg_35}">
+                <td style="padding: 12px 16px;">25 mm² a 35 mm² {tag_35}</td>
+                <td style="padding: 12px 16px;">Ø 50 mm o Ø 63 mm</td>
+                <td style="padding: 12px 16px;">Capacidad para grandes demandas o suministros trifásicos especiales.</td>
+            </tr>
+            <tr style="{bg_95}">
+                <td style="padding: 12px 16px;">≥ 50 mm² {tag_95}</td>
+                <td style="padding: 12px 16px;">Ø 90 mm o Bandeja</td>
+                <td style="padding: 12px 16px;">Grandes secciones en acometidas particulares o edificios singulares.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    """
+    st.markdown(html_tabla_tubos_di, unsafe_allow_html=True)
+
     st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA DI: {s_final_di} mm² de {di_mat.upper()}
-    Garantiza una caída de tensión real del **{dv_real_di_pct:.3f}%**. Protegida en origen/cuadro por **IGA de {in_iga_auto} A (Curva C)** con corte efectivo garantizado por cortocircuito.
+    Garantiza una caída de tensión real del **{dv_real_di_pct:.3f}%**. Protegida en origen/cuadro por **IGA de {in_iga_auto} A (Curva C)** con corte efectivo garantizado por cortocircuito, y canalizada bajo **tubo de {tubo_diam_di}**.
     """)
