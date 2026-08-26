@@ -476,14 +476,46 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     if st.button("➕ Añadir Grupo de Viviendas"): 
         st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 9200, "nocturna": False})
 
+    # --- AYUDA TÉCNICA REBT: BÁSICA VS ELEVADA ---
+    with st.expander("📖 Criterios REBT: ¿Cuándo una vivienda es de Electrificación Básica o Elevada?"):
+        st.markdown("""
+        Según la normativa ITC-BT-25 y ITC-BT-10 del REBT:
+        * **Electrificación Básica (5.750 W):** Destinada a cubrir las necesidades primarias sin calefacción eléctrica. Incluye circuitos básicos (iluminación, tomas de uso general, cocina/horno, lavadora/lavavajillas y baño/cocina auxiliares). Habitualmente para superficies menores o moderadas.
+        * **Electrificación Elevada (9.200 W o superior):** Obligatoria o recomendada cuando se dan alguna de estas condiciones:
+          * Superficie útil de la vivienda **superior a 160 m²**.
+          * Previsión de **calefacción eléctrica** o aire acondicionado generalizado.
+          * Inclusión de sistemas de **automatización, domótica o gestión técnica centralizada**.
+          * Previsión de secadora, más de 2 circuitos de baños, o piscinas y saunas.
+        """)
+
     pot_total_viviendas = 0
     total_n_viviendas = sum(v["qty"] for v in st.session_state.grupos_viviendas)
+
+    # Opciones con etiquetas descriptivas claras para el usuario
+    opciones_potencia = {
+        "5.750 W (Básica - Estándar)": 5750,
+        "7.360 W (Elevada - Moderada)": 7360,
+        "9.200 W (Elevada - Domótica / Clima)": 9200,
+        "11.500 W (Elevada - Gran Superficie / Especial)": 11500
+    }
+    lista_etiquetas = list(opciones_potencia.keys())
+    lista_valores = list(opciones_potencia.values())
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
         with c2: viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
-        with c3: viv["pot"] = st.selectbox(f"Pot. Unitaria", [5750, 7360, 9200, 11500], index=[5750, 7360, 9200, 11500].index(viv["pot"]) if viv["pot"] in [5750, 7360, 9200, 11500] else 0, key=f"v_p_{idx}")
+        
+        # Encontrar el índice actual de la potencia seleccionada
+        try:
+            curr_idx = lista_valores.index(viv["pot"])
+        except ValueError:
+            curr_idx = 0
+            
+        with c3: 
+            sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
+            viv["pot"] = opciones_potencia[sel_etiqueta]
+            
         with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
         with c5:
             st.write(""); st.write("")
@@ -509,7 +541,7 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         st.info(
             f"**Justificación Analítica (Viviendas): {viv['nombre']}**\n\n"
             f"- Nº de viviendas en este grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)\n"
-            f"- Potencia unitaria: **{viv['pot']} W**\n"
+            f"- Potencia unitaria seleccionada: **{viv['pot']} W**\n"
             f"- Coeficiente de simultaneidad aplicado ($K$): **{cs_grupo:.3f}**\n\n"
             f"**Resultado parcial:** **{pot_parcial:,} W**"
         )
@@ -517,6 +549,13 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
     
 
+
+
+    
+    
+    # =========================================================================
+    
+    
     # =========================================================================
     # 2. LOCALES COMERCIALES (P2)
     # =========================================================================
