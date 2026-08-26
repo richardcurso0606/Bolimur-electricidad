@@ -220,7 +220,7 @@ def renderizar():
     """
     st.markdown(html_tabla_tubos, unsafe_allow_html=True)
 
-    # --- TABLA HTML ESTILADA DE SECCIONES (IGUAL QUE EL RESTO DE MÓDULOS) ---
+    # --- TABLA HTML ESTILADA DE SECCIONES (USANDO st.markdown CON unsafe_allow_html=True) ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
     filas_html = ""
