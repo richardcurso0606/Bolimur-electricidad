@@ -4,21 +4,18 @@ import sqlite3
 # =========================================================================
 # 1. IMPORTACIÓN DE LOS MÓDULOS AISLADOS
 # =========================================================================
-# Le decimos a Python que busque en la carpeta 'modulos' nuestro archivo
 from modulos import calculo_rapido
 from modulos import prevision_cargas
 from modulos import lga
 from modulos import di
 
-# Cuando aísles los demás, quitarás el '#' para importarlos así:
-# from modulos import prevision_cargas
-# from modulos import lga
-# from modulos import di
-
 # =========================================================================
 # 2. CONFIGURACIÓN GENERAL (SIEMPRE LA PRIMERA LÍNEA)
 # =========================================================================
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡", layout="wide")
+
+
+
 
 # =========================================================================
 # 3. ESTILOS CSS GLOBALES (Para que toda la app se vea perfecta)
