@@ -61,7 +61,7 @@ def renderizar():
 
     pt_auto = float(p_viv_total + p_loc_total + p_serv_total + p_gar_total)
 
-    # --- CONTROLES DE ENTRADA CON FORMULARIO PARA CÁLCULO INMEDIATO AL PULSAR ENTER ---
+    # --- CONTROLES DE ENTRADA CON FORMULARIO (CÁLCULO AL PULSAR ENTER) ---
     st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
     
     with st.form("form_lga_parametros"):
@@ -108,8 +108,11 @@ def renderizar():
 
     rho_lga = 1.0 / gamma_lga if gamma_lga > 0 else 0.0
     r_lga_cable = (rho_lga * lga_long) / s_final_lga if s_final_lga > 0 else 0.0
-    z_tot_lga = (400.0 / (lga_icc_orig * 1000.0)) + r_lga_cable if lga_icc_orig > 0 else 1.0
-    icc_fin_lga = 400.0 / z_tot_lga / 1000.0 if z_tot_lga > 0 else 0.0
+    
+    # Comprobación Icc LGA
+    z_orig_lga_ohms = 400.0 / (lga_icc_orig * 1000.0)
+    z_tot_lga = z_orig_lga_ohms + r_lga_cable
+    icc_fin_lga = 400.0 / z_tot_lga if z_tot_lga > 0 else 0.0
 
     st.markdown("---")
     st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)</h3>", unsafe_allow_html=True)
@@ -148,26 +151,30 @@ def renderizar():
     * **V**: Tensión nominal (400 V).
     
     **Sustitución Numérica y Resultado:**
-    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}$$
+    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_di_ si es necesario o dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}$$
     """)
     
     # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
     st.info(f"""
     #### 3. Icc Mínima y Fusibles de Compañía (CGP)
     
-    **Criterio y Fórmula Reglamentaria:**
+    **Criterio y Fórmula Reglamentaria (ITC-BT-14 / ITC-BT-22):**
+    Verificamos que los fusibles de protección tipo gG situados en la CGP fundirán a tiempo en caso de un cortocircuito franco al final de la Línea General de Alimentación.
+    
     $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
     
     **Leyenda y Definición de Variables:**
-    * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (kA).
-    * **V**: Tensión nominal de referencia (400 V).
-    * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig} kA).
-    * **R_cable**: Resistencia total del tramo de conductor calculado ($R = \\frac{{\\rho \\cdot L}}{{S}} = {r_lga_cable:.5f}\\ \\Omega$).
-    * **I_n**: Calibre del fusible gG de protección seleccionado ({in_lga_auto} A).
+    * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (A).
+    * **V**: Tensión nominal compuesta de referencia (400 V).
+    * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig * 1000:,.0f} A).
+    * **R_cable**: Resistencia activa del conductor en el tramo ($R = \\frac{\\rho \\cdot L}{S} = {r_lga_cable:.5f}\\ \\Omega$).
+    * **In**: Calibre de los fusibles gG de protección en origen ({in_lga_auto} A).
     
-    **Sustitución y Comprobación Reglamentaria:**
-    * **Icc al final de la LGA:** {icc_fin_lga * 1000:.1f} A ({icc_fin_lga:.2f} kA)
-    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los tiempos reglamentarios exigidos por el REBT.
+    **Sustitución Numérica y Verificación Reglamentaria:**
+    $$I_{{cc,final}} = \\frac{{400}}{{\\left(\\frac{{400}}{{{lga_icc_orig * 1000.0}}}\\right) + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_orig_lga_ohms:.5f} + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_tot_lga:.5f}}} = \\mathbf{{{icc_fin_lga:.1f}\\text{{ A}}}}$$
+    
+    * **Icc al final de la LGA:** **{icc_fin_lga:.1f} A** ({icc_fin_lga / 1000.0:.2f} kA)
+    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los márgenes reglamentarios.
     """)
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
