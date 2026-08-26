@@ -22,6 +22,7 @@ st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡
 # =========================================================================
 st.markdown("""
     <style>
+        /* Bordes generales para inputs y selects */
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
             border: 2.5px solid #2563eb !important; border-radius: 6px !important; background-color: #f8fafc !important;
         }
@@ -31,17 +32,53 @@ st.markdown("""
         div[data-baseweb="popover"], ul[data-baseweb="menu"] {
             max-height: 250px !important; overflow-y: auto !important;
         }
+        
+        /* Estilo general de la barra lateral */
         [data-testid="stSidebar"] {
-            background-color: #f8fafc !important; border-right: 1px solid #e2e8f0;
+            background-color: #f8fafc !important; 
+            border-right: 1px solid #e2e8f0;
         }
-        [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
-            background-color: transparent !important; padding: 10px 5px !important; margin-bottom: 5px !important; color: #334155 !important; font-size: 16px !important; border-radius: 8px;
+        
+        /* =========================================================
+           ESTILO DE TARJETAS / RECUADROS PARA EL MENÚ LATERAL
+           ========================================================= */
+        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
+            background-color: #ffffff !important;
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            padding: 12px 14px !important;
+            margin-bottom: 10px !important;
+            width: 100% !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+            transition: all 0.2s ease-in-out !important;
+            cursor: pointer !important;
         }
-        [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label:hover {
+        
+        /* Efecto al pasar el ratón por encima del recuadro */
+        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:hover {
+            border-color: #38bdf8 !important;
+            background-color: #f0f9ff !important;
+            transform: translateY(-1px);
+        }
+        
+        /* Estilo para la tarjeta seleccionada (recuadro azul destacado) */
+        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label[data-checked="true"],
+        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:has(input:checked) {
+            border: 2.5px solid #0284c7 !important;
             background-color: #e0f2fe !important;
+            box-shadow: 0 4px 6px rgba(2, 132, 199, 0.15) !important;
         }
-        [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label[data-baseweb="radio"] input:checked + div {
-            color: #0369a1 !important; font-weight: bold !important;
+
+        /* Tipografía del texto dentro de las tarjetas del menú */
+        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label p {
+            color: #334155 !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+        }
+        
+        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label input:checked ~ div p {
+            color: #0369a1 !important;
+            font-weight: bold !important;
         }
     </style>
 """, unsafe_allow_html=True)
