@@ -32,18 +32,17 @@ def seleccionar_proteccion(ib):
 def renderizar():
     
     # --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
-    col_tit, col_btn = st.columns([3, 1])
-    with col_tit:
-        st.title("🧮 Cálculo Rápido Avanzado")
-    with col_btn:
+with col_btn:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
             st.markdown("""
                 <script>
-                    window.print();
+                    window.focus();
+                    setTimeout(() => {
+                        window.print();
+                    }, 400);
                 </script>
             """, unsafe_allow_html=True)
-
     # --- ESTILOS CSS INYECTADOS DENTRO DEL RENDER (CORRIGE MÁRGENES Y MULTIPÁGINA) ---
     st.markdown("""
     <style>
