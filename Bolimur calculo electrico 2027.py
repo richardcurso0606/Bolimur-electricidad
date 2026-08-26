@@ -539,6 +539,7 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     st.markdown("---")
 
     pot_total_viviendas = 0
+    pot_total_viviendas = 0
 
     pot_total_viviendas = 0
     
