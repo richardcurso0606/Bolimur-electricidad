@@ -175,98 +175,43 @@ def renderizar():
         f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
 
-    # --- TABLA HTML ESTILADA DE TUBOS ---
+    # --- TABLA MARKDOWN DE TUBOS ---
     st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
-    
-    html_tabla_tubos = """
-    <div style="overflow-x: auto; margin-bottom: 20px;">
-    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <thead>
-            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
-                <th style="padding: 12px 16px;">SECCIÓN DEL CABLE (LGA)</th>
-                <th style="padding: 12px 16px;">DIÁMETRO EXTERIOR DEL TUBO</th>
-                <th style="padding: 12px 16px;">MOTIVO TÉCNICO / REGLAMENTARIO</th>
-            </tr>
-        </thead>
-        <tbody style="font-size: 14px; color: #334155;">
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 12px 16px; font-weight: bold;">10 mm² a 16 mm²</td>
-                <td style="padding: 12px 16px;">Ø 40 mm o Ø 50 mm</td>
-                <td style="padding: 12px 16px;">Espacio adecuado para hilos finos en acometidas pequeñas.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
-                <td style="padding: 12px 16px; font-weight: bold;">25 mm² a 35 mm²</td>
-                <td style="padding: 12px 16px;">Ø 50 mm o Ø 63 mm</td>
-                <td style="padding: 12px 16px;">Capacidad para 4 conductores de sección media sin sobrepresión.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f0fdf4;">
-                <td style="padding: 12px 16px; font-weight: bold; color: #166534;">50 mm² <span style="font-size: 11px; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">Actual</span></td>
-                <td style="padding: 12px 16px; font-weight: bold; color: #166534;">Ø 63 mm</td>
-                <td style="padding: 12px 16px; color: #166534; font-weight: bold;">El tamaño ideal para cumplir el factor de llenaje del 30-40%.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 12px 16px; font-weight: bold;">70 mm² a 95 mm²</td>
-                <td style="padding: 12px 16px;">Ø 90 mm</td>
-                <td style="padding: 12px 16px;">Tubo corrugado de gran calibre para hilos pesados y rígidos.</td>
-            </tr>
-            <tr style="background-color: #f8fafc;">
-                <td style="padding: 12px 16px; font-weight: bold;">≥ 120 mm²</td>
-                <td style="padding: 12px 16px;">Bandeja / Canaladura</td>
-                <td style="padding: 12px 16px;">Canales de obra o bandejas registrables por imposibilidad de curvado en tubo.</td>
-            </tr>
-        </tbody>
-    </table>
-    </div>
+    tabla_tubos_md = """
+| SECCIÓN DEL CABLE (LGA) | DIÁMETRO EXTERIOR DEL TUBO | MOTIVO TÉCNICO / REGLAMENTARIO |
+| :--- | :--- | :--- |
+| **10 mm² a 16 mm²** | Ø 40 mm o Ø 50 mm | Espacio adecuado para hilos finos en acometidas pequeñas. |
+| **25 mm² a 35 mm²** | Ø 50 mm o Ø 63 mm | Capacidad para 4 conductores de sección media sin sobrepresión. |
+| **50 mm²** *(Tu cálculo actual)* | **Ø 63 mm** | **El tamaño ideal para cumplir el factor de llenaje del 30-40%.** |
+| **70 mm² a 95 mm²** | Ø 90 mm | Tubo corrugado de gran calibre para hilos pesados y rígidos. |
+| **≥ 120 mm²** | Bandeja / Canaladura | Canales de obra o bandejas registrables por imposibilidad de curvado en tubo. |
     """
-    st.markdown(html_tabla_tubos, unsafe_allow_html=True)
+    st.markdown(tabla_tubos_md)
 
-    # --- TABLA HTML ESTILADA DE SECCIONES (USANDO st.markdown CON unsafe_allow_html=True) ---
+    # --- TABLA MARKDOWN DE CORRIENTES ADMISIBLES (BBLIOTECAS NATIVAS BLINDADAS) ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
-    filas_html = ""
-    for s_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]:
+    tabla_lga_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    for s_com in SECCIONES_COMERCIALES:
         iz_val_t = tabla_iz.get(s_com, 0)
         dv_c_pct = ((lga_pot * lga_long) / (gamma_lga * s_com * 400) / 400) * 100 if s_com > 0 else 0.0
         cond_s_lga = 0.91 * iz_val_t
         
-        bg_row = "background-color: #f0fdf4;" if s_com == s_final_lga else ""
-        
         if iz_val_t < ib_lga:
             est = "❌ Falla Calentamiento"
         elif in_lga_auto > cond_s_lga:
-            est = f"❌ Falla (In {in_lga_auto}A > {cond_s_lga:.1f}A)"
+            est = f"❌ Falla ($I_n$ {in_lga_auto}A > {cond_s_lga:.1f}A)"
         elif s_com == s_final_lga:
-            est = f"✅ <b>CUMPLE IDEAL</b> (In {in_lga_auto}A ≤ {cond_s_lga:.1f}A)"
+            est = f"✅ **CUMPLE IDEAL** ($I_n$ {in_lga_auto}A $\\le$ {cond_s_lga:.1f}A)"
         else:
             est = "Válido pero sobredimensionado"
             
-        filas_html += f"""
-        <tr style="border-bottom: 1px solid #e2e8f0; {bg_row}">
-            <td style="padding: 12px 16px; font-weight: bold;">{s_com} mm²</td>
-            <td style="padding: 12px 16px;">{iz_val_t} A</td>
-            <td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td>
-            <td style="padding: 12px 16px;">{est}</td>
-        </tr>
-        """
-
-    html_tabla_secciones = f"""
-    <div style="overflow-x: auto; margin-bottom: 20px;">
-    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <thead>
-            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
-                <th style="padding: 12px 16px;">SECCIÓN</th>
-                <th style="padding: 12px 16px;">IZ ADMISIBLE (A)</th>
-                <th style="padding: 12px 16px;">CDT REAL (%)</th>
-                <th style="padding: 12px 16px;">ESTADO DE VERIFICACIÓN (In ≤ 0.91 · Iz)</th>
-            </tr>
-        </thead>
-        <tbody style="font-size: 14px; color: #334155;">
-            {filas_html}
-        </tbody>
-    </table>
-    </div>
-    """
-    st.markdown(html_tabla_secciones, unsafe_allow_html=True)
+        if s_com == s_final_lga:
+            tabla_lga_md += f"| **{s_com} mm² (Óptima)** | **{iz_val_t} A** | **{dv_c_pct:.3f}%** | **{est}** |\n"
+        else:
+            tabla_lga_md += f"| {s_com} mm² | {iz_val_t} A | {dv_c_pct:.3f}% | {est} |\n"
+            
+    st.markdown(tabla_lga_md)
 
     st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA LGA: {s_final_lga} mm² de {lga_mat.upper()}
