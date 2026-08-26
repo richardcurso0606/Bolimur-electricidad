@@ -297,10 +297,10 @@ def renderizar():
     """
     st.markdown(html_tabla_tubos, unsafe_allow_html=True)
 
-    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES (CONSTRUIDA EN UNA SOLA VARIABLE LIMPIA) ---
+    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES (BLINDADA CON UNIÓN LIMPIA DE LISTAS) ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
-    lineas_filas = []
+    filas_lista = []
     for s_com in SECCIONES_COMERCIALES:
         iz_val_t = tabla_iz.get(s_com, 0)
         dv_c_pct = ((lga_pot * lga_long) / (gamma_lga * s_com * 400) / 400) * 100 if s_com > 0 else 0.0
@@ -317,14 +317,8 @@ def renderizar():
         else:
             est = "Válido pero sobredimensionado"
             
-        lineas_filas.append(f"""
-        <tr style="border-bottom: 1px solid #e2e8f0; {bg_row}">
-            <td style="padding: 12px 16px; font-weight: bold;">{s_com} mm²</td>
-            <td style="padding: 12px 16px;">{iz_val_t} A</td>
-            <td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td>
-            <td style="padding: 12px 16px;">{est}</td>
-        </tr>
-        """)
+        fila_str = f'<tr style="border-bottom: 1px solid #e2e8f0; {bg_row}"><td style="padding: 12px 16px; font-weight: bold;">{s_com} mm²</td><td style="padding: 12px 16px;">{iz_val_t} A</td><td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px;">{est}</td></tr>'
+        filas_lista.append(fila_str)
 
     html_tabla_secciones = f"""
     <div style="overflow-x: auto; margin-bottom: 20px;">
@@ -338,7 +332,7 @@ def renderizar():
             </tr>
         </thead>
         <tbody style="font-size: 14px; color: #334155;">
-            {"".join(lineas_filas)}
+            {"".join(filas_lista)}
         </tbody>
     </table>
     </div>
