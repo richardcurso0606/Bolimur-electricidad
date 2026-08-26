@@ -177,32 +177,28 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (ESTILO IMPRESIÓN LIMPIO)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PROFESIONAL PARA OCULTAR TODO EXCEPTO LA MEMORIA AL IMPRIMIR ---
+    
+ # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ----------------------------------------------------------------------
+    
+ # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ----------------------------------------------------------------------
+    
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar barra lateral, cabeceras de Streamlit, botones y los selectores superiores de entrada */
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"] {
+        /* Ocultar elementos de navegación, menús de Streamlit y selectores */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe) {
             display: none !important;
         }
-        /* Forzar fondo blanco y eliminar márgenes innecesarios */
+        /* Forzar visibilidad y formato limpio en papel */
         body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
             background-color: white !important;
             color: black !important;
             font-size: 11pt !important;
-            margin: 0 !important;
-            padding: 0 !important;
         }
-        /* Mostrar y estructurar de forma limpia la memoria para PDF/Impresión */
-        .memoria-impresion {
-            display: block !important;
-            width: 100% !important;
-            padding: 10px !important;
-            margin: 0 !important;
-        }
-        /* Asegurar que las cajas azules se impriman limpias */
-        .stInfo, div[data-baseweb="notification"] {
+        /* Asegurar que las cajas de texto y resultados salgan completas */
+        .stInfo, div[data-baseweb="notification"], div[style*="background-color"] {
             background-color: #f0f9ff !important;
+            color: black !important;
             border: 1px solid #bae6fd !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -210,7 +206,6 @@ elif seleccion_modulo.startswith("🧮"):
     }
     </style>
     """, unsafe_allow_html=True)
-
     st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
