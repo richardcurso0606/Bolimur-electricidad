@@ -180,6 +180,8 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN INFORME TÉCNICO OFICIAL)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
+
+    
     # --- ESTILO CSS PARA INFORME TÉCNICO PURO (SIN APARIENCIA DE APP) ---
     st.markdown("""
     <style>
@@ -443,6 +445,24 @@ elif seleccion_modulo.startswith("🧮"):
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10) - VERSIÓN TÉCNICA AVANZADA
 # =========================================================================
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
+    
+    # --- ESTILOS CSS PARA ENMARCAR LAS CASILLAS Y MEJORAR LA VISIBILIDAD ---
+    st.markdown("""
+        <style>
+            /* Enmarcar y dar relieve visible a los inputs y selects */
+            div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+                border: 2px solid #b0c4de !important;
+                border-radius: 8px !important;
+                background-color: #fafbfc !important;
+            }
+            /* Efecto al hacer clic o escribir en la casilla */
+            div[data-baseweb="input"] > div:focus-within, div[data-baseweb="select"] > div:focus-within {
+                border: 2px solid #1e3a8a !important;
+                box-shadow: 0 0 5px rgba(30, 58, 138, 0.3) !important;
+            }
+        </style>
+    """, unsafe_allow_html=True,)
+
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
@@ -450,6 +470,11 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         st.write("Desarrollo analítico y reglamentario para el cálculo de la Potencia Total Prevista ($P_t$) del edificio.")
     with col_b1:
         if st.button("🔄 Resetear Todo"): 
+            ...
+
+
+
+            
             st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
             st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1}]
