@@ -629,31 +629,52 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
     st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
 
+
+
+
+
+
+
+    
     # =========================================================================
     # 4. GARAJES E IRVE (P4)
     # =========================================================================
+
+
+# =========================================================================
+    # 4. GARAJES E INFRAESTRUCTURA DE RECARGA (IRVE - ITC-BT-52)
+    # =========================================================================
     st.markdown("---")
     st.header("4. Garajes e Infraestructura de Recarga (IRVE - ITC-BT-52)")
-    g1, g2, g3 = st.columns(3)
-    with g1: st.session_state.garajes["sup"] = st.number_input("Superficie Garaje m²", value=float(st.session_state.garajes["sup"]))
-    with g2: st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en Garaje", value=int(st.session_state.garajes["plazas_irve"]))
+    
+    g1, g2, g3, g4 = st.columns(4)
+    with g1: 
+        st.session_state.garajes["sup"] = st.number_input("Superficie Garaje m²", value=float(st.session_state.garajes["sup"]))
+    with g2: 
+        tipo_vent = st.selectbox("Tipo de Ventilación", ["Forzada (20 W/m²)", "Natural (10 W/m²)"])
     with g3: 
-        tipo_irve_pct = st.selectbox("Previsión IRVE (ITC-BT-52)", ["10% de las plazas (Factor 0.3 o cálculo directo)", "Esquema colectivo con sistema de gestión"])
-        st.session_state.garajes["tipo_irve"] = 0.10 # 10% obligatorio general sin sistema de gestión dedicado
+        st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en Garaje", value=int(st.session_state.garajes["plazas_irve"]))
+    with g4: 
+        st.session_state.garajes["tipo_irve"] = st.selectbox("Esquema IRVE", ["10% (Sin sistema de gestión)", "Con sistema de gestión"])
 
     sup_g = st.session_state.garajes["sup"]
-    p_gar = max(sup_g * 20.0, 3450.0 if sup_g > 0 else 0.0) # 20 W/m² para ventilación forzada
     
-    # Cálculo reglamentario IRVE según ejercicio (10% de plazas a 3.680 W cada una con factor de simultaneidad o esquema)
-    plazas_afectadas = int(round(st.session_state.garajes["plazas_irve"] * st.session_state.garajes["tipo_irve"]))
-    p_irve = plazas_afectadas * 3680.0  # 3.680 W por cada plaza de recarga básica (cir. dedicado 16A 230V)
+    # Asignar ratio según la selección del desplegable
+    ratio_vent = 20.0 if "Forzada" in tipo_vent else 10.0
+    p_gar = max(sup_g * ratio_vent, 3450.0 if sup_g > 0 else 0.0)
+    
+    # Cálculo de plazas afectadas para IRVE
+    factor_irve_val = 0.10 if "Sin sistema" in st.session_state.garajes["tipo_irve"] else 0.05
+    plazas_afectadas = int(round(st.session_state.garajes["plazas_irve"] * factor_irve_val))
+    p_irve = plazas_afectadas * 3680.0  # 3.680 W por plaza de recarga básica
+    
     pot_total_garaje = p_gar + p_irve
 
     if sup_g > 0 or st.session_state.garajes["plazas_irve"] > 0:
         st.info(f"""
         **Justificación Analítica: Garajes e Instalación IRVE**
-        * **Ventilación Forzada Garaje:** {sup_g} m² $\\cdot$ 20 W/m² = **{p_gar:,.0f} W**
-        * **Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ 10% = **{plazas_afectadas} plazas** $\\cdot$ 3.680 W = **{p_irve:,.0f} W**
+        * **Ventilación del Garaje ({tipo_vent}):** {sup_g} m² $\\cdot$ {ratio_vent} W/m² = **{p_gar:,.0f} W**
+        * **Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ ({int(factor_irve_val*100)}%) = **{plazas_afectadas} plazas** $\\cdot$ 3.680 W = **{p_irve:,.0f} W**
         """)
 
     st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.0f} W**")
