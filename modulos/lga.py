@@ -25,7 +25,7 @@ def seleccionar_proteccion(ib):
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # --- AYUDA TÉCNICA DESPLEGABLE CORREGIDA (HTML AISLADO) ---
+    # --- AYUDA TÉCNICA DESPLEGABLE ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
         
@@ -252,10 +252,10 @@ def renderizar():
         f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
 
-    # --- TABLA HTML ESTILADA DE TUBOS (ESTILO CORPORATIVO) ---
+    # --- TABLA HTML ESTILADA DE TUBOS ---
     st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
     
-    html_tabla_tubos = f"""
+    html_tabla_tubos = """
     <div style="overflow-x: auto; margin-bottom: 20px;">
     <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <thead>
@@ -297,7 +297,7 @@ def renderizar():
     """
     st.markdown(html_tabla_tubos, unsafe_allow_html=True)
 
-    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES ---
+    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES (BLINDADA EN BLOQUE ÚNICO) ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
     filas_html = ""
