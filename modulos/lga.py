@@ -25,6 +25,57 @@ def seleccionar_proteccion(ib):
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
+    # --- AYUDA TÉCNICA DESPLEGABLE CON DISEÑO PROFESIONAL ---
+    with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
+        st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
+        
+        html_ayuda_cond = """
+        <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <thead>
+                <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 13px;">
+                    <th style="padding: 10px 14px;">MATERIAL CONDUCTOR</th>
+                    <th style="padding: 10px 14px;">AISLAMIENTO</th>
+                    <th style="padding: 10px 14px;">TEMP. SERVICIO</th>
+                    <th style="padding: 10px 14px;">CONDUCTIVIDAD (γ) [m/(Ω·mm²)]</th>
+                    <th style="padding: 10px 14px;">RESISTIVIDAD (ρ) [Ω·mm²/m]</th>
+                </tr>
+            </thead>
+            <tbody style="font-size: 13px; color: #334155;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
+                    <td style="padding: 10px 14px;">PVC</td>
+                    <td style="padding: 10px 14px;">70 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">56.0</td>
+                    <td style="padding: 10px 14px;">~0.0179</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
+                    <td style="padding: 10px 14px;">XLPE / EPR</td>
+                    <td style="padding: 10px 14px;">90 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">44.0</td>
+                    <td style="padding: 10px 14px;">~0.0227</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
+                    <td style="padding: 10px 14px;">PVC</td>
+                    <td style="padding: 10px 14px;">70 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">35.0</td>
+                    <td style="padding: 10px 14px;">~0.0286</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
+                    <td style="padding: 10px 14px;">XLPE / EPR</td>
+                    <td style="padding: 10px 14px;">90 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">28.0</td>
+                    <td style="padding: 10px 14px;">~0.0357</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        """
+        st.markdown(html_ayuda_cond, unsafe_allow_html=True)
+
     # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
     
@@ -202,7 +253,7 @@ def renderizar():
         f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
 
-    # --- TABLA HTML ESTILADA DE TUBOS ---
+    # --- TABLA HTML ESTILADA DE TUBOS (ESTILO CORPORATIVO UNIFICADO) ---
     st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
     
     html_tabla_tubos = """
@@ -247,7 +298,7 @@ def renderizar():
     """
     st.markdown(html_tabla_tubos, unsafe_allow_html=True)
 
-    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES (IGUAL A LA DE LA CAPTURA) ---
+    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
     filas_html = ""
