@@ -2,13 +2,48 @@ import streamlit as st
 import sqlite3
 
 # =========================================================================
-# CONFIGURACIÓN DE PÁGINA (TÍTULO Y ICONO NITIDO PARA MÓVIL)
+# CONFIGURACIÓN DE PÁGINA (TÍTULO Y ICONO NÍTIDO PARA MÓVIL)
 # =========================================================================
 st.set_page_config(
     page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
     page_icon="⚡",
     layout="wide"
 )
+
+# =========================================================================
+# ESTILOS CSS GLOBALES (FORZANDO MODO CLARO PARA EVITAR PANTALLAS NEGRAS)
+# =========================================================================
+st.markdown("""
+    <style>
+        /* Forzar fondo blanco y texto oscuro en toda la app y sus módulos */
+        .stApp {
+            background-color: #ffffff;
+            color: #334155;
+        }
+        
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
+        }
+        [data-testid="stSidebar"] {
+            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
+        }
+        [data-testid="stSidebar"] button {
+            width: 100%;
+            text-align: left;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            color: #334155;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        [data-testid="stSidebar"] button:hover {
+            border-color: #0284c7;
+            background-color: #f0f9ff;
+            color: #0284c7;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # =========================================================================
 # INICIALIZACIÓN GLOBAL OBLIGATORIA (¡Arriba del todo para evitar errores!)
@@ -44,35 +79,6 @@ try:
     from modulos import di
 except Exception as e:
     st.error(f"Error al cargar el módulo di: {e}")
-
-# =========================================================================
-# ESTILOS CSS GLOBALES
-# =========================================================================
-st.markdown("""
-    <style>
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
-        }
-        [data-testid="stSidebar"] button {
-            width: 100%;
-            text-align: left;
-            background-color: #ffffff;
-            border: 2px solid #cbd5e1;
-            border-radius: 8px;
-            color: #334155;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-        [data-testid="stSidebar"] button:hover {
-            border-color: #0284c7;
-            background-color: #f0f9ff;
-            color: #0284c7;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # =========================================================================
 # MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
