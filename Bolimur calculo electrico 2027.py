@@ -556,7 +556,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     st.markdown("---")
 
     pot_total_viviendas = 0
-    
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.grupos_viviendas if not v["nocturna"])
     
     def obtener_K_total(n):
@@ -579,52 +578,60 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     lista_valores = list(opciones_potencia.values())
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
-        c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
-        with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
-        with c2: viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
-        
-        pot_actual = viv["pot"]
-        if pot_actual in lista_valores:
-            curr_idx = lista_valores.index(pot_actual)
-        else:
-            curr_idx = 4
+        # Contenedor enmarcado en forma de tarjeta técnica sólida para cada grupo
+        with st.container():
+            st.markdown(f"""
+                <div style="border: 2px solid #cbd5e1; border-radius: 10px; padding: 15px; margin-bottom: 15px; background-color: #ffffff;">
+                <h4 style="margin-top: 0; color: #1e3a8a;">Grupo #{idx+1}: {viv['nombre']}</h4>
+            """, unsafe_allow_html=True)
+
+            c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
+            with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
+            with c2: viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
             
-        with c3: 
-            sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
-            if sel_etiqueta.startswith("✏️"):
-                viv["pot"] = st.number_input(f"Valor personalizado (W)", min_value=0, value=int(pot_actual if pot_actual > 0 else 7000), step=100, key=f"v_custom_{idx}")
+            pot_actual = viv["pot"]
+            if pot_actual in lista_valores:
+                curr_idx = lista_valores.index(pot_actual)
             else:
-                viv["pot"] = opciones_potencia[sel_etiqueta]
+                curr_idx = 4
+                
+            with c3: 
+                sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
+                if sel_etiqueta.startswith("✏️"):
+                    viv["pot"] = st.number_input(f"Valor personalizado (W)", min_value=0, value=int(pot_actual if pot_actual > 0 else 7000), step=100, key=f"v_custom_{idx}")
+                else:
+                    viv["pot"] = opciones_potencia[sel_etiqueta]
+                
+            with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
+            with c5:
+                st.write(""); st.write("")
+                if st.button("🗑️", key=f"del_v_{idx}"):
+                    if len(st.session_state.grupos_viviendas) > 1: 
+                        st.session_state.grupos_viviendas.pop(idx); st.rerun()
+
+            if viv["nocturna"]:
+                pot_parcial = int(round(viv["qty"] * viv["pot"]))
+            else:
+                if viviendas_diurnas_qty > 0:
+                    pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_diurno / viviendas_diurnas_qty)))
+                else:
+                    pot_parcial = 0
+
+            pot_total_viviendas += pot_parcial
+
+            # Justificación analítica dentro de un expander desplegable y ocultable
+            with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
+                st.info(
+                    f"**Desarrollo de Cálculo:**\n\n"
+                    f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
+                    f"- Potencia unitaria: **{viv['pot']:,} W**\n"
+                    f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
+                    f"**Resultado parcial:** **{pot_parcial:,} W**"
+                )
             
-        with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
-        with c5:
-            st.write(""); st.write("")
-            if st.button("🗑️", key=f"del_v_{idx}"):
-                if len(st.session_state.grupos_viviendas) > 1: 
-                    st.session_state.grupos_viviendas.pop(idx); st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        if viv["nocturna"]:
-            pot_parcial = int(round(viv["qty"] * viv["pot"]))
-        else:
-            if viviendas_diurnas_qty > 0:
-                pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_diurno / viviendas_diurnas_qty)))
-            else:
-                pot_parcial = 0
-
-        pot_total_viviendas += pot_parcial
-
-        # --- JUSTIFICACIÓN ANALÍTICA OCULTABLE / DESPLEGABLE ---
-        with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
-            st.info(
-                f"**Desarrollo de Cálculo:**\n\n"
-                f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
-                f"- Potencia unitaria: **{viv['pot']:,} W**\n"
-                f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
-                f"**Resultado parcial:** **{pot_parcial:,} W**"
-            )
-
-    st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")    
-    
+    st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
     # =========================================================================
     
     
