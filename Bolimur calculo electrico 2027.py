@@ -174,37 +174,50 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN LIMPIA PARA IMPRESIÓN)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN INFORME PROFESIONAL)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN (OCULTAR AYUDAS Y NUMERAR PÁGINAS) ---
+    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN (SALTOS DE PÁGINA Y MÁRGENES) ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de navegación, menús, selectores y ayudas visuales al imprimir */
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe), .no-print {
+        /* Ocultar elementos de navegación, menús, selectores */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe) {
             display: none !important;
         }
+        /* Ocultar explícitamente los expanders (Ayuda) y el aviso inferior */
+        details, .ocultar-impresion {
+            display: none !important;
+        }
+        /* Forzar fondo blanco y tipografía formal */
         body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
             background-color: white !important;
             color: black !important;
             font-size: 11pt !important;
         }
+        /* Configuración de márgenes oficiales y numeración */
+        @page {
+            margin: 2cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: sans-serif;
+                font-size: 9pt;
+                color: #64748b;
+            }
+        }
+        /* EVITAR QUE LAS CAJAS Y TABLAS SE PARTAN A LA MITAD DE LA PÁGINA */
+        .stInfo, .pia-destacado, table, div[data-testid="stTable"] {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 15px !important;
+        }
+        /* Mantener los colores de las cajas de resultados al imprimir */
         .stInfo, div[data-baseweb="notification"], div[style*="background-color"] {
             background-color: #f0f9ff !important;
             color: black !important;
             border: 1px solid #bae6fd !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        /* Numeración automática de páginas en el PDF generado */
-        @page {
-            margin: 20mm;
-            @bottom-right {
-                content: "Página " counter(page) " de " counter(pages);
-                font-size: 9pt;
-                color: #64748b;
-            }
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
     }
     </style>
@@ -356,8 +369,7 @@ elif seleccion_modulo.startswith("🧮"):
     </div>
     """, unsafe_allow_html=True)
 
-    # --- VENTANA DE AYUDA DESPLEGABLE (OCULTA AL IMPRIMIR GRACIAS A .no-print) ---
-    st.markdown('<div class="no-print">', unsafe_allow_html=True)
+    # --- VENTANA DE AYUDA DESPLEGABLE (OCULTADA NATIVAMENTE AL IMPRIMIR) ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
         
@@ -371,7 +383,6 @@ elif seleccion_modulo.startswith("🧮"):
         """
         st.markdown(tabla_gamma_md)
         st.markdown("*Nota:* El programa selecciona automáticamente este valor según la selección superior.")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
@@ -392,19 +403,18 @@ elif seleccion_modulo.startswith("🧮"):
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
-    # --- AVISO INFORMATIVO PARA IMPRESIÓN (OCULTO AL IMPRIMIR) ---
-    st.markdown('<div class="no-print">', unsafe_allow_html=True)
-    st.markdown("---")
-    st.info("💡 **Para guardar o imprimir esta memoria en PDF de forma limpia:** Pulsa las opciones de tu navegador o usa el atajo **Ctrl + P** (en PC) para generar el documento oficial sin menús ni barras laterales.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    # --- AVISO INFORMATIVO INYECTADO COMO HTML PURO PARA OCULTARLO AL IMPRIMIR ---
+    st.markdown("""
+    <div class="ocultar-impresion" style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px;">
+        💡 <b>Para guardar o imprimir esta memoria en PDF de forma limpia:</b> Pulsa las opciones de tu navegador o usa el atajo <b>Ctrl + P</b> (en PC) para generar el documento oficial sin menús ni barras laterales.
+    </div>
+    """, unsafe_allow_html=True)
 
 
 
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
 # =========================================================================
-
-
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
 # =========================================================================
