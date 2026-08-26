@@ -174,28 +174,21 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (ESTILO IMPRESIÓN LIMPIO)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN DEFINITIVA)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    
- # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ----------------------------------------------------------------------
-    
- # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ----------------------------------------------------------------------
-    
+    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de navegación, menús de Streamlit y selectores */
         [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe) {
             display: none !important;
         }
-        /* Forzar visibilidad y formato limpio en papel */
         body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
             background-color: white !important;
             color: black !important;
             font-size: 11pt !important;
         }
-        /* Asegurar que las cajas de texto y resultados salgan completas */
         .stInfo, div[data-baseweb="notification"], div[style*="background-color"] {
             background-color: #f0f9ff !important;
             color: black !important;
@@ -206,6 +199,7 @@ elif seleccion_modulo.startswith("🧮"):
     }
     </style>
     """, unsafe_allow_html=True)
+
     st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
@@ -287,10 +281,7 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.markdown("---")
     
-    # --- CONTENEDOR PRINCIPAL DE LA MEMORIA TÉCNICA ---
-    st.markdown('<div class="memoria-impresion">', unsafe_allow_html=True)
-    
-    # Cabecera formal corporativa exclusiva para impresión/PDF
+    # --- CABECERA DE LA MEMORIA TÉCNICA (Visible y lista para imprimir) ---
     st.markdown("""
     <div style="border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px;">
         <h2 style="color: #0369a1; margin: 0;">BOLIMUR INSTALACIONES INTEGRALES</h2>
@@ -387,30 +378,16 @@ elif seleccion_modulo.startswith("🧮"):
     La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
-    
-    st.markdown('</div>', unsafe_allow_html=True) # Fin del contenedor de impresión
 
-    # --- COMPONENTE HTML/JS PARA IMPRESIÓN COMPATIBLE CON TABLET Y PC ---
+    # --- AVISO INFORMATIVO PARA IMPRESIÓN ---
     st.markdown("---")
-    import streamlit.components.v1 as components
-    
-    html_print_code = """
-    <div style="background-color: #f0f9ff; padding: 20px; border-radius: 10px; border: 1px solid #bae6fd; text-align: center; font-family: sans-serif;">
-        <h3 style="color: #0369a1; margin-bottom: 5px;">📄 BOLIMUR INSTALACIONES INTEGRALES</h3>
-        <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 15px;">Memoria Técnica lista para imprimir de forma ordenada y estructurada.</p>
-        <button onclick="window.print()" style="background-color: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-            🖨️ Imprimir / Guardar Memoria en PDF
-        </button>
-    </div>
-    """
-    components.html(html_print_code, height=140)
+    st.info("💡 **Para guardar o imprimir esta memoria en PDF de forma limpia:** Pulsa las opciones de tu navegador o usa el atajo **Ctrl + P** (en PC) para generar el documento oficial sin menús ni barras laterales.")
 
 
 
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
-# =========================================================================
-# =========================================================================
+# =========================================================================# =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
 
