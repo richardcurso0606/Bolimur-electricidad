@@ -170,7 +170,7 @@ def renderizar():
     
     st.markdown("""
     <div style="border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px;">
-        <h2 style="color: #0369a1; margin: 0;">BOLIMUR INSTALACIONES INTEGRALES</h2>
+        <h2 style="color: #0369a1; margin: 0;">CALCULO INSTALACIONES INTEGRALES</h2>
         <p style="color: #64748b; font-size: 13px; margin: 2px 0 0 0;">Memoria Técnica de Justificación de Secciones - REBT</p>
     </div>
     """, unsafe_allow_html=True)
