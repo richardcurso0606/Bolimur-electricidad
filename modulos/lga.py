@@ -109,7 +109,6 @@ def renderizar():
     rho_lga = 1.0 / gamma_lga if gamma_lga > 0 else 0.0
     r_lga_cable = (rho_lga * lga_long) / s_final_lga if s_final_lga > 0 else 0.0
     
-    # Comprobación Icc LGA
     z_orig_lga_ohms = 400.0 / (lga_icc_orig * 1000.0)
     z_tot_lga = z_orig_lga_ohms + r_lga_cable
     icc_fin_lga = 400.0 / z_tot_lga if z_tot_lga > 0 else 0.0
@@ -151,7 +150,7 @@ def renderizar():
     * **V**: Tensión nominal (400 V).
     
     **Sustitución Numérica y Resultado:**
-    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_di_ si es necesario o dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}$$
+    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}$$
     """)
     
     # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
