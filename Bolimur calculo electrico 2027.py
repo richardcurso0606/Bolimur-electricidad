@@ -105,7 +105,7 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     
 
 elif seleccion_modulo.startswith("⚡"):
-    lga.renderizar(calcular_pt_global)
+    lga.renderizar()
 
 
 elif seleccion_modulo.startswith("🔌"):
