@@ -43,11 +43,11 @@ def renderizar():
     # --- CÁLCULOS TÉCNICOS ---
     es_trifasico = "Trifásico" in tipo_suministro
     v_tension = 400.0 if es_trifasico else 230.0
-    cos_phi_di = 1.0 # Habitual en viviendas / suministros en baja tensión
+    cos_phi_di = 1.0 
     
     ib_di = di_pot / (math.sqrt(3) * v_tension * cos_phi_di) if es_trifasico else di_pot / (v_tension * cos_phi_di)
     
-    dv_pct_di = 1.0 # Límite ITC-BT-15 desde contador hasta cuadro general
+    dv_pct_di = 1.0 
     gamma_di = 44.0 if "XLPE" in di_aisl else 48.5
     dv_max_di = v_tension * (dv_pct_di / 100.0)
     
@@ -57,7 +57,7 @@ def renderizar():
         s_cdt_di = (2.0 * di_pot * di_long) / (gamma_di * dv_max_di * v_tension) if gamma_di * dv_max_di * v_tension > 0 else 6.0
 
     in_iga_auto = seleccionar_iga(ib_di)
-    s_final_di = seleccionar_seccion_optima_di(max(s_cdt_di, 6.0)) # Mínimo reglamentario ITC-BT-15 para viviendas suele ser 6 mm²
+    s_final_di = seleccionar_seccion_optima_di(max(s_cdt_di, 6.0)) 
     
     tabla_iz_di = IZ_COBRE_TUBO_DI
     while True:
@@ -72,8 +72,10 @@ def renderizar():
     rho_di = 1.0 / gamma_di if gamma_di > 0 else 0.0
     r_cable_di = (rho_di * di_long) / s_final_di if s_final_di > 0 else 0.0
     
-    # Comprobación Icc cortocircuito IGA (Curva C: disparo magnético entre 5 y 10 In -> tomamos 10*In como umbral severo)
-    z_tot_di = (v_tension / (di_icc_orig * 1000.0)) + (2.0 * r_cable_di if not es_trifasico else r_cable_di)
+    # Comprobación Icc cortocircuito IGA
+    z_orig_ohms = v_tension / (di_icc_orig * 1000.0)
+    r_total_cable = (2.0 if not es_trifasico else 1.0) * r_cable_di
+    z_tot_di = z_orig_ohms + r_total_cable
     icc_fin_di = v_tension / z_tot_di if z_tot_di > 0 else 0.0
     umbral_magnetico_iga = 10.0 * in_iga_auto
 
@@ -134,7 +136,7 @@ def renderizar():
     #### 3. Comprobación de Cortocircuito y Protección IGA (Disparo Magnético 0.1s)
     
     **Criterio y Fórmula Reglamentaria (ITC-BT-22 / ITC-BT-15):**
-    El Interruptor General Automático (IGA) instalado en el cuadro de vivienda debe garantizar el corte ultra-rápido (< 0.1 s) ante un cortocircuito franco al final de la línea mediante su disparo magnético (Curva C: $10 \\cdot I_n$).
+    El Interruptor General Automático (IGA) instalado en el cuadro de vivienda debe garantizar el corte ultra-rápido ante un cortocircuito franco al final de la línea mediante su disparo magnético instantáneo (Curva C: $10 \\cdot I_n$).
     
     $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{total,cable}}}}$$
     
@@ -142,13 +144,15 @@ def renderizar():
     * **I_cc,final**: Corriente de cortocircuito estimada al final de la DI (A).
     * **V**: Tensión nominal de referencia ({v_tension} V).
     * **I_cc,origen**: Corriente de cortocircuito en el origen / contadores ({di_icc_orig * 1000:,.0f} A).
-    * **R_total,cable**: Resistencia activa total del bucle de conductors ({'2 · R_cable' if not es_trifasico else 'R_cable'} = {('2 * ' if not es_trifasico else '') + f'{r_cable_di:.5f}'} = { (2.0 if not es_trifasico else 1.0) * r_cable_di:.5f}\\ \\Omega).
+    * **R_total,cable**: Resistencia activa total del bucle de conductores ({'2 · R_cable' if not es_trifasico else 'R_cable'} = {r_total_cable:.5f}\\ \\Omega).
     * **Umbral Magnético Curva C ($10 \\cdot I_n$)**: Intensidad requerida para asegurar el disparo instantáneo del IGA de {in_iga_auto} A $\\rightarrow$ $10 \\times {in_iga_auto} = \\mathbf{{{umbral_magnetico_iga:.1f}\\text{{ A}}}}$.
     
-    **Sustitución y Verificación Reglamentaria:**
+    **Sustitución Numérica y Verificación Reglamentaria:**
+    $$I_{{cc,final}} = \\frac{{{v_tension}}}{{\\left(\\frac{{{v_tension}}}{{{di_icc_orig * 1000.0}}}\\right) + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{z_orig_ohms:.5f} + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{{z_tot_di:.5f}}}} = \\mathbf{{{icc_fin_di:.1f}\\text{{ A}}}}$$
+    
     * **Icc estimada al final de la DI:** **{icc_fin_di:,.1f} A** ({icc_fin_di / 1000:.2f} kA)
     * **Umbral de disparo magnético exigido ($10 \\cdot I_n$):** **{umbral_magnetico_iga:.1f} A**
-    * **Veredicto de Protección:** {'✅ **GARANTIZADO** (La Icc final de cortocircuito supera ampliamente el umbral magnético de disparo instantáneo del IGA de ' + str(in_iga_auto) + ' A).' if icc_fin_di >= umbral_magnetico_iga else '⚠️ **REVISAR** (La Icc es inferior al umbral magnético de la curva C).'}
+    * **Veredicto de Protección:** {'✅ **GARANTIZADO** (La Icc final de cortocircuito de ' + f'{icc_fin_di:.1f} A' + ' supera ampliamente el umbral magnético de disparo instantáneo del IGA de ' + str(in_iga_auto) + ' A).' if icc_fin_di >= umbral_magnetico_iga else '⚠️ **REVISAR** (La Icc es inferior al umbral magnético de la curva C).'}
     """)
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ IGA RECOMENDADO EN CUADRO VIVIENDA: {in_iga_auto} A (Curva C)</div>""", unsafe_allow_html=True)
