@@ -25,7 +25,7 @@ def seleccionar_proteccion(ib):
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
+    # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS[cite: 1] ---
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
     
     tabla_k = {1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8, 10: 8.5, 
@@ -114,7 +114,7 @@ def renderizar():
     icc_fin_lga = 400.0 / z_tot_lga if z_tot_lga > 0 else 0.0
 
     st.markdown("---")
-    st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)[cite: 1]</h3>", unsafe_allow_html=True)
 
     # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
     st.info(
@@ -128,7 +128,7 @@ def renderizar():
         "* **cos φ**: Factor de potencia estimado para instalaciones generales (0.9).\n"
         "* **√3**: Constante trifásica ($\\approx 1.732$).\n\n"
         "**Sustitución Numérica y Resultado:**\n"
-        f"$$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\frac{{{lga_pot:,.2f}}}{{623.54}} = \\mathbf{{{ib_lga:.2f}\\text{{ A}}}}{$$"
+        f"$$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\frac{{{lga_pot:,.2f}}}{{623.54}} = \\mathbf{{{ib_lga:.2f}\\text{{ A}}}}$$"
     )
 
     # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
@@ -144,7 +144,7 @@ def renderizar():
         f"* **ΔV**: Caída de tensión máxima admisible ({dv_pct_lga}% de 400V = {dv_max_lga:.2f} V).\n"
         "* **V**: Tensión nominal (400 V).\n\n"
         "**Sustitución Numérica y Resultado:**\n"
-        f"$$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}{$$"
+        f"$$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}$$"
     )
     
     # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
@@ -160,14 +160,14 @@ def renderizar():
         f"* **R_cable**: Resistencia activa del conductor en el tramo ($R = \\frac{\\rho \\cdot L}{S} = {r_lga_cable:.5f}\\ \\Omega$).\n"
         f"* **In**: Calibre de los fusibles gG de protección en origen ({in_lga_auto} A).\n\n"
         "**Sustitución Numérica y Verificación Reglamentaria:**\n"
-        f"$$I_{cc,final} = \\frac{{400}}{{\\left(\\frac{{400}}{{{lga_icc_orig * 1000.0}}}\\right) + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_orig_lga_ohms:.5f} + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_tot_lga:.5f}}} = \\mathbf{{{icc_fin_lga:.1f}\\text{{ A}}}}{$$\n\n"
+        f"$$I_{cc,final} = \\frac{{400}}{{\\left(\\frac{{400}}{{{lga_icc_orig * 1000.0}}}\\right) + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_orig_lga_ohms:.5f} + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_tot_lga:.5f}}} = \\mathbf{{{icc_fin_lga:.1f}\\text{{ A}}}}$$\n\n"
         f"* **Icc al final de la LGA:** **{icc_fin_lga:.1f} A** ({icc_fin_lga / 1000.0:.2f} kA)\n"
         f"* **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los márgenes reglamentarios."
     )
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
 
-    st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (LGA)")
+    st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (LGA)[cite: 1]")
     tabla_lga_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for s_com in [35, 50, 70, 95, 120, 150, 185, 240]:
         iz_val_t = tabla_iz.get(s_com, 0)
