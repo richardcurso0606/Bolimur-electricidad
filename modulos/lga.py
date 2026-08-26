@@ -155,7 +155,6 @@ def renderizar():
     st.markdown("---")
     st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-14 / ITC-BT-21)")
 
-    # Lógica de tubo ajustada a la sección calculada
     if s_final_lga <= 16:
         tubo_diam = "Ø 40 mm o Ø 50 mm"
         razon_tubo = "Suficiente para albergar hilos de menor calibre respetando el espacio de llenaje permitido."
@@ -164,17 +163,30 @@ def renderizar():
         razon_tubo = "Requerido para alojar sin apretar los 4 conductores unipolares de sección media."
     elif s_final_lga <= 50:
         tubo_diam = "Ø 63 mm"
-        razon_tubo = f"Para tus hilos de {s_final_lga} mm² (que miden unos 14-15 mm de grosor cada uno), se exigen al menos 4 hilos en trifásica. Respetando la ley de que los cables no deben ocupar más del 30-40% del tubo para que no se ahoguen y se puedan meter tirando en la obra, el tubo comercial perfecto es el de 63 mm."
+        razon_tubo = f"Para tus hilos de cobre de {s_final_lga} mm² (sección de cable), se exigen al menos 4 hilos en trifásica. Respetando la ley de llenaje (máximo 30-40% del tubo para que no se ahoguen y se puedan pasar tirando en la obra), el tubo exterior comercial perfecto es el de 63 mm."
     else:
         tubo_diam = "Ø 90 mm, Ø 110 mm o Bandeja técnica"
         razon_tubo = "Secciones muy pesadas que requieren tubos de gran calibre o bandejas registrables debido a la rigidez del cable."
 
     st.info(
-        f"**Análisis del Tubo para tu sección óptima de {s_final_lga} mm²:**\n\n"
+        f"**Análisis del Tubo para tu sección óptima de cable de {s_final_lga} mm²:**\n\n"
         f"* **Diámetro exterior del tubo recomendado:** **{tubo_diam}**\n"
         f"* **¿Por qué se elige este tamaño? (Explicación técnica):** {razon_tubo}\n"
         f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
+
+    # --- TABLA RESUMEN DE SECCIONES DE CABLE VS DIÁMETRO DE TUBO ---
+    st.markdown("#### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
+    tabla_tubos_md = """
+| SECCIÓN DEL CABLE (LGA) | DIÁMETRO EXTERIOR DEL TUBO | MOTIVO TÉCNICO / REGLAMENTARIO |
+| :--- | :--- | :--- |
+| **10 mm² a 16 mm²** | Ø 40 mm o Ø 50 mm | Espacio adecuado para hilos finos en acometidas pequeñas. |
+| **25 mm² a 35 mm²** | Ø 50 mm o Ø 63 mm | Capacidad para 4 conductores de sección media sin sobrepresión. |
+| **50 mm²** *(Tu cálculo actual)* | **Ø 63 mm** | **El tamaño ideal para cumplir el factor de llenaje del 30-40%.** |
+| **70 mm² a 95 mm²** | Ø 90 mm | Tubo corrugado de gran calibre para hilos pesados y rígidos. |
+| **≥ 120 mm²** | Bandeja / Canaladura | Canales de obra o bandejas registrables por imposibilidad de curvado en tubo. |
+    """
+    st.markdown(tabla_tubos_md)
 
     st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (LGA)")
     tabla_lga_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
