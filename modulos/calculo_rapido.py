@@ -45,7 +45,7 @@ def renderizar():
             </div>
         """, unsafe_allow_html=True)
 
-    # --- ESTILOS CSS PARA IMPRESIÓN MULTIPÁGINA REAL ---
+# --- ESTILOS CSS CON SOPORTE MULTIPÁGINA PARA HUAWEI Y ANDROID ---
     st.markdown("""
     <style>
     @media print {
@@ -59,16 +59,17 @@ def renderizar():
             margin: 10mm;
         }
         
-        /* Forzar al navegador móvil y de PC a romper la altura fija y permitir multipágina */
+        /* Forzar al navegador de Huawei y móviles a romper la altura fija de pantalla */
         html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
             background-color: white !important; 
             color: black !important; 
             font-family: "Helvetica", "Arial", sans-serif !important; 
             font-size: 10pt !important;
-            height: auto !important;
+            height: 100% !important;
+            min-height: 100% !important;
             max-height: none !important;
             overflow: visible !important;
-            position: static !important;
+            position: relative !important;
             display: block !important;
         }
         
