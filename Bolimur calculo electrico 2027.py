@@ -22,21 +22,22 @@ st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡
 # =========================================================================
 st.markdown("""
     <style>
-        /* Bordes generales para inputs y selects */
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2.5px solid #2563eb !important; border-radius: 6px !important; background-color: #f8fafc !important;
+     /* Estilo para convertir los botones de la barra lateral en tarjetas/recuadros */
+        [data-testid="stSidebar"] button {
+            width: 100% !important;
+            text-align: left !important;
+            background-color: #ffffff !important;
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            color: #334155 !important;
+            font-weight: 500 !important;
+            margin-bottom: 6px !important;
+            transition: all 0.2s ease-in-out !important;
         }
-        div[data-baseweb="input"] > div:focus-within, div[data-baseweb="select"] > div:focus-within {
-            border: 3px solid #1e40af !important; background-color: #ffffff !important; box-shadow: 0 0 8px rgba(37, 99, 235, 0.5) !important;
-        }
-        div[data-baseweb="popover"], ul[data-baseweb="menu"] {
-            max-height: 250px !important; overflow-y: auto !important;
-        }
-        
-        /* Estilo general de la barra lateral */
-        [data-testid="stSidebar"] {
-            background-color: #f8fafc !important; 
-            border-right: 1px solid #e2e8f0;
+        [data-testid="stSidebar"] button:hover {
+            border-color: #0284c7 !important;
+            background-color: #f0f9ff !important;
+            color: #0284c7 !important;
         }
         
         /* =========================================================
@@ -105,27 +106,23 @@ if 'locales' not in st.session_state: st.session_state.locales = [{"nombre": "Lo
 if 'servicios_generales' not in st.session_state: st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30}]
 if 'garajes' not in st.session_state: st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
 
-# =========================================================================
-# 5. MENÚ LATERAL
-# =========================================================================
-with st.sidebar:
-    st.markdown("""
-        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ BOLIMUR</h3>
-            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
-    seleccion_modulo = st.radio("Selecciona:", [
-        "🏠 Menú Principal", 
-        "🧮 Cálculo Rápido (CDT & Icc)", 
-        "🏢 Previsión de Cargas (Pt)", 
-        "⚡ Línea General (LGA)", 
-        "🔌 Derivación Individual (DI)", 
-        "📚 Tablas REBT"
-    ], label_visibility="collapsed")
-
+/* Estilo para convertir los botones de la barra lateral en tarjetas/recuadros */
+        [data-testid="stSidebar"] button {
+            width: 100% !important;
+            text-align: left !important;
+            background-color: #ffffff !important;
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            color: #334155 !important;
+            font-weight: 500 !important;
+            margin-bottom: 6px !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        [data-testid="stSidebar"] button:hover {
+            border-color: #0284c7 !important;
+            background-color: #f0f9ff !important;
+            color: #0284c7 !important;
+        }
 # =========================================================================
 # 6. EL ENRUTADOR (CARGA DE VENTANAS)
 # =========================================================================
