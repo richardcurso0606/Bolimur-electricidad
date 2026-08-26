@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 
 # =========================================================================
-# CONFIGURACIÓN DE PÁGINA (ESTÁNDAR)
+# CONFIGURACIÓN DE PÁGINA
 # =========================================================================
 st.set_page_config(
     page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
@@ -11,7 +11,41 @@ st.set_page_config(
 )
 
 # =========================================================================
-# INICIALIZACIÓN GLOBAL OBLIGATORIA (¡Arriba del todo para evitar errores!)
+# ESTILOS CSS (LIMPIO + CORRECCIÓN DE TÍTULOS OSCUROS)
+# =========================================================================
+st.markdown("""
+    <style>
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
+        }
+        [data-testid="stSidebar"] {
+            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
+        }
+        [data-testid="stSidebar"] button {
+            width: 100%;
+            text-align: left;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            color: #334155;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        [data-testid="stSidebar"] button:hover {
+            border-color: #0284c7;
+            background-color: #f0f9ff;
+            color: #0284c7;
+        }
+        
+        /* Evitar fondos negros indeseados en cabeceras internas */
+        .block-container h1, .block-container h2, .block-container h3 {
+            color: #1e293b !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# =========================================================================
+# INICIALIZACIÓN GLOBAL OBLIGATORIA
 # =========================================================================
 if 'grupos_viviendas' not in st.session_state:
     st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
@@ -44,35 +78,6 @@ try:
     from modulos import di
 except Exception as e:
     st.error(f"Error al cargar el módulo di: {e}")
-
-# =========================================================================
-# ESTILOS CSS GLOBALES (RESPETANDO LOS CONTENEDORES DE COLOR)
-# =========================================================================
-st.markdown("""
-    <style>
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
-        }
-        [data-testid="stSidebar"] button {
-            width: 100%;
-            text-align: left;
-            background-color: #ffffff;
-            border: 2px solid #cbd5e1;
-            border-radius: 8px;
-            color: #334155;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-        [data-testid="stSidebar"] button:hover {
-            border-color: #0284c7;
-            background-color: #f0f9ff;
-            color: #0284c7;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # =========================================================================
 # MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
