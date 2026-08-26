@@ -640,7 +640,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     # 4. GARAJES E IRVE (P4)
     # =========================================================================
 
-
 # =========================================================================
     # 4. GARAJES E INFRAESTRUCTURA DE RECARGA (IRVE - ITC-BT-52)
     # =========================================================================
@@ -677,9 +676,7 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         * **Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ ({int(factor_irve_val*100)}%) = **{plazas_afectadas} plazas** $\\cdot$ 3.680 W = **{p_irve:,.0f} W**
         """)
 
-    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.0f} W**")
-
-    # =========================================================================
+    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.0f} W**")    # =========================================================================
     # RESULTADO GLOBAL: POTENCIA TOTAL PREVISTA (Pt)
     # =========================================================================
     st.markdown("---")
