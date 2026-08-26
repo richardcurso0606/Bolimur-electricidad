@@ -476,7 +476,33 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     # 1. VIVIENDAS (P1)
     # =========================================================================
  
+# =========================================================================
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10) - VERSIÓN TÉCNICA AVANZADA
+# =========================================================================
+elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
+    st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
+    col_t1, col_b1 = st.columns([4, 1])
+    with col_t1: 
+        st.write("Desarrollo analítico y reglamentario para el cálculo de la Potencia Total Prevista ($P_t$) del edificio.")
+    with col_b1:
+        if st.button("🔄 Resetear Todo"): 
+            st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
+            st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
+            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1}]
+            st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
+            st.rerun()
+
+    # Inicializar estado si no existe
+    if "grupos_viviendas" not in st.session_state:
+        st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
+    if "locales" not in st.session_state:
+        st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
+    if "servicios_generales" not in st.session_state:
+        st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1}]
+    if "garajes" not in st.session_state:
+        st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
+
     # =========================================================================
     # 1. VIVIENDAS (P1)
     # =========================================================================
@@ -484,21 +510,49 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     if st.button("➕ Añadir Grupo de Viviendas"): 
         st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 5750, "nocturna": False})
 
+    # --- AYUDA TÉCNICA CON TABLA ESTILIZADA ITC-BT-10 ---
     with st.expander("📖 Criterios REBT: Electrificación Básica o Elevada y Tabla ITC-BT-10"):
         st.markdown("""
         * **Básica (5.750 W):** Necesidades primarias (viviendas habituales estándar).
         * **Elevada (9.200 W o más):** Superficies > 160 m², calefacción eléctrica o domótica/automatización.
-        
-        **Tabla oficial de coeficientes de simultaneidad ($K$) según nº de viviendas ($n$):**
-        * $n = 1 \rightarrow K = 1,0$ | $n = 2 \rightarrow K = 2,0$ | $n = 3 \rightarrow K = 2,8$ | $n = 4 \rightarrow K = 3,6$
-        * $n = 5 \rightarrow K = 4,4$ | $n = 6 \rightarrow K = 5,2$ | $n = 7 \rightarrow K = 6,0$ | $n = 8 \rightarrow K = 6,8$
-        * $n = 9 \rightarrow K = 7,6$ | $n = 10 \rightarrow K = 8,4$ | $n = 11 \rightarrow K = 9,1$ | $n = 12 \rightarrow K = 9,8$
-        * $n = 13 \rightarrow K = 10,5$ | $n = 14 \rightarrow K = 11,2$ | $n = 15 \rightarrow K = 11,9$ | $n = 16 \rightarrow K = 12,6$
-        * *(Para más de 20 viviendas se aplica $15,4 + 0,7 \cdot (n - 20)$)*
         """)
+        
+        st.markdown("**Tabla oficial de coeficientes de simultaneidad (K) según nº de viviendas (n):**")
+        
+        tabla_k_markdown = """
+| Nº VIVIENDAS (n) | COEFICIENTE K | Nº VIVIENDAS (n) | COEFICIENTE K |
+| :--- | :--- | :--- | :--- |
+| n = 1 | 1,0 | n = 11 | 9,1 |
+| n = 2 | 2,0 | n = 12 | 9,8 |
+| n = 3 | 2,8 | n = 13 | 10,5 |
+| n = 4 | 3,6 | n = 14 | 11,2 |
+| n = 5 | 4,4 | n = 15 | 11,9 |
+| n = 6 | 5,2 | n = 16 | 12,6 |
+| n = 7 | 6,0 | n = 17 | 13,3 |
+| n = 8 | 6,8 | n = 18 | 14,0 |
+| n = 9 | 7,6 | n = 19 | 14,7 |
+| n = 10 | 8,4 | n = 20 | 15,4 |
+        """
+        st.markdown(tabla_k_markdown)
+        st.markdown("*Nota reglamentaria:* Para más de 20 viviendas se aplica la fórmula 15,4 + 0,7 · (n - 20).")
+
+    st.markdown("---")
 
     pot_total_viviendas = 0
-    total_n_viviendas = sum(v["qty"] for v in st.session_state.grupos_viviendas)
+
+    pot_total_viviendas = 0
+    
+    # Separar viviendas normales (diurnas) y con tarifa nocturna para el cálculo exacto de academias/FP
+    viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.grupos_viviendas if not v["nocturna"])
+    
+    def obtener_K_total(n):
+        if n <= 1: return 1.0
+        tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
+                   11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
+        if n in tabla_k: return tabla_k[n]
+        else: return round(15.4 + (n - 20) * 0.7, 2)
+
+    k_diurno = obtener_K_total(max(viviendas_diurnas_qty, 1))
 
     opciones_potencia = {
         "5.750 W (Básica - Estándar)": 5750,
@@ -508,16 +562,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     }
     lista_etiquetas = list(opciones_potencia.keys())
     lista_valores = list(opciones_potencia.values())
-
-    # Función oficial del coeficiente K global del edificio según ITC-BT-10
-    def obtener_K_total(n):
-        if n <= 1: return 1.0
-        tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
-                   11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
-        if n in tabla_k: return tabla_k[n]
-        else: return round(15.4 + (n - 20) * 0.7, 2)
-
-    k_edificio = obtener_K_total(max(total_n_viviendas, 1))
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
@@ -538,27 +582,26 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
                 if len(st.session_state.grupos_viviendas) > 1: 
                     st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
-        if total_n_viviendas > 0:
-            if viv["nocturna"]:
-                pot_parcial = int(round(viv["qty"] * viv["pot"]))
-            else:
-                pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_edificio / total_n_viviendas)))
+        # Cálculo diferenciado: Las nocturnas van directas, las diurnas aplican el coeficiente global K del bloque diurno
+        if viv["nocturna"]:
+            pot_parcial = int(round(viv["qty"] * viv["pot"]))
         else:
-            pot_parcial = 0
+            if viviendas_diurnas_qty > 0:
+                pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_diurno / viviendas_diurnas_qty)))
+            else:
+                pot_parcial = 0
 
         pot_total_viviendas += pot_parcial
 
         st.info(
             f"**Justificación Analítica (Viviendas): {viv['nombre']}**\n\n"
-            f"- Nº de viviendas del grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)\n"
+            f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviennes_diurnas_qty if 'viviendas_diurnas_qty' in locals() else viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
             f"- Potencia unitaria: **{viv['pot']} W**\n"
-            f"- Coeficiente Global REBT aplicado ($K_{{total}}$ para $n={total_n_viviendas}$): **{k_edificio}**\n"
-            f"- Tabla de referencia ITC-BT-10 consultada para el cálculo.\n\n"
+            f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
             f"**Resultado parcial:** **{pot_parcial:,} W**"
         )
 
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
-
 
     
     
