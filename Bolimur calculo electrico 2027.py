@@ -85,8 +85,8 @@ st.markdown("""
         font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #7dd3fc;
     }
     .fusible-vistoso {
-        background: #ffedd5; color: #c2410c; padding: 15px; border-radius: 8px; 
-        font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #fdba74;
+        background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; 
+        font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;
     }
     </style>
 """, unsafe_allow_html=True)
