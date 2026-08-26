@@ -61,27 +61,31 @@ def renderizar():
 
     pt_auto = float(p_viv_total + p_loc_total + p_serv_total + p_gar_total)
 
-    # --- DISEÑO FIJO DE CONTROLES EN DOS COLUMNAS ---
+    # --- CONTROLES DE ENTRADA CON FORMULARIO PARA CÁLCULO INMEDIATO AL PULSAR ENTER ---
     st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
-    lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], horizontal=True, key="lga_modo")
     
-    lga_c1, lga_c2 = st.columns(2)
-    with lga_c1:
-        if "Automático" in lga_modo_potencia:
-            lga_pot = pt_auto
-            st.metric(label="Potencia de cálculo LGA (Automática desde Previsión)", value=f"{lga_pot:,.2f} W")
-            st.caption(f"Desglose: Viviendas ({p_viv_total:,}W) + Locales ({p_loc_total:,.0f}W) + Servicios ({p_serv_total:,.2f}W) + Garajes ({p_gar_total:,.2f}W)")
-        else:
-            lga_pot = st.number_input("Potencia de cálculo LGA (Manual en W)", value=pt_auto, step=500.0, key="lga_pot_man")
-            
-        lga_long = st.number_input("Longitud de la LGA (m)", value=0.0, step=1.0, key="lga_long")
-        lga_mat = st.selectbox("Material Conductor", ["cobre", "aluminio"], key="lga_mat")
-        metodo_lga_key = st.selectbox("Instalación:", list(METODOS_INSTALACION.keys()), index=3, key="lga_met")
+    with st.form("form_lga_parametros"):
+        lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], horizontal=True, key="lga_modo")
+        
+        lga_c1, lga_c2 = st.columns(2)
+        with lga_c1:
+            if "Automático" in lga_modo_potencia:
+                lga_pot = pt_auto
+                st.metric(label="Potencia de cálculo LGA (Automática desde Previsión)", value=f"{lga_pot:,.2f} W")
+                st.caption(f"Desglose: Viviendas ({p_viv_total:,}W) + Locales ({p_loc_total:,.0f}W) + Servicios ({p_serv_total:,.2f}W) + Garajes ({p_gar_total:,.2f}W)")
+            else:
+                lga_pot = st.number_input("Potencia de cálculo LGA (Manual en W) - Pulsa Enter para fijar", value=pt_auto, step=500.0, key="lga_pot_man")
+                
+            lga_long = st.number_input("Longitud de la LGA (m) - Pulsa Enter para recalcular", value=0.0, step=1.0, key="lga_long")
+            lga_mat = st.selectbox("Material Conductor", ["cobre", "aluminio"], key="lga_mat")
+            metodo_lga_key = st.selectbox("Instalación:", list(METODOS_INSTALACION.keys()), index=3, key="lga_met")
 
-    with lga_c2:
-        lga_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"], key="lga_aisl")
-        tipo_enlace_lga = st.radio("Contadores:", ["Totalmente concentrados (Límite CDT = 0.5%)", "Centralizaciones Parciales (Límite CDT = 1.0%)"], key="lga_enlace")
-        lga_icc_orig = st.number_input("Icc en origen (kA)", value=10.0, step=0.5, key="lga_icc")
+        with lga_c2:
+            lga_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"], key="lga_aisl")
+            tipo_enlace_lga = st.radio("Contadores:", ["Totalmente concentrados (Límite CDT = 0.5%)", "Centralizaciones Parciales (Límite CDT = 1.0%)"], key="lga_enlace")
+            lga_icc_orig = st.number_input("Icc en origen (kA) - Pulsa Enter para recalcular", value=10.0, step=0.5, key="lga_icc")
+
+        submitted = st.form_submit_button("🔄 Recalcular / Actualizar Cálculo")
 
     dv_pct_lga = 0.5 if "concentrados" in tipo_enlace_lga else 1.0
     gamma_lga = 44.0 if "XLPE" in lga_aisl else 48.5
@@ -108,34 +112,62 @@ def renderizar():
     icc_fin_lga = 400.0 / z_tot_lga / 1000.0 if z_tot_lga > 0 else 0.0
 
     st.markdown("---")
-    st.markdown("<h3>📋 Memoria Analítica Detallada (LGA)</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)</h3>", unsafe_allow_html=True)
 
+    # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
     st.info(f"""
     #### 1. Intensidad de Diseño Trifásica ($I_b$)
-    **Justificación:** Calculamos la corriente por fase. En instalaciones generales se asume un $\\cos\\varphi$ de 0.9.
     
-    $$I_b = \\frac{{{lga_pot:,.1f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot 400 \\text{{ V}} \\cdot 0.9}}$$
+    **Criterio y Fórmula Reglamentaria:**
+    $$I_b = \\frac{{P}}{{\\sqrt{3} \\cdot V \\cdot \\cos\\varphi}}$$
     
-    **Sustitución y Resultado:** {lga_pot:,.1f} W / 623.54 = **{ib_lga:.2f} A**
+    **Leyenda y Definición de Variables:**
+    * **I_b**: Intensidad de cálculo o de diseño por fase (A).
+    * **P**: Potencia total prevista de transporte en la línea ($P_t$ = {lga_pot:,.2f} W).
+    * **V**: Tensión nominal compuesta entre fases (400 V).
+    * **cos φ**: Factor de potencia estimado para instalaciones generales (0.9).
+    * **√3**: Constante trifásica ($\approx 1.732$).
+    
+    **Sustitución Numérica y Resultado:**
+    $$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\frac{{{lga_pot:,.2f}}}{{623.54}} = \\mathbf{{{ib_lga:.2f}\\text{{ A}}}}$$
     """)
 
+    # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
     st.info(f"""
     #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Límite máximo de pérdida del **{dv_pct_lga}%** ({dv_max_lga:.2f} V) según esquema de enlace (ITC-BT-14).
     
-    $$S = \\frac{{{lga_pot:,.1f} \\cdot {lga_long}}}{{\\gamma \\cdot \\Delta V \\cdot 400}}$$
+    **Criterio y Fórmula Reglamentaria:**
+    $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$
     
-    **Resultado:** Sección mínima exigida = **{s_cdt_lga:.2f} mm²**
+    **Leyenda y Definición de Variables:**
+    * **S**: Sección teórica mínima exigida del conductor ($\text{{mm}}^2$).
+    * **P**: Potencia total de cálculo ({lga_pot:,.2f} W).
+    * **L**: Longitud unifilar de la línea ({lga_long} m).
+    * **γ (gamma)**: Conductividad del material a servicio normal ({gamma_lga} m/(Ω·mm²) para {lga_aisl}).
+    * **ΔV**: Caída de tensión máxima admisible ({dv_pct_lga}% de 400V = {dv_max_lga:.2f} V).
+    * **V**: Tensión nominal (400 V).
+    
+    **Sustitución Numérica y Resultado:**
+    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_lga:.2f}\\text{{ mm}}^2}}$$
     """)
     
+    # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
     st.info(f"""
-    #### 3. Icc Mínima y Fusibles de Compañía
-    **Justificación:** Verificamos que los fusibles gG en la CGP fundirán a tiempo en caso de cortocircuito al final de la línea.
+    #### 3. Icc Mínima y Fusibles de Compañía (CGP)
     
+    **Criterio y Fórmula Reglamentaria:**
     $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
     
+    **Leyenda y Definición de Variables:**
+    * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (kA).
+    * **V**: Tensión nominal fase-neutro o compuesta de referencia (400 V).
+    * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig} kA).
+    * **R_cable**: Resistencia total del tramo de conductor calculado ($R = \\frac{\\rho \\cdot L}{S} = {r_lga_cable:.5f}\\ \\Omega$).
+    * **I_n**: Calibre del fusible gG de protección seleccionado ({in_lga_auto} A).
+    
+    **Sustitución y Comprobación Reglamentaria:**
     * **Icc al final de la LGA:** {icc_fin_lga * 1000:.1f} A ({icc_fin_lga:.2f} kA)
-    * **Veredicto:** ✅ La Icc es suficiente para accionar los fusibles de protección de {in_lga_auto} A.
+    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los tiempos reglamentarios exigidos por el REBT.
     """)
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
