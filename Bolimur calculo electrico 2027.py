@@ -452,43 +452,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
         if st.button("🔄 Resetear Todo"): 
             st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "qty": 1}]
-            st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": 0.10} # 10% según ITC-BT-52 / ejercicio
-            st.rerun()
-
-    # Inicializar estado si no existe
-    if "grupos_viviendas" not in st.session_state:
-        st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
-    if "locales" not in st.session_state:
-        st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
-    if "servicios_generales" not in st.session_state:
-        st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "qty": 1}]
-    if "garajes" not in st.session_state:
-        st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": 0.10}
-
-    
-    
-    
-    # =========================================================================
-    # 1. VIVIENDAS (P1)
-    # =========================================================================
-# =========================================================================
-    # 1. VIVIENDAS (P1)
-    # =========================================================================
- 
-# =========================================================================
-# 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10) - VERSIÓN TÉCNICA AVANZADA
-# =========================================================================
-elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
-    st.title("🏢 Previsión de Cargas (ITC-BT-10)")
-    
-    col_t1, col_b1 = st.columns([4, 1])
-    with col_t1: 
-        st.write("Desarrollo analítico y reglamentario para el cálculo de la Potencia Total Prevista ($P_t$) del edificio.")
-    with col_b1:
-        if st.button("🔄 Resetear Todo"): 
-            st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
             st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1}]
             st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
             st.rerun()
@@ -539,11 +502,8 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     st.markdown("---")
 
     pot_total_viviendas = 0
-    pot_total_viviendas = 0
-
-    pot_total_viviendas = 0
     
-    # Separar viviendas normales (diurnas) y con tarifa nocturna para el cálculo exacto de academias/FP
+    # Separar viviendas normales (diurnas) y con tarifa nocturna para el cálculo exacto
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.grupos_viviendas if not v["nocturna"])
     
     def obtener_K_total(n):
@@ -583,7 +543,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
                 if len(st.session_state.grupos_viviendas) > 1: 
                     st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
-        # Cálculo diferenciado: Las nocturnas van directas, las diurnas aplican el coeficiente global K del bloque diurno
         if viv["nocturna"]:
             pot_parcial = int(round(viv["qty"] * viv["pot"]))
         else:
@@ -596,14 +555,13 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
         st.info(
             f"**Justificación Analítica (Viviendas): {viv['nombre']}**\n\n"
-            f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviennes_diurnas_qty if 'viviendas_diurnas_qty' in locals() else viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
+            f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
             f"- Potencia unitaria: **{viv['pot']} W**\n"
             f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
             f"**Resultado parcial:** **{pot_parcial:,} W**"
         )
 
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
-
     
     
     # =========================================================================
