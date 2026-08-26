@@ -580,13 +580,15 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
     
 for idx, viv in enumerate(st.session_state.grupos_viviendas):
-        # Usamos el contenedor nativo con borde de Streamlit para que los desplegables no se corten
+        # Contenedor nativo con borde de Streamlit
         with st.container(border=True):
             st.markdown(f"#### Grupo #{idx+1}: {viv['nombre']}")
 
             c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
-            with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
-            with c2: viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
+            with c1: 
+                viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
+            with c2: 
+                viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
             
             pot_actual = viv["pot"]
             if pot_actual in lista_valores:
@@ -601,12 +603,14 @@ for idx, viv in enumerate(st.session_state.grupos_viviendas):
                 else:
                     viv["pot"] = opciones_potencia[sel_etiqueta]
                 
-            with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
+            with c4: 
+                viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
             with c5:
                 st.write(""); st.write("")
                 if st.button("🗑️", key=f"del_v_{idx}"):
                     if len(st.session_state.grupos_viviendas) > 1: 
-                        st.session_state.grupos_viviendas.pop(idx); st.rerun()
+                        st.session_state.grupos_viviendas.pop(idx)
+                        st.rerun()
 
             if viv["nocturna"]:
                 pot_parcial = int(round(viv["qty"] * viv["pot"]))
@@ -619,13 +623,17 @@ for idx, viv in enumerate(st.session_state.grupos_viviendas):
             pot_total_viviendas += pot_parcial
 
             with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
-                st.info(
+                texto_justificacion = (
                     f"**Desarrollo de Cálculo:**\n\n"
-                    f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + f"\n"
+                    f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + "\n"
                     f"- Potencia unitaria: **{viv['pot']:,} W**\n"
                     f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
                     f"**Resultado parcial:** **{pot_parcial:,} W**"
                 )
+                st.info(texto_justificacion)
+
+
+                
 
 # <--- A partir de aquí fuera del bucle va tu línea del subtotal:
 # st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
