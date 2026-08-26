@@ -132,20 +132,38 @@ def renderizar():
                         f"({viv['qty']} * {viv['pot']:,}) * ({k_diurno} / {viviendas_diurnas_qty}) = **{pot_parcial:,} W**"
                     )
 
-    # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
+ # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
     st.markdown("---")
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
     
-    with st.expander("📖 Ver Justificación y Fórmula Global del Subtotal de Viviendas ($P_1$)"):
+    with st.expander("📖 Ver Justificación, Operación Matemática y Leyenda de Variables ($P_1$)"):
+        # Construimos el desglose dinámico de los grupos de viviendas para la operación
+        detalle_grupos = []
+        suma_bruta_diurna = 0
+        for g in st.session_state.grupos_viviendas:
+            if not g["nocturna"]:
+                parcial_grupo = g["qty"] * g["pot"]
+                suma_bruta_diurna += parcial_grupo
+                detalle_grupos.append(f"({g['qty']} viv. * {g['pot']:,} W)")
+
+        formula_str = " + ".join(detalle_grupos) if detalle_grupos else "0"
+
         st.info(
-            f"**Criterio normativo (ITC-BT-10):**\n"
-            f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad K correspondiente al número total de viviendas diurnas del edificio (n = {viviendas_diurnas_qty}), obteniendo un coeficiente K = {k_diurno}.\n\n"
-            f"**Fórmula General:**\n"
+            f"**1. Criterio Normativo (ITC-BT-10):**\n"
+            f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad $K$ correspondiente al número total de viviendas diurnas del edificio ($n = {viviendas_diurnas_qty}$), obteniendo un coeficiente $K = {k_diurno}$.\n\n"
+            f"**2. Leyenda y Definición de Variables:**\n"
+            f"- **P1**: Potencia total prevista para el conjunto de viviendas (W).\n"
+            f"- **n_i**: Número de viviendas de cada grupo con la misma potencia unitaria.\n"
+            f"- **P_u,i**: Potencia unitaria asignada a cada vivienda del grupo (W).\n"
+            f"- **K**: Coeficiente de simultaneidad obtenido de la tabla ITC-BT-10 según el total de viviendas diurnas ($n = {viviendas_diurnas_qty} \rightarrow K = {k_diurno}$). शशि\n"
+            f"- **n_diurnas**: Número total de viviendas diurnas del edificio ({viviendas_diurnas_qty}).\n"
+            f"- **P_nocturnas**: Potencia de viviendas con tarifa nocturna (computan al 100% sin simultaneidad diurna).\n\n"
+            f"**3. Operación Matemática Detallada:**\n"
             f"P1 = [ Σ (n_i * P_u,i) ] * (K / n_diurnas) + Σ P_nocturnas\n\n"
-            f"**Resumen de Parámetros Aplicados:**\n"
-            f"- Total viviendas diurnas de cálculo (n): **{viviendas_diurnas_qty}**\n"
-            f"- Coeficiente K obtenido de la tabla ITC-BT-10: **{k_diurno}**\n"
-            f"- Suma total resultante para el subtotal P1: **{pot_total_viviendas:,} W**"
+            f"**Sustitución Numérica:**\n"
+            f"P1 = [ {formula_str} ] * ({k_diurno} / {viviendas_diurnas_qty})\n"
+            f"P1 = [ {suma_bruta_diurna:,} W ] * {(k_diurno / viviendas_diurnas_qty if viviendas_diurnas_qty > 0 else 0):.4f}\n"
+            f"**Resultado Final P1 = {pot_total_viviendas:,} W**"
         )
     
     # --- 2. LOCALES COMERCIALES ---
