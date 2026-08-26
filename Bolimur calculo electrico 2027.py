@@ -181,60 +181,23 @@ if seleccion_modulo.startswith("🏠"):
 
 
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN INFORME TÉCNICO OFICIAL - RESTAURADO PERFECTO)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN CON CAJAS ESTILO LGA)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PARA INFORME TÉCNICO PURO (SIN APARIENCIA DE APP) ---
+    # --- ESTILO CSS PARA IMPRESIÓN ---
     st.markdown("""
     <style>
     @media print {
         [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details {
             display: none !important;
         }
-        h1 {
-            display: none !important;
-        }
+        h1 { display: none !important; }
         body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
-            background-color: white !important;
-            color: black !important;
-            font-family: "Helvetica", "Arial", sans-serif !important;
-            font-size: 10pt !important;
+            background-color: white !important; color: black !important;
+            font-family: "Helvetica", "Arial", sans-serif !important; font-size: 10pt !important;
         }
-        @page {
-            margin: 2cm 1.5cm;
-            @bottom-right {
-                content: "Página " counter(page) " de " counter(pages);
-                font-size: 8pt;
-                color: #64748b;
-            }
-        }
-        .bloque-calculo, .pia-destacado, table {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            margin-bottom: 20px !important;
-        }
-        table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-        }
-        th, td {
-            border: 1px solid #cbd5e1 !important;
-            padding: 8px !important;
-            font-size: 9pt !important;
-            color: black !important;
-            background-color: white !important;
-        }
-        th {
-            background-color: #f1f5f9 !important;
-            color: black !important;
-        }
-    }
-    .bloque-calculo {
-        background-color: #f8fafc;
-        border-left: 4px solid #0284c7;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 0 8px 8px 0;
+        table { width: 100% !important; border-collapse: collapse !important; }
+        th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 9pt !important; color: black !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -311,13 +274,6 @@ elif seleccion_modulo.startswith("🧮"):
     corriente_disparo = prot_q * 10.0
     salta_proteccion = (icc_fin_q * 1000.0) >= corriente_disparo
 
-    # --- PREPARACIÓN DE TEXTOS PARA FÓRMULAS (Restaurado a tu versión perfecta original) ---
-    txt_formula_ib = r"$$I_b = \frac{P}{V \cdot \cos\varphi}$$" if "Monofásico" in tipo_red_q else r"$$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$"
-    txt_sust_ib = f"{val_pot_q:,.1f} / ({v_nom_calc} \cdot {cos_q})" if "Monofásico" in tipo_red_q else f"{val_pot_q:,.1f} / (1.732 \cdot {v_nom_calc} \cdot {cos_q})"
-    
-    txt_formula_cdt = r"$$S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$$" if "Monofásico" in tipo_red_q else r"$$S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
-    txt_sust_cdt = f"(2 \cdot {val_pot_q:,.1f} \cdot {long_q}) / ({gamma_q} \cdot {dv_max_q:.2f} \cdot {v_nom_calc})" if "Monofásico" in tipo_red_q else f"({val_pot_q:,.1f} \cdot {long_q}) / ({gamma_q} \cdot {dv_max_q:.2f} \cdot {v_nom_calc})"
-
     st.markdown("---")
     
     # --- CABECERA DE LA MEMORIA TÉCNICA ---
@@ -330,48 +286,58 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="bloque-calculo">
-        <h4 style="margin-top:0; color:#0f172a;">1. Intensidad de Diseño ($I_b$)</h4>
-        <p><b>Justificación:</b> Se calcula la corriente nominal base a plena carga ($I_z \\ge I_b$).</p>
-        {txt_formula_ib}
-        <p><b>Sustitución y Resultado:</b> $I_b =$ {txt_sust_ib} = <b>{ib_q:.2f} A</b></p>
-    </div>
-    """, unsafe_allow_html=True)
+    # --- 1. INTENSIDAD DE DISEÑO ---
+    if "Monofásico" in tipo_red_q:
+        formula_ib_str = f"$$I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}}$$\n\n**Sustitución y Resultado:** {val_pot_q:,.1f} W / ({v_nom_calc} V $\\cdot$ {cos_q}) = **{ib_q:.2f} A**"
+    else:
+        formula_ib_str = f"$$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}}$$\n\n**Sustitución y Resultado:** {val_pot_q:,.1f} W / (1.732 $\\cdot$ {v_nom_calc} V $\\cdot$ {cos_q}) = **{ib_q:.2f} A**"
 
-    st.markdown(f"""
-    <div class="bloque-calculo">
-        <h4 style="margin-top:0; color:#0f172a;">2. Determinación de Sección por Calentamiento ($I_z$)</h4>
-        <p><b>Justificación:</b> Buscamos en las tablas reglamentarias la sección mínima con $I_z \\ge I_b$ ({ib_q:.2f} A).</p>
-        <p>• <b>Sección requerida por este criterio:</b> <b>{s_cal_q} mm²</b> ($I_z$ = {tabla_iz_q.get(s_cal_q, 0)} A).</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.info(f"""
+    #### 1. Intensidad de Diseño ($I_b$)
+    **Justificación:** Se calcula la corriente nominal base de la carga para asegurar que el cable soporte la demanda en régimen permanente ($I_z \\ge I_b$).
+    
+    {formula_ib_str}
+    """)
 
-    st.markdown(f"""
-    <div class="bloque-calculo">
-        <h4 style="margin-top:0; color:#0f172a;">3. Sección Teórica por Caída de Tensión ($\\Delta V$)</h4>
-        <p><b>Justificación:</b> Grosor necesario para no superar el límite del {cdt_lim_q}% ({dv_max_q:.2f} V).</p>
-        {txt_formula_cdt}
-        <p><b>Sustitución y Resultado:</b> $S =$ {txt_sust_cdt} = <b>{s_cdt_q:.2f} mm²</b></p>
-    </div>
-    """, unsafe_allow_html=True)
+    # --- 2. SECCIÓN POR CALENTAMIENTO ---
+    st.info(f"""
+    #### 2. Determinación de Sección por Calentamiento ($I_z$)
+    **Justificación:** Evaluamos las tablas del REBT (UNE-HD 60364-5-52) según el método de instalación seleccionado para encontrar la sección mínima que garantice una capacidad térmica superior a la corriente de diseño.
+    
+    * **Corriente de diseño ($I_b$):** {ib_q:.2f} A
+    * **Sección requerida por este criterio:** **{s_cal_q} mm²** (Admite una intensidad máxima $I_z = $ {tabla_iz_q.get(s_cal_q, 0)} A).
+    """)
 
+    # --- 3. SECCIÓN POR CAÍDA DE TENSIÓN ---
+    if "Monofásico" in tipo_red_q:
+        formula_cdt_str = f"$$S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$\n\n**Sustitución y Resultado:** (2 $\\cdot$ {val_pot_q:,.1f} $\\cdot$ {long_q}) / ({gamma_q} $\\cdot$ {dv_max_q:.2f} $\\cdot$ {v_nom_calc}) = **{s_cdt_q:.2f} mm²**"
+    else:
+        formula_cdt_str = f"$$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$\n\n**Sustitución y Resultado:** ({val_pot_q:,.1f} $\\cdot$ {long_q}) / ({gamma_q} $\\cdot$ {dv_max_q:.2f} $\\cdot$ {v_nom_calc}) = **{s_cdt_q:.2f} mm²**"
+
+    st.info(f"""
+    #### 3. Sección Teórica por Caída de Tensión ($\\Delta V$)
+    **Justificación:** Se determina el grosor de conductor necesario para que las pérdidas de tensión a lo largo de la línea no superen el límite reglamentario del **{cdt_lim_q}%** ({dv_max_q:.2f} V).
+    
+    {formula_cdt_str}
+    """)
+
+    # --- 4. CORTOCIRCUITO ---
     estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
-    st.markdown(f"""
-    <div class="bloque-calculo">
-        <h4 style="margin-top:0; color:#0f172a;">4. Comprobación Cortocircuito y Disparo Magnético (0.1s)</h4>
-        <p><b>Justificación:</b> La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe superar el umbral magnético (Curva C = $10 \\cdot I_n$).</p>
-        $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
-        <p><b>Origen detallado de los parámetros de impedancia y resistencia:</b></p>
-        <ul>
-            <li><b>Impedancia de red en origen ($Z_{{origen}}$):</b> Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en <b>{z_origen:.4f} $\\Omega$</b>.</li>
-            <li><b>Resistencia del cable ($R_{{cable}}$):</b> Se calcula mediante la ley de resistencia para conductores ($R = \\frac{{\\rho \\cdot L}}{{S}}$), multiplicada por 2 en sistemas monofásicos (ida y vuelta por el neutro). Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en <b>{r_cable_total:.4f} $\\Omega$</b>.</li>
-        </ul>
-        $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
-        <p>• <b>Umbral de disparo exigido ({prot_q} A x 10):</b> {corriente_disparo:.1f} A</p>
-        <p>• <b>Veredicto:</b> {estado_icc}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.info(f"""
+    #### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)
+    **Justificación:** La corriente de cortocircuito en el punto más lejano de la línea ($I_{{cc,final}}$) debe tener fuerza suficiente para accionar el umbral magnético de la protección de forma instantánea (Curva C = $10 \\cdot I_n$).
+    
+    $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
+    
+    **Origen detallado de los parámetros de impedancia y resistencia:**
+    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en cabecera ($I_{{cc,origen}} = {icc_orig_q}$ kA). Aplicando la ley de Ohm ($Z_{{origen}} = V / I_{{cc,origen}}$), resulta en **{z_origen:.4f} $\\Omega$**.
+    * **Resistencia del cable ($R_{{cable}}$):** Calculada con $R = (\\rho \\cdot L) / S$ (multiplicada por 2 en líneas monofásicas por retorno de neutro). Con longitud {long_q} m y sección óptima de {s_opt_q} mm², resulta en **{r_cable_total:.4f} $\\Omega$**.
+    
+    $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f} \\text{{ A}}}}$$
+    
+    * **Umbral de disparo magnético exigido ({prot_q} A $\\times$ 10):** {corriente_disparo:.1f} A
+    * **Veredicto:** {estado_icc}
+    """)
 
     # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA ---
     st.markdown(f"""
@@ -421,7 +387,7 @@ elif seleccion_modulo.startswith("🧮"):
 
 
 # =========================================================================
-# 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10) - MEJORA TABLET CONSERVADA
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10)
 # =========================================================================
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
@@ -484,7 +450,6 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     lista_valores = list(opciones_potencia.values())
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
-        # El contenedor con border=True soluciona el problema de los menús desplegables en tablet
         with st.container(border=True):
             st.markdown(f"#### Grupo #{idx+1}: {viv['nombre']}")
 
