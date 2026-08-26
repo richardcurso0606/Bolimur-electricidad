@@ -15,17 +15,16 @@ def get_coef_simultaneidad(num):
 # =========================================================================
 def renderizar():
 
- # Blindaje total de variables de sesión
+    # Blindaje total de variables de sesión
     if 'grupos_viviendas' not in st.session_state:
         st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
     if 'locales' not in st.session_state:
         st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
     if 'servicios_generales' not in st.session_state:
-        st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30}]
+        st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0}]
     if 'garajes' not in st.session_state:
         st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
 
-    
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
@@ -34,8 +33,8 @@ def renderizar():
     with col_b1:
         if st.button("🔄 Resetear Todo"): 
             st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1}]
+            st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
+            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0}]
             st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
             st.rerun()
 
@@ -144,12 +143,11 @@ def renderizar():
                         f"({viv['qty']} * {viv['pot']:,}) * ({k_diurno} / {viviendas_diurnas_qty}) = **{pot_parcial:,} W**"
                     )
 
- # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
+    # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
     st.markdown("---")
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
     
     with st.expander("📖 Ver Justificación, Operación Matemática y Leyenda de Variables ($P_1$)"):
-        # Construimos el desglose dinámico de los grupos de viviendas para la operación
         detalle_grupos = []
         suma_bruta_diurna = 0
         for g in st.session_state.grupos_viviendas:
@@ -167,7 +165,7 @@ def renderizar():
             f"- **P1**: Potencia total prevista para el conjunto de viviendas (W).\n"
             f"- **n_i**: Número de viviendas de cada grupo con la misma potencia unitaria.\n"
             f"- **P_u,i**: Potencia unitaria asignada a cada vivienda del grupo (W).\n"
-            f"- **K**: Coeficiente de simultaneidad obtenido de la tabla ITC-BT-10 según el total de viviendas diurnas ($n = {viviendas_diurnas_qty} \rightarrow K = {k_diurno}$). शशि\n"
+            f"- **K**: Coeficiente de simultaneidad obtenido de la tabla ITC-BT-10 según el total de viviendas diurnas ($n = {viviendas_diurnas_qty} \rightarrow K = {k_diurno}$).\n"
             f"- **n_diurnas**: Número total de viviendas diurnas del edificio ({viviendas_diurnas_qty}).\n"
             f"- **P_nocturnas**: Potencia de viviendas con tarifa nocturna (computan al 100% sin simultaneidad diurna).\n\n"
             f"**3. Operación Matemática Detallada:**\n"
@@ -182,15 +180,15 @@ def renderizar():
     st.markdown("---")
     st.header("2. Locales Comerciales ($P_2$)")
     if st.button("➕ Añadir Local"): 
-        st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 100.0, "qty": 1})
+        st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "qty": 1, "superficie": 100.0})
     
     pot_total_locales = 0.0
     for idx, loc in enumerate(st.session_state.locales):
         with st.container(border=True):
             c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
             with c1: loc["nombre"] = st.text_input(f"Local", loc["nombre"], key=f"l_n_{idx}")
-            with c2: loc["superficie"] = st.number_input(f"Sup. m²", value=float(loc["superficie"]), key=f"l_s_{idx}")
-            with c3: loc["qty"] = st.number_input(f"Cantidad", value=int(loc["qty"]), key=f"l_q_{idx}")
+            with c2: loc["superficie"] = st.number_input(f"Sup. m²", value=float(loc.get("superficie", 100.0)), key=f"l_s_{idx}")
+            with c3: loc["qty"] = st.number_input(f"Cantidad", value=int(loc.get("qty", 1)), key=f"l_q_{idx}")
             with c4:
                 st.write(""); st.write("")
                 if st.button("🗑️", key=f"del_l_{idx}"): 
@@ -229,8 +227,8 @@ def renderizar():
             st.markdown(f"**Servicio #{idx+1}: {serv['nombre']}**")
             c1, c2, c3 = st.columns([3, 2, 2])
             with c1: serv["nombre"] = st.text_input(f"Descripción del Servicio", serv["nombre"], key=f"s_n_{idx}")
-            with c2: serv["potencia"] = st.number_input(f"Potencia unitaria (W)", value=float(serv["potencia"]), key=f"s_p_{idx}")
-            with c3: serv["qty"] = st.number_input(f"Cantidad (Uds.)", value=int(serv["qty"]), key=f"s_q_{idx}")
+            with c2: serv["potencia"] = st.number_input(f"Potencia unitaria (W)", value=float(serv.get("potencia", 0.0)), key=f"s_p_{idx}")
+            with c3: serv["qty"] = st.number_input(f"Cantidad (Uds.)", value=int(serv.get("qty", 1)), key=f"s_q_{idx}")
 
             c4, c5, c6 = st.columns([3, 2, 1])
             factor_actual = serv.get("factor", 1.30)
