@@ -1,4 +1,4 @@
-import streamlit as st
+[source: 3]import streamlit as st
 import math
 
 METODOS_INSTALACION = {
@@ -177,6 +177,24 @@ def renderizar():
     """)
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
+
+    # --- BLOQUE 4: RECOMENDACIÓN DE TUBO Y CANALIZACIÓN (ITC-BT-14) ---
+    st.markdown("---")
+    st.markdown("### 🛠️ Recomendación de Canalización y Tubo Protector (ITC-BT-14)")
+
+    if s_final_lga <= 16:
+        tubo_sugerido = "Tubo curivable o rígido de material aislante. Diámetro mínimo recomendado: Ø 40 mm o 50 mm según ocupación."
+    elif s_final_lga <= 50:
+        tubo_sugerido = "Tubo rígido o curivable de altas prestaciones mecánicas (IK07). Diámetro recomendado: Ø 63 mm o canaladura técnica de obra."
+    else:
+        tubo_sugerido = "Canaladura de obra exclusiva, bandeja metálica perforada con tapa o tubo rígido de gran diámetro (≥ Ø 90-110 mm para tramos enterrados)."
+
+    st.info(
+        f"**Criterio de Instalación para LGA de {s_final_lga} mm²:**\n\n"
+        f"* **Tipo de tubo / conducto sugerido:** {tubo_sugerido}\n"
+        f"* **Normativa aplicable:** ITC-BT-14 (Líneas Generales de Alimentación).\n"
+        f"* **Observación de obra:** Los conductores deben ser unipersonales con aislamiento termoplástico o termoestable (Designación tipo H07V-K o XZ1 (SZ1) según exigencia de compañía suministradora local)."
+    )
 
     st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (LGA)")
     tabla_lga_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
