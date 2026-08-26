@@ -11,21 +11,39 @@ st.set_page_config(
 )
 
 # =========================================================================
-# ESTILOS CSS GLOBALES (FORZANDO MODO CLARO PARA EVITAR PANTALLAS NEGRAS)
+# ESTILOS CSS GLOBALES (FORZANDO MODO CLARO EN TODA LA APP Y FORMULARIOS)
 # =========================================================================
 st.markdown("""
     <style>
         /* Forzar fondo blanco y texto oscuro en toda la app y sus módulos */
         .stApp {
-            background-color: #ffffff;
-            color: #334155;
+            background-color: #ffffff !important;
+            color: #1e293b !important;
         }
         
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
+        /* Forzar fondo blanco y texto legible en todas las cajas de texto y números */
+        input, textarea, select {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
         }
+
+        /* Forzar contenedores de selectores, inputs y menús desplegables */
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+            border: 2px solid #2563eb !important; 
+            border-radius: 6px !important; 
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+        }
+
+        /* Color de los textos dentro de los desplegables y campos numéricos */
+        div[data-baseweb="select"] span, div[data-baseweb="input"] input {
+            color: #1e293b !important;
+        }
+
+        /* Estilo de la barra lateral */
         [data-testid="stSidebar"] {
-            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
+            background-color: #f8fafc !important; 
+            border-right: 1px solid #e2e8f0;
         }
         [data-testid="stSidebar"] button {
             width: 100%;
