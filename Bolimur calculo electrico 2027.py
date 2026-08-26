@@ -109,8 +109,7 @@ elif seleccion_modulo.startswith("⚡"):
 
 
 elif seleccion_modulo.startswith("🔌"):
-    di.renderizar(METODOS_INSTALACION, GAMMA_MAP, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO, seleccionar_seccion_optima, seleccionar_proteccion)
-    
+    di.renderizar()
 
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Tablas REBT")
