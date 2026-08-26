@@ -108,7 +108,8 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     
 
 elif seleccion_modulo.startswith("⚡"):
-    lga.renderizar(calcular_pt_global, METODOS_INSTALACION, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO, SECCIONES_COMERCIALES, seleccionar_seccion_optima, seleccionar_proteccion)
+    lga.renderizar(calcular_pt_global)
+
 
 elif seleccion_modulo.startswith("🔌"):
     di.renderizar(METODOS_INSTALACION, GAMMA_MAP, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO, seleccionar_seccion_optima, seleccionar_proteccion)
