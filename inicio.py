@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
-    page_icon="icono_bolimur.png",
+    page_icon="icono_bolimur.PNG",
     layout="wide"
 )
 
