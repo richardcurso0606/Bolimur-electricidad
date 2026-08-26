@@ -228,51 +228,101 @@ def renderizar():
         f"* **Veredicto:** {estado_icc}"
     )
 
-    st.markdown(f"""
-    <div class="pia-destacado">
-        <h4 style="margin: 0;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</h4>
-        <hr style="border-top: 1px solid #cbd5e1; margin: 10px 0;">
-        <span style="font-size: 14px; font-weight: normal;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub></b> (siendo I<sub>z</sub> = {iz_opt_val} A).
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</div>""", unsafe_allow_html=True)
 
+    # --- AYUDA TÉCNICA DESPLEGABLE CON HTML PURO (CORREGIDO) ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
-        st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
-        tabla_gamma_md = """
-| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\gamma$) [$\mathrm{m / (\Omega \cdot mm^2)}$] | RESISTIVIDAD APROXIMADA ($\rho$) [$\mathrm{\Omega \cdot mm^2 / m}$] |
-| :--- | :--- | :--- | :--- | :--- |
-| **Cobre** | XLPE / EPR | 90 ºC | **44.0** | ~0.0227 |
-| **Cobre** | PVC | 70 ºC | **48.5** | ~0.0206 |
-| **Aluminio** | XLPE / EPR | 90 ºC | **28.0** | ~0.0357 |
-| **Aluminio** | PVC | 70 ºC | **31.0** | ~0.0323 |
+        st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-52:")
+        
+        html_ayuda_cond = """
+        <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <thead>
+                <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 13px;">
+                    <th style="padding: 10px 14px;">MATERIAL CONDUCTOR</th>
+                    <th style="padding: 10px 14px;">AISLAMIENTO</th>
+                    <th style="padding: 10px 14px;">TEMP. SERVICIO</th>
+                    <th style="padding: 10px 14px;">CONDUCTIVIDAD (γ) [m/(Ω·mm²)]</th>
+                    <th style="padding: 10px 14px;">RESISTIVIDAD (ρ) [Ω·mm²/m]</th>
+                </tr>
+            </thead>
+            <tbody style="font-size: 13px; color: #334155;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
+                    <td style="padding: 10px 14px;">XLPE / EPR</td>
+                    <td style="padding: 10px 14px;">90 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">44.0</td>
+                    <td style="padding: 10px 14px;">~0.0227</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
+                    <td style="padding: 10px 14px;">PVC</td>
+                    <td style="padding: 10px 14px;">70 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">48.5</td>
+                    <td style="padding: 10px 14px;">~0.0206</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
+                    <td style="padding: 10px 14px;">XLPE / EPR</td>
+                    <td style="padding: 10px 14px;">90 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">28.0</td>
+                    <td style="padding: 10px 14px;">~0.0357</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
+                    <td style="padding: 10px 14px;">PVC</td>
+                    <td style="padding: 10px 14px;">70 ºC</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">31.0</td>
+                    <td style="padding: 10px 14px;">~0.0323</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
         """
-        st.markdown(tabla_gamma_md)
+        st.markdown(html_ayuda_cond, unsafe_allow_html=True)
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
-    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN (I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub>) |\n| :--- | :--- | :--- | :--- |\n"
+    
+    filas_lista = []
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
         cond_sobrecarga = 0.91 * iz_c
+        
+        bg_row = "background-color: #f0fdf4;" if sec_com == s_opt_q else ""
+        
         if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
         elif prot_q > cond_sobrecarga: est_v = f"❌ Falla (I<sub>n</sub> {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** (I<sub>n</sub> {prot_q} A &le; {cond_sobrecarga:.1f} A)"
+        elif sec_com == s_opt_q: est_v = f"✅ <b>CUMPLE IDEAL</b> (I<sub>n</sub> {prot_q} A &le; {cond_sobrecarga:.1f} A)"
         else: est_v = "Válido pero sobredimensionado"
-        tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
-    st.markdown(tabla_q_md)
+            
+        fila_str = f'<tr style="border-bottom: 1px solid #e2e8f0; {bg_row}"><td style="padding: 12px 16px; font-weight: bold;">{sec_com} mm²</td><td style="padding: 12px 16px;">{iz_c} A</td><td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px;">{est_v}</td></tr>'
+        filas_lista.append(fila_str)
 
-    st.markdown(f"""
-    <div style="background-color: #dcfce7; border: 2px solid #86efac; color: #166534; padding: 20px; border-radius: 8px; margin-top: 20px;">
-        <h3 style="margin-top: 0; margin-bottom: 10px; color: #166534;">✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})</h3>
-        <p style="font-size: 15px; margin-bottom: 8px; color: #166534;">
-            La sección de <b>{s_opt_q} mm²</b> garantiza el cumplimiento térmico 
-            (<b><i>I<sub>z</sub></i> = {iz_opt_val} A &ge; <i>I<sub>b</sub></i> = {ib_q:.2f} A</b>) 
-            y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>.
-        </p>
-        <p style="font-size: 15px; margin: 0; color: #166534;">
-            Coordinada perfectamente con un <b>PIA de {prot_q} A (Curva C)</b>.
-        </p>
+    html_tabla_secciones = f"""
+    <div style="overflow-x: auto; margin-bottom: 20px;">
+    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <thead>
+            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
+                <th style="padding: 12px 16px;">SECCIÓN</th>
+                <th style="padding: 12px 16px;">IZ ADMISIBLE (A)</th>
+                <th style="padding: 12px 16px;">CDT REAL (%)</th>
+                <th style="padding: 12px 16px;">ESTADO DE VERIFICACIÓN (I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub>)</th>
+            </tr>
+        </thead>
+        <tbody style="font-size: 14px; color: #334155;">
+            {"".join(filas_lista)}
+        </tbody>
+    </table>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(html_tabla_secciones, unsafe_allow_html=True)
+
+    st.success(f"""
+    ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
+    La sección de **{s_opt_q} mm²** garantiza el cumplimiento térmico 
+    (**<i>I<sub>z</sub></i> = {iz_opt_val} A &ge; <i>I<sub>b</sub></i> = {ib_q:.2f} A**) 
+    y una caída de tensión real del **{dv_real_pct_q:.3f}%**.
+    
+    Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
+    """)
