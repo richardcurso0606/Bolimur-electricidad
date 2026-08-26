@@ -14,11 +14,8 @@ from modulos import di
 # =========================================================================
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡", layout="wide")
 
-
-
-
 # =========================================================================
-# 3. ESTILOS CSS GLOBALES
+# 3. ESTILOS CSS GLOBALES (Para que toda la app se vea perfecta)
 # =========================================================================
 st.markdown("""
     <style>
@@ -45,50 +42,6 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-        
-        /* =========================================================
-           ESTILO DE TARJETAS / RECUADROS PARA EL MENÚ LATERAL
-           ========================================================= */
-        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
-            background-color: #ffffff !important;
-            border: 2px solid #cbd5e1 !important;
-            border-radius: 10px !important;
-            padding: 12px 14px !important;
-            margin-bottom: 10px !important;
-            width: 100% !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-            transition: all 0.2s ease-in-out !important;
-            cursor: pointer !important;
-        }
-        
-        /* Efecto al pasar el ratón por encima del recuadro */
-        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:hover {
-            border-color: #38bdf8 !important;
-            background-color: #f0f9ff !important;
-            transform: translateY(-1px);
-        }
-        
-        /* Estilo para la tarjeta seleccionada (recuadro azul destacado) */
-        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label[data-checked="true"],
-        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:has(input:checked) {
-            border: 2.5px solid #0284c7 !important;
-            background-color: #e0f2fe !important;
-            box-shadow: 0 4px 6px rgba(2, 132, 199, 0.15) !important;
-        }
-
-        /* Tipografía del texto dentro de las tarjetas del menú */
-        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label p {
-            color: #334155 !important;
-            font-size: 15px !important;
-            font-weight: 500 !important;
-        }
-        
-        [data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label input:checked ~ div p {
-            color: #0369a1 !important;
-            font-weight: bold !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # --- BASE DE DATOS LOCAL ---
 DB_NAME = "bolimur_database.db"
@@ -105,48 +58,70 @@ def init_db():
 init_db()
 
 # =========================================================================
-# 4. INICIALIZACIÓN DE VARIABLES GLOBALES (Evita que se borren datos al cambiar de ventana)
+# 4. INICIALIZACIÓN DE VARIABLES GLOBALES
 # =========================================================================
 if 'grupos_viviendas' not in st.session_state: st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
 if 'locales' not in st.session_state: st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
 if 'servicios_generales' not in st.session_state: st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30}]
 if 'garajes' not in st.session_state: st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
 
-/* Estilo para convertir los botones de la barra lateral en tarjetas/recuadros */
-        [data-testid="stSidebar"] button {
-            width: 100% !important;
-            text-align: left !important;
-            background-color: #ffffff !important;
-            border: 2px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            color: #334155 !important;
-            font-weight: 500 !important;
-            margin-bottom: 6px !important;
-            transition: all 0.2s ease-in-out !important;
-        }
-        [data-testid="stSidebar"] button:hover {
-            border-color: #0284c7 !important;
-            background-color: #f0f9ff !important;
-            color: #0284c7 !important;
-        }
+# =========================================================================
+# 5. MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
+# =========================================================================
+with st.sidebar:
+    st.markdown("""
+        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ BOLIMUR</h3>
+            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
+
+    if 'menu_activo' not in st.session_state:
+        st.session_state.menu_activo = "🏠 Menú Principal"
+
+    if st.button("🏠  Menú Principal", use_container_width=True):
+        st.session_state.menu_activo = "🏠 Menú Principal"
+        st.rerun()
+        
+    if st.button("🧮  Cálculo Rápido (CDT & Icc)", use_container_width=True):
+        st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
+        st.rerun()
+        
+    if st.button("🏢  Previsión de Cargas (Pt)", use_container_width=True):
+        st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
+        st.rerun()
+        
+    if st.button("⚡  Línea General (LGA)", use_container_width=True):
+        st.session_state.menu_activo = "⚡ Línea General (LGA)"
+        st.rerun()
+        
+    if st.button("🔌  Derivación Individual (DI)", use_container_width=True):
+        st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
+        st.rerun()
+        
+    if st.button("📚  Tablas REBT", use_container_width=True):
+        st.session_state.menu_activo = "📚 Tablas REBT"
+        st.rerun()
+
+    seleccion_modulo = st.session_state.menu_activo
+
 # =========================================================================
 # 6. EL ENRUTADOR (CARGA DE VENTANAS)
 # =========================================================================
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
-    st.write("Bienvenido al panel de cálculo eléctrico. Selecciona un módulo en el menú lateral para empezar.")
+    st.write("Bienvenido al panel de cálculo eléctrico. Selecciona una opción en el menú lateral para empezar.")
 
 elif seleccion_modulo.startswith("🧮"):
-    # ¡AQUÍ ESTÁ LA MAGIA! Llamamos a la función que guardamos en cuarentena en el otro archivo.
     calculo_rapido.renderizar()
 
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     prevision_cargas.renderizar()
-    
 
 elif seleccion_modulo.startswith("⚡"):
     lga.renderizar()
-
 
 elif seleccion_modulo.startswith("🔌"):
     di.renderizar()
