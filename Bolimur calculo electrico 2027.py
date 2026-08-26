@@ -174,14 +174,15 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN ÓPTIMA Y PULIDA)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN LIMPIA PARA IMPRESIÓN)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ---
+    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN (OCULTAR AYUDAS Y NUMERAR PÁGINAS) ---
     st.markdown("""
     <style>
     @media print {
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe) {
+        /* Ocultar elementos de navegación, menús, selectores y ayudas visuales al imprimir */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], div:has(> iframe), .no-print {
             display: none !important;
         }
         body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
@@ -195,6 +196,15 @@ elif seleccion_modulo.startswith("🧮"):
             border: 1px solid #bae6fd !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+        }
+        /* Numeración automática de páginas en el PDF generado */
+        @page {
+            margin: 20mm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 9pt;
+                color: #64748b;
+            }
         }
     }
     </style>
@@ -335,7 +345,7 @@ elif seleccion_modulo.startswith("🧮"):
     * **Veredicto:** {estado_icc}
     """)
 
-    # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA (COLOCADA AQUÍ DE FORMA LÓGICA) ---
+    # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA ---
     st.markdown(f"""
     <div class="pia-destacado">
         🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
@@ -346,7 +356,8 @@ elif seleccion_modulo.startswith("🧮"):
     </div>
     """, unsafe_allow_html=True)
 
-    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES ---
+    # --- VENTANA DE AYUDA DESPLEGABLE (OCULTA AL IMPRIMIR GRACIAS A .no-print) ---
+    st.markdown('<div class="no-print">', unsafe_allow_html=True)
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
         
@@ -360,6 +371,7 @@ elif seleccion_modulo.startswith("🧮"):
         """
         st.markdown(tabla_gamma_md)
         st.markdown("*Nota:* El programa selecciona automáticamente este valor según la selección superior.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
@@ -380,10 +392,17 @@ elif seleccion_modulo.startswith("🧮"):
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
     """)
 
-    # --- AVISO INFORMATIVO PARA IMPRESIÓN ---
+    # --- AVISO INFORMATIVO PARA IMPRESIÓN (OCULTO AL IMPRIMIR) ---
+    st.markdown('<div class="no-print">', unsafe_allow_html=True)
     st.markdown("---")
     st.info("💡 **Para guardar o imprimir esta memoria en PDF de forma limpia:** Pulsa las opciones de tu navegador o usa el atajo **Ctrl + P** (en PC) para generar el documento oficial sin menús ni barras laterales.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
+
+
+# =========================================================================
+# MODULO: PREVISION DE CARGAS (Pt)
+# =========================================================================
 
 
 # =========================================================================
