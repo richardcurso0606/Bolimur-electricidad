@@ -1,6 +1,28 @@
 import streamlit as st
 
-def renderizar(METODOS_INSTALACION, GAMMA_MAP, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO, seleccionar_seccion_optima, seleccionar_proteccion):
+METODOS_INSTALACION = {
+    "B1 (Bajo tubo empotrado)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
+    "B2 (Bajo tubo en superficie)": {"ref": "B2", "desc": "Cables unipolares en tubo montado en superficie"},
+    "C (Multiconductor en pared)": {"ref": "C", "desc": "Cable multiconductor fijado directo"},
+    "D (Cables enterrados bajo tubo)": {"ref": "D", "desc": "Instalación subterránea"}
+}
+GAMMA_MAP = {("cobre", "PVC (70ºC)"): 48.5, ("cobre", "XLPE / EPR (90ºC)"): 44.0, ("aluminio", "PVC (70ºC)"): 31.0, ("aluminio", "XLPE / EPR (90ºC)"): 28.0}
+SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
+IZ_COBRE_TUBO = {1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0}
+IZ_COBRE_ENTERRADO = {1.5: 22.0, 2.5: 29.0, 4: 38.0, 6: 48.0, 10: 65.0, 16: 85.0, 25: 110.0, 35: 135.0, 50: 160.0, 70: 170.0, 95: 202.0, 120: 230.0, 150: 270.0, 185: 310.0, 240: 360.0}
+CALIBRES_INTERRUPTORES = [10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630]
+
+def seleccionar_seccion_optima(s_necesaria):
+    for sec in SECCIONES_COMERCIALES:
+        if sec >= s_necesaria: return sec
+    return SECCIONES_COMERCIALES[-1]
+
+def seleccionar_proteccion(ib):
+    for cal in CALIBRES_INTERRUPTORES:
+        if cal >= ib: return cal
+    return CALIBRES_INTERRUPTORES[-1]
+
+def renderizar():
     st.title("🔌 Derivación Individual - DI (ITC-BT-15)")
     
     with st.expander("🏗️ Selector de Instalación y Entorno", expanded=True):
@@ -96,3 +118,4 @@ def renderizar(METODOS_INSTALACION, GAMMA_MAP, IZ_COBRE_TUBO, IZ_COBRE_ENTERRADO
     ### ✅ SECCIÓN ÓPTIMA DI: {s_optima_di} mm² de {di_mat.upper()}
     Caída de tensión real controlada al **{dv_real_di_pct:.3f}%**. La línea está protegida perfectamente por el IGA del cuadro general de la vivienda (**{prot_di} A, Curva C**).
     """)
+
