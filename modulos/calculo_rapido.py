@@ -31,58 +31,51 @@ def seleccionar_proteccion(ib):
 # =========================================================================
 def renderizar():
     
-    # --- TÍTULO Y BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
+    # --- TÍTULO Y BOTÓN DE IMPRESIÓN NATIVO (COMPATIBLE CON TABLET Y PC) ---
     col_tit, col_btn = st.columns([3, 1])
     with col_tit:
         st.title("🧮 Cálculo Rápido Avanzado")
     with col_btn:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
-            st.markdown("""
-                <script>
-                    window.focus();
-                    setTimeout(() => {
-                        window.print();
-                    }, 400);
-                </script>
-            """, unsafe_allow_html=True)
+        st.markdown("""
+            <div style="text-align: right;">
+                <a href="javascript:window.print();" style="background-color: #0284c7; color: white; padding: 10px 15px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    🖨️ Imprimir / PDF
+                </a>
+            </div>
+        """, unsafe_allow_html=True)
 
-    # --- ESTILOS CSS INYECTADOS DENTRO DEL RENDER (ELIMINA MÁRGENES Y FUERZA MULTIPÁGINA EN TABLET) ---
+    # --- ESTILOS CSS PARA IMPRESIÓN MULTIPÁGINA Y PANTALLA ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de la interfaz de Streamlit que no van en el PDF */
         [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details { 
             display: none !important; 
         }
         h1 { display: none !important; }
         
-        /* Reset absoluto de márgenes y tamaño de página real A4 */
         @page {
             size: A4 portrait;
             margin: 10mm;
         }
         
-        /* Romper los contenedores fijos de Streamlit para que la tablet detecte todas las páginas */
         html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
             background-color: white !important; 
             color: black !important; 
             font-family: "Helvetica", "Arial", sans-serif !important; 
             font-size: 10pt !important;
-            height: max-content !important;
+            height: auto !important;
             max-height: none !important;
             overflow: visible !important;
             position: static !important;
             display: block !important;
         }
         
-        /* Evitar que las cajas informativas se corten a mitad entre páginas */
         .stInfo, div[style*="background-color"], .pia-destacado, table, tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
         }
         
-        /* Estilos de tablas limpios para impresión */
         table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
@@ -95,7 +88,6 @@ def renderizar():
         }
     }
     
-    /* Estilos visuales en pantalla */
     .pia-destacado { background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #7dd3fc; }
     table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     th { background-color: #1e293b !important; color: #ffffff !important; text-align: center !important; padding: 14px !important; font-weight: 700; text-transform: uppercase; font-size: 12px; }
