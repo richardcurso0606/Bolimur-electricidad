@@ -174,7 +174,7 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN DEFINITIVA)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN ÓPTIMA Y PULIDA)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN ---
@@ -212,7 +212,7 @@ elif seleccion_modulo.startswith("🧮"):
             cos_q = st.slider("Coseno phi (cos φ)", 0.7, 1.0, 0.85)
             v_nom_calc = 230.0 if "Monofásico" in tipo_red_q else 400.0
             if "Monofásico" in tipo_red_q: ib_q = val_pot_q / (v_nom_calc * cos_q) if v_nom_calc * cos_q > 0 else 0.0
-            else: ib_q = val_pot_q / (math.sqrt(3) * v_nom_calc * cos_q) if v_nom_calc * cos_q > 0 else 0.0
+            else: ib_q = val_pot_q / (math.sqrt(3) * v_nom_calc * cos_q) if math.sqrt(3) * v_nom_calc * cos_q > 0 else 0.0
         else:
             ib_q = st.number_input("Intensidad Ib (A)", value=0.0, step=1.0)
             cos_q = st.slider("Coseno phi (cos φ)", 0.7, 1.0, 0.85)
@@ -281,7 +281,7 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.markdown("---")
     
-    # --- CABECERA DE LA MEMORIA TÉCNICA (Visible y lista para imprimir) ---
+    # --- CABECERA DE LA MEMORIA TÉCNICA ---
     st.markdown("""
     <div style="border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px;">
         <h2 style="color: #0369a1; margin: 0;">BOLIMUR INSTALACIONES INTEGRALES</h2>
@@ -335,7 +335,18 @@ elif seleccion_modulo.startswith("🧮"):
     * **Veredicto:** {estado_icc}
     """)
 
-    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES CON ESTILO DE CUADRO ---
+    # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA (COLOCADA AQUÍ DE FORMA LÓGICA) ---
+    st.markdown(f"""
+    <div class="pia-destacado">
+        🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
+        <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
+        <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \\le 0.91 \\cdot I_z$</b> (siendo $I_z$ = {iz_opt_val} A).
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- VENTANA DE AYUDA DESPLEGABLE: TABLA DE CONDUCTIVIDADES ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
         
@@ -350,16 +361,6 @@ elif seleccion_modulo.startswith("🧮"):
         st.markdown(tabla_gamma_md)
         st.markdown("*Nota:* El programa selecciona automáticamente este valor según la selección superior.")
 
-    st.markdown(f"""
-    <div class="pia-destacado">
-        🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
-        <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
-        <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>In <= 0.91 * Iz</b> (siendo Iz = {iz_opt_val} A).
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
@@ -368,7 +369,7 @@ elif seleccion_modulo.startswith("🧮"):
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
         elif prot_q > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q}A $\\le$ {cond_sobrecarga:.1f}A)"
+        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q} A $\\le$ {cond_sobrecarga:.1f} A)"
         else: est_v = "Válido pero sobredimensionado"
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
@@ -387,10 +388,7 @@ elif seleccion_modulo.startswith("🧮"):
 
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
-# =========================================================================# =========================================================================
-# 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================
-
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (Pt)
 # =========================================================================#
