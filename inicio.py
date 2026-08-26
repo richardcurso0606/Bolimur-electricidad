@@ -15,28 +15,27 @@ st.set_page_config(
 # =========================================================================
 st.markdown("""
     <style>
-        /* Forzar fondo blanco y texto oscuro en toda la app y sus módulos */
-        .stApp {
+        /* Forzar modo claro general en toda la aplicación y contenedores principales */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
             background-color: #ffffff !important;
             color: #1e293b !important;
         }
         
-        /* Forzar fondo blanco y texto legible en todas las cajas de texto y números */
-        input, textarea, select {
+        /* Forzar inputs, selectores y cajas numéricas de Streamlit a fondo blanco y texto oscuro */
+        input, textarea, select, div[data-baseweb="base-input"], div[data-baseweb="select"] {
             background-color: #ffffff !important;
             color: #1e293b !important;
         }
 
-        /* Forzar contenedores de selectores, inputs y menús desplegables */
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #2563eb !important; 
-            border-radius: 6px !important; 
+        /* Forzar contenedores internos de los campos de número y texto */
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
             background-color: #ffffff !important;
             color: #1e293b !important;
+            border-color: #2563eb !important;
         }
 
-        /* Color de los textos dentro de los desplegables y campos numéricos */
-        div[data-baseweb="select"] span, div[data-baseweb="input"] input {
+        /* Texto de las etiquetas y títulos dentro de los módulos */
+        h1, h2, h3, h4, h5, h6, p, span, label {
             color: #1e293b !important;
         }
 
