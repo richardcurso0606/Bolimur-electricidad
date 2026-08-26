@@ -177,48 +177,71 @@ if seleccion_modulo.startswith("🏠"):
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN INFORME PROFESIONAL)
 # =========================================================================
 # =========================================================================
-# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (ALTA COMPATIBILIDAD TABLET/PC)
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN INFORME TÉCNICO OFICIAL)
 # =========================================================================
 elif seleccion_modulo.startswith("🧮"):
-    # --- ESTILO CSS PROFESIONAL DE IMPRESIÓN (SEGURO PARA TABLETS) ---
+    # --- ESTILO CSS PARA INFORME TÉCNICO PURO (SIN APARIENCIA DE APP) ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de navegación, menús y selectores de forma segura */
-        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], .ocultar-impresion, details {
+        /* Ocultar elementos de la app que no van en el informe */
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details {
             display: none !important;
         }
-        /* Forzar fondo blanco y tipografía formal */
+        /* Ocultar el título repetido por defecto de Streamlit */
+        h1 {
+            display: none !important;
+        }
+        /* Forzar fondo blanco y tipografía formal de documento */
         body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
             background-color: white !important;
             color: black !important;
-            font-size: 11pt !important;
+            font-family: "Helvetica", "Arial", sans-serif !important;
+            font-size: 10pt !important;
         }
-        /* Configuración de márgenes oficiales */
+        /* Configuración de márgenes oficiales y numeración */
         @page {
-            margin: 20mm;
+            margin: 2cm 1.5cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 8pt;
+                color: #64748b;
+            }
         }
-        /* Evitar que las cajas y tablas se partan a la mitad de la página */
-        .stInfo, .pia-destacado, table, div[data-testid="stTable"] {
+        /* Evitar saltos de página dentro de bloques de cálculo */
+        .bloque-calculo, .pia-destacado, table {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            margin-bottom: 15px !important;
+            margin-bottom: 20px !important;
         }
-        /* Mantener los colores de las cajas de resultados al imprimir */
-        .stInfo, div[data-baseweb="notification"], div[style*="background-color"] {
-            background-color: #f0f9ff !important;
+        /* Formato de tabla limpia para asegurar legibilidad en móviles */
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+        th, td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 8px !important;
+            font-size: 9pt !important;
             color: black !important;
-            border: 1px solid #bae6fd !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            background-color: white !important;
         }
+        th {
+            background-color: #f1f5f9 !important;
+            color: black !important;
+        }
+    }
+    /* Estilos visuales para la app (fuera de impresión) */
+    .bloque-calculo {
+        background-color: #f8fafc;
+        border-left: 4px solid #0284c7;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 0 8px 8px 0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    st.title("🧮 Cálculo Rápido Avanzado")
-    
-    # ... (AQUÍ CONTINÚA EXACTAMENTE EL MISMO CÓDIGO QUE YA TIENES: rc1, rc2 = st.columns(2), etc.) ...
     st.title("🧮 Cálculo Rápido Avanzado")
 
     rc1, rc2 = st.columns(2)
@@ -293,10 +316,10 @@ elif seleccion_modulo.startswith("🧮"):
 
     # --- PREPARACIÓN DE TEXTOS PARA FÓRMULAS ---
     txt_formula_ib = r"$$I_b = \frac{P}{V \cdot \cos\varphi}$$" if "Monofásico" in tipo_red_q else r"$$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$"
-    txt_sust_ib = f"{val_pot_q:,.1f} / ({v_nom_calc} · {cos_q})" if "Monofásico" in tipo_red_q else f"{val_pot_q:,.1f} / (1.732 · {v_nom_calc} · {cos_q})"
+    txt_sust_ib = f"{val_pot_q:,.1f} / ({v_nom_calc} \cdot {cos_q})" if "Monofásico" in tipo_red_q else f"{val_pot_q:,.1f} / (1.732 \cdot {v_nom_calc} \cdot {cos_q})"
     
     txt_formula_cdt = r"$$S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$$" if "Monofásico" in tipo_red_q else r"$$S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
-    txt_sust_cdt = f"(2 · {val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})" if "Monofásico" in tipo_red_q else f"({val_pot_q:,.1f} · {long_q}) / ({gamma_q} · {dv_max_q:.2f} · {v_nom_calc})"
+    txt_sust_cdt = f"(2 \cdot {val_pot_q:,.1f} \cdot {long_q}) / ({gamma_q} \cdot {dv_max_q:.2f} \cdot {v_nom_calc})" if "Monofásico" in tipo_red_q else f"({val_pot_q:,.1f} \cdot {long_q}) / ({gamma_q} \cdot {dv_max_q:.2f} \cdot {v_nom_calc})"
 
     st.markdown("---")
     
@@ -310,62 +333,61 @@ elif seleccion_modulo.startswith("🧮"):
 
     st.markdown("<h3>📋 Memoria Analítica Detallada</h3>", unsafe_allow_html=True)
 
-    st.info(f"""
-    #### 1. Intensidad de Diseño ($I_b$)
-    **Justificación:** Se calcula la corriente nominal base a plena carga ($I_z \\ge I_b$).
-    
-    {txt_formula_ib}
-    
-    **Sustitución y Resultado:** 
-    $I_b =$ {txt_sust_ib} = **{ib_q:.2f} A**
-    """)
+    st.markdown(f"""
+    <div class="bloque-calculo">
+        <h4 style="margin-top:0; color:#0f172a;">1. Intensidad de Diseño ($I_b$)</h4>
+        <p><b>Justificación:</b> Se calcula la corriente nominal base a plena carga ($I_z \\ge I_b$).</p>
+        {txt_formula_ib}
+        <p><b>Sustitución y Resultado:</b> $I_b =$ {txt_sust_ib} = <b>{ib_q:.2f} A</b></p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.info(f"""
-    #### 2. Determinación de Sección por Calentamiento ($I_z$)
-    **Justificación:** Buscamos en las tablas reglamentarias la sección mínima con $I_z \\ge I_b$ ({ib_q:.2f} A).
-    
-    * **Sección requerida por este criterio:** **{s_cal_q} mm²** ($I_z$ = {tabla_iz_q.get(s_cal_q, 0)} A).
-    """)
+    st.markdown(f"""
+    <div class="bloque-calculo">
+        <h4 style="margin-top:0; color:#0f172a;">2. Determinación de Sección por Calentamiento ($I_z$)</h4>
+        <p><b>Justificación:</b> Buscamos en las tablas reglamentarias la sección mínima con $I_z \\ge I_b$ ({ib_q:.2f} A).</p>
+        <p>• <b>Sección requerida por este criterio:</b> <b>{s_cal_q} mm²</b> ($I_z$ = {tabla_iz_q.get(s_cal_q, 0)} A).</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.info(f"""
-    #### 3. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Grosor necesario para no superar el límite del {cdt_lim_q}% ({dv_max_q:.2f} V).
-    
-    {txt_formula_cdt}
-    
-    **Sustitución y Resultado:** 
-    $S =$ {txt_sust_cdt} = **{s_cdt_q:.2f} mm²**
-    """)
+    st.markdown(f"""
+    <div class="bloque-calculo">
+        <h4 style="margin-top:0; color:#0f172a;">3. Sección Teórica por Caída de Tensión ($\\Delta V$)</h4>
+        <p><b>Justificación:</b> Grosor necesario para no superar el límite del {cdt_lim_q}% ({dv_max_q:.2f} V).</p>
+        {txt_formula_cdt}
+        <p><b>Sustitución y Resultado:</b> $S =$ {txt_sust_cdt} = <b>{s_cdt_q:.2f} mm²</b></p>
+    </div>
+    """, unsafe_allow_html=True)
 
     estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
-    st.info(f"""
-    #### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)
-    **Justificación:** La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe superar el umbral magnético (Curva C = $10 \\cdot I_n$).
-    
-    $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
-    
-    **Origen detallado de los parámetros de impedancia y resistencia:**
-    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en **`{z_origen:.4f}` $\\Omega$**.
-    * **Resistencia del cable ($R_{{cable}}$):** Se calcula mediante la ley de resistencia para conductores ($R = \\frac{{\\rho \\cdot L}}{{S}}$), multiplicada por 2 en sistemas monofásicos (ida y vuelta por el neutro). Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en **`{r_cable_total:.4f}` $\\Omega$**.
-    
-    $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
-
-    * **Umbral de disparo exigido ({prot_q} A x 10):** {corriente_disparo:.1f} A
-    * **Veredicto:** {estado_icc}
-    """)
+    st.markdown(f"""
+    <div class="bloque-calculo">
+        <h4 style="margin-top:0; color:#0f172a;">4. Comprobación Cortocircuito y Disparo Magnético (0.1s)</h4>
+        <p><b>Justificación:</b> La corriente de cortocircuito al final de la línea ($I_{{cc,final}}$) debe superar el umbral magnético (Curva C = $10 \\cdot I_n$).</p>
+        $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
+        <p><b>Origen detallado de los parámetros de impedancia y resistencia:</b></p>
+        <ul>
+            <li><b>Impedancia de red en origen ($Z_{{origen}}$):</b> Se obtiene a partir de la corriente de cortocircuito configurada en origen ($I_{{cc,origen}} = {icc_orig_q} \\text{{ kA}}$). Aplicando la ley de Ohm ($Z_{{origen}} = \\frac{{V}}{{I_{{cc,origen}}}}$), resulta en <b>{z_origen:.4f} $\\Omega$</b>.</li>
+            <li><b>Resistencia del cable ($R_{{cable}}$):</b> Se calcula mediante la ley de resistencia para conductores ($R = \\frac{{\\rho \\cdot L}}{{S}}$), multiplicada por 2 en sistemas monofásicos (ida y vuelta por el neutro). Con una longitud de {long_q} m y una sección de {s_opt_q} mm², resulta en <b>{r_cable_total:.4f} $\\Omega$</b>.</li>
+        </ul>
+        $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f}\\text{{ A}}}}$$
+        <p>• <b>Umbral de disparo exigido ({prot_q} A x 10):</b> {corriente_disparo:.1f} A</p>
+        <p>• <b>Veredicto:</b> {estado_icc}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA ---
     st.markdown(f"""
-    <div class="pia-destacado">
-        🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)
-        <hr style="border-top: 1px solid #7dd3fc; margin: 10px 0;">
-        <span style="font-size: 15px; font-weight: normal; color: #0c4a6e;">
+    <div class="pia-destacado" style="background-color: #f8fafc; border: 2px solid #94a3b8; color: #334155; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+        <h4 style="margin: 0;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</h4>
+        <hr style="border-top: 1px solid #cbd5e1; margin: 10px 0;">
+        <span style="font-size: 14px; font-weight: normal;">
         <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \\le 0.91 \\cdot I_z$</b> (siendo $I_z$ = {iz_opt_val} A).
         </span>
     </div>
     """, unsafe_allow_html=True)
 
-    # --- VENTANA DE AYUDA DESPLEGABLE (OCULTADA NATIVAMENTE AL IMPRIMIR) ---
+    # --- VENTANA DE AYUDA DESPLEGABLE (OCULTADA AL IMPRIMIR) ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
         
@@ -378,7 +400,6 @@ elif seleccion_modulo.startswith("🧮"):
 | **Aluminio** | PVC | 70 ºC | **31.0** | ~0.0323 |
         """
         st.markdown(tabla_gamma_md)
-        st.markdown("*Nota:* El programa selecciona automáticamente este valor según la selección superior.")
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
@@ -393,25 +414,17 @@ elif seleccion_modulo.startswith("🧮"):
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
-    st.success(f"""
-    ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
-    La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
-    Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
-    """)
-
-    # --- AVISO INFORMATIVO INYECTADO COMO HTML PURO PARA OCULTARLO AL IMPRIMIR ---
-    st.markdown("""
-    <div class="ocultar-impresion" style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px;">
-        💡 <b>Para guardar o imprimir esta memoria en PDF de forma limpia:</b> Pulsa las opciones de tu navegador o usa el atajo <b>Ctrl + P</b> (en PC) para generar el documento oficial sin menús ni barras laterales.
+    st.markdown(f"""
+    <div style="background-color: #dcfce7; border: 2px solid #86efac; color: #166534; padding: 15px; border-radius: 8px; margin-top: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 10px;">✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})</h3>
+        La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>.<br>
+        Coordinada perfectamente con un <b>PIA de {prot_q} A (Curva C)</b>.
     </div>
     """, unsafe_allow_html=True)
 
-
-
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
-# =========================================================================
-# =========================================================================
+# =========================================================================# =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
 # =========================================================================
 # =========================================================================
