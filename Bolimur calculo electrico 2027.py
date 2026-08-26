@@ -377,7 +377,7 @@ elif seleccion_modulo.startswith("🧮"):
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
 
-    st.success(f"""
+  st.success(f"""
     ### ✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})
     La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del **{dv_real_pct_q:.3f}%**. 
     Coordinada perfectamente con un **PIA de {prot_q} A (Curva C)**.
@@ -399,6 +399,12 @@ elif seleccion_modulo.startswith("🧮"):
     </div>
     """
     components.html(html_print_code, height=140)
+
+
+
+# =========================================================================
+# MODULO: PREVISION DE CARGAS (Pt)
+# =========================================================================
 
 
 
