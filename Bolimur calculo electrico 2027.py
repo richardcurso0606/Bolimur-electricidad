@@ -422,9 +422,14 @@ elif seleccion_modulo.startswith("🧮"):
     </div>
     """, unsafe_allow_html=True)
 
+
+
+
+
 # =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
-# =========================================================================# =========================================================================
+# =========================================================================
+# =========================================================================
 # MODULO: PREVISION DE CARGAS (Pt)
 # =========================================================================
 # =========================================================================
@@ -464,6 +469,9 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     # =========================================================================
     # 1. VIVIENDAS (P1)
     # =========================================================================
+# =========================================================================
+    # 1. VIVIENDAS (P1)
+    # =========================================================================
     st.header("1. Viviendas ($P_1$)")
     if st.button("➕ Añadir Grupo de Viviendas"): 
         st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 9200, "nocturna": False})
@@ -483,41 +491,31 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
                 if len(st.session_state.grupos_viviendas) > 1: 
                     st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
-        # Coeficiente de simultaneidad K según ITC-BT-10 (total de viviendas del edificio)
         n_viv_calc = max(total_n_viviendas, 1)
         if viv["nocturna"]:
             cs_grupo = float(viv["qty"])
             pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo))
         else:
-            # Función estándar de simultaneidad K del REBT (ITC-BT-10)
-            def obtener_K(n):
-                if n == 1: return 1.0
-                elif n <= 2: return 2 * 1.0 # Aproximación simplificada o tabla oficial
-                # Aplicamos la fórmula reglamentaria general de la ITC-BT-10: K = 1 + (n-1)/n ... o tabla oficial
-                # Tabla oficial simplificada para K en función de n total:
-                tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
-                           11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
-                if n in tabla_k: return tabla_k[n]
-                else: return round(15.4 + (n - 20) * 0.7, 2) # aproximación para > 20
+            tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
+                       11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
+            if n_viv_calc in tabla_k: k_total = tabla_k[n_viv_calc]
+            else: k_total = round(15.4 + (n_viv_calc - 20) * 0.7, 2)
             
-            # Coeficiente proporcional al grupo según el peso total de viviendas
-            k_total = obtener_K(n_viv_calc)
-            # Potencia media ponderada o aplicación directa por coeficiente global del edificio
-            pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_total / n_viv_calc)))
             cs_grupo = k_total / n_viv_calc
+            pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo))
 
         pot_total_viviendas += pot_parcial
 
-        st.info(f"""
-        **Justificación Analítica (Viviendas): {viv['nombre']}**
-        * Nº de viviendas en este grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)
-        * Potencia unitaria: **{viv['pot']} W**
-        * Coeficiente de simultaneidad aplicado ($K$): **{cs_grupo:.3f}**
-        $$P_{{parcial}} = n_{{viv}} \\cdot P_{{unitaria}} \\cdot \\left(\\frac{K_{{total}}}{n_{{total}}}\\right)$$
-        **Resultado parcial:** **{pot_parcial:,} W**
-        """)
+        st.info(
+            f"**Justificación Analítica (Viviendas): {viv['nombre']}**\n\n"
+            f"- Nº de viviendas en este grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)\n"
+            f"- Potencia unitaria: **{viv['pot']} W**\n"
+            f"- Coeficiente de simultaneidad aplicado ($K$): **{cs_grupo:.3f}**\n\n"
+            f"**Resultado parcial:** **{pot_parcial:,} W**"
+        )
 
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
+    
 
     # =========================================================================
     # 2. LOCALES COMERCIALES (P2)
