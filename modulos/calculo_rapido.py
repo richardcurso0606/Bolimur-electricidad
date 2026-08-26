@@ -31,7 +31,8 @@ def seleccionar_proteccion(ib):
 # =========================================================================
 def renderizar():
     
-    # --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
+# --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
+
 with col_btn:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
@@ -42,9 +43,12 @@ with col_btn:
                         window.print();
                     }, 400);
                 </script>
-            """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True
+                       
     # --- ESTILOS CSS INYECTADOS DENTRO DEL RENDER (CORRIGE MÁRGENES Y MULTIPÁGINA) ---
-    st.markdown("""
+    
+                        
+                     st.markdown("""
     <style>
     @media print {
         /* Ocultar elementos de la interfaz de Streamlit */
@@ -53,23 +57,26 @@ with col_btn:
         }
         h1 { display: none !important; }
         
-        /* Forzar formato A4 real y eliminar márgenes vacíos de Streamlit */
+        /* Reset absoluto de márgenes y tamaños para tablets y PC */
         @page {
-            size: A4;
+            size: A4 portrait;
             margin: 10mm;
         }
-        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {
+        
+        /* Romper los contenedores fijos de Streamlit que limitan la tablet a 1 sola página */
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
             background-color: white !important; 
             color: black !important; 
             font-family: "Helvetica", "Arial", sans-serif !important; 
             font-size: 10pt !important;
-            height: auto !important;
+            height: max-content !important;
             max-height: none !important;
             overflow: visible !important;
             position: static !important;
+            display: block !important;
         }
         
-        /* Evitar que los bloques informativos o cajas se corten a mitad entre páginas */
+        /* Evitar que las cajas informativas se corten mal entre páginas */
         .stInfo, div[style*="background-color"], .pia-destacado, table, tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
