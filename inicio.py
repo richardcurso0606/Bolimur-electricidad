@@ -1,4 +1,12 @@
 import streamlit as st
+
+st.set_page_config(
+    page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
+    page_icon="icono_bolimur.png",
+    layout="wide"
+)
+
+import streamlit as st
 import sqlite3
 
 st.set_page_config(page_title="CÁLCULOS ELÉCTRICOS", page_icon="⚡", layout="wide")
