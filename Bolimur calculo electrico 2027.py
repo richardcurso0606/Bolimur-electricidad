@@ -1,22 +1,13 @@
 import streamlit as st
 import sqlite3
 
-# =========================================================================
-# 1. IMPORTACIÓN DE LOS MÓDULOS AISLADOS
-# =========================================================================
-from modulos import calculo_rapido
-from modulos import prevision_cargas
-from modulos import lga
-from modulos import di
+import modulos.calculo_rapido as calculo_rapido
+import modulos.prevision_cargas as prevision_cargas
+import modulos.lga as lga
+import modulos.di as di
 
-# =========================================================================
-# 2. CONFIGURACIÓN GENERAL (SIEMPRE LA PRIMERA LÍNEA)
-# =========================================================================
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡", layout="wide")
 
-# =========================================================================
-# 3. ESTILOS CSS GLOBALES (Para que toda la app se vea perfecta)
-# =========================================================================
 st.markdown("""
     <style>
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
@@ -46,7 +37,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS LOCAL ---
 DB_NAME = "bolimur_database.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -60,17 +50,11 @@ def init_db():
     conn.close()
 init_db()
 
-# =========================================================================
-# 4. INICIALIZACIÓN DE VARIABLES GLOBALES
-# =========================================================================
 if 'grupos_viviendas' not in st.session_state: st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
 if 'locales' not in st.session_state: st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
 if 'servicios_generales' not in st.session_state: st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30}]
 if 'garajes' not in st.session_state: st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
 
-# =========================================================================
-# 5. MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
-# =========================================================================
 with st.sidebar:
     st.markdown("""
         <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
@@ -110,9 +94,6 @@ with st.sidebar:
 
     seleccion_modulo = st.session_state.menu_activo
 
-# =========================================================================
-# 6. EL ENRUTADOR (CARGA DE VENTANAS)
-# =========================================================================
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR INSTALACIONES INTEGRALES")
     st.write("Bienvenido al panel de cálculo eléctrico. Selecciona una opción en el menú lateral para empezar.")
