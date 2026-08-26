@@ -46,43 +46,41 @@ def renderizar():
             """, unsafe_allow_html=True)
 
 
-
-    
-# --- Estilos exclusivos profesionales para impresión y PDF (PC y Tablet) ---
+# --- Estilos profesionales definitivos para impresión sin márgenes ni cortes ---
     st.markdown("""
     <style>
     @media print {
-        /* Ocultar elementos de la interfaz que no deben salir en el papel */
+        /* Ocultar elementos de la interfaz de Streamlit */
         [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div[data-testid="stHorizontalBlock"], details { 
             display: none !important; 
         }
         h1 { display: none !important; }
         
-        /* Configuración de página limpia y tipografía adaptada para impresión */
-        body, html, [data-testid="stAppViewContainer"], [data-testid="stMain"] { 
+        /* Eliminar márgenes fantasma y forzar altura libre para que salgan todas las páginas */
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {
             background-color: white !important; 
             color: black !important; 
             font-family: "Helvetica", "Arial", sans-serif !important; 
-            font-size: 10pt !important; 
+            font-size: 10pt !important;
+            height: auto !important;
+            overflow: visible !important;
+            position: static !important;
         }
         
-        /* Evitar cortes extraños en mitad de los bloques de contenido o cajas */
-        .stInfo, div[style*="background-color"], .pia-destacado {
+        /* Forzar que los bloques no se corten entre páginas */
+        .stInfo, div[style*="background-color"], .pia-destacado, table, tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
-            margin-bottom: 15px !important;
-            border: 1px solid #94a3b8 !important;
         }
-
-        /* Optimización absoluta para tablas (evitar que se corten filas) */
+        
+        /* Ajuste de tablas para impresión */
         table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
-            break-inside: auto !important;
-        }
-        tr { 
-            break-inside: avoid !important; 
-            page-break-inside: avoid !important; 
         }
         th, td { 
             border: 1px solid #cbd5e1 !important; 
@@ -100,6 +98,10 @@ def renderizar():
     tr:nth-child(even) td { background-color: #f8fafc !important; }
     </style>
     """, unsafe_allow_html=True)
+    
+
+
+    
  
 
     rc1, rc2 = st.columns(2)
