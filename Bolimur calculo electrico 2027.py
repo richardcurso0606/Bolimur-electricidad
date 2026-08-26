@@ -83,8 +83,8 @@ if 'garajes' not in st.session_state: st.session_state.garajes = {"sup": 240.0, 
 with st.sidebar:
     st.markdown("""
         <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ BOLIMUR</h3>
-            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Instalaciones Integrales</p>
+            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ CÁLCULOS ELÉCTRICOS</h3>
+            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Panel Técnico REBT</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -120,13 +120,11 @@ with st.sidebar:
     seleccion_modulo = st.session_state.menu_activo
 
 
-
-
 # =========================================================================
 # EL ENRUTADOR (CARGA DE VENTANAS)
 # =========================================================================
 if seleccion_modulo.startswith("🏠"):
-    st.title("⚡ CALULOS ELECTRICOS")
+    st.title("⚡ CÁLCULOS ELÉCTRICOS")
     st.write("Bienvenido al panel de cálculo eléctrico. Selecciona una opción en el menú lateral para empezar.")
 
 elif seleccion_modulo.startswith("🧮"):
