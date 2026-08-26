@@ -110,15 +110,43 @@ def renderizar():
             pot_total_viviendas += pot_parcial
 
             with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
-                st.info(
-                    f"**Desarrollo de Cálculo:**\n\n"
-                    f"- Nº de viviendas: **{viv['qty']}** " + (f"(Viviendas diurnas de cálculo: {viviendas_diurnas_qty})" if not viv["nocturna"] else "(Régimen de Tarifa Nocturna)") + "\n"
-                    f"- Potencia unitaria: **{viv['pot']:,} W**\n"
-                    f"- Coeficiente REBT aplicado: **{k_diurno if not viv['nocturna'] else 'N/A (Nocturna)'}**\n\n"
-                    f"**Resultado parcial:** **{pot_parcial:,} W**"
-                )
+                if viv["nocturna"]:
+                    st.info(
+                        f"**Desarrollo de Cálculo (Tarifa Nocturna):**\n\n"
+                        f"- Nº de viviendas: **{viv['qty']}**\n"
+                        f"- Potencia unitaria: **{viv['pot']:,} W**\n"
+                        f"- Criterio: Al estar bajo régimen nocturno, computa al 100% de su potencia sin coeficiente de simultaneidad diurno.\n\n"
+                        f"**Fórmula:** $P_{{parcial}} = \\text{{Nº Viv.}} \\times \\text{{Pot. Unitaria}}$\n"
+                        f"**Resultado parcial:** **{pot_parcial:,} W**"
+                    )
+                else:
+                    st.info(
+                        f"**Desarrollo de Cálculo (ITC-BT-10):**\n\n"
+                        f"- Total de viviendas diurnas en el edificio ($n$): **{viviendas_diurnas_qty}**\n"
+                        f"- Coeficiente de simultaneidad de tabla ($K$): **{k_diurno}**\n"
+                        f"- Viviendas en este grupo: **{viv['qty']}**\n"
+                        f"- Potencia unitaria: **{viv['pot']:,} W**\n\n"
+                        f"**Fórmula reglamentaria aplicada:**\n"
+                        f"$$P_{{parcial}} = \\text{{Nº Viv. grupo}} \\times \\text{{Pot. Unitaria}} \\times \\left( \\frac{K}{n} \\right)$$\n\n"
+                        f"**Sustitución numérica:**\n"
+                        f"${viv['qty']} \\times {viv['pot']:,} \\times \\left( \\frac{{{k_diurno}}}{{ {viviendas_diurnas_qty} }} \\right) = \\mathbf{{{pot_parcial:,}\\text{{ W}}}}$"
+                    )
 
+    # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
+    st.markdown("---")
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
+    
+    with st.expander("📖 Ver Justificación y Fórmula Global del Subtotal de Viviendas ($P_1$)"):
+        st.info(
+            f"**Criterio normativo (ITC-BT-10):**\n"
+            f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad $K$ correspondiente al número total de viviendas diurnas del edificio ($n = {viviendas_diurnas_qty}$), obteniendo un coeficiente $K = {k_diurno}$.\n\n"
+            f"**Fórmula General:**\n"
+            f"$$P_1 = \\sum \\left( n_i \\times P_{{u,i}} \\right) \\times \\frac{K}{n_{text{{diurnas}}}} + \\sum P_{{\\text{{nocturnas}}}}\n$$\n\n"
+            f"**Resumen de Parámetros Aplicados:**\n"
+            f"- Total viviendas diurnas de cálculo ($n$): **{viviendas_diurnas_qty}**\n"
+            f"- Coeficiente $K$ obtenido de la tabla ITC-BT-10: **{k_diurno}**\n"
+            f"- Suma total resultante para el subtotal $P_1$: **{pot_total_viviendas:,} W**"
+        )
     
     # --- 2. LOCALES COMERCIALES ---
     st.markdown("---")
@@ -252,7 +280,7 @@ def renderizar():
     * 🏠 Total Viviendas ($P_1$): **{pot_total_viviendas:,} W**
     * 🏪 Total Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**
     * 💡 Total Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**
-    * 🚗 Total Garajes e IRVE ($P_4$): **{pot_total_garaje:,.0f} W**
+    * 🚗 Total Garajes e IRVE ($P_4$): **{pot_total_garaje:,.2f} W**
     
     *Valor listo y optimizado para el cálculo inmediato de la Línea General de Alimentación (LGA).*
     """)
