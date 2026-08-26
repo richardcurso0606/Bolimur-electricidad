@@ -31,7 +31,7 @@ def seleccionar_proteccion(ib):
 # =========================================================================
 def renderizar():
     
-    # --- TÍTULO Y BOTÓN DE IMPRESIÓN NATIVO (COMPATIBLE CON TABLET Y PC) ---
+    # --- TÍTULO Y BOTÓN DE IMPRESIÓN NATIVO OPTIMIZADO ---
     col_tit, col_btn = st.columns([3, 1])
     with col_tit:
         st.title("🧮 Cálculo Rápido Avanzado")
@@ -45,7 +45,7 @@ def renderizar():
             </div>
         """, unsafe_allow_html=True)
 
-    # --- ESTILOS CSS PARA IMPRESIÓN MULTIPÁGINA Y PANTALLA ---
+    # --- ESTILOS CSS PARA IMPRESIÓN MULTIPÁGINA REAL ---
     st.markdown("""
     <style>
     @media print {
@@ -59,6 +59,7 @@ def renderizar():
             margin: 10mm;
         }
         
+        /* Forzar al navegador móvil y de PC a romper la altura fija y permitir multipágina */
         html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
             background-color: white !important; 
             color: black !important; 
@@ -231,7 +232,7 @@ def renderizar():
         <h4 style="margin: 0;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</h4>
         <hr style="border-top: 1px solid #cbd5e1; margin: 10px 0;">
         <span style="font-size: 14px; font-weight: normal;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \le 0.91 \cdot I_z$</b> (siendo $I_z$ = {iz_opt_val} A).
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub></b> (siendo I<sub>z</sub> = {iz_opt_val} A).
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -249,14 +250,14 @@ def renderizar():
         st.markdown(tabla_gamma_md)
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
-    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \le 0.91 \cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN (I<sub>n</sub> &le; 0.91 &middot; I<sub>z</sub>) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
-        elif prot_q > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q} A $\le$ {cond_sobrecarga:.1f} A)"
+        elif prot_q > cond_sobrecarga: est_v = f"❌ Falla (I<sub>n</sub> {prot_q}A > {cond_sobrecarga:.1f}A)"
+        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** (I<sub>n</sub> {prot_q} A &le; {cond_sobrecarga:.1f} A)"
         else: est_v = "Válido pero sobredimensionado"
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
