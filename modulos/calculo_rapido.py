@@ -30,7 +30,6 @@ def seleccionar_proteccion(ib):
 # FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
 # =========================================================================
 def renderizar():
-
     
     # --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
     col_tit, col_btn = st.columns([3, 1])
@@ -45,8 +44,7 @@ def renderizar():
                 </script>
             """, unsafe_allow_html=True)
 
-
-# --- Estilos profesionales definitivos para impresión sin márgenes ni cortes ---
+    # --- ESTILOS CSS INYECTADOS DENTRO DEL RENDER (CORRIGE MÁRGENES Y MULTIPÁGINA) ---
     st.markdown("""
     <style>
     @media print {
@@ -56,10 +54,10 @@ def renderizar():
         }
         h1 { display: none !important; }
         
-        /* Eliminar márgenes fantasma y forzar altura libre para que salgan todas las páginas */
+        /* Forzar formato A4 real y eliminar márgenes vacíos de Streamlit */
         @page {
             size: A4;
-            margin: 15mm;
+            margin: 10mm;
         }
         html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {
             background-color: white !important; 
@@ -67,17 +65,18 @@ def renderizar():
             font-family: "Helvetica", "Arial", sans-serif !important; 
             font-size: 10pt !important;
             height: auto !important;
+            max-height: none !important;
             overflow: visible !important;
             position: static !important;
         }
         
-        /* Forzar que los bloques no se corten entre páginas */
+        /* Evitar que los bloques informativos o cajas se corten a mitad entre páginas */
         .stInfo, div[style*="background-color"], .pia-destacado, table, tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
         }
         
-        /* Ajuste de tablas para impresión */
+        /* Estilos de tablas limpios para impresión */
         table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
@@ -98,11 +97,6 @@ def renderizar():
     tr:nth-child(even) td { background-color: #f8fafc !important; }
     </style>
     """, unsafe_allow_html=True)
-    
-
-
-    
- 
 
     rc1, rc2 = st.columns(2)
     with rc1:
