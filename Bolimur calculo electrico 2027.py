@@ -1,10 +1,6 @@
 import streamlit as st
 import sqlite3
-
-import modulos.calculo_rapido as calculo_rapido
-import modulos.prevision_cargas as prevision_cargas
-import modulos.lga as lga
-import modulos.di as di
+from modulos import calculo_rapido, prevision_cargas, lga, di
 
 st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡", layout="wide")
 
