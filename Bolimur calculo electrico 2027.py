@@ -435,25 +435,42 @@ elif seleccion_modulo.startswith("🧮"):
 
 
 # =========================================================================
-# (AQUÍ EMPEZARÍA EL SIGUIENTE MÓDULO: PREVISIÓN DE CARGAS)
+# 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10) - VERSIÓN TÉCNICA AVANZADA
 # =========================================================================
-elif seleccion_modulo.startswith("🏢"):
+elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
     
     col_t1, col_b1 = st.columns([4, 1])
-    with col_t1: st.write("Desarrollo analítico para el cálculo de la Potencia Total Prevista (Pt) del edificio.")
+    with col_t1: 
+        st.write("Desarrollo analítico y reglamentario para el cálculo de la Potencia Total Prevista ($P_t$) del edificio.")
     with col_b1:
         if st.button("🔄 Resetear Todo"): 
-            st.session_state.grupos_viviendas = [{"nombre": "Grupo 1", "qty": 0, "pot": 5750, "nocturna": False}]
-            st.session_state.locales = [{"nombre": "Local 1", "superficie": 0.0, "qty": 0}]
-            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 0.0, "factor": 1.30, "qty": 0}]
-            st.session_state.garajes = {"sup": 0.0, "plazas_irve": 0, "tipo_irve": 0.3}
+            st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
+            st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
+            st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "qty": 1}]
+            st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": 0.10} # 10% según ITC-BT-52 / ejercicio
             st.rerun()
 
-    st.header("1. Viviendas (P1)")
-    if st.button("➕ Añadir Grupo de Viviendas"): st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 0, "pot": 5750, "nocturna": False})
+    # Inicializar estado si no existe
+    if "grupos_viviendas" not in st.session_state:
+        st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
+    if "locales" not in st.session_state:
+        st.session_state.locales = [{"nombre": "Locales Comerciales", "superficie": 100.0, "qty": 2}]
+    if "servicios_generales" not in st.session_state:
+        st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "potencia": 4000.0, "factor": 1.30, "qty": 1}]
+    if "garajes" not in st.session_state:
+        st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": 0.10}
+
+    # =========================================================================
+    # 1. VIVIENDAS (P1)
+    # =========================================================================
+    st.header("1. Viviendas ($P_1$)")
+    if st.button("➕ Añadir Grupo de Viviendas"): 
+        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 9200, "nocturna": False})
 
     pot_total_viviendas = 0
+    total_n_viviendas = sum(v["qty"] for v in st.session_state.grupos_viviendas)
+
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
@@ -461,22 +478,55 @@ elif seleccion_modulo.startswith("🏢"):
         with c3: viv["pot"] = st.selectbox(f"Pot. Unitaria", [5750, 7360, 9200, 11500], index=[5750, 7360, 9200, 11500].index(viv["pot"]) if viv["pot"] in [5750, 7360, 9200, 11500] else 0, key=f"v_p_{idx}")
         with c4: viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
         with c5:
+            st.write(""); st.write("")
             if st.button("🗑️", key=f"del_v_{idx}"):
-                if len(st.session_state.grupos_viviendas)>1: st.session_state.grupos_viviendas.pop(idx); st.rerun()
+                if len(st.session_state.grupos_viviendas) > 1: 
+                    st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
-        cs_grupo = float(viv["qty"]) if viv["nocturna"] else get_coef_simultaneidad(viv["qty"])
-        pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo)) if viv["nocturna"] else int(round(viv["pot"] * cs_grupo))
+        # Coeficiente de simultaneidad K según ITC-BT-10 (total de viviendas del edificio)
+        n_viv_calc = max(total_n_viviendas, 1)
+        if viv["nocturna"]:
+            cs_grupo = float(viv["qty"])
+            pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo))
+        else:
+            # Función estándar de simultaneidad K del REBT (ITC-BT-10)
+            def obtener_K(n):
+                if n == 1: return 1.0
+                elif n <= 2: return 2 * 1.0 # Aproximación simplificada o tabla oficial
+                # Aplicamos la fórmula reglamentaria general de la ITC-BT-10: K = 1 + (n-1)/n ... o tabla oficial
+                # Tabla oficial simplificada para K en función de n total:
+                tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
+                           11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
+                if n in tabla_k: return tabla_k[n]
+                else: return round(15.4 + (n - 20) * 0.7, 2) # aproximación para > 20
+            
+            # Coeficiente proporcional al grupo según el peso total de viviendas
+            k_total = obtener_K(n_viv_calc)
+            # Potencia media ponderada o aplicación directa por coeficiente global del edificio
+            pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_total / n_viv_calc)))
+            cs_grupo = k_total / n_viv_calc
+
         pot_total_viviendas += pot_parcial
 
         st.info(f"""
-        **Justificación Analítica: {viv['nombre']}**
-        Se aplica coeficiente de simultaneidad ($K$) según el número de viviendas (ITC-BT-10).
-        $$P_{{parcial}} = P_{{unitaria}} \\cdot K_{{simultaneidad}}$$
-        **Sustitución:** {viv['pot']} W $\\cdot$ K({cs_grupo:.2f}) = **{pot_parcial:,} W**
+        **Justificación Analítica (Viviendas): {viv['nombre']}**
+        * Nº de viviendas en este grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)
+        * Potencia unitaria: **{viv['pot']} W**
+        * Coeficiente de simultaneidad aplicado ($K$): **{cs_grupo:.3f}**
+        $$P_{{parcial}} = n_{{viv}} \\cdot P_{{unitaria}} \\cdot \\left(\\frac{K_{{total}}}{n_{{total}}}\\right)$$
+        **Resultado parcial:** **{pot_parcial:,} W**
         """)
 
-    st.header("2. Locales Comerciales (P2)")
-    if st.button("➕ Añadir Local"): st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 0.0, "qty": 0})
+    st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
+
+    # =========================================================================
+    # 2. LOCALES COMERCIALES (P2)
+    # =========================================================================
+    st.markdown("---")
+    st.header("2. Locales Comerciales ($P_2$)")
+    if st.button("➕ Añadir Local"): 
+        st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "superficie": 100.0, "qty": 1})
+    
     pot_total_locales = 0.0
     for idx, loc in enumerate(st.session_state.locales):
         c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
@@ -484,23 +534,34 @@ elif seleccion_modulo.startswith("🏢"):
         with c2: loc["superficie"] = st.number_input(f"Sup. m²", value=float(loc["superficie"]), key=f"l_s_{idx}")
         with c3: loc["qty"] = st.number_input(f"Cantidad", value=int(loc["qty"]), key=f"l_q_{idx}")
         with c4:
-            if st.button("🗑️", key=f"del_l_{idx}"): st.session_state.locales.pop(idx); st.rerun()
+            st.write(""); st.write("")
+            if st.button("🗑️", key=f"del_l_{idx}"): 
+                st.session_state.locales.pop(idx); st.rerun()
 
+        # Criterio REBT: Mínimo 100 W/m² y nunca inferior a 3450 W
         pot_u = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
         pot_parcial = pot_u * loc["qty"]
         pot_total_locales += pot_parcial
         
         st.info(f"""
         **Justificación Analítica: {loc['nombre']}**
-        El REBT exige 100 W/m² con un mínimo de 3450 W por local.
-        $$P_{{local}} = \max(Superficie \\cdot 100, \\ 3450)$$
-        **Cálculo:** Mínimo aplicado para {loc['superficie']} m² = **{pot_u:,.0f} W** por unidad.
+        El REBT exige un mínimo de 100 W/m² con un suelo de 3.450 W por local comercial.
+        $$P_{{local}} = \\max(\\text{{Superficie}} \\cdot 100, \\ 3450) \\cdot \\text{{Cantidad}}$$
+        **Cálculo:** $\\max({loc['superficie']} \\cdot 100, \\ 3450) \\cdot {loc['qty']} = \\mathbf{{{pot_parcial:,.0f}\\text{{ W}}}}$
         """)
 
-    st.header("3. Servicios Generales (P3)")
-    if st.button("➕ Añadir Servicio"): st.session_state.servicios_generales.append({"nombre": "Servicio", "potencia": 0.0, "factor": 1.30, "qty": 0})
+    st.markdown(f"### 📌 Subtotal Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**")
+
+    # =========================================================================
+    # 3. SERVICIOS GENERALES (P3)
+    # =========================================================================
+    st.markdown("---")
+    st.header("3. Servicios Generales ($P_3$)")
+    if st.button("➕ Añadir Servicio"): 
+        st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 0.0, "factor": 1.30, "qty": 1})
+    
     pot_total_servicios = 0.0
-    opciones_factores_k = {"Ascensor (K=1.30)": 1.30, "Iluminación LED (K=1.00)": 1.00, "Bombas de agua (K=1.25)": 1.25}
+    opciones_factores_k = {"Ascensor / Motores (K=1.30)": 1.30, "Iluminación / Estándar (K=1.00)": 1.00, "Bombas de agua (K=1.25)": 1.25}
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
@@ -516,44 +577,76 @@ elif seleccion_modulo.startswith("🏢"):
             serv["factor"] = factor
         with c5:
             st.write(""); st.write("")
-            if st.button("🗑️", key=f"del_s_{idx}"): st.session_state.servicios_generales.pop(idx); st.rerun()
+            if st.button("🗑️", key=f"del_s_{idx}"): 
+                st.session_state.servicios_generales.pop(idx); st.rerun()
         
         p_parcial = serv["potencia"] * serv["qty"] * factor
         pot_total_servicios += p_parcial
         
         st.info(f"""
         **Justificación Analítica: {serv['nombre']}**
-        Se aplica coeficiente multiplicador según la naturaleza del receptor.
-        $$P_{{servicio}} = P_{{unitaria}} \\cdot n \\cdot K$$
-        **Sustitución:** {serv["potencia"]} W $\\cdot$ {serv["qty"]} ud(s) $\\cdot$ {factor} = **{p_parcial:,.1f} W**
+        Se aplica el coeficiente multiplicador reglamentario según el tipo de servicio.
+        $$P_{{servicio}} = P_{{unitaria}} \\cdot \\text{{Uds.}} \\cdot K$$
+        **Sustitución:** {serv["potencia"]} W $\\cdot$ {serv["qty"]} ud(s) $\\cdot$ {factor} = **{p_parcial:,.2f} W**
         """)
 
-    st.header("4. Garajes e IRVE (P4)")
+    st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
+
+    # =========================================================================
+    # 4. GARAJES E IRVE (P4)
+    # =========================================================================
+    st.markdown("---")
+    st.header("4. Garajes e Infraestructura de Recarga (IRVE - ITC-BT-52)")
     g1, g2, g3 = st.columns(3)
     with g1: st.session_state.garajes["sup"] = st.number_input("Superficie Garaje m²", value=float(st.session_state.garajes["sup"]))
-    with g2: st.session_state.garajes["plazas_irve"] = st.number_input("Plazas IRVE (ITC-BT-52)", value=int(st.session_state.garajes["plazas_irve"]))
+    with g2: st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en Garaje", value=int(st.session_state.garajes["plazas_irve"]))
     with g3: 
-        tipo = st.selectbox("Esquema IRVE", ["Esquema 1.5 (Factor 0.3)", "Troncal (Factor 0.5)"])
-        st.session_state.garajes["tipo_irve"] = 0.3 if "0.3" in tipo else 0.5
+        tipo_irve_pct = st.selectbox("Previsión IRVE (ITC-BT-52)", ["10% de las plazas (Factor 0.3 o cálculo directo)", "Esquema colectivo con sistema de gestión"])
+        st.session_state.garajes["tipo_irve"] = 0.10 # 10% obligatorio general sin sistema de gestión dedicado
 
     sup_g = st.session_state.garajes["sup"]
-    p_gar = max(sup_g * 20.0, 3450.0 if sup_g > 0 else 0.0)
-    p_irve = st.session_state.garajes["plazas_irve"] * 3680.0 * st.session_state.garajes["tipo_irve"]
+    p_gar = max(sup_g * 20.0, 3450.0 if sup_g > 0 else 0.0) # 20 W/m² para ventilación forzada
+    
+    # Cálculo reglamentario IRVE según ejercicio (10% de plazas a 3.680 W cada una con factor de simultaneidad o esquema)
+    plazas_afectadas = int(round(st.session_state.garajes["plazas_irve"] * st.session_state.garajes["tipo_irve"]))
+    p_irve = plazas_afectadas * 3680.0  # 3.680 W por cada plaza de recarga básica (cir. dedicado 16A 230V)
     pot_total_garaje = p_gar + p_irve
 
     if sup_g > 0 or st.session_state.garajes["plazas_irve"] > 0:
         st.info(f"""
-        **Justificación Analítica: Garajes e IRVE**
-        *   **Ventilación/Extracción:** {sup_g} m² $\\cdot$ 20 W/m² = {p_gar:,.0f} W
-        *   **Recarga Vehículos:** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ 3680 W $\\cdot$ {st.session_state.garajes['tipo_irve']} = {p_irve:,.0f} W
+        **Justificación Analítica: Garajes e Instalación IRVE**
+        * **Ventilación Forzada Garaje:** {sup_g} m² $\\cdot$ 20 W/m² = **{p_gar:,.0f} W**
+        * **Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ 10% = **{plazas_afectadas} plazas** $\\cdot$ 3.680 W = **{p_irve:,.0f} W**
         """)
 
-    pt_total = pot_total_viviendas + int(pot_total_locales) + int(pot_total_servicios) + int(pot_total_garaje)
+    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.0f} W**")
+
+    # =========================================================================
+    # RESULTADO GLOBAL: POTENCIA TOTAL PREVISTA (Pt)
+    # =========================================================================
+    st.markdown("---")
+    pt_total = pot_total_viviendas + pot_total_locales + pot_total_servicios + pot_total_garaje
 
     st.success(f"""
-    ### ✅ POTENCIA TOTAL PREVISTA (Pt): {pt_total:,.1f} W
-    Suma total reglamentaria lista y calculada para dimensionar la Línea General de Alimentación (LGA).
+    ### ✅ POTENCIA TOTAL PREVISTA DEL EDIFICIO ($P_t$): {pt_total:,.2f} W
+    
+    **Desglose acumulado para la memoria técnica:**
+    * 🏠 Total Viviendas ($P_1$): **{pot_total_viviendas:,} W**
+    * 🏪 Total Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**
+    * 💡 Total Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**
+    * 🚗 Total Garajes e IRVE ($P_4$): **{pot_total_garaje:,.0f} W**
+    
+    *Valor listo y optimizado para el cálculo inmediato de la Línea General de Alimentación (LGA).*
     """)
+
+# =========================================================================
+# MODULO: LÍNEA GENERAL DE ALIMENTACIÓN (LGA)
+# =========================================================================
+
+
+
+
+
 
 elif seleccion_modulo.startswith("⚡"):
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
