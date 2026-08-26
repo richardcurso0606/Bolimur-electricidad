@@ -18,27 +18,33 @@ st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡
 
 
 # =========================================================================
-# 3. ESTILOS CSS GLOBALES (Para que toda la app se vea perfecta)
+# 3. ESTILOS CSS GLOBALES
 # =========================================================================
 st.markdown("""
     <style>
-     /* Estilo para convertir los botones de la barra lateral en tarjetas/recuadros */
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
+        }
+        [data-testid="stSidebar"] {
+            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
+        }
         [data-testid="stSidebar"] button {
-            width: 100% !important;
-            text-align: left !important;
-            background-color: #ffffff !important;
-            border: 2px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            color: #334155 !important;
-            font-weight: 500 !important;
-            margin-bottom: 6px !important;
-            transition: all 0.2s ease-in-out !important;
+            width: 100%;
+            text-align: left;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            color: #334155;
+            font-weight: 500;
+            margin-bottom: 6px;
         }
         [data-testid="stSidebar"] button:hover {
-            border-color: #0284c7 !important;
-            background-color: #f0f9ff !important;
-            color: #0284c7 !important;
+            border-color: #0284c7;
+            background-color: #f0f9ff;
+            color: #0284c7;
         }
+    </style>
+""", unsafe_allow_html=True)
         
         /* =========================================================
            ESTILO DE TARJETAS / RECUADROS PARA EL MENÚ LATERAL
