@@ -30,6 +30,26 @@ def seleccionar_proteccion(ib):
 # FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
 # =========================================================================
 def renderizar():
+    # --- BOTÓN DE IMPRESIÓN DIRECTA ---
+    col_imprimir_1, col_imprimir_2 = st.columns([3, 1])
+    with col_imprimir_2:
+        if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
+            st.markdown("""
+                <script>
+                    window.print();
+                </script>
+            """, unsafe_allow_html=True)
+
+    # --- Estilos exclusivos para las tablas de este módulo y para la impresión ---
+    st.markdown("""
+    <style>
+    @media print {
+...
+
+# =========================================================================
+# FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
+# =========================================================================
+def renderizar():
     # --- Estilos exclusivos para las tablas de este módulo y para la impresión ---
     st.markdown("""
     <style>
