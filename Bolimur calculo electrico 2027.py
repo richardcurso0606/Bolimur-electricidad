@@ -589,51 +589,90 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
 
     st.markdown(f"### 📌 Subtotal Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**")
 
+   
+    
+    
+    # =========================================================================
+    # 3. SERVICIOS GENERALES (P3)
+    # =========================================================================
+   
+    
     # =========================================================================
     # 3. SERVICIOS GENERALES (P3)
     # =========================================================================
     st.markdown("---")
     st.header("3. Servicios Generales ($P_3$)")
     if st.button("➕ Añadir Servicio"): 
-        st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 0.0, "factor": 1.30, "qty": 1})
+        st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 0.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1})
     
     pot_total_servicios = 0.0
-    opciones_factores_k = {"Ascensor / Motores (K=1.30)": 1.30, "Iluminación / Estándar (K=1.00)": 1.00, "Bombas de agua (K=1.25)": 1.25}
+    
+    # Opciones de multiplicadores K según ITC-BT-10 y REBT
+    opciones_factores_k = {
+        "Ascensor / Motores principales (K=1.30)": 1.30,
+        "Bombas de agua / Presión (K=1.25)": 1.25,
+        "Alumbrado Fluorescente / Descarga con reactancias (K=1.80)": 1.80,
+        "Iluminación incandescente / Estándar (K=1.00)": 1.00
+    }
 
     for idx, serv in enumerate(st.session_state.servicios_generales):
-        c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
-        with c1: serv["nombre"] = st.text_input(f"Servicio", serv["nombre"], key=f"s_n_{idx}")
-        with c2: serv["potencia"] = st.number_input(f"Pot. W", value=float(serv["potencia"]), key=f"s_p_{idx}")
-        with c3: serv["qty"] = st.number_input(f"Uds.", value=int(serv["qty"]), key=f"s_q_{idx}")
-        
+        # Usamos un diseño en dos filas o columnas equilibradas para evitar solapes en tablet
+        st.markdown(f"**Servicio #{idx+1}**")
+        c1, c2, c3 = st.columns([3, 2, 2])
+        with c1: 
+            serv["nombre"] = st.text_input(f"Descripción del Servicio", serv["nombre"], key=f"s_n_{idx}")
+        with c2: 
+            serv["potencia"] = st.number_input(f"Potencia unitaria (W)", value=float(serv["potencia"]), key=f"s_p_{idx}")
+        with c3: 
+            serv["qty"] = st.number_input(f"Cantidad (Uds.)", value=int(serv["qty"]), key=f"s_q_{idx}")
+
+        c4, c5, c6 = st.columns([3, 2, 1])
         factor_actual = serv.get("factor", 1.30)
-        def_opt_idx = 0 if factor_actual == 1.30 else 1 if factor_actual == 1.00 else 2
+        
+        # Mapeo seguro del índice para el selectbox
+        lista_k_keys = list(opciones_factores_k.keys())
+        lista_k_vals = list(opciones_factores_k.values())
+        try:
+            def_opt_idx = lista_k_vals.index(factor_actual)
+        except ValueError:
+            def_opt_idx = 0
+
         with c4:
-            sel_opt = st.selectbox(f"Multiplicador (K)", list(opciones_factores_k.keys()), index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
+            sel_opt = st.selectbox(f"Multiplicador Reglamentario (K)", lista_k_keys, index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
             factor = opciones_factores_k[sel_opt]
             serv["factor"] = factor
+            
         with c5:
-            st.write(""); st.write("")
+            # Casilla opcional para el Coseno de phi si aplica
+            serv["cos_phi"] = st.number_input(f"Coseno phi (cos φ)", min_value=0.5, max_value=1.0, value=float(serv.get("cos_phi", 1.0)), step=0.05, key=f"s_cos_{idx}")
+            
+        with c6:
+            st.write("")
             if st.button("🗑️", key=f"del_s_{idx}"): 
                 st.session_state.servicios_generales.pop(idx); st.rerun()
         
-        p_parcial = serv["potencia"] * serv["qty"] * factor
+        # Cálculo analítico considerando potencia, unidades, factor K y factor de potencia si procede
+        # En alumbrado fluorescente del ejercicio: P_parcial = Uds * Pot_unitaria * K * cos_phi (o según formule el caso)
+        cos_val = serv.get("cos_phi", 1.0)
+        
+        # Si es alumbrado fluorescente (K=1.80), el ejercicio típico aplica P = Uds * Pot * K * cos_phi
+        if factor == 1.80 and cos_val < 1.0:
+            p_parcial = serv["potencia"] * serv["qty"] * factor * cos_val
+        else:
+            p_parcial = serv["potencia"] * serv["qty"] * factor
+
         pot_total_servicios += p_parcial
         
-        st.info(f"""
-        **Justificación Analítica: {serv['nombre']}**
-        Se aplica el coeficiente multiplicador reglamentario según el tipo de servicio.
-        $$P_{{servicio}} = P_{{unitaria}} \\cdot \\text{{Uds.}} \\cdot K$$
-        **Sustitución:** {serv["potencia"]} W $\\cdot$ {serv["qty"]} ud(s) $\\cdot$ {factor} = **{p_parcial:,.2f} W**
-        """)
+        # Justificación analítica limpia en bloques de texto separados para evitar cortes en pantallas táctiles
+        st.info(
+            f"**Justificación Analítica: {serv['nombre']}**\n\n"
+            f"- Expresión reglamentaria: $P_{{servicio}} = P_{{unitaria}} \\cdot \\text{{Uds.}} \\cdot K \\cdot (\\cos\\varphi)$\n"
+            f"- Sustitución numérica: {serv['potencia']} W $\\cdot$ {serv['qty']} ud(s) $\\cdot$ {factor}" + (f" $\\cdot$ {cos_val}" if factor == 1.80 and cos_val < 1.0 else "") + f"\n\n"
+            f"**Subtotal del servicio:** **{p_parcial:,.2f} W**"
+        )
+        st.markdown("---")
 
     st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
-
-
-
-
-
-
 
     
     # =========================================================================
@@ -654,29 +693,31 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     with g3: 
         st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en Garaje", value=int(st.session_state.garajes["plazas_irve"]))
     with g4: 
-        st.session_state.garajes["tipo_irve"] = st.selectbox("Esquema IRVE", ["10% (Sin sistema de gestión)", "Con sistema de gestión"])
+        st.session_state.garajes["tipo_irve"] = st.selectbox("Esquema IRVE", ["10% (Sin sistema de gestión)", "5% (Con sistema de gestión)"])
 
     sup_g = st.session_state.garajes["sup"]
-    
-    # Asignar ratio según la selección del desplegable
     ratio_vent = 20.0 if "Forzada" in tipo_vent else 10.0
     p_gar = max(sup_g * ratio_vent, 3450.0 if sup_g > 0 else 0.0)
     
-    # Cálculo de plazas afectadas para IRVE
-    factor_irve_val = 0.10 if "Sin sistema" in st.session_state.garajes["tipo_irve"] else 0.05
-    plazas_afectadas = int(round(st.session_state.garajes["plazas_irve"] * factor_irve_val))
-    p_irve = plazas_afectadas * 3680.0  # 3.680 W por plaza de recarga básica
+    # Cálculo exacto sin redondear el número de plazas para los vatios (respetando el decimal del % como en los temarios)
+    factor_irve_val = 0.10 if "10%" in st.session_state.garajes["tipo_irve"] else 0.05
+    plazas_calculo = st.session_state.garajes["plazas_irve"] * factor_irve_val
+    p_irve = plazas_calculo * 3680.0  # 3.680 W por plaza base de recarga
     
     pot_total_garaje = p_gar + p_irve
 
     if sup_g > 0 or st.session_state.garajes["plazas_irve"] > 0:
-        st.info(f"""
-        **Justificación Analítica: Garajes e Instalación IRVE**
-        * **Ventilación del Garaje ({tipo_vent}):** {sup_g} m² $\\cdot$ {ratio_vent} W/m² = **{p_gar:,.0f} W**
-        * **Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ ({int(factor_irve_val*100)}%) = **{plazas_afectadas} plazas** $\\cdot$ 3.680 W = **{p_irve:,.0f} W**
-        """)
+        st.info(
+            f"**Justificación Analítica: Garajes e Instalación IRVE**\n\n"
+            f"- **Ventilación del Garaje ({tipo_vent}):** {sup_g} m² $\\cdot$ {ratio_vent} W/m² = **{p_gar:,.0f} W**\n"
+            f"- **Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ {int(factor_irve_val*100)}\\% = **{plazas_calculo:.1f} plazas** $\\cdot$ 3.680 W = **{p_irve:,.2f} W**"
+        )
 
-    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.0f} W**")    # =========================================================================
+    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.2f} W**")  
+    
+    
+    
+    # =========================================================================
     # RESULTADO GLOBAL: POTENCIA TOTAL PREVISTA (Pt)
     # =========================================================================
     st.markdown("---")
