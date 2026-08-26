@@ -20,10 +20,13 @@ st.set_page_config(page_title="BOLIMUR INSTALACIONES INTEGRALES", page_icon="⚡
 st.markdown("""
     <style>
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
+            border: 2px solid #2563eb; 
+            border-radius: 6px; 
+            background-color: #f8fafc;
         }
         [data-testid="stSidebar"] {
-            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
+            background-color: #f8fafc; 
+            border-right: 1px solid #e2e8f0;
         }
         [data-testid="stSidebar"] button {
             width: 100%;
