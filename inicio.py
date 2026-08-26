@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 
 # =========================================================================
-# CONFIGURACIÓN DE PÁGINA (TÍTULO Y ICONO NÍTIDO PARA MÓVIL)
+# CONFIGURACIÓN DE PÁGINA (ESTÁNDAR ORIGINAL)
 # =========================================================================
 st.set_page_config(
     page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
@@ -11,59 +11,7 @@ st.set_page_config(
 )
 
 # =========================================================================
-# ESTILOS CSS GLOBALES (FORZANDO MODO CLARO EN TODA LA APP Y FORMULARIOS)
-# =========================================================================
-st.markdown("""
-    <style>
-        /* Forzar modo claro general en toda la aplicación y contenedores principales */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-        }
-        
-        /* Forzar inputs, selectores y cajas numéricas de Streamlit a fondo blanco y texto oscuro */
-        input, textarea, select, div[data-baseweb="base-input"], div[data-baseweb="select"] {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-        }
-
-        /* Forzar contenedores internos de los campos de número y texto */
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-            border-color: #2563eb !important;
-        }
-
-        /* Texto de las etiquetas y títulos dentro de los módulos */
-        h1, h2, h3, h4, h5, h6, p, span, label {
-            color: #1e293b !important;
-        }
-
-        /* Estilo de la barra lateral */
-        [data-testid="stSidebar"] {
-            background-color: #f8fafc !important; 
-            border-right: 1px solid #e2e8f0;
-        }
-        [data-testid="stSidebar"] button {
-            width: 100%;
-            text-align: left;
-            background-color: #ffffff;
-            border: 2px solid #cbd5e1;
-            border-radius: 8px;
-            color: #334155;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-        [data-testid="stSidebar"] button:hover {
-            border-color: #0284c7;
-            background-color: #f0f9ff;
-            color: #0284c7;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# =========================================================================
-# INICIALIZACIÓN GLOBAL OBLIGATORIA (¡Arriba del todo para evitar errores!)
+# INICIALIZACIÓN GLOBAL OBLIGATORIA
 # =========================================================================
 if 'grupos_viviendas' not in st.session_state:
     st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
@@ -98,46 +46,29 @@ except Exception as e:
     st.error(f"Error al cargar el módulo di: {e}")
 
 # =========================================================================
-# MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
+# MENÚ LATERAL ESTÁNDAR
 # =========================================================================
 with st.sidebar:
-    st.markdown("""
-        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ CÁLCULOS ELÉCTRICOS</h3>
-            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Panel Técnico REBT</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
+    st.title("⚡ CÁLCULOS ELÉCTRICOS")
+    st.markdown("Panel Técnico REBT")
+    
+    st.markdown("---")
 
     if 'menu_activo' not in st.session_state:
         st.session_state.menu_activo = "🏠 Menú Principal"
 
-    if st.button("🏠  Menú Principal", use_container_width=True):
-        st.session_state.menu_activo = "🏠 Menú Principal"
-        st.rerun()
-        
-    if st.button("🧮  Cálculo Rápido (CDT & Icc)", use_container_width=True):
-        st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
-        st.rerun()
-        
-    if st.button("🏢  Previsión de Cargas (Pt)", use_container_width=True):
-        st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
-        st.rerun()
-        
-    if st.button("⚡  Línea General (LGA)", use_container_width=True):
-        st.session_state.menu_activo = "⚡ Línea General (LGA)"
-        st.rerun()
-        
-    if st.button("🔌  Derivación Individual (DI)", use_container_width=True):
-        st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
-        st.rerun()
-        
-    if st.button("📚  Tablas REBT", use_container_width=True):
-        st.session_state.menu_activo = "📚 Tablas REBT"
-        st.rerun()
-
-    seleccion_modulo = st.session_state.menu_activo
+    # Usamos radio o botones estándar limpios de Streamlit
+    seleccion_modulo = st.radio(
+        "📂 Navegación",
+        [
+            "🏠 Menú Principal",
+            "🧮 Cálculo Rápido (CDT & Icc)",
+            "🏢 Previsión de Cargas (Pt)",
+            "⚡ Línea General (LGA)",
+            "🔌 Derivación Individual (DI)",
+            "📚 Tablas REBT"
+        ]
+    )
 
 # =========================================================================
 # EL ENRUTADOR (CARGA DE VENTANAS)
