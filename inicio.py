@@ -1,17 +1,33 @@
 import streamlit as st
 import sqlite3
 
-# =========================================================================
-# CONFIGURACIÓN DE PÁGINA
-# =========================================================================
-st.set_page_config(
-    page_title="ELECTRICIDAD BAJA TENSIÓN INSTALACIONES",
-    page_icon="⚡",
-    layout="wide"
-)
+st.set_page_config(page_title="CÁLCULOS ELÉCTRICOS", page_icon="⚡", layout="wide")
 
 # =========================================================================
-# ESTILOS CSS (LIMPIO + CORRECCIÓN DE TÍTULOS OSCUROS)
+# IMPORTACIÓN SEGURA DE MÓDULOS (Para capturar cualquier error interno)
+# =========================================================================
+try:
+    from modulos import calculo_rapido
+except Exception as e:
+    st.error(f"Error al cargar el módulo calculo_rapido: {e}")
+
+try:
+    from modulos import prevision_cargas
+except Exception as e:
+    st.error(f"Error al cargar el módulo prevision_cargas: {e}")
+
+try:
+    from modulos import lga
+except Exception as e:
+    st.error(f"Error al cargar el módulo lga: {e}")
+
+try:
+    from modulos import di
+except Exception as e:
+    st.error(f"Error al cargar el módulo di: {e}")
+
+# =========================================================================
+# ESTILOS CSS GLOBALES
 # =========================================================================
 st.markdown("""
     <style>
@@ -36,48 +52,8 @@ st.markdown("""
             background-color: #f0f9ff;
             color: #0284c7;
         }
-        
-        /* Evitar fondos negros indeseados en cabeceras internas */
-        .block-container h1, .block-container h2, .block-container h3 {
-            color: #1e293b !important;
-        }
     </style>
 """, unsafe_allow_html=True)
-
-# =========================================================================
-# INICIALIZACIÓN GLOBAL OBLIGATORIA
-# =========================================================================
-if 'grupos_viviendas' not in st.session_state:
-    st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
-if 'locales' not in st.session_state:
-    st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
-if 'servicios_generales' not in st.session_state:
-    st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0}]
-if 'garajes' not in st.session_state:
-    st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
-
-# =========================================================================
-# IMPORTACIÓN SEGURA DE MÓDULOS
-# =========================================================================
-try:
-    from modulos import calculo_rapido
-except Exception as e:
-    st.error(f"Error al cargar el módulo calculo_rapido: {e}")
-
-try:
-    from modulos import prevision_cargas
-except Exception as e:
-    st.error(f"Error al cargar el módulo prevision_cargas: {e}")
-
-try:
-    from modulos import lga
-except Exception as e:
-    st.error(f"Error al cargar el módulo lga: {e}")
-
-try:
-    from modulos import di
-except Exception as e:
-    st.error(f"Error al cargar el módulo di: {e}")
 
 # =========================================================================
 # MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
