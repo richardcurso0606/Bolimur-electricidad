@@ -30,6 +30,8 @@ def seleccionar_proteccion(ib):
 # FUNCIÓN MAESTRA QUE LLAMAREMOS DESDE LA APP PRINCIPAL
 # =========================================================================
 def renderizar():
+
+    
     # --- BOTÓN DE IMPRESIÓN DIRECTA ARRIBA A LA DERECHA ---
     col_tit, col_btn = st.columns([3, 1])
     with col_tit:
