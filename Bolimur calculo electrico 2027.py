@@ -466,51 +466,66 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     if "garajes" not in st.session_state:
         st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": 0.10}
 
+    
+    
+    
     # =========================================================================
     # 1. VIVIENDAS (P1)
     # =========================================================================
 # =========================================================================
     # 1. VIVIENDAS (P1)
     # =========================================================================
+ 
+    
+    # =========================================================================
+    # 1. VIVIENDAS (P1)
+    # =========================================================================
     st.header("1. Viviendas ($P_1$)")
     if st.button("➕ Añadir Grupo de Viviendas"): 
-        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 9200, "nocturna": False})
+        st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 5750, "nocturna": False})
 
-    # --- AYUDA TÉCNICA REBT: BÁSICA VS ELEVADA ---
-    with st.expander("📖 Criterios REBT: ¿Cuándo una vivienda es de Electrificación Básica o Elevada?"):
+    with st.expander("📖 Criterios REBT: Electrificación Básica o Elevada y Tabla ITC-BT-10"):
         st.markdown("""
-        Según la normativa ITC-BT-25 y ITC-BT-10 del REBT:
-        * **Electrificación Básica (5.750 W):** Destinada a cubrir las necesidades primarias sin calefacción eléctrica. Incluye circuitos básicos (iluminación, tomas de uso general, cocina/horno, lavadora/lavavajillas y baño/cocina auxiliares). Habitualmente para superficies menores o moderadas.
-        * **Electrificación Elevada (9.200 W o superior):** Obligatoria o recomendada cuando se dan alguna de estas condiciones:
-          * Superficie útil de la vivienda **superior a 160 m²**.
-          * Previsión de **calefacción eléctrica** o aire acondicionado generalizado.
-          * Inclusión de sistemas de **automatización, domótica o gestión técnica centralizada**.
-          * Previsión de secadora, más de 2 circuitos de baños, o piscinas y saunas.
+        * **Básica (5.750 W):** Necesidades primarias (viviendas habituales estándar).
+        * **Elevada (9.200 W o más):** Superficies > 160 m², calefacción eléctrica o domótica/automatización.
+        
+        **Tabla oficial de coeficientes de simultaneidad ($K$) según nº de viviendas ($n$):**
+        * $n = 1 \rightarrow K = 1,0$ | $n = 2 \rightarrow K = 2,0$ | $n = 3 \rightarrow K = 2,8$ | $n = 4 \rightarrow K = 3,6$
+        * $n = 5 \rightarrow K = 4,4$ | $n = 6 \rightarrow K = 5,2$ | $n = 7 \rightarrow K = 6,0$ | $n = 8 \rightarrow K = 6,8$
+        * $n = 9 \rightarrow K = 7,6$ | $n = 10 \rightarrow K = 8,4$ | $n = 11 \rightarrow K = 9,1$ | $n = 12 \rightarrow K = 9,8$
+        * $n = 13 \rightarrow K = 10,5$ | $n = 14 \rightarrow K = 11,2$ | $n = 15 \rightarrow K = 11,9$ | $n = 16 \rightarrow K = 12,6$
+        * *(Para más de 20 viviendas se aplica $15,4 + 0,7 \cdot (n - 20)$)*
         """)
 
     pot_total_viviendas = 0
     total_n_viviendas = sum(v["qty"] for v in st.session_state.grupos_viviendas)
 
-    # Opciones con etiquetas descriptivas claras para el usuario
     opciones_potencia = {
         "5.750 W (Básica - Estándar)": 5750,
         "7.360 W (Elevada - Moderada)": 7360,
         "9.200 W (Elevada - Domótica / Clima)": 9200,
-        "11.500 W (Elevada - Gran Superficie / Especial)": 11500
+        "11.500 W (Elevada - Gran Superficie)": 11500
     }
     lista_etiquetas = list(opciones_potencia.keys())
     lista_valores = list(opciones_potencia.values())
+
+    # Función oficial del coeficiente K global del edificio según ITC-BT-10
+    def obtener_K_total(n):
+        if n <= 1: return 1.0
+        tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
+                   11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
+        if n in tabla_k: return tabla_k[n]
+        else: return round(15.4 + (n - 20) * 0.7, 2)
+
+    k_edificio = obtener_K_total(max(total_n_viviendas, 1))
 
     for idx, viv in enumerate(st.session_state.grupos_viviendas):
         c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
         with c1: viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
         with c2: viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
         
-        # Encontrar el índice actual de la potencia seleccionada
-        try:
-            curr_idx = lista_valores.index(viv["pot"])
-        except ValueError:
-            curr_idx = 0
+        try: curr_idx = lista_valores.index(viv["pot"])
+        except ValueError: curr_idx = 0
             
         with c3: 
             sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
@@ -523,32 +538,26 @@ elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
                 if len(st.session_state.grupos_viviendas) > 1: 
                     st.session_state.grupos_viviendas.pop(idx); st.rerun()
 
-        n_viv_calc = max(total_n_viviendas, 1)
-        if viv["nocturna"]:
-            cs_grupo = float(viv["qty"])
-            pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo))
+        if total_n_viviendas > 0:
+            if viv["nocturna"]:
+                pot_parcial = int(round(viv["qty"] * viv["pot"]))
+            else:
+                pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_edificio / total_n_viviendas)))
         else:
-            tabla_k = {1:1.0, 2:2.0, 3:2.8, 4:3.6, 5:4.4, 6:5.2, 7:6.0, 8:6.8, 9:7.6, 10:8.4, 
-                       11:9.1, 12:9.8, 13:10.5, 14:11.2, 15:11.9, 16:12.6, 17:13.3, 18:14.0, 19:14.7, 20:15.4}
-            if n_viv_calc in tabla_k: k_total = tabla_k[n_viv_calc]
-            else: k_total = round(15.4 + (n_viv_calc - 20) * 0.7, 2)
-            
-            cs_grupo = k_total / n_viv_calc
-            pot_parcial = int(round(viv["qty"] * viv["pot"] * cs_grupo))
+            pot_parcial = 0
 
         pot_total_viviendas += pot_parcial
 
         st.info(
             f"**Justificación Analítica (Viviendas): {viv['nombre']}**\n\n"
-            f"- Nº de viviendas en este grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)\n"
-            f"- Potencia unitaria seleccionada: **{viv['pot']} W**\n"
-            f"- Coeficiente de simultaneidad aplicado ($K$): **{cs_grupo:.3f}**\n\n"
+            f"- Nº de viviendas del grupo: **{viv['qty']}** (Total edificio: **{total_n_viviendas}**)\n"
+            f"- Potencia unitaria: **{viv['pot']} W**\n"
+            f"- Coeficiente Global REBT aplicado ($K_{{total}}$ para $n={total_n_viviendas}$): **{k_edificio}**\n"
+            f"- Tabla de referencia ITC-BT-10 consultada para el cálculo.\n\n"
             f"**Resultado parcial:** **{pot_parcial:,} W**"
         )
 
     st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
-    
-
 
 
     
