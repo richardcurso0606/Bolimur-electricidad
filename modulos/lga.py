@@ -143,7 +143,7 @@ def renderizar():
     * **S**: Sección teórica mínima exigida del conductor ($\text{{mm}}^2$).
     * **P**: Potencia total de cálculo ({lga_pot:,.2f} W).
     * **L**: Longitud unifilar de la línea ({lga_long} m).
-    * **γ (gamma)**: Conductividad del material a servicio normal ({gamma_lga} m/(Ω·mm²) para {lga_aisl}).
+    * **γ**: Conductividad del material a servicio normal ({gamma_lga} m/(Ω·mm²) para {lga_aisl}).
     * **ΔV**: Caída de tensión máxima admisible ({dv_pct_lga}% de 400V = {dv_max_lga:.2f} V).
     * **V**: Tensión nominal (400 V).
     
@@ -160,9 +160,9 @@ def renderizar():
     
     **Leyenda y Definición de Variables:**
     * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (kA).
-    * **V**: Tensión nominal fase-neutro o compuesta de referencia (400 V).
+    * **V**: Tensión nominal de referencia (400 V).
     * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig} kA).
-    * **R_cable**: Resistencia total del tramo de conductor calculado ($R = \\frac{\\rho \\cdot L}{S} = {r_lga_cable:.5f}\\ \\Omega$).
+    * **R_cable**: Resistencia total del tramo de conductor calculado ($R = \\frac{{\\rho \\cdot L}}{{S}} = {r_lga_cable:.5f}\\ \\Omega$).
     * **I_n**: Calibre del fusible gG de protección seleccionado ({in_lga_auto} A).
     
     **Sustitución y Comprobación Reglamentaria:**
