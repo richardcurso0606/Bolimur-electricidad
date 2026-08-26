@@ -183,6 +183,10 @@ if seleccion_modulo.startswith("🏠"):
 # =========================================================================
 # 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN CON CAJAS ESTILO LGA)
 # =========================================================================
+
+# =========================================================================
+# 🧮 MÓDULO: CÁLCULO RÁPIDO AVANZADO (VERSIÓN CON CAJAS ESTILO LGA - CORREGIDO)
+# =========================================================================
 elif seleccion_modulo.startswith("🧮"):
     # --- ESTILO CSS PARA IMPRESIÓN ---
     st.markdown("""
@@ -288,56 +292,58 @@ elif seleccion_modulo.startswith("🧮"):
 
     # --- 1. INTENSIDAD DE DISEÑO ---
     if "Monofásico" in tipo_red_q:
-        formula_ib_str = f"$$I_b = \\frac{{P}}{{V \\cdot \\cos\\varphi}}$$\n\n**Sustitución y Resultado:** {val_pot_q:,.1f} W / ({v_nom_calc} V $\\cdot$ {cos_q}) = **{ib_q:.2f} A**"
+        f_ib = r"$$I_b = \frac{P}{V \cdot \cos\varphi}$$"
+        r_ib = f"{val_pot_q:,.1f} W / ({v_nom_calc} V $\cdot$ {cos_q})"
     else:
-        formula_ib_str = f"$$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}}$$\n\n**Sustitución y Resultado:** {val_pot_q:,.1f} W / (1.732 $\\cdot$ {v_nom_calc} V $\\cdot$ {cos_q}) = **{ib_q:.2f} A**"
+        f_ib = r"$$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$"
+        r_ib = f"{val_pot_q:,.1f} W / (1.732 $\cdot$ {v_nom_calc} V $\cdot$ {cos_q})"
 
-    st.info(f"""
-    #### 1. Intensidad de Diseño ($I_b$)
-    **Justificación:** Se calcula la corriente nominal base de la carga para asegurar que el cable soporte la demanda en régimen permanente ($I_z \\ge I_b$).
-    
-    {formula_ib_str}
-    """)
+    st.info(
+        f"#### 1. Intensidad de Diseño ($I_b$)\n"
+        f"**Justificación:** Se calcula la corriente nominal base de la carga para asegurar que el cable soporte la demanda en régimen permanente ($I_z \ge I_b$).\n\n"
+        f"{f_ib}\n\n"
+        f"**Sustitución y Resultado:** {r_ib} = **{ib_q:.2f} A**"
+    )
 
     # --- 2. SECCIÓN POR CALENTAMIENTO ---
-    st.info(f"""
-    #### 2. Determinación de Sección por Calentamiento ($I_z$)
-    **Justificación:** Evaluamos las tablas del REBT (UNE-HD 60364-5-52) según el método de instalación seleccionado para encontrar la sección mínima que garantice una capacidad térmica superior a la corriente de diseño.
-    
-    * **Corriente de diseño ($I_b$):** {ib_q:.2f} A
-    * **Sección requerida por este criterio:** **{s_cal_q} mm²** (Admite una intensidad máxima $I_z = $ {tabla_iz_q.get(s_cal_q, 0)} A).
-    """)
+    st.info(
+        f"#### 2. Determinación de Sección por Calentamiento ($I_z$)\n"
+        f"**Justificación:** Evaluamos las tablas del REBT (UNE-HD 60364-5-52) según el método de instalación seleccionado para encontrar la sección mínima que garantice una capacidad térmica superior a la corriente de diseño.\n\n"
+        f"* **Corriente de diseño ($I_b$):** {ib_q:.2f} A\n"
+        f"* **Sección requerida por este criterio:** **{s_cal_q} mm²** (Admite una intensidad máxima $I_z =$ {tabla_iz_q.get(s_cal_q, 0)} A)."
+    )
 
     # --- 3. SECCIÓN POR CAÍDA DE TENSIÓN ---
     if "Monofásico" in tipo_red_q:
-        formula_cdt_str = f"$$S = \\frac{{2 \\cdot P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$\n\n**Sustitución y Resultado:** (2 $\\cdot$ {val_pot_q:,.1f} $\\cdot$ {long_q}) / ({gamma_q} $\\cdot$ {dv_max_q:.2f} $\\cdot$ {v_nom_calc}) = **{s_cdt_q:.2f} mm²**"
+        f_cdt = r"$$S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
+        r_cdt = f"(2 $\cdot$ {val_pot_q:,.1f} $\cdot$ {long_q}) / ({gamma_q} $\cdot$ {dv_max_q:.2f} $\cdot$ {v_nom_calc})"
     else:
-        formula_cdt_str = f"$$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$\n\n**Sustitución y Resultado:** ({val_pot_q:,.1f} $\\cdot$ {long_q}) / ({gamma_q} $\\cdot$ {dv_max_q:.2f} $\\cdot$ {v_nom_calc}) = **{s_cdt_q:.2f} mm²**"
+        f_cdt = r"$$S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}$$"
+        r_cdt = f"({val_pot_q:,.1f} $\cdot$ {long_q}) / ({gamma_q} $\cdot$ {dv_max_q:.2f} $\cdot$ {v_nom_calc})"
 
-    st.info(f"""
-    #### 3. Sección Teórica por Caída de Tensión ($\\Delta V$)
-    **Justificación:** Se determina el grosor de conductor necesario para que las pérdidas de tensión a lo largo de la línea no superen el límite reglamentario del **{cdt_lim_q}%** ({dv_max_q:.2f} V).
-    
-    {formula_cdt_str}
-    """)
+    st.info(
+        f"#### 3. Sección Teórica por Caída de Tensión ($\Delta V$)\n"
+        f"**Justificación:** Se determina el grosor de conductor necesario para que las pérdidas de tensión a lo largo de la línea no superen el límite reglamentario del **{cdt_lim_q}%** ({dv_max_q:.2f} V).\n\n"
+        f"{f_cdt}\n\n"
+        f"**Sustitución y Resultado:** {r_cdt} = **{s_cdt_q:.2f} mm²**"
+    )
 
     # --- 4. CORTOCIRCUITO ---
     estado_icc = "✅ GARANTIZADO" if salta_proteccion else "⚠️ PELIGRO: NO SALTARÁ A TIEMPO"
-    st.info(f"""
-    #### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)
-    **Justificación:** La corriente de cortocircuito en el punto más lejano de la línea ($I_{{cc,final}}$) debe tener fuerza suficiente para accionar el umbral magnético de la protección de forma instantánea (Curva C = $10 \\cdot I_n$).
-    
-    $$I_{{cc,final}} = \\frac{{V}}{{Z_{{origen}} + R_{{cable}}}}$$
-    
-    **Origen detallado de los parámetros de impedancia y resistencia:**
-    * **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en cabecera ($I_{{cc,origen}} = {icc_orig_q}$ kA). Aplicando la ley de Ohm ($Z_{{origen}} = V / I_{{cc,origen}}$), resulta en **{z_origen:.4f} $\\Omega$**.
-    * **Resistencia del cable ($R_{{cable}}$):** Calculada con $R = (\\rho \\cdot L) / S$ (multiplicada por 2 en líneas monofásicas por retorno de neutro). Con longitud {long_q} m y sección óptima de {s_opt_q} mm², resulta en **{r_cable_total:.4f} $\\Omega$**.
-    
-    $$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f} \\text{{ A}}}}$$
-    
-    * **Umbral de disparo magnético exigido ({prot_q} A $\\times$ 10):** {corriente_disparo:.1f} A
-    * **Veredicto:** {estado_icc}
-    """)
+    f_icc1 = r"$$I_{cc,final} = \frac{V}{Z_{origen} + R_{cable}}$$"
+    f_icc2 = f"$$I_{{cc,final}} = \\frac{{{v_nom_calc}}}{{{z_origen:.4f} + {r_cable_total:.4f}}} = \\mathbf{{{icc_fin_q * 1000:.1f} \text{{ A}}}}$$"
+
+    st.info(
+        f"#### 4. Comprobación Cortocircuito y Disparo Magnético (0.1s)\n"
+        f"**Justificación:** La corriente de cortocircuito en el punto más lejano de la línea ($I_{{cc,final}}$) debe tener fuerza suficiente para accionar el umbral magnético de la protección de forma instantánea (Curva C = $10 \cdot I_n$).\n\n"
+        f"{f_icc1}\n\n"
+        f"**Origen detallado de los parámetros de impedancia y resistencia:**\n"
+        f"* **Impedancia de red en origen ($Z_{{origen}}$):** Se obtiene a partir de la corriente de cortocircuito configurada en cabecera ($I_{{cc,origen}} = {icc_orig_q}$ kA). Aplicando la ley de Ohm ($Z_{{origen}} = V / I_{{cc,origen}}$), resulta en **{z_origen:.4f} $\Omega$**.\n"
+        f"* **Resistencia del cable ($R_{{cable}}$):** Calculada con $R = (\\rho \cdot L) / S$ (multiplicada por 2 en líneas monofásicas por retorno de neutro). Con longitud {long_q} m y sección óptima de {s_opt_q} mm², resulta en **{r_cable_total:.4f} $\Omega$**.\n\n"
+        f"{f_icc2}\n\n"
+        f"* **Umbral de disparo magnético exigido ({prot_q} A $\\times$ 10):** {corriente_disparo:.1f} A\n"
+        f"* **Veredicto:** {estado_icc}"
+    )
 
     # --- CAJA DE PROTECCIÓN MAGNETOTÉRMICA ---
     st.markdown(f"""
@@ -345,7 +351,7 @@ elif seleccion_modulo.startswith("🧮"):
         <h4 style="margin: 0;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</h4>
         <hr style="border-top: 1px solid #cbd5e1; margin: 10px 0;">
         <span style="font-size: 14px; font-weight: normal;">
-        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \\le 0.91 \\cdot I_z$</b> (siendo $I_z$ = {iz_opt_val} A).
+        <b>Justificación normativa:</b> Su calibre nominal ({prot_q} A) absorbe la intensidad de diseño ({ib_q:.2f} A) sin disparos intempestivos, asegurando la protección del aislamiento al cumplir estrictamente la condición <b>$I_n \le 0.91 \cdot I_z$</b> (siendo $I_z$ = {iz_opt_val} A).
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -355,7 +361,7 @@ elif seleccion_modulo.startswith("🧮"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) según la norma UNE-HD 60364-5-52:")
         
         tabla_gamma_md = """
-| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\\gamma$) [$\\mathrm{m / (\\Omega \\cdot mm^2)}$] | RESISTIVIDAD APROXIMADA ($\\rho$) [$\\mathrm{\\Omega \\cdot mm^2 / m}$] |
+| MATERIAL CONDUCTOR | AISLAMIENTO | TEMP. SERVICIO | CONDUCTIVIDAD ($\gamma$) [$\mathrm{m / (\Omega \cdot mm^2)}$] | RESISTIVIDAD APROXIMADA ($\rho$) [$\mathrm{\Omega \cdot mm^2 / m}$] |
 | :--- | :--- | :--- | :--- | :--- |
 | **Cobre** | XLPE / EPR | 90 ºC | **44.0** | ~0.0227 |
 | **Cobre** | PVC | 70 ºC | **48.5** | ~0.0206 |
@@ -365,14 +371,14 @@ elif seleccion_modulo.startswith("🧮"):
         st.markdown(tabla_gamma_md)
 
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
-    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    tabla_q_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \le 0.91 \cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
     for sec_com in [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70]:
         iz_c = tabla_iz_q.get(sec_com, 250.0)
         dv_c_pct = (((2.0 * val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0 if "Monofásico" in tipo_red_q else (((val_pot_q * long_q) / (gamma_q * sec_com * v_nom_calc)) / v_nom_calc) * 100.0
         cond_sobrecarga = 0.91 * iz_c
         if iz_c < ib_q: est_v = f"❌ Falla Calentamiento"
         elif prot_q > cond_sobrecarga: est_v = f"❌ Falla ($I_n$ {prot_q}A > {cond_sobrecarga:.1f}A)"
-        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q} A $\\le$ {cond_sobrecarga:.1f} A)"
+        elif sec_com == s_opt_q: est_v = f"✅ **CUMPLE IDEAL** ($I_n$ {prot_q} A $\le$ {cond_sobrecarga:.1f} A)"
         else: est_v = "Válido pero sobredimensionado"
         tabla_q_md += f"| **{sec_com} mm²** | {iz_c} A | {dv_c_pct:.3f}% | {est_v} |\n"
     st.markdown(tabla_q_md)
@@ -380,11 +386,10 @@ elif seleccion_modulo.startswith("🧮"):
     st.markdown(f"""
     <div style="background-color: #dcfce7; border: 2px solid #86efac; color: #166534; padding: 15px; border-radius: 8px; margin-top: 20px;">
         <h3 style="margin-top: 0; margin-bottom: 10px;">✅ SECCIÓN ÓPTIMA ADOPTADA: {s_opt_q} mm² ({mat_q.upper()})</h3>
-        La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>.<br>
+        La sección de {s_opt_q} mm² garantiza el cumplimiento térmico ($I_z$ = {iz_opt_val} A $\ge$ $I_b$ = {ib_q:.2f} A) y una caída de tensión real del <b>{dv_real_pct_q:.3f}%</b>.<br>
         Coordinada perfectamente con un <b>PIA de {prot_q} A (Curva C)</b>.
     </div>
     """, unsafe_allow_html=True)
-
 
 # =========================================================================
 # 🏢 MÓDULO: PREVISIÓN DE CARGAS (ITC-BT-10)
