@@ -116,20 +116,20 @@ def renderizar():
                         f"- Nº de viviendas: **{viv['qty']}**\n"
                         f"- Potencia unitaria: **{viv['pot']:,} W**\n"
                         f"- Criterio: Al estar bajo régimen nocturno, computa al 100% de su potencia sin coeficiente de simultaneidad diurno.\n\n"
-                        f"**Fórmula:** $P_{{parcial}} = \\text{{Nº Viv.}} \\times \\text{{Pot. Unitaria}}$\n"
+                        f"**Fórmula:** P_parcial = Nº Viv. * Pot. Unitaria\n"
                         f"**Resultado parcial:** **{pot_parcial:,} W**"
                     )
                 else:
                     st.info(
                         f"**Desarrollo de Cálculo (ITC-BT-10):**\n\n"
-                        f"- Total de viviendas diurnas en el edificio ($n$): **{viviendas_diurnas_qty}**\n"
-                        f"- Coeficiente de simultaneidad de tabla ($K$): **{k_diurno}**\n"
+                        f"- Total de viviendas diurnas en el edificio (n): **{viviendas_diurnas_qty}**\n"
+                        f"- Coeficiente de simultaneidad de tabla (K): **{k_diurno}**\n"
                         f"- Viviendas en este grupo: **{viv['qty']}**\n"
                         f"- Potencia unitaria: **{viv['pot']:,} W**\n\n"
                         f"**Fórmula reglamentaria aplicada:**\n"
-                        f"$$P_{{parcial}} = \\text{{Nº Viv. grupo}} \\times \\text{{Pot. Unitaria}} \\times \\left( \\frac{K}{n} \\right)$$\n\n"
+                        f"P_parcial = (Nº Viv. grupo * Pot. Unitaria) * (K / n_diurnas)\n\n"
                         f"**Sustitución numérica:**\n"
-                        f"${viv['qty']} \\times {viv['pot']:,} \\times \\left( \\frac{{{k_diurno}}}{{ {viviendas_diurnas_qty} }} \\right) = \\mathbf{{{pot_parcial:,}\\text{{ W}}}}$"
+                        f"({viv['qty']} * {viv['pot']:,}) * ({k_diurno} / {viviendas_diurnas_qty}) = **{pot_parcial:,} W**"
                     )
 
     # --- DESGLOSE Y JUSTIFICACIÓN DEL SUBTOTAL DE VIVIENDAS ---
@@ -139,13 +139,13 @@ def renderizar():
     with st.expander("📖 Ver Justificación y Fórmula Global del Subtotal de Viviendas ($P_1$)"):
         st.info(
             f"**Criterio normativo (ITC-BT-10):**\n"
-            f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad $K$ correspondiente al número total de viviendas diurnas del edificio ($n = {viviendas_diurnas_qty}$), obteniendo un coeficiente $K = {k_diurno}$.\n\n"
+            f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad K correspondiente al número total de viviendas diurnas del edificio (n = {viviendas_diurnas_qty}), obteniendo un coeficiente K = {k_diurno}.\n\n"
             f"**Fórmula General:**\n"
-            f"$$P_1 = \\sum \\left( n_i \\times P_{{u,i}} \\right) \\times \\frac{K}{n_{{diurnas}}} + \\sum P_{{nocturnas}}$$\n\n"
+            f"P1 = [ Σ (n_i * P_u,i) ] * (K / n_diurnas) + Σ P_nocturnas\n\n"
             f"**Resumen de Parámetros Aplicados:**\n"
-            f"- Total viviendas diurnas de cálculo ($n$): **{viviendas_diurnas_qty}**\n"
-            f"- Coeficiente $K$ obtenido de la tabla ITC-BT-10: **{k_diurno}**\n"
-            f"- Suma total resultante para el subtotal $P_1$: **{pot_total_viviendas:,} W**"
+            f"- Total viviendas diurnas de cálculo (n): **{viviendas_diurnas_qty}**\n"
+            f"- Coeficiente K obtenido de la tabla ITC-BT-10: **{k_diurno}**\n"
+            f"- Suma total resultante para el subtotal P1: **{pot_total_viviendas:,} W**"
         )
     
     # --- 2. LOCALES COMERCIALES ---
@@ -174,8 +174,8 @@ def renderizar():
                 st.info(f"""
                 **Justificación Analítica:**
                 El REBT exige un mínimo de 100 W/m² con un suelo de 3.450 W por local comercial.
-                $$P_{{local}} = \\max(\\text{{Superficie}} \\cdot 100, \\ 3450) \\cdot \\text{{Cantidad}}$$
-                **Cálculo:** $\\max({loc['superficie']} \\cdot 100, \\ 3450) \\cdot {loc['qty']} = \\mathbf{{{pot_parcial:,.0f}\\text{{ W}}}}$
+                P_local = max(Superficie * 100, 3450) * Cantidad
+                **Cálculo:** max({loc['superficie']} * 100, 3450) * {loc['qty']} = **{pot_parcial:,.0f} W**
                 """)
 
     st.markdown(f"### 📌 Subtotal Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**")
@@ -232,8 +232,8 @@ def renderizar():
             
             with st.expander(f"🔍 Ver Justificación Analítica (Parcial: {p_parcial:,.2f} W)"):
                 st.info(
-                    f"**Expresión reglamentaria:** $P_{{servicio}} = P_{{unitaria}} \\cdot \\text{{Uds.}} \\cdot K \\cdot (\\cos\\varphi)$\n\n"
-                    f"**Sustitución numérica:** {serv['potencia']} W $\\cdot$ {serv['qty']} ud(s) $\\cdot$ {factor}" + (f" $\\cdot$ {cos_val}" if factor == 1.80 and cos_val < 1.0 else "") + f"\n\n"
+                    f"**Expresión reglamentaria:** P_servicio = P_unitaria * Uds. * K * (cos φ)\n\n"
+                    f"**Sustitución numérica:** {serv['potencia']} W * {serv['qty']} ud(s) * {factor}" + (f" * {cos_val}" if factor == 1.80 and cos_val < 1.0 else "") + f"\n\n"
                     f"**Subtotal del servicio:** **{p_parcial:,.2f} W**"
                 )
 
@@ -263,8 +263,8 @@ def renderizar():
         if sup_g > 0 or st.session_state.garajes["plazas_irve"] > 0:
             with st.expander(f"🔍 Ver Justificación Analítica Garajes e IRVE"):
                 st.info(
-                    f"**Ventilación del Garaje ({tipo_vent}):** {sup_g} m² $\\cdot$ {ratio_vent} W/m² = **{p_gar:,.0f} W**\n\n"
-                    f"**Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas $\\cdot$ {int(factor_irve_val*100)}\\% = **{plazas_calculo:.1f} plazas** $\\cdot$ 3.680 W = **{p_irve:,.2f} W**"
+                    f"**Ventilación del Garaje ({tipo_vent}):** {sup_g} m² * {ratio_vent} W/m² = **{p_gar:,.0f} W**\n\n"
+                    f"**Previsión Vehículo Eléctrico (IRVE):** {st.session_state.garajes['plazas_irve']} plazas * {int(factor_irve_val*100)}% = **{plazas_calculo:.1f} plazas** * 3.680 W = **{p_irve:,.2f} W**"
                 )
 
     st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.2f} W**")  
