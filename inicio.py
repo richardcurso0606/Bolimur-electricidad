@@ -4,7 +4,7 @@ import sqlite3
 st.set_page_config(page_title="CÁLCULOS ELÉCTRICOS", page_icon="⚡", layout="wide")
 
 # =========================================================================
-# IMPORTACIÓN SEGURA DE MÓDULOS (Para capturar cualquier error interno)
+# IMPORTACIÓN SEGURA DE MÓDULOS
 # =========================================================================
 try:
     from modulos import calculo_rapido
@@ -54,6 +54,18 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
+# =========================================================================
+# INICIALIZACIÓN OBLIGATORIA DE VARIABLES DE ESTADO (SESSION_STATE)
+# =========================================================================
+if 'grupos_viviendas' not in st.session_state:
+    st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
+if 'locales' not in st.session_state:
+    st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
+if 'servicios_generales' not in st.session_state:
+    st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30}]
+if 'garajes' not in st.session_state:
+    st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
 
 # =========================================================================
 # MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
