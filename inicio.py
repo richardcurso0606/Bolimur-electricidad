@@ -123,6 +123,16 @@ elif seleccion_modulo.startswith("🧮"):
         st.error(f"Error al ejecutar Cálculo Rápido: {e}")
 
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
+    # Inicialización obligatoria para evitar el error de sesión
+    if 'grupos_viviendas' not in st.session_state:
+        st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
+    if 'locales' not in st.session_state:
+        st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
+    if 'servicios_generales' not in st.session_state:
+        st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30}]
+    if 'garajes' not in st.session_state:
+        st.session_state.garajes = {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"}
+    
     try:
         prevision_cargas.renderizar()
     except Exception as e:
