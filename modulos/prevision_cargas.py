@@ -15,7 +15,7 @@ def get_coef_simultaneidad(num):
 # =========================================================================
 def renderizar():
 
-    # Blindaje total de variables de sesión
+    # Blindaje total de variables de sesión (Esquema 3a por defecto)
     if 'grupos_viviendas' not in st.session_state:
         st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
     if 'locales' not in st.session_state:
@@ -26,12 +26,12 @@ def renderizar():
         st.session_state.garajes = {
             "sup": 240.0, 
             "plazas_irve": 18, 
-            "esquema_irve": "Esquema 3a (Conexión al contador de la vivienda)",
+            "esquema_irve": "Esquema 3a (Desde centralización de contadores)",
             "spl": False
         }
 
     if "esquema_irve" not in st.session_state.garajes:
-        st.session_state.garajes["esquema_irve"] = "Esquema 3a (Conexión al contador de la vivienda)"
+        st.session_state.garajes["esquema_irve"] = "Esquema 3a (Desde centralización de contadores)"
         st.session_state.garajes["spl"] = False
 
     st.title("🏢 Previsión de Cargas (ITC-BT-10)")
@@ -47,7 +47,7 @@ def renderizar():
             st.session_state.garajes = {
                 "sup": 240.0, 
                 "plazas_irve": 18, 
-                "esquema_irve": "Esquema 3a (Conexión al contador de la vivienda)",
+                "esquema_irve": "Esquema 3a (Desde centralización de contadores)",
                 "spl": False
             }
             st.rerun()
@@ -289,28 +289,40 @@ def renderizar():
 
     st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
 
-    # --- 4. GARAJES E IRVE (CON LA GRAN EXPLICACIÓN TÉCNICA DE LOS ESQUEMAS) ---
+    # --- 4. GARAJES E IRVE (CON EXPLICACIÓN TÉCNICA DETALLADA DE CADA ESQUEMA) ---
     st.markdown("---")
     st.header("4. Garajes e Infraestructura de Recarga (IRVE - ITC-BT-52)")
     
-    with st.expander("📖 Ayuda Técnica: Explicación Detallada de los Esquemas Oficiales IRVE (ITC-BT-52)"):
+    with st.expander("📖 Guía Técnica Detallada: ¿Qué implica elegir cada Esquema IRVE?"):
         st.markdown("""
-        En el Reglamento Electrotécnico para Baja Tensión (REBT), todo lo relacionado con la Infraestructura para la Recarga de Vehículos Eléctricos (IRVE) se rige bajo la instrucción **ITC-BT-52**. 
+        La instrucción **ITC-BT-52** del REBT regula cómo alimentar los puntos de recarga. Dependiendo de si diseñas para una comunidad de vecinos, unifamiliares o locales, debes elegir un esquema u otro. Aquí tienes el detalle técnico de cada uno:
 
-        Los famosos "esquemas" son, sencillamente, las formas legales y topológicas permitidas para conectar el cargador del coche a la red eléctrica del edificio.
+        *   **Esquema 1 (Instalación Colectiva con Subcontadores):**
+            *   *Cómo funciona:* Se instala un contador general trifásico principal para todo el garaje y, a partir de él, una línea troncal de la que cuelgan subcontadores privados por cada plaza.
+            *   *Cuándo se usa:* Parkings públicos, edificios de oficinas o bloques de apartamentos en régimen de alquiler gestionados por la propiedad.
+            *   *Efecto en cálculo:* Toda la potencia prevista de recarga ($P_4$) impacta directamente de forma centralizada en el edificio.
+            
+        *   **Esquema 2 (Contador Individual Exclusivo Nuevo):**
+            *   *Cómo funciona:* El usuario contrata a la compañía eléctrica un suministro totalmente independiente solo para el punto de recarga. Se coloca un contador exclusivo en el cuarto de contadores y se tira una línea directa hasta la plaza.
+            *   *Cuándo se usa:* Cuando el garaje está separado o el usuario prefiere tener una factura y contrato de luz totalmente segregados de su vivienda.
+            
+        *   **Esquema 3a (Conexión al contador de la vivienda - El más habitual en bloques):**
+            *   *Cómo funciona:* La línea de recarga nace conectada directamente en los bornes de salida del contador principal de la vivienda (ubicado en la centralización del edificio) y baja hasta la plaza de garaje asignada.
+            *   *Cuándo se usa:* Edificios residenciales de pisos. Es el rey indiscutible porque **no requiere un contrato nuevo**, el vecino paga la luz del coche en su factura de casa.
+            *   *Efecto en cálculo:* Al estar asociado a la Derivación Individual de cada vivienda, optimiza el reparto de cargas y permite el uso de sistemas inteligentes de control (SPL).
+            
+        *   **Esquema 3b (Conexión al Cuadro CGMP en Unifamiliares):**
+            *   *Cómo funciona:* El circuito del coche sale directamente desde un magnetotérmico dedicado ubicado dentro del Cuadro General de Mando y Protección (CGMP) situado dentro de la propia casa o adosado.
+            *   *Cuándo se usa:* Viviendas unifamiliares, chalets o adosados con garaje en la misma parcela.
+            
+        *   **Esquema 4 (Conexión a cuadro de local o nave):**
+            *   *Cómo funciona:* El circuito de recarga se alimenta colgando directamente del cuadro general de distribución de un local comercial, taller o nave industrial.
+            *   *Cuándo se usa:* Negocios o actividades comerciales que disponen de plazas de parking privadas vinculadas a su actividad.
 
-        ### Los 4 Esquemas Oficiales (ITC-BT-52)
-        *   **Esquema 1 (Instalación Colectiva):** Existe un único contador principal de compañía para todo el garaje. De ahí sale una línea troncal y cada plaza de aparcamiento tiene un "subcontador" secundario privado. Es el sistema habitual para parkings públicos, centros comerciales o flotas de empresa.
-        *   **Esquema 2 (Individual Independiente):** El usuario contrata un suministro eléctrico totalmente nuevo solo para el coche. Se instala un contador exclusivo para la plaza en el cuarto de contadores del edificio y se tira la línea directa.
-        *   **Esquema 3 (Compartido con la Vivienda):** Es el rey indiscutible de las instalaciones en garajes comunitarios residenciales, ya que se aprovecha el mismo contrato de luz de la casa.
-            *   **Esquema 3a:** La línea del cargador nace empalmada directamente en los bornes de salida del contador de la vivienda (en la centralización de contadores) y baja al garaje.
-            *   **Esquema 3b:** La línea nace en un magnetotérmico dedicado dentro del Cuadro General (CGMP) del interior de la propia casa. Es el típico de los chalets o unifamiliares.
-        *   **Esquema 4 (Locales o Suministros Existentes):** Es el equivalente al esquema 3, pero aplicado a negocios, naves u oficinas. El circuito de recarga cuelga del cuadro general eléctrico de la empresa.
-
-        ### Protecciones Clave en el Montaje
-        *   **Protección Diferencial:** No vale cualquier diferencial. El REBT exige un diferencial Mínimo Tipo A (que incluya detección de corriente continua a 6mA) o un Tipo B directamente, por si las baterías del coche derivan en continua.
-        *   **Sobretensiones:** Es obligatorio colocar protección contra sobretensiones transitorias y permanentes justo antes del cargador.
-        *   **Control Dinámico (SPL):** Muy recomendable en el Esquema 3. Es un aparato inteligente que lee el consumo en tiempo real; si en la vivienda se enciende el horno o la climatización, le baja la potencia al coche para que no salte el limitador general.
+        ---
+        ### 🛡️ Protecciones Obligatorias y Sistema SPL
+        *   **Protección Diferencial:** Es obligatorio un **Diferencial mínimo Tipo A** (que detecte corrientes continuas suavizadas de hasta 6 mA) o directamente **Tipo B** para evitar que las baterías del coche bloqueen las protecciones.
+        *   **Control Dinámico (SPL):** Si marcas la casilla de control dinámico, el sistema asume que los cargadores le bajarán la potencia al coche automáticamente si la vivienda se acerca a su límite contratado, premiándote reglamentariamente al **reducir el factor de simultaneidad del 10% al 5%**.
         """)
     
     with st.container(border=True):
@@ -322,23 +334,26 @@ def renderizar():
             st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en el Garaje", value=int(st.session_state.garajes["plazas_irve"]), min_value=0)
         with g2: 
             tipo_vent = st.selectbox("Tipo de Ventilación (afecta a la carga base)", ["Forzada (20 W/m²)", "Natural (10 W/m²)"])
-            st.session_state.garajes["spl"] = st.checkbox("✅ Instalar Control Dinámico (SPL) en los cargadores", value=st.session_state.garajes["spl"])
+            st.session_state.garajes["spl"] = st.checkbox("✅ Instalar Control Dinámico (SPL) en cargadores", value=st.session_state.garajes["spl"])
 
         st.markdown("#### 🔌 Selección de Esquema Topológico (ITC-BT-52)")
+        
+        # Textos limpios, cortos y profesionales para que no se corten nunca en tablets ni móviles
         opciones_esquema = [
-            "Esquema 1 (Instalación colectiva con contadores secundarios)",
-            "Esquema 2 (Instalación individual con contador nuevo exclusivo)",
-            "Esquema 3a (Conexión al contador de la vivienda - Bloques de pisos)",
-            "Esquema 3b (Conexión al cuadro general CGMP - Unifamiliares)",
-            "Esquema 4 (Conexión al cuadro de local comercial o nave)"
+            "Esquema 1 (Instalación colectiva con subcontadores)",
+            "Esquema 2 (Contador individual exclusivo nuevo)",
+            "Esquema 3a (Desde centralización de contadores)",
+            "Esquema 3b (Desde cuadro CGMP en vivienda unifamiliar)",
+            "Esquema 4 (Desde cuadro general de local o nave)"
         ]
         
-        idx_esq = 2
+        idx_esq = 2 # Por defecto el 3a que es el más utilizado
         for i, opt in enumerate(opciones_esquema):
-            if st.session_state.garajes["esquema_irve"].split(" ")[0] in opt:
+            if st.session_state.garajes["esquema_irve"].split(" ")[1] in opt:
                 idx_esq = i; break
                 
-        st.session_state.garajes["esquema_irve"] = st.selectbox("Esquema Reglamentario de Conexión", opciones_esquema, index=idx_esq)
+        seleccion_esq = st.selectbox("Esquema Reglamentario de Conexión", opciones_esquema, index=idx_esq)
+        st.session_state.garajes["esquema_irve"] = seleccion_esq
 
         # CÁLCULOS INTERNOS IRVE
         sup_g = st.session_state.garajes["sup"]
@@ -359,14 +374,14 @@ def renderizar():
                     f"P_base = max(Superficie * {ratio_vent} W/m², Mínimo REBT 3.450 W)\n"
                     f"P_base = {sup_g} m² * {ratio_vent} = **{p_gar:,.0f} W**\n\n"
                     f"**2. Previsión Vehículo Eléctrico (Cargadores a 3.680 W):**\n"
-                    f"Al configurar la instalación bajo el **{st.session_state.garajes['esquema_irve'].split(' ')[0]}** y " 
+                    f"Al configurar la instalación bajo el **{seleccion_esq.split(' ')[0] + ' ' + seleccion_esq.split(' ')[1]}** y "
                     f"{'**contar con SPL (Control Dinámico)**, el factor de simultaneidad se reduce al **5%**.' if st.session_state.garajes['spl'] else '**NO contar con SPL**, se aplica el factor de simultaneidad por defecto del **10%**.'}\n\n"
                     f"P_IRVE = Total Plazas * Factor Simultaneidad * Potencia Cargador\n"
                     f"P_IRVE = {st.session_state.garajes['plazas_irve']} plazas * {int(factor_irve_val*100)}% = {plazas_calculo:.1f} plazas simultáneas * 3.680 W = **{p_irve:,.2f} W**\n\n"
                     f"**3. Potencia Total Prevista de Garaje ($P_4$):** {p_gar:,.0f} W + {p_irve:,.2f} W = **{pot_total_garaje:,.2f} W**"
                 )
 
-    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.2f} W**")  
+    st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.2f} W**")
     
     # --- RESULTADO GLOBAL ---
     st.markdown("---")
