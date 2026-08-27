@@ -20,6 +20,11 @@ def seleccionar_proteccion_irve(ib):
         if cal >= ib: return cal
     return CALIBRES_PI[-1]
 
+# --- CALLBACK PARA RESETEO INFALIBLE ---
+def reset_valores_irve():
+    st.session_state['irve_long'] = 25.0
+    st.session_state['irve_custom_w'] = 7360.0
+
 def renderizar():
     st.title("🚗 Línea Específica de Recarga IRVE (ITC-BT-52)")
     
@@ -35,7 +40,12 @@ def renderizar():
             * **Sobretensiones:** Protección transitoria y permanente obligatoria en el origen del circuito.
         """)
 
-    st.markdown("### ⚙️ Parámetros de Diseño del Circuito de Recarga")
+    # --- TÍTULO Y BOTÓN DE RESETEO ---
+    col_tit, col_btn = st.columns([3, 1])
+    with col_tit:
+        st.markdown("### ⚙️ Parámetros de Diseño del Circuito de Recarga")
+    with col_btn:
+        st.button("🔄 Restablecer", on_click=reset_valores_irve, use_container_width=True)
     
     with st.form("form_irve_parametros"):
         irve_c1, irve_c2 = st.columns(2)
@@ -47,6 +57,7 @@ def renderizar():
                 p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
                 
             irve_long = st.number_input("Longitud real del cable hasta la plaza (m)", value=25.0, step=1.0, key="irve_long")
+            
             esquema_orig = st.selectbox("Origen de la línea (Esquema ITC-BT-52):", [
                 "Esquema 3a (Desde centralización de contadores)", 
                 "Esquema 3b (Desde cuadro CGMP de la vivienda)", 
@@ -60,6 +71,18 @@ def renderizar():
             tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red")
 
         submitted_irve = st.form_submit_button("🔄 Recalcular / Actualizar Circuito IRVE")
+
+    # --- DETALLE TÉCNICO INFORMATIVO DE CADA OPCIÓN DE ORIGEN ---
+    st.markdown("""
+    <div style="background-color: #f1f5f9; border-left: 4px solid #0284c7; padding: 15px; border-radius: 4px; margin-top: 15px; margin-bottom: 15px; color: #334155; font-size: 13px;">
+        <strong style="color: #0f172a; font-size: 14px;">ℹ️ INFORMACIÓN TÉCNICA - IMPLICACIONES DE DISEÑO SEGÚN EL ORIGEN SELECCIONADO:</strong>
+        <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+            <li><strong>Esquema 3a (Desde centralización de contadores):</strong> El cable de la plaza de garaje nace directamente en los bornes de salida del contador de la vivienda. <em>Implicación técnica:</em> Acumula mayor longitud de recorrido al atravesar las bandejas o tubos comunitarios desde la planta baja/sótano hasta la plaza, exigiendo mayor precisión en el cálculo de caída de tensión (máx. 1%).</li>
+            <li><strong>Esquema 3b (Desde cuadro CGMP de la vivienda):</strong> El circuito sale de un magnetotérmico dedicado ubicado en el interior de la propia vivienda (típico en unifamiliares o chalets). <em>Implicación técnica:</em> La tirada de cable debe sumar la distancia interior desde el cuadro de vivienda hasta salir al exterior y llegar al garaje colindante.</li>
+            <li><strong>Esquema 1 / 2 (Instalación colectiva o contador exclusivo):</strong> El suministro se alimenta de un contador general de garaje o de uno nuevo e independiente. <em>Implicación técnica:</em> Dimensiona una línea principal específica gestionada de forma centralizada o segregada del consumo doméstico.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
     # --- CÁLCULOS TÉCNICOS IRVE ---
     es_trif_irve = "Trifásico" in tipo_red_irve
