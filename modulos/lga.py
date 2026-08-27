@@ -25,23 +25,17 @@ def seleccionar_proteccion(ib):
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # --- BOTÓN DE RESETEO DE PARÁMETROS DE DISEÑO ---
+    # --- BOTÓN DE RESTABLECER SOLO LONGITUD Y POTENCIA MANUAL ---
     col_tit, col_btn = st.columns([3, 1])
     with col_tit:
         st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
     with col_btn:
         if st.button("🔄 Restablecer", use_container_width=True):
-            st.session_state.pop('lga_modo', None)
-            st.session_state.pop('lga_pot_man', None)
-            st.session_state.pop('lga_long', None)
-            st.session_state.pop('lga_mat', None)
-            st.session_state.pop('lga_met', None)
-            st.session_state.pop('lga_aisl', None)
-            st.session_state.pop('lga_enlace', None)
-            st.session_state.pop('lga_icc', None)
+            st.session_state['lga_long'] = 0.0
+            st.session_state['lga_pot_man'] = 0.0
             st.rerun()
 
-    # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
+    # --- RECUPERACIÓN AUTOMÁTICA DE LA PREVISIÓN DE CARGAS ---
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
     
     tabla_k = {1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8, 10: 8.5, 
@@ -77,15 +71,16 @@ def renderizar():
 
     pt_auto = float(p_viv_total + p_loc_total + p_serv_total + p_gar_total)
 
-    # --- CONTROLES DE ENTRADA DINÁMICOS ---
+    # --- SELECCIÓN DE MODO (AUTOMÁTICO / MANUAL) ---
     lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], horizontal=True, key="lga_modo")
     
     if lga_modo_potencia == "Automático":
         lga_pot = pt_auto
         st.info(f"⚡ **Potencia Automática (Previsión de Cargas):** {lga_pot:,.2f} W\n\n*Desglose: Viviendas ({p_viv_total:,}W) + Locales ({p_loc_total:,.0f}W) + Servicios ({p_serv_total:,.2f}W) + Garajes ({p_gar_total:,.2f}W)*")
     else:
-        lga_pot = st.number_input("✏️ Introduce la Potencia de cálculo LGA (en W):", value=pt_auto, step=500.0, key="lga_pot_man")
+        lga_pot = st.number_input("✏️ Introduce la Potencia de cálculo LGA manual (en W):", value=pt_auto, step=500.0, key="lga_pot_man")
 
+    # --- FORMULARIO DE PARÁMETROS ---
     with st.form("form_lga_parametros"):
         lga_c1, lga_c2 = st.columns(2)
         with lga_c1:
@@ -152,7 +147,7 @@ def renderizar():
     <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
         <h4>3. Icc Mínima y Fusibles de Compañía (CGP)</h4>
         <p><b>Icc al final de la línea:</b> <b>{icc_fin_lga:.1f} A</b> ({icc_fin_lga / 1000.0:.2f} kA)</p>
-        <p><b>Veredicto:</b> Garantiza la fusión de los protecciones de origen de <b>{in_lga_auto} A (Tipo gG)</b>.</p>
+        <p><b>Veredicto:</b> Garantiza la fusión de las protecciones de origen de <b>{in_lga_auto} A (Tipo gG)</b>.</p>
     </div>
     """, unsafe_allow_html=True)
 
