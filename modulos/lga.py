@@ -22,6 +22,11 @@ def seleccionar_proteccion(ib):
         if cal >= ib: return cal
     return CALIBRES_INTERRUPTORES[-1]
 
+# --- CALLBACK PARA RESETEO INFALIBLE ---
+def reset_valores_lga():
+    st.session_state['lga_long'] = 0.0
+    st.session_state['lga_pot_man'] = 0.0
+
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
@@ -75,15 +80,12 @@ def renderizar():
         </div>
         """, unsafe_allow_html=True)
     
-    # --- BOTÓN DE RESETEO DE LONGITUD Y POTENCIA MANUAL ---
+    # --- BOTÓN DE RESETEO VINCULADO AL CALLBACK ---
     col_tit, col_btn = st.columns([3, 1])
     with col_tit:
         st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
     with col_btn:
-        if st.button("🔄 Restablecer a 0", use_container_width=True):
-            st.session_state['lga_long'] = 0.0
-            st.session_state['lga_pot_man'] = 0.0
-            st.rerun()
+        st.button("🔄 Restablecer a 0", on_click=reset_valores_lga, use_container_width=True)
 
     # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
