@@ -35,7 +35,7 @@ def renderizar():
         * **Normativa:** ITC-BT-52 del REBT.
         * **Caída de Tensión Máxima Admisible:** Limitada al **1.0%** para circuitos de recarga alimentados desde centralización o contadores principales, asegurando que llegue la tensión adecuada al cargador (Wallbox).
         * **Protecciones Obligatorias:** 
-            * **Magnetotérmico:** Adecuado a la potencia del cargador (típicamente 16A o 32A para 3.7 kW o 7.4 kW en monofásico).
+            * **Magnetotérmico:** Adecuado a la potencia del cargador (típicamente 16A or 32A para 3.7 kW o 7.4 kW en monofásico).
             * **Diferencial:** Obligatorio **Tipo A** (con inmunización y detección de corriente continua residual de hasta 6 mA) o **Tipo B** de forma directa.
             * **Sobretensiones:** Protección transitoria y permanente obligatoria en el origen del circuito.
         """)
@@ -58,11 +58,13 @@ def renderizar():
                 
             irve_long = st.number_input("Longitud real del cable hasta la plaza (m)", value=25.0, step=1.0, key="irve_long")
             
-            esquema_orig = st.selectbox("Origen de la línea (Esquema ITC-BT-52):", [
-                "Esquema 3a (Desde centralización de contadores)", 
-                "Esquema 3b (Desde cuadro CGMP de la vivienda)", 
-                "Esquema 1 / 2 (Instalación colectiva o contador exclusivo)"
-            ], key="irve_esq")
+            # Textos cortos y adaptados para verse perfectamente en la pantalla del móvil sin cortes
+            opciones_esquema_movil = [
+                "Esquema 3a (Centralización contadores)",
+                "Esquema 3b (Cuadro CGMP vivienda)",
+                "Esquema 1 / 2 (Instalación colectiva / exclusiva)"
+            ]
+            esquema_orig = st.selectbox("Origen de la línea (Esquema ITC-BT-52):", opciones_esquema_movil, key="irve_esq")
             
         with irve_c2:
             irve_mat = st.selectbox("Material Conductor", ["cobre"], key="irve_mat")
@@ -77,9 +79,9 @@ def renderizar():
     <div style="background-color: #f1f5f9; border-left: 4px solid #0284c7; padding: 15px; border-radius: 4px; margin-top: 15px; margin-bottom: 15px; color: #334155; font-size: 13px;">
         <strong style="color: #0f172a; font-size: 14px;">ℹ️ INFORMACIÓN TÉCNICA - IMPLICACIONES DE DISEÑO SEGÚN EL ORIGEN SELECCIONADO:</strong>
         <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-            <li><strong>Esquema 3a (Desde centralización de contadores):</strong> El cable de la plaza de garaje nace directamente en los bornes de salida del contador de la vivienda. <em>Implicación técnica:</em> Acumula mayor longitud de recorrido al atravesar las bandejas o tubos comunitarios desde la planta baja/sótano hasta la plaza, exigiendo mayor precisión en el cálculo de caída de tensión (máx. 1%).</li>
-            <li><strong>Esquema 3b (Desde cuadro CGMP de la vivienda):</strong> El circuito sale de un magnetotérmico dedicado ubicado en el interior de la propia vivienda (típico en unifamiliares o chalets). <em>Implicación técnica:</em> La tirada de cable debe sumar la distancia interior desde el cuadro de vivienda hasta salir al exterior y llegar al garaje colindante.</li>
-            <li><strong>Esquema 1 / 2 (Instalación colectiva o contador exclusivo):</strong> El suministro se alimenta de un contador general de garaje o de uno nuevo e independiente. <em>Implicación técnica:</em> Dimensiona una línea principal específica gestionada de forma centralizada o segregada del consumo doméstico.</li>
+            <li><strong>Esquema 3a (Centralización contadores):</strong> El cable de la plaza de garaje nace directamente en los bornes de salida del contador de la vivienda. <em>Implicación técnica:</em> Acumula mayor longitud de recorrido al atravesar las bandejas o tubos comunitarios desde la planta baja/sótano hasta la plaza, exigiendo mayor precisión en el cálculo de caída de tensión (máx. 1%).</li>
+            <li><strong>Esquema 3b (Cuadro CGMP vivienda):</strong> El circuito sale de un magnetotérmico dedicado ubicado en el interior de la propia vivienda (típico en unifamiliares o chalets). <em>Implicación técnica:</em> La tirada de cable debe sumar la distancia interior desde el cuadro de vivienda hasta salir al exterior y llegar al garaje colindante.</li>
+            <li><strong>Esquema 1 / 2 (Instalación colectiva / exclusiva):</strong> El suministro se alimenta de un contador general de garaje o de uno nuevo e independiente. <em>Implicación técnica:</em> Dimensiona una línea principal específica gestionada de forma centralizada o segregada del consumo doméstico.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
