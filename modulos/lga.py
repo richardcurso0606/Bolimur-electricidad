@@ -30,7 +30,7 @@ def reset_valores_lga():
 def renderizar():
     st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
     
-    # --- AYUDA TÉCNICA DESPLEGABLE (RECUPERADA INTACTA) ---
+    # --- AYUDA TÉCNICA DESPLEGABLE ---
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
         
@@ -261,10 +261,21 @@ def renderizar():
         f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
     )
 
-    # --- TABLA HTML ESTILADA DE TUBOS ---
+    # --- LÓGICA DINÁMICA PARA LA TABLA DE TUBOS ---
+    def get_style(is_active):
+        if is_active:
+            return 'background-color: #f0fdf4;', 'color: #166534;', '<span style="font-size: 11px; background: #dcfce7; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">Actual</span>'
+        return '', '', ''
+
+    bg1, c1, bd1 = get_style(s_final_lga <= 16)
+    bg2, c2, bd2 = get_style(25 <= s_final_lga <= 35)
+    bg3, c3, bd3 = get_style(s_final_lga == 50)
+    bg4, c4, bd4 = get_style(70 <= s_final_lga <= 95)
+    bg5, c5, bd5 = get_style(s_final_lga >= 120)
+
     st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
     
-    html_tabla_tubos = """
+    html_tabla_tubos = f"""
     <div style="overflow-x: auto; margin-bottom: 20px;">
     <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <thead>
@@ -275,30 +286,30 @@ def renderizar():
             </tr>
         </thead>
         <tbody style="font-size: 14px; color: #334155;">
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 12px 16px; font-weight: bold;">10 mm² a 16 mm²</td>
-                <td style="padding: 12px 16px;">Ø 40 mm o Ø 50 mm</td>
-                <td style="padding: 12px 16px;">Espacio adecuado para hilos finos en acometidas pequeñas.</td>
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg1}">
+                <td style="padding: 12px 16px; font-weight: bold; {c1}">10 mm² a 16 mm² {bd1}</td>
+                <td style="padding: 12px 16px; font-weight: bold; {c1}">Ø 40 mm o Ø 50 mm</td>
+                <td style="padding: 12px 16px; {c1}">Espacio adecuado para hilos finos en acometidas pequeñas.</td>
             </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
-                <td style="padding: 12px 16px; font-weight: bold;">25 mm² a 35 mm²</td>
-                <td style="padding: 12px 16px;">Ø 50 mm o Ø 63 mm</td>
-                <td style="padding: 12px 16px;">Capacidad para 4 conductores de sección media sin sobrepresión.</td>
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg2}">
+                <td style="padding: 12px 16px; font-weight: bold; {c2}">25 mm² a 35 mm² {bd2}</td>
+                <td style="padding: 12px 16px; font-weight: bold; {c2}">Ø 50 mm o Ø 63 mm</td>
+                <td style="padding: 12px 16px; {c2}">Capacidad para 4 conductores de sección media sin sobrepresión.</td>
             </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f0fdf4;">
-                <td style="padding: 12px 16px; font-weight: bold; color: #166534;">50 mm² <span style="font-size: 11px; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">Actual</span></td>
-                <td style="padding: 12px 16px; font-weight: bold; color: #166534;">Ø 63 mm</td>
-                <td style="padding: 12px 16px; color: #166534; font-weight: bold;">El tamaño ideal para cumplir el factor de llenaje del 30-40%.</td>
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg3}">
+                <td style="padding: 12px 16px; font-weight: bold; {c3}">50 mm² {bd3}</td>
+                <td style="padding: 12px 16px; font-weight: bold; {c3}">Ø 63 mm</td>
+                <td style="padding: 12px 16px; {c3}">El tamaño ideal para cumplir el factor de llenaje del 30-40%.</td>
             </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 12px 16px; font-weight: bold;">70 mm² a 95 mm²</td>
-                <td style="padding: 12px 16px;">Ø 90 mm</td>
-                <td style="padding: 12px 16px;">Tubo corrugado de gran calibre para hilos pesados y rígidos.</td>
+            <tr style="border-bottom: 1px solid #e2e8f0; {bg4}">
+                <td style="padding: 12px 16px; font-weight: bold; {c4}">70 mm² a 95 mm² {bd4}</td>
+                <td style="padding: 12px 16px; font-weight: bold; {c4}">Ø 90 mm</td>
+                <td style="padding: 12px 16px; {c4}">Tubo corrugado de gran calibre para hilos pesados y rígidos.</td>
             </tr>
-            <tr style="background-color: #f8fafc;">
-                <td style="padding: 12px 16px; font-weight: bold;">≥ 120 mm²</td>
-                <td style="padding: 12px 16px;">Bandeja / Canaladura</td>
-                <td style="padding: 12px 16px;">Canales de obra o bandejas registrables por imposibilidad de curvado en tubo.</td>
+            <tr style="background-color: #f8fafc; {bg5}">
+                <td style="padding: 12px 16px; font-weight: bold; {c5}">≥ 120 mm² {bd5}</td>
+                <td style="padding: 12px 16px; font-weight: bold; {c5}">Bandeja / Canaladura</td>
+                <td style="padding: 12px 16px; {c5}">Canales de obra o bandejas registrables por imposibilidad de curvado en tubo.</td>
             </tr>
         </tbody>
     </table>
