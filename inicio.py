@@ -26,6 +26,12 @@ try:
 except Exception as e:
     st.error(f"Error al cargar el módulo di: {e}")
 
+# NUEVO: Importación segura del módulo IRVE
+try:
+    from modulos import irve
+except Exception as e:
+    st.error(f"Error al cargar el módulo irve: {e}")
+
 # =========================================================================
 # ESTILOS CSS GLOBALES
 # =========================================================================
@@ -90,6 +96,11 @@ with st.sidebar:
     if st.button("🔌  Derivación Individual (DI)", use_container_width=True):
         st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
         st.rerun()
+
+    # NUEVO: Botón de acceso directo al módulo IRVE en el menú lateral
+    if st.button("🚗  Línea Recarga (IRVE)", use_container_width=True):
+        st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
+        st.rerun()
         
     if st.button("📚  Tablas REBT", use_container_width=True):
         st.session_state.menu_activo = "📚 Tablas REBT"
@@ -127,6 +138,13 @@ elif seleccion_modulo.startswith("🔌"):
         di.renderizar()
     except Exception as e:
         st.error(f"Error al ejecutar DI: {e}")
+
+# NUEVO: Enrutador para el módulo IRVE
+elif seleccion_modulo.startswith("🚗"):
+    try:
+        irve.renderizar()
+    except Exception as e:
+        st.error(f"Error al ejecutar Línea IRVE: {e}")
 
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Tablas REBT")
