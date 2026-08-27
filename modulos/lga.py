@@ -30,7 +30,7 @@ def renderizar():
     with col_tit:
         st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
     with col_btn:
-        if st.button("🔄 Restablecer Valores", use_container_width=True):
+        if st.button("🔄 Restablecer", use_container_width=True):
             st.session_state.pop('lga_modo', None)
             st.session_state.pop('lga_pot_man', None)
             st.session_state.pop('lga_long', None)
@@ -129,69 +129,36 @@ def renderizar():
     st.markdown("---")
     st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)</h3>", unsafe_allow_html=True)
 
-    # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
-    st.info(f"""
-    #### 1. Intensidad de Diseño Trifásica ($I_b$)
-    
-    **Criterio y Fórmula Reglamentaria:**
-    $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}}$$
-    
-    **Leyenda y Definición de Variables:**
-    * **I_b**: Intensidad de cálculo o de diseño por fase (A).
-    * **P**: Potencia total prevista de transporte en la línea ($P_t$ = {lga_pot:,.2f} W).
-    * **V**: Tensión nominal compuesta entre fases (400 V).
-    * **cos φ**: Factor de potencia estimado para instalaciones generales (0.9).
-    * **√3**: Constante trifásica ($\\approx 1.732$).
-    
-    **Sustitución Numérica y Resultado:**
-    $$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\frac{{{lga_pot:,.2f}}}{{623.54}} = \\mathbf{{ {ib_lga:.2f} \\text{{ A}} }}$$
-    """)
+    # --- BLOQUE 1 ---
+    st.markdown(f"""
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
+        <h4>1. Intensidad de Diseño Trifásica (Ib)</h4>
+        <p><b>Fórmula:</b> I<sub>b</sub> = P / (√3 · V · cos φ)</p>
+        <p><b>Sustitución:</b> I<sub>b</sub> = {lga_pot:,.2f} / (1.732 · 400 · 0.9) = <b>{ib_lga:.2f} A</b></p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
-    st.info(f"""
-    #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
+    # --- BLOQUE 2 ---
+    st.markdown(f"""
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
+        <h4>2. Sección Teórica por Caída de Tensión (ΔV)</h4>
+        <p><b>Fórmula:</b> S = (P · L) / (γ · ΔV · V)</p>
+        <p><b>Sustitución:</b> S = ({lga_pot:,.2f} · {lga_long}) / ({gamma_lga} · {dv_max_lga:.2f} · 400) = <b>{s_cdt_lga:.2f} mm²</b></p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    **Criterio y Fórmula Reglamentaria:**
-    $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$
-    
-    **Leyenda y Definición de Variables:**
-    * **S**: Sección teórica mínima exigida del conductor ($\\text{{mm}}^2$).
-    * **P**: Potencia total de cálculo ({lga_pot:,.2f} W).
-    * **L**: Longitud unifilar de la línea ({lga_long} m).
-    * **γ**: Conductividad del material a servicio normal ({gamma_lga} m/(Ω·mm²) para {lga_aisl}).
-    * **ΔV**: Caída de tensión máxima admisible ({dv_pct_lga}% de 400V = {dv_max_lga:.2f} V).
-    * **V**: Tensión nominal (400 V).
-    
-    **Sustitución Numérica y Resultado:**
-    $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{ {s_cdt_lga:.2f} \\text{{ mm}}^2 }}$$
-    """)
-    
-    # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
-    st.info(f"""
-    #### 3. Icc Mínima y Fusibles de Compañía (CGP)
-    
-    **Criterio y Fórmula Reglamentaria (ITC-BT-14 / ITC-BT-22):**
-    Verificamos que los fusibles de protección tipo gG situados en la CGP fundirán a tiempo en caso de un cortocircuito franco al final de la Línea General de Alimentación.
-    
-    $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{I_{{cc,origen}}}\\right) + R_{{cable}}}}$$
-    
-    **Leyenda y Definición de Variables:**
-    * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (A).
-    * **V**: Tensión nominal compuesta de referencia (400 V).
-    * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig * 1000:,.0f} A).
-    * **R_cable**: Resistencia activa del conductor en el tramo ($R = \\frac{{\\rho \\cdot L}}{{S}} = {r_lga_cable:.5f}\\ \\Omega$).
-    * **In**: Calibre de los fusibles gG de protección en origen ({in_lga_auto} A).
-    
-    **Sustitución Numérica y Verificación Reglamentaria:**
-    $$I_{{cc,final}} = \\frac{{400}}{{\\left(\\frac{{400}}{{{lga_icc_orig * 1000.0}}}\\right) + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_orig_lga_ohms:.5f} + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_tot_lga:.5f}}} = \\mathbf{{ {icc_fin_lga:.1f} \\text{{ A}} }}$$
-    
-    * **Icc al final de la LGA:** **{icc_fin_lga:.1f} A** ({icc_fin_lga / 1000.0:.2f} kA)
-    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los márgenes reglamentarios exigidos por el REBT.
-    """)
+    # --- BLOQUE 3 ---
+    st.markdown(f"""
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
+        <h4>3. Icc Mínima y Fusibles de Compañía (CGP)</h4>
+        <p><b>Icc al final de la línea:</b> <b>{icc_fin_lga:.1f} A</b> ({icc_fin_lga / 1000.0:.2f} kA)</p>
+        <p><b>Veredicto:</b> Garantiza la fusión de los protecciones de origen de <b>{in_lga_auto} A (Tipo gG)</b>.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
 
-    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES ---
+    # --- TABLA DE CORRIENTES ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
     filas_lista = []
