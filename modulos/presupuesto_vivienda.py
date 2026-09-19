@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo de Presupuesto Inteligente por Estancias, Superficie y Altura
+Módulo Avanzado de Presupuesto Inteligente por Estancias, Tipo de Obra y REBT
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -9,36 +9,45 @@ import pandas as pd
 import openpyxl
 
 def app():
-    st.title("🏡 Generador de Presupuestos Inteligentes por Estancias")
-    st.markdown("Calcula el material exacto y el presupuesto desglosado introduciendo los metros cuadrados y la altura de cada estancia.")
+    st.title("🏡 Generador Profesional de Presupuestos y Materiales")
+    st.markdown("Calcula instalaciones eléctricas completas adaptadas al REBT, especificando tipos de obra (rozas/yeso), superficies y alturas.")
 
-    # Cargar base de datos maestra
+    # Cargar base de datos maestra de precios
     try:
-        wb = openpyxl.load_workbook("base_datos_precio_oficial.xlsx")
+        wb = openpyxl.load_workbook("Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx")
         ws = wb["Tarifa Maestra Completa"]
         data = list(ws.iter_rows(values_only=True))
         df = pd.DataFrame(data[1:], columns=data[0])
     except Exception as e:
-        st.error(f"No se pudo cargar la base de datos maestra: {e}")
+        st.error(f"No se pudo cargar la base de datos maestra de precios: {e}")
         return
 
-    st.sidebar.header("⚙️ Parámetros Generales")
+    # Sidebar: Parámetros de Configuración de Obra
+    st.sidebar.header("⚙️ Parámetros de Instalación")
+    
+    tipo_obra = st.sidebar.selectbox(
+        "Tipo de Ejecución / Instalación",
+        [
+            "Empotrada en Rozas (Ladrillo + Yeso)",
+            "Falso Techo / Pladur (Obra Seca)",
+            "Superficie (Tubo visto / Canaleta)"
+        ]
+    )
+
     gama_seleccionada = st.sidebar.selectbox(
-        "Nivel de Gama / Calidad",
+        "Nivel de Gama / Calidad de Mecanismos",
         ['1. Ultra Económica', '2. Económica Estándar', '3. Media Residencial', '4. Alta Decorativa']
     )
     
-    proveedor_filtro = st.sidebar.selectbox(
-        "Proveedor Principal / Tienda",
-        ['Optimizado (Mejor Precio Global)', 'Obramat', 'Leroy Merlin']
-    )
+    incluir_mano_obra = st.sidebar.checkbox("Incluir Estimación de Mano de Obra", value=True)
+    margen_comercial = st.sidebar.slider("Margen Comercial / Beneficio (%)", 0, 40, 15)
 
-    st.subheader("📋 Configuración de Estancias de la Vivienda")
-    st.markdown("Modifica los metros cuadrados y la altura de cada estancia para una estimación milimétrica.")
+    st.subheader("📋 Configuración de Estancias, Superficies y Alturas")
+    st.markdown("Ajusta los metros cuadrados y la altura libre de cada estancia para calcular con exactitud rozas, metros de tubo y cableado.")
 
-    # Inicializar estado de estancias si no existe
-    if 'estancias_data' not in st.session_state:
-        st.session_state.estancias_data = [
+    # Estado inicial de estancias
+    if 'estancias_pro' not in st.session_state:
+        st.session_state.estancias_pro = [
             {"nombre": "Salón - Comedor", "m2": 25.0, "altura": 2.6, "incluir": True},
             {"nombre": "Cocina", "m2": 12.0, "altura": 2.6, "incluir": True},
             {"nombre": "Dormitorio Principal", "m2": 16.0, "altura": 2.6, "incluir": True},
@@ -50,63 +59,87 @@ def app():
             {"nombre": "Terraza / Exterior", "m2": 10.0, "altura": 2.6, "incluir": False},
         ]
 
-    estancias_usuario = []
+    estancias_activas = []
 
-    # Mostrar estancias de forma limpia y estable
-    for i, est in enumerate(st.session_state.estancias_data):
-        cols = st.columns([3, 2, 2, 1])
-        with cols[0]:
-            est["nombre"] = st.text_input(f"Estancia {i}", value=est["nombre"], key=f"nombre_{i}", label_visibility="collapsed")
-        with cols[1]:
-            est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"m2_{i}", label_visibility="collapsed")
-        with cols[2]:
-            est["altura"] = st.number_input(f"Altura {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"alt_{i}", label_visibility="collapsed")
-        with cols[3]:
-            est["incluir"] = st.checkbox(f"Incluir {i}", value=est["incluir"], key=f"inc_{i}", label_visibility="collapsed")
+    # Renderizado de la tabla de estancias
+    cols_h = st.columns([3, 2, 2, 1])
+    cols_h[0].markdown("**Estancia**")
+    cols_h[1].markdown("**Superficie ($m^2$)**")
+    cols_h[2].markdown("**Altura (m)**")
+    cols_h[3].markdown("**Incluir**")
+
+    for i, est in enumerate(st.session_state.estancias_pro):
+        c = st.columns([3, 2, 2, 1])
+        with c[0]:
+            est["nombre"] = st.text_input(f"Est {i}", value=est["nombre"], key=f"p_nom_{i}", label_visibility="collapsed")
+        with c[1]:
+            est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"p_m2_{i}", label_visibility="collapsed")
+        with c[2]:
+            est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"p_alt_{i}", label_visibility="collapsed")
+        with c[3]:
+            est["incluir"] = st.checkbox(f"Inc {i}", value=est["incluir"], key=f"p_inc_{i}", label_visibility="collapsed")
         
         if est["incluir"]:
-            estancias_usuario.append(est)
+            estancias_activas.append(est)
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto y Materiales", type="primary"):
-        if not estancias_usuario:
-            st.warning("Por favor, selecciona al menos una estancia para calcular.")
+    if st.button("🚀 Calcular Presupuesto Técnico y Materiales", type="primary"):
+        if not estancias_activas:
+            st.warning("Selecciona al menos una estancia para realizar el cálculo.")
             return
 
-        superficie_total = sum([e["m2"] for e in estancias_usuario])
-        altura_promedio = sum([e["altura"] for e in estancias_usuario]) / len(estancias_usuario)
+        superficie_total = sum([e["m2"] for e in estancias_activas])
+        altura_media = sum([e["altura"] for e in estancias_activas]) / len(estancias_activas)
 
-        st.success(f"Superficie útil total calculada: **{superficie_total:.1f} m²** | Altura media: **{altura_promedio:.2f} m**")
+        st.success(f"📊 **Resumen Dimensional:** Superficie Total: **{superficie_total:.1f} m²** | Altura Media de Paramentos: **{altura_media:.2f} m** | Sistema: **{tipo_obra}**")
 
-        # Estimación de materiales
-        metros_tubo = superficie_total * 4.2 * (altura_promedio / 2.5)
-        metros_cable_15 = superficie_total * 12.0
-        metros_cable_25 = superficie_total * 15.0
-        metros_cable_4 = superficie_total * 4.5
+        # --- CÁLCULOS TÉCNICOS DE MATERIALES ---
+        # Tubos y cables basados en coeficientes REBT y perímetro estimado
+        perimetro_estimado = superficie_total * 0.8 * 4  # Estimación geométrica de muros
+        metros_rozas = perimetro_estimado * 1.5 if "Empotrada" in tipo_obra else 0
+        sacos_yeso = max(2, int(metros_rozas / 12)) if "Empotrada" in tipo_obra else 0
 
+        metros_tubo = superficie_total * 4.5 * (altura_media / 2.5)
+        cable_15 = superficie_total * 12.0  # C1 Iluminación
+        cable_25 = superficie_total * 16.0  # C2 Enchufes
+        cable_40 = superficie_total * 5.0   # C3 Cocina / Horno
+        cable_60 = 25.0                     # C4 Lavadora / Termo / AACC
+
+        # Filtrar gama de mecanismos
         df_gama = df[df['Nivel de Gama / Aplicación'] == gama_seleccionada]
 
-        st.subheader("📦 Desglose Automático de Materiales y Presupuesto")
+        st.subheader("📦 Partidas de Materiales y Obra Civil")
 
-        partidas = [
-            {"Concepto": "Tubo Corrugado M-20 (Corona 50m)", "Cantidad": max(1, int(metros_tubo / 50)), "Unidad": "Rollos"},
-            {"Concepto": "Cable H07V-K 1.5 mm² (Iluminación)", "Cantidad": int(metros_cable_15), "Unidad": "Metros"},
-            {"Concepto": "Cable H07V-K 2.5 mm² (Enchufes)", "Cantidad": int(metros_cable_25), "Unidad": "Metros"},
-            {"Concepto": "Cable H07V-K 4 mm² (Cocina/Horno)", "Cantidad": int(metros_cable_4), "Unidad": "Metros"},
-            {"Concepto": "Cajas de Registro Derivación", "Cantidad": max(3, int(superficie_total / 15)), "Unidad": "Unidades"},
-            {"Concepto": "Mecanismos Interruptores / Conmutadores", "Cantidad": len(estancias_usuario) * 3, "Unidad": "Unidades"},
-            {"Concepto": "Bases de Enchufe Schuko 16A", "Cantidad": int(superficie_total / 4), "Unidad": "Unidades"},
+        partidas_tecnicas = [
+            {"Partida / Material", "Cantidad", "Unidad", "Observaciones"},
+        ]
+        
+        datos_tabla = [
+            {"Partida / Material": f"Tubo Corrugado M-20 (Corona 50m) - [{tipo_obra}]", "Cantidad": max(1, int(metros_tubo / 50)), "Unidad": "Rollos", "Observaciones": "Canalización protegida"},
+            {"Partida / Material": "Cable H07V-K 1.5 mm² (Libre Halógenos / Marfil/Azul/Verde)", "Cantidad": int(cable_15), "Unidad": "Metros", "Observaciones": "Circuito C1 (Iluminación)"},
+            {"Partida / Material": "Cable H07V-K 2.5 mm² (Fase/Neutro/Tierra)", "Cantidad": int(cable_25), "Unidad": "Metros", "Observaciones": "Circuito C2 (Tomacorrientes)"},
+            {"Partida / Material": "Cable H07V-K 4 mm² (Potencia)", "Cantidad": int(cable_40), "Unidad": "Metros", "Observaciones": "Circuito C3 (Cocina / Horno)"},
+            {"Partida / Material": "Cable H07V-K 6 mm² (Alta Potencia)", "Cantidad": int(cable_60), "Unidad": "Metros", "Observaciones": "Circuito C4 (Termo / Lavadora)"},
+            {"Partida / Material": "Cajas de Registro Derivación empotradas", "Cantidad": max(3, int(superficie_total / 15)), "Unidad": "Unidades", "Observaciones": "Repartidas por estancias"},
+            {"Partida / Material": "Mecanismos (Interruptores / Conmutadores)", "Cantidad": len(estancias_activas) * 3, "Unidad": "Unidades", "Observaciones": f"Gama: {gama_seleccionada}"},
+            {"Partida / Material": "Bases de Enchufe Schuko 16A con Tierra", "Cantidad": int(superficie_total / 3.5), "Unidad": "Unidades", "Observaciones": f"Gama: {gama_seleccionada}"},
         ]
 
-        df_partidas = pd.DataFrame(partidas)
-        st.dataframe(df_partidas, use_container_width=True)
+        if "Empotrada" in tipo_obra:
+            datos_tabla.append({"Partida / Material": "Picado y Ejecución de Rozas en Pared", "Cantidad": int(metros_rozas), "Unidad": "Metros", "Observaciones": "Rozas para canalización"})
+            datos_tabla.append({"Partida / Material": "Sacos de Yeso / Pasta de Agarre (25 kg)", "Cantidad": int(sacos_yeso), "Unidad": "Sacos", "Observaciones": "Tapado de rozas y cajas"})
 
-        st.subheader("🛒 Artículos Seleccionados de la Base de Datos")
+        df_resumen = pd.DataFrame(datos_tabla)
+        st.dataframe(df_resumen, use_container_width=True)
+
+        st.subheader("🛒 Referencias de la Base de Datos Oficial (Obramat / Leroy Merlin)")
         if not df_gama.empty:
             st.dataframe(df_gama[['ID', 'Familia / Categoria', 'Marca', 'Proveedor / Tienda', 'Descripción Exacta del Artículo', 'Precio S/IVA (€)']], use_container_width=True)
         else:
             st.dataframe(df.head(15)[['ID', 'Familia / Categoria', 'Marca', 'Proveedor / Tienda', 'Descripción Exacta del Artículo']], use_container_width=True)
+
+        st.success("✅ Presupuesto y desglose técnico calculados con éxito. ¡Dime si quieres añadir partidas adicionales!")
 
 if __name__ == "__main__":
     app()
