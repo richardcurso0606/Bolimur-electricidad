@@ -1,1 +1,7 @@
 matplotlib
+
+Plaintext
+streamlit
+pandas
+openpyxl
+
