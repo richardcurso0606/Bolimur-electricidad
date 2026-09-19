@@ -1,7 +1,5 @@
-matplotlib
-
 Plaintext
 streamlit
 pandas
 openpyxl
-
+matplotlib
