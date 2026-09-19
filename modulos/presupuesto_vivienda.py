@@ -14,7 +14,7 @@ def app():
 
     # Cargar base de datos maestra
     try:
-        wb = openpyxl.load_workbook("Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx")
+        wb = openpyxl.load_workbook("base_datos_precio_oficial.xlsx")
         ws = wb["Tarifa Maestra Completa"]
         data = list(ws.iter_rows(values_only=True))
         df = pd.DataFrame(data[1:], columns=data[0])
