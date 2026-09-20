@@ -182,5 +182,3 @@ def app():
 
 if __name__ == "__main__":
     app()
-modulos/presupuesto_vivienda.py
-Mostrando modulos/presupuesto_vivienda.py.
