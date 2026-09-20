@@ -25,7 +25,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Control por Estancias y Costes de Autónomo")
-    st.markdown("Desglose pormenorizado por habitación (Materiales, Colores de Cable, Horas de Mano de Obra y Vista Comercial por Estancias).")
+    st.markdown("Desglose pormenorizado por habitación (Materiales, Colores de Cable con Conmutadas en Gris/Marrón, Horas de Mano de Obra y Vista Comercial por Estancias).")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -176,8 +176,8 @@ def app():
             alt = est["altura"]
             
             m_tubo = m2 * 4.2 * (alt / 2.5)
-            m_c1 = m2 * 12.0  # 1.5mm²
-            m_c2 = m2 * 15.0  # 2.5mm²
+            m_c1 = m2 * 12.0  # 1.5mm² (Iluminación y Vueltas)
+            m_c2 = m2 * 15.0  # 2.5mm² (Enchufes y Fuerza)
             mecanismos = max(3, int(m2 / 4))
             
             mat_coste = (m_tubo * 0.45) + (m_c1 * 0.35) + (m_c2 * 0.50) + (mecanismos * 6.5)
@@ -190,11 +190,11 @@ def app():
                 "Estancia": est["nombre"],
                 "Sup (m²)": m2,
                 "Tubo M-20": f"{int(m_tubo)} m",
-                "Cable 1.5mm² (Fase/Neutro/Vueltas Gris-Marrón)": f"{int(m_c1)} m",
-                "Cable 2.5mm² (Fase/Neutro/Tierra)": f"{int(m_c2)} m",
+                "Cable 1.5mm² (Fases, Neutro y Vueltas Gris/Marrón)": f"{int(m_c1)} m",
+                "Cable 2.5mm² (Fases, Neutro y Tierra)": f"{int(m_c2)} m",
                 "Mecanismos": f"{mecanismos} uds",
                 "Horas Trab.": f"{horas_est} h",
-                "Coste Mat. (€)": round(mat_coste, 2)
+                "Coste Mat. Neto (€)": round(mat_coste, 2)
             })
 
         df_tecnico = pd.DataFrame(detalle_tecnico)
@@ -213,16 +213,16 @@ def app():
         # ==========================================
         st.markdown("---")
         st.header("🛠️ 1. INFORME TÉCNICO Y DE COSTES (Para el Instalador)")
-        st.info("Desglose milimétrico por habitación con metrajes, colores de cable (incluyendo gris y marrón para conmutadas) y costes directos.")
+        st.info("Desglose milimétrico por habitación con metrajes, colores de cable especificados (incluyendo gris y marrón para conmutadas) y costes netos para ti.")
 
         st.dataframe(df_tecnico, use_container_width=True)
 
-        st.markdown("### 🎨 Código de Colores Normalizado (REBT):")
+        st.markdown("### 🎨 Especificación de Colores de Cables (Normativa REBT y Práctica):")
         st.markdown("""
-        * **Fases Principales:** Marrón / Negro.
-        * **Neutro:** Azul claro.
-        * **Protección (Tierra):** Verde - Amarillo.
-        * **Vueltas de Interruptor y Conmutadas:** Color **Gris** y **Marrón** (para diferenciar idas y retornos).
+        * **Fase Principal (L):** Marrón / Negro.
+        * **Neutro (N):** Azul claro.
+        * **Protección / Tierra (PE):** Verde - Amarillo.
+        * **Vueltas de Interruptor, Conmutadas y Cruzamientos:** Hilos de color **Gris** y **Marrón** (para identificar claramente las maniobras en registros y mecanismos).
         """)
 
         st.markdown("### 💰 Resumen Financiero Interno (Lo que te cuesta ejecutar la obra)")
@@ -242,7 +242,7 @@ def app():
         # ==========================================
         st.markdown("---")
         st.header("📄 2. VISTA COMERCIAL: Presupuesto Detallado por Estancias para el Cliente")
-        st.markdown("Lista comercial con materiales, trabajos y margen aplicado por estancia. Pulsa **Ctrl + P** para imprimir o guardar como PDF limpio.")
+        st.markdown("Lista comercial con materiales y margen aplicado habitación por habitación. Pulsa **Ctrl + P** en tu teclado para imprimir o guardar como PDF limpio.")
 
         st.markdown(f"""
         <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
@@ -263,7 +263,6 @@ def app():
 
         for est in estancias_activas:
             m2 = est["m2"]
-            # Coste base por m² (materiales + mano de obra estimada de esa estancia)
             coste_base_m2 = 42.0 if "Empotrada" in tipo_obra else 32.0
             precio_comercial_m2 = coste_base_m2 * multiplicador
             importe_estancia = m2 * precio_comercial_m2
@@ -272,7 +271,7 @@ def app():
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle de Suministro, Canalización, Cableado y Mecanismos": f"Instalación completa: Tubo M-20, cableado libre de halógenos (incluyendo hilos de color gris y marrón para conmutadas/vueltas), cajas de registro y mecanismos de gama {gama_sel}.",
+                "Detalle de Suministro, Canalización, Cableado y Mecanismos": f"Instalación completa: Tubo M-20, cableado libre de halógenos (fase, neutro, tierra y hilos de color gris/marrón para conmutadas y vueltas), cajas de registro y mecanismos gama {gama_sel}.",
                 "Importe (€)": round(importe_estancia, 2)
             })
 
@@ -310,7 +309,7 @@ def app():
         st.markdown("##### 📝 Condiciones Generales y Garantía")
         st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT.")
 
-        st.success("✅ ¡Presupuesto y desgloses actualizados correctamente!")
+        st.success("✅ ¡Presupuesto y desgloses actualizados correctamente con colores de cables y vista comercial por estancias!")
 
 if __name__ == "__main__":
     app()
