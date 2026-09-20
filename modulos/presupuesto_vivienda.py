@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Desglose Independiente por Colores (Azul, Negro = Fase, Marrón = Vueltas, Gris = Cruzamientos), UTP y Acopio
+Módulo Profesional de Presupuestos: Desglose por Estancia con Puntos Personalizables, Comparativa Obramat/Leroy y Acopio
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -34,7 +34,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Panel Profesional de Autónomo")
-    st.markdown("Conectado con tu Base de Datos Maestra Oficial Actualizada (`base_datos_precio_oficial.xlsx`).")
+    st.markdown("Conectado con tu Base de Datos Maestra Oficial (`base_datos_precio_oficial.xlsx`). Comparativa automática Obramat vs Leroy Merlin.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -73,19 +73,35 @@ def app():
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}` ({len(df_precios)} artículos)")
 
     # ==========================================
-    # FUNCIONES DE BÚSQUEDA PRECISA EN EXCEL
+    # FUNCIONES DE BÚSQUEDA INTELIGENTE (MÁS ECONÓMICO)
     # ==========================================
-    def buscar_general(df, main_kw, sub_kw=None):
+    def buscar_mas_economico(df, main_kw, sub_kw=None):
+        mejores_candidatos = []
+        main_kw_lower = main_kw.lower()
+        sub_kw_lower = sub_kw.lower() if sub_kw else None
+        
         for idx, row in df.iterrows():
             desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
-            if main_kw in desc:
-                if sub_kw is None or sub_kw in desc:
-                    return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
+            if main_kw_lower in desc:
+                if sub_kw_lower is None or sub_kw_lower in desc:
+                    try:
+                        precio = float(row['Precio S/IVA (€)'])
+                        prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                        art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                        fila = idx + 2
+                        mejores_candidatos.append((precio, prov, art_desc, fila))
+                    except:
+                        continue
+                        
+        if mejores_candidatos:
+            mejores_candidatos.sort(key=lambda x: x[0])
+            p, prov, desc, fila = mejores_candidatos[0]
+            return p, prov, desc, True, fila
+            
         return 0.45, "Obramat", "Artículo estándar", False, -1
 
     def buscar_mecanismo(df, tipo, serie_sel):
         serie_lower = serie_sel.lower()
-        
         kw_map = {
             'interruptor': ['interruptor', 'conmutador'],
             'schuko': ['schuko', 'enchufe'],
@@ -93,18 +109,8 @@ def app():
             'marco': ['marco 1 elemento', 'marco']
         }
         keywords = kw_map.get(tipo, ['interruptor'])
+        mejores_candidatos = []
 
-        for kw in keywords:
-            for idx, row in df.iterrows():
-                desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
-                serie_item = str(row.get('Serie / Gama', '')).strip().lower()
-                
-                if kw in desc:
-                    if any(term in serie_item or term in desc for term in ['simon 10', 'simon 27 play', 'simon 82', 'zenit', 'asfora', 'ovalis', 'miluz', 'niloé step', 'suno', 'new unica', 'valena next', 'simon 270'] if term in serie_lower):
-                        if any(t in serie_item for t in serie_lower.split() if len(t) > 3):
-                            return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
-
-        brand_terms = [t for t in ['simon', 'schneider', 'niessen', 'legrand', 'solera', 'lexman'] if t in serie_lower]
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
@@ -112,14 +118,33 @@ def app():
                 marca_item = str(row.get('Marca', '')).strip().lower()
                 
                 if kw in desc:
-                    if any(bt in marca_item or bt in serie_item for bt in brand_terms):
-                        return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
+                    if any(term in serie_item or term in desc for term in ['simon 10', 'simon 27 play', 'simon 82', 'zenit', 'asfora', 'ovalis', 'miluz', 'niloé step', 'suno', 'new unica', 'valena next', 'simon 270'] if term in serie_lower):
+                        try:
+                            precio = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            fila = idx + 2
+                            mejores_candidatos.append((precio, prov, art_desc, fila))
+                        except:
+                            continue
 
-        for kw in keywords:
-            for idx, row in df.iterrows():
-                desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
-                if kw in desc and row['Familia / Categoria'] in ['Mecanismos', 'Bases de Enchufe', 'Tomas / Datos', 'Marcos / Placas']:
-                    return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
+        if not mejores_candidatos:
+            for kw in keywords:
+                for idx, row in df.iterrows():
+                    desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                    if kw in desc:
+                        try:
+                            precio = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            fila = idx + 2
+                            mejores_candidatos.append((precio, prov, art_desc, fila))
+                        except:
+                            continue
+
+        if mejores_candidatos:
+            mejores_candidatos.sort(key=lambda x: x[0])
+            return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
 
         return 3.50, "Obramat", "Artículo estándar", False, -1
 
@@ -197,28 +222,23 @@ def app():
     with col_c2:
         num_operarios = st.number_input("Nº Operarios", min_value=1, max_value=5, value=1, step=1)
 
-    tipo_obra = st.selectbox(
-        "Sistema de Ejecución General",
-        ["Empotrada en Rozas (Ladrillo + Yeso)", "Falso Techo / Pladur (Obra Seca)", "Superficie (Tubo visto / Canaleta)"]
-    )
-
     st.markdown("---")
 
     # ==========================================
-    # GESTIÓN DINÁMICA DE ESTANCIAS
+    # GESTIÓN DINÁMICA DE ESTANCIAS Y PUNTOS EXTRA
     # ==========================================
     if 'estancias_pro' not in st.session_state:
         st.session_state.estancias_pro = [
-            {"nombre": "Salón - Comedor", "m2": 25.0, "altura": 2.6},
-            {"nombre": "Cocina", "m2": 12.0, "altura": 2.6},
-            {"nombre": "Dormitorio Principal", "m2": 16.0, "altura": 2.6},
-            {"nombre": "Dormitorio 2", "m2": 11.0, "altura": 2.6},
-            {"nombre": "Baño 1", "m2": 6.0, "altura": 2.6},
-            {"nombre": "Pasillo", "m2": 7.0, "altura": 2.6},
+            {"nombre": "Salón - Comedor", "m2": 25.0, "altura": 2.6, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
+            {"nombre": "Cocina", "m2": 12.0, "altura": 2.6, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
+            {"nombre": "Dormitorio Principal", "m2": 16.0, "altura": 2.6, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
+            {"nombre": "Dormitorio 2", "m2": 11.0, "altura": 2.6, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
+            {"nombre": "Baño 1", "m2": 6.0, "altura": 2.6, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
+            {"nombre": "Pasillo", "m2": 7.0, "altura": 2.6, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
         ]
 
-    st.subheader("📋 Dimensionamiento y Estancias de la Vivienda (Gestión Dinámica)")
-    st.markdown("Modifica los datos, elimina estancias o añade nuevas habitaciones según las necesidades del proyecto.")
+    st.subheader("📋 Dimensionamiento y Puntos por Estancia (Personalización Total)")
+    st.markdown("Modifica las dimensiones, añade o quita puntos de luz, enchufes Schuko o tomas de red RJ45 en cada estancia de forma independiente.")
 
     with st.expander("➕ Añadir Nueva Estancia a la Vivienda"):
         with st.form("form_nueva_estancia"):
@@ -232,7 +252,10 @@ def app():
             
             if st.form_submit_button("Agregar Estancia"):
                 if nuevo_nombre:
-                    st.session_state.estancias_pro.append({"nombre": nuevo_nombre, "m2": nuevo_m2, "altura": nuevo_alt})
+                    st.session_state.estancias_pro.append({
+                        "nombre": nuevo_nombre, "m2": nuevo_m2, "altura": nuevo_alt,
+                        "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0
+                    })
                     st.success(f"Estancia '{nuevo_nombre}' añadida correctamente.")
                     st.rerun()
                 else:
@@ -240,19 +263,30 @@ def app():
 
     estancias_activas = []
     for i, est in enumerate(st.session_state.estancias_pro):
-        cols = st.columns([3, 2, 2, 1, 1])
-        with cols[0]:
-            est["nombre"] = st.text_input(f"Nombre {i}", value=est["nombre"], key=f"est_nom_{i}", label_visibility="collapsed")
-        with cols[1]:
-            est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"est_m2_{i}", label_visibility="collapsed")
-        with cols[2]:
-            est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"est_alt_{i}", label_visibility="collapsed")
-        with cols[3]:
-            incluir = st.checkbox(f"Inc {i}", value=True, key=f"est_inc_{i}", label_visibility="collapsed")
-        with cols[4]:
-            if st.button("🗑️", key=f"del_est_{i}"):
-                st.session_state.estancias_pro.pop(i)
-                st.rerun()
+        with st.container():
+            cols = st.columns([3, 2, 2, 1, 1])
+            with cols[0]:
+                est["nombre"] = st.text_input(f"Nombre {i}", value=est["nombre"], key=f"est_nom_{i}", label_visibility="collapsed")
+            with cols[1]:
+                est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"est_m2_{i}", label_visibility="collapsed")
+            with cols[2]:
+                est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"est_alt_{i}", label_visibility="collapsed")
+            with cols[3]:
+                incluir = st.checkbox(f"Inc {i}", value=True, key=f"est_inc_{i}", label_visibility="collapsed")
+            with cols[4]:
+                if st.button("🗑️", key=f"del_est_{i}"):
+                    st.session_state.estancias_pro.pop(i)
+                    st.rerun()
+
+            # Controles desplegables para añadir o quitar puntos específicos en la estancia
+            with st.expander(f"⚙️ Ajustar Puntos Extra en: {est['nombre']}"):
+                col_p1, col_p2, col_p3 = st.columns(3)
+                with col_p1:
+                    est["extra_schuko"] = st.number_input(f"Enchufes Schuko Extra", min_value=-5, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
+                with col_p2:
+                    est["extra_luz"] = st.number_input(f"Puntos de Luz / Interruptores Extra", min_value=-3, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
+                with col_p3:
+                    est["extra_rj45"] = st.number_input(f"Tomas de Red RJ45 Extra", min_value=-2, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
 
         if incluir:
             estancias_activas.append(est)
@@ -266,38 +300,38 @@ def app():
 
         sup_total = sum([e["m2"] for e in estancias_activas])
 
-        # Búsquedas precisas en Excel (Tubos, Cajas y Cables)
-        p_tubo20, prov_tubo20, desc_tubo20, _, fila_tubo20 = buscar_general(df_precios, 'm20', 'corrugado')
-        p_tubo25, prov_tubo25, desc_tubo25, _, fila_tubo25 = buscar_general(df_precios, 'm25', 'corrugado')
+        # Búsqueda inteligente (más económico entre Obramat y Leroy Merlin)
+        p_tubo20, prov_tubo20, desc_tubo20, _, fila_tubo20 = buscar_mas_economico(df_precios, 'm20', 'corrugado')
+        p_tubo25, prov_tubo25, desc_tubo25, _, fila_tubo25 = buscar_mas_economico(df_precios, 'm25', 'corrugado')
 
-        p_caja_mec, prov_caja_mec, desc_caja_mec, _, fila_caja_mec = buscar_general(df_precios, '67mm', 'mecanismos')
-        p_caja_reg, prov_caja_reg, desc_caja_reg, _, fila_caja_reg = buscar_general(df_precios, '100x100', 'registro')
+        p_caja_mec, prov_caja_mec, desc_caja_mec, _, fila_caja_mec = buscar_mas_economico(df_precios, '67mm', 'mecanismos')
+        p_caja_reg, prov_caja_reg, desc_caja_reg, _, fila_caja_reg = buscar_mas_economico(df_precios, '100x100', 'registro')
         
-        # Búsqueda independiente de cables 1.5mm² por colores (Azul, Negro, Marrón, Gris, Amarillo/Verde)
-        p_15_az, prov_15_az, desc_15_az, _, fila_15_az = buscar_general(df_precios, '1.5 mm²', 'azul')
-        p_15_ne, prov_15_ne, desc_15_ne, _, fila_15_ne = buscar_general(df_precios, '1.5 mm²', 'negro')
-        p_15_ma, prov_15_ma, desc_15_ma, _, fila_15_ma = buscar_general(df_precios, '1.5 mm²', 'marrón')
-        p_15_gr, prov_15_gr, desc_15_gr, _, fila_15_gr = buscar_general(df_precios, '1.5 mm²', 'gris')
-        p_15_tt, prov_15_tt, desc_15_tt, _, fila_15_tt = buscar_general(df_precios, '1.5 mm²', 'amarillo')
+        # Cables 1.5mm²
+        p_15_az, prov_15_az, desc_15_az, _, fila_15_az = buscar_mas_economico(df_precios, '1.5 mm²', 'azul')
+        p_15_ne, prov_15_ne, desc_15_ne, _, fila_15_ne = buscar_mas_economico(df_precios, '1.5 mm²', 'negro')
+        p_15_ma, prov_15_ma, desc_15_ma, _, fila_15_ma = buscar_mas_economico(df_precios, '1.5 mm²', 'marrón')
+        p_15_gr, prov_15_gr, desc_15_gr, _, fila_15_gr = buscar_mas_economico(df_precios, '1.5 mm²', 'gris')
+        p_15_tt, prov_15_tt, desc_15_tt, _, fila_15_tt = buscar_mas_economico(df_precios, '1.5 mm²', 'amarillo')
 
-        # Búsqueda independiente de cables 2.5mm² por colores
-        p_25_az, prov_25_az, desc_25_az, _, fila_25_az = buscar_general(df_precios, '2.5 mm²', 'azul')
-        p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = buscar_general(df_precios, '2.5 mm²', 'negro')
+        # Cables 2.5mm²
+        p_25_az, prov_25_az, desc_25_az, _, fila_25_az = buscar_mas_economico(df_precios, '2.5 mm²', 'azul')
+        p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = buscar_mas_economico(df_precios, '2.5 mm²', 'negro')
         if not fila_25_ne or p_25_ne == 0.45:
-            p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = buscar_general(df_precios, '2.5 mm²', 'marrón')
-        p_25_tt, prov_25_tt, desc_25_tt, _, fila_25_tt = buscar_general(df_precios, '2.5 mm²', 'amarillo')
+            p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = p_25_ma, prov_25_ma, desc_25_ma, _, fila_25_ma
+        p_25_tt, prov_25_tt, desc_25_tt, _, fila_25_tt = buscar_mas_economico(df_precios, '2.5 mm²', 'amarillo')
 
         # Cable UTP Cat6
-        p_utp, prov_utp, desc_utp, _, fila_utp = buscar_general(df_precios, 'utp', 'cat.6')
+        p_utp, prov_utp, desc_utp, _, fila_utp = buscar_mas_economico(df_precios, 'utp', 'cat.6')
         if not prov_utp or p_utp == 0.45:
-            p_utp, prov_utp, desc_utp, _, fila_utp = buscar_general(df_precios, 'cable de red', 'cat.6')
+            p_utp, prov_utp, desc_utp, _, fila_utp = buscar_mas_economico(df_precios, 'cable de red', 'cat.6')
 
         # Conexión seleccionada (Wago o Clemas)
         if "Wago" in tipo_conexion:
-            p_con, prov_con, desc_con, _, fila_con = buscar_general(df_precios, 'wago 221', '3 conductores')
+            p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'wago 221', '3 conductores')
             nombre_conexion_txt = "Conectores Rápidos Wago 221 (Caja 50ud)"
         else:
-            p_con, prov_con, desc_con, _, fila_con = buscar_general(df_precios, 'clema', '10mm')
+            p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'clema', '10mm')
             nombre_conexion_txt = "Regleta / Clema de Conexión 12 Polos"
 
         p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo(df_precios, 'interruptor', serie_mecanismos)
@@ -312,14 +346,14 @@ def app():
         global_caja_reg_uds = 0
         
         global_15_az_m = 0.0
-        global_15_ne_m = 0.0  # Fase principal
-        global_15_ma_m = 0.0  # Vueltas simples
-        global_15_gr_m = 0.0  # Cruzamientos / Cruces
-        global_15_tt_m = 0.0  # Tierra
+        global_15_ne_m = 0.0
+        global_15_ma_m = 0.0
+        global_15_gr_m = 0.0
+        global_15_tt_m = 0.0
         
         global_25_az_m = 0.0
-        global_25_ne_m = 0.0  # Fase fuerza
-        global_25_tt_m = 0.0  # Tierra fuerza
+        global_25_ne_m = 0.0
+        global_25_tt_m = 0.0
 
         global_utp_m = 0.0
         global_marcos_uds = 0
@@ -344,58 +378,65 @@ def app():
             alt = est["altura"]
             nombre_est = est["nombre"].lower()
 
-            m_tubo = m2 * 4.5 * (alt / 2.5)
+            ex_sch = est.get("extra_schuko", 0)
+            ex_luz = est.get("extra_luz", 0)
+            ex_rj45 = est.get("extra_rj45", 0)
+
+            m_tubo = (m2 * 4.5 * (alt / 2.5)) + (ex_sch * 6.0) + (ex_luz * 5.0) + (ex_rj45 * 8.0)
             m_tubo_20 = m_tubo * 0.75
             m_tubo_25 = m_tubo * 0.25
             
             n_cajas_reg = 1 if m2 > 8 else 0
             
-            # Cálculo de metros de 1.5mm² por color
-            # Azul (Neutro): 30%
-            # Negro (Fase Principal): 30%
-            # Marrón (Vueltas Simples): 20%
-            # Gris (Cruzamientos / Cruces): 10%
-            # Amarillo/Verde (Tierra): 10%
-            base_15 = m2 * 12.0  
+            base_15 = (m2 * 12.0) + (ex_luz * 15.0)
             est_15_az = base_15 * 0.30
             est_15_ne = base_15 * 0.30
             est_15_ma = base_15 * 0.20
             est_15_gr = base_15 * 0.10
             est_15_tt = base_15 * 0.10
 
-            # Cálculo de 2.5mm² por color (Fuerza / Tomas)
-            base_25 = m2 * (15.0 if "Elevada" in grado_electrificacion else 12.0)
+            base_25 = (m2 * (15.0 if "Elevada" in grado_electrificacion else 12.0)) + (ex_sch * 18.0)
             est_25_az = base_25 * 0.40
             est_25_ne = base_25 * 0.40
             est_25_tt = base_25 * 0.20
 
-            # Cable UTP Cat6 para estancias con toma de datos
             est_utp = 0.0
             if "salón" in nombre_est or "comedor" in nombre_est or "despacho" in nombre_est:
                 est_utp = 15.0
+            est_utp += (ex_rj45 * 12.0)
 
+            # Mecanismos base según estancia + extras
             if "cocina" in nombre_est:
+                cant_int = 1 + max(0, ex_luz)
+                cant_sch = 4 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Interruptor simple", "desc_real": desc_int, "cant": 1, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Base Schuko 16A", "desc_real": desc_schuko, "cant": 4, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
+                    {"nombre": "Interruptor simple", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
+                    {"nombre": "Base Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
                     {"nombre": "Base fuerza 25A Horno/Vitro", "desc_real": desc_schuko, "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko},
                     {"nombre": "Bases Schuko lavavajillas/lavadora", "desc_real": desc_schuko, "cant": 2, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
                 ]
             elif "baño" in nombre_est:
+                cant_int = 1 + max(0, ex_luz)
+                cant_sch = 2 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Interruptor luz espejo", "desc_real": desc_int, "cant": 1, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Base Schuko tapa estanca IP44", "desc_real": desc_schuko, "cant": 2, "precio": p_schuko * 1.2, "prov": prov_schuko, "fila": fila_schuko}
+                    {"nombre": "Interruptor luz espejo", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
+                    {"nombre": "Base Schuko tapa estanca IP44", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko * 1.2, "prov": prov_schuko, "fila": fila_schuko}
                 ]
             elif "salón" in nombre_est or "comedor" in nombre_est:
+                cant_int = 2 + max(0, ex_luz)
+                cant_sch = 6 + max(0, ex_sch)
+                cant_rj = 2 + max(0, ex_rj45)
                 mecanismos_est = [
-                    {"nombre": "Conmutador / Cruzamiento", "desc_real": desc_int, "cant": 2, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Bases Schuko zona TV/Sofá", "desc_real": desc_schuko, "cant": 6, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
-                    {"nombre": "Toma de datos RJ45", "desc_real": desc_rj45, "cant": 2, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45}
+                    {"nombre": "Conmutador / Cruzamiento", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
+                    {"nombre": "Bases Schuko zona TV/Sofá", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
+                    {"nombre": "Toma de datos RJ45", "desc_real": desc_rj45, "cant": cant_rj, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45}
                 ]
             else:
+                cant_int = 2 + max(0, ex_luz)
+                cant_sch = 3 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": 2, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": 3, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
+                    {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
+                    {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
                 ]
 
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
@@ -533,45 +574,45 @@ def app():
             st.markdown("---")
 
             # DESGLOSE DETALLADO POR ESTANCIAS
-            st.subheader("🛠️ Desglose Detallado por Estancias (Enlazado con Excel y Criterio de Colores Completo)")
+            st.subheader("🛠️ Desglose Detallado por Estancias (Enlazado con Precios Más Económicos y Puntos Personalizados)")
             for item in desgloses_internos_estancias:
                 st.markdown(f"### 📍 {item['nombre']} ({item['m2']} m²)")
                 st.markdown(f"⏱️ **Mano de Obra Estancia:** `{item['horas']:.2f} h` netas (`{item['coste_mo']:.2f} €`) — Tareas: Rozas `{item['rozas']:.2f}h`, Tubos `{item['tubos']:.2f}h`, Cable `{item['cable']:.2f}h`, Mecanizado `{item['mec']:.2f}h`")
                 
                 st.markdown("📦 **Materiales y Metraje de la Estancia:**")
-                st.write(f"  - **Tubo M-20:** `{int(item['m_tubo_20'])} m` | Proveedor: `{prov_tubo20}` | `[Fila Excel: #{fila_tubo20}]`")
-                st.write(f"  - **Tubo M-25:** `{int(item['m_tubo_25'])} m` | Proveedor: `{prov_tubo25}` | `[Fila Excel: #{fila_tubo25}]`")
-                st.write(f"  - **Cajas Universales (67mm):** Proveedor: `{prov_caja_mec}` | `[Fila Excel: #{fila_caja_mec}]`")
+                st.write(f"  - **Tubo M-20:** `{int(item['m_tubo_20'])} m` | Proveedor: **{prov_tubo20}** | `[Fila Excel: #{fila_tubo20}]`")
+                st.write(f"  - **Tubo M-25:** `{int(item['m_tubo_25'])} m` | Proveedor: **{prov_tubo25}** | `[Fila Excel: #{fila_tubo25}]`")
+                st.write(f"  - **Cajas Universales (67mm):** Proveedor: **{prov_caja_mec}** | `[Fila Excel: #{fila_caja_mec}]`")
                 if item['n_cajas_reg'] > 0:
-                    st.write(f"  - **Caja de Registro (100x100):** Proveedor: `{prov_caja_reg}` | `[Fila Excel: #{fila_caja_reg}]`")
+                    st.write(f"  - **Caja de Registro (100x100):** Proveedor: **{prov_caja_reg}** | `[Fila Excel: #{fila_caja_reg}]`")
 
-                # CABLES 1.5 mm² CON GRIS PARA CRUZAMIENTOS
+                # CABLES 1.5 mm²
                 st.markdown(f"  - **Cables 1.5 mm² ({tipo_cable_sel}):**")
-                st.write(f"    • Azul (Neutro): `{int(item['cable_15_az'])} m` | `[Fila Excel: #{fila_15_az}]` | `{prov_15_az}`")
-                st.write(f"    • Negro (Fase Principal): `{int(item['cable_15_ne'])} m` | `[Fila Excel: #{fila_15_ne}]` | `{prov_15_ne}`")
-                st.write(f"    • Marrón (Vueltas Simples): `{int(item['cable_15_ma'])} m` | `[Fila Excel: #{fila_15_ma}]` | `{prov_15_ma}`")
-                st.write(f"    • Gris (Cruzamientos / Cruces): `{int(item['cable_15_gr'])} m` | `[Fila Excel: #{fila_15_gr}]` | `{prov_15_gr}`")
-                st.write(f"    • Amarillo/Verde (Tierra): `{int(item['cable_15_tt'])} m` | `[Fila Excel: #{fila_15_tt}]` | `{prov_15_tt}`")
+                st.write(f"    • Azul (Neutro): `{int(item['cable_15_az'])} m` | `[Fila Excel: #{fila_15_az}]` | **{prov_15_az}**")
+                st.write(f"    • Negro (Fase Principal): `{int(item['cable_15_ne'])} m` | `[Fila Excel: #{fila_15_ne}]` | **{prov_15_ne}**")
+                st.write(f"    • Marrón (Vueltas Simples): `{int(item['cable_15_ma'])} m` | `[Fila Excel: #{fila_15_ma}]` | **{prov_15_ma}**")
+                st.write(f"    • Gris (Cruzamientos / Cruces): `{int(item['cable_15_gr'])} m` | `[Fila Excel: #{fila_15_gr}]` | **{prov_15_gr}**")
+                st.write(f"    • Amarillo/Verde (Tierra): `{int(item['cable_15_tt'])} m` | `[Fila Excel: #{fila_15_tt}]` | **{prov_15_tt}**")
 
                 # CABLES 2.5 mm²
                 st.markdown(f"  - **Cables 2.5 mm² ({tipo_cable_sel}):**")
-                st.write(f"    • Azul (Neutro): `{int(item['cable_25_az'])} m` | `[Fila Excel: #{fila_25_az}]` | `{prov_25_az}`")
-                st.write(f"    • Negro (Fase): `{int(item['cable_25_ne'])} m` | `[Fila Excel: #{fila_25_ne}]` | `{prov_25_ne}`")
-                st.write(f"    • Amarillo/Verde (Tierra): `{int(item['cable_25_tt'])} m` | `[Fila Excel: #{fila_25_tt}]` | `{prov_25_tt}`")
+                st.write(f"    • Azul (Neutro): `{int(item['cable_25_az'])} m` | `[Fila Excel: #{fila_25_az}]` | **{prov_25_az}**")
+                st.write(f"    • Negro (Fase): `{int(item['cable_25_ne'])} m` | `[Fila Excel: #{fila_25_ne}]` | **{prov_25_ne}**")
+                st.write(f"    • Amarillo/Verde (Tierra): `{int(item['cable_25_tt'])} m` | `[Fila Excel: #{fila_25_tt}]` | **{prov_25_tt}**")
 
                 # CABLE UTP SI APLICA
                 if item['cable_utp'] > 0:
-                    st.markdown(f"  - **Cable de Datos UTP Cat.6:** `{int(item['cable_utp'])} m` | Proveedor: `{prov_utp}` | `[Fila Excel: #{fila_utp}]` | Ref: `{desc_utp}`")
+                    st.markdown(f"  - **Cable de Datos UTP Cat.6:** `{int(item['cable_utp'])} m` | Proveedor: **{prov_utp}** | `[Fila Excel: #{fila_utp}]` | Ref: `{desc_utp}`")
 
                 for mec in item['mecanismos_detalle']:
-                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | Proveedor: `{mec['prov']}` | `[Fila Excel: #{mec['fila']}]` | S/IVA c/u: `{mec['precio']:.2f} €`")
+                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | Proveedor: **{mec['prov']}** | `[Fila Excel: #{mec['fila']}]` | S/IVA c/u: `{mec['precio']:.2f} €`")
 
                 st.markdown(f"👉 **Subtotal Materiales Estancia:** Sin IVA: `{item['neto_mat']:.2f} €` &nbsp;|&nbsp; **Con IVA (21%): `{item['iva_mat']:.2f} €`**")
                 st.markdown("---")
 
             # RESUMEN GLOBAL DE ACOPIO
-            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos}) — Dónde Comprar y Trazabilidad Excel")
-            st.markdown("Lista oficial para compras en almacén organizada con desglose exacto por color (incluyendo Gris para cruzamientos).")
+            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos}) — Selección Automática del Más Económico (Obramat / Leroy Merlin)")
+            st.markdown("Lista oficial optimizada con los mejores precios del mercado según tu base de datos.")
 
             rollos_tubo20 = max(1, int((global_tubo20_m + 49) / 50))
             rollos_tubo25 = max(1, int((global_tubo25_m + 49) / 50))
@@ -598,7 +639,7 @@ def app():
 
             st.markdown("---")
 
-            # BLOQUE 2: CABLEADO POR COLORES (INCLUYENDO GRIS)
+            # BLOQUE 2: CABLEADO
             st.markdown(f"#### ⚡ 2. Cableado por Colores Independientes ({tipo_cable_sel})")
             st.markdown("##### 🔹 Cables de 1.5 mm²:")
             st.write(f"  - **Azul (Neutro):** `{int(global_15_az_m)} m` | Proveedor: **{prov_15_az}** | `[Fila Excel: #{fila_15_az}]`")
@@ -690,7 +731,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Base de datos y script actualizados con cable Gris de 1.5mm² integrado para cruzamientos!")
+        st.success("✅ ¡Presupuesto calculado con éxito con estancias personalizadas y comparativa de precios!")
 
 if __name__ == "__main__":
     app()
