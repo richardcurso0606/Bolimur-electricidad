@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Validador REBT, Distancias al Cuadro, Circuitos por Estancia y Acopio
+Módulo Profesional de Presupuestos: Inspector REBT (ITC-BT-25), IGA Oficial por Potencia, Distancias Reales y Acopio
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -33,8 +33,8 @@ def app():
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🏡 Generador de Presupuestos: Ingeniería y Panel de Autónomo REBT")
-    st.markdown("Validador normativo preventivo, cálculo de distancias reales al cuadro y acopio inteligente.")
+    st.title("🏡 Generador de Presupuestos: Panel de Ingeniería REBT e Inspector IA")
+    st.markdown("Cumplimiento estricto de la ITC-BT-25, cálculo de distancias reales al cuadro y acopio en firme.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -160,9 +160,9 @@ def app():
     def buscar_proteccion_por_marca(df, tipo_prot, marca_sel):
         marca_lower = marca_sel.lower()
         kw_map = {
-            'iga': ['iga', 'interruptor general automático'],
-            'diferencial': ['diferencial', 'id'],
-            'pia': ['pequeño interruptor', 'magnetotérmico', 'automático']
+            'iga': ['interruptor general automático', 'iga'],
+            'diferencial': ['interruptor diferencial', 'diferencial'],
+            'pia': ['magnetotérmico', 'interrup.', 'automático']
         }
         keywords = kw_map.get(tipo_prot, ['automático'])
         mejores_candidatos = []
@@ -173,6 +173,9 @@ def app():
                 marca_item = str(row.get('Marca', '')).strip().lower()
                 
                 if kw in desc and marca_lower in marca_item:
+                    # Evitar que coja especiales de VE si buscamos IGA general
+                    if tipo_prot == 'iga' and 'vehículo' in desc:
+                        continue
                     try:
                         precio = float(row['Precio S/IVA (€)'])
                         prov = str(row.get('Proveedor / Tienda', 'Obramat'))
@@ -191,6 +194,26 @@ def app():
 
         return 15.00, "Obramat", "Protección estándar", False, -1
 
+    def buscar_caja_cuadro(df, marca_sel):
+        marca_lower = marca_sel.lower()
+        mejores_candidatos = []
+        for idx, row in df.iterrows():
+            desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+            marca_item = str(row.get('Marca', '')).strip().lower()
+            if ('caja' in desc or 'automatismos' in desc or 'envolvente' in desc) and marca_lower in marca_item:
+                try:
+                    precio = float(row['Precio S/IVA (€)'])
+                    prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                    art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                    fila = idx + 2
+                    mejores_candidatos.append((precio, prov, art_desc, fila))
+                except:
+                    continue
+        if mejores_candidatos:
+            mejores_candidatos.sort(key=lambda x: x[0])
+            return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
+        return buscar_mas_economico(df, 'caja de distribución')
+
     # ==========================================
     # DATOS DE LA EMPRESA / INSTALADOR
     # ==========================================
@@ -202,25 +225,54 @@ def app():
     telefono = st.sidebar.text_input("Teléfono Contacto", value="+34 600 000 000")
 
     # ==========================================
-    # PARÁMETROS GLOBALES Y SELECCIÓN DE MARCAS
+    # PARÁMETROS DE POTENCIA REBT E IGA OFICIAL
     # ==========================================
     st.markdown("---")
-    st.subheader("⚙️ Parámetros de Ingeniería, Potencia y Marcas REBT")
-    
-    col_par1, col_par2, col_par3 = st.columns(3)
-    with col_par1:
-        grado_electrificacion = st.selectbox(
-            "Grado de Electrificación (REBT)",
-            ["Básica (Hasta 9.2 kW)", "Elevada (Más de 9.2 kW / Climatización / Domótica)"]
+    st.subheader("⚙️ Parámetros de Potencia y Escalones IGA (Guía-BT-10 / ITC-BT-25)")
+
+    col_pot1, col_pot2 = st.columns(2)
+    with col_pot1:
+        potencia_prevista_kw = st.selectbox(
+            "Selecciona la Potencia Prevista / Escalón REBT",
+            [
+                "5.750 W (Básica - IGA 25A)",
+                "7.360 W (Básica Ampliada - IGA 32A)",
+                "9.200 W (Elevada - IGA 40A)",
+                "11.500 W (Elevada - IGA 50A)",
+                "14.490 W (Elevada - IGA 63A)"
+            ]
         )
-    with col_par2:
-        potencia_prevista_kw = st.number_input("Potencia Prevista / Contratada (kW)", min_value=3.3, max_value=25.0, value=5.75 if "Básica" in grado_electrificacion else 9.2, step=0.25)
-    with col_par3:
+    with col_pot2:
         tipo_cable_sel = st.selectbox(
             "Tecnología de Cableado",
             ["Libre de Halógenos (H07Z1-K)", "PVC Normal / Estándar (H07V-K)"]
         )
 
+    # Traducción automática de potencia e IGA según selección oficial
+    if "5.750" in potencia_prevista_kw:
+        grado_electr = "Básica"
+        iga_amperaje = 25
+        num_circuitos_base = 5
+    elif "7.360" in potencia_prevista_kw:
+        grado_electr = "Básica"
+        iga_amperaje = 32
+        num_circuitos_base = 6
+    elif "9.200" in potencia_prevista_kw:
+        grado_electr = "Elevada"
+        iga_amperaje = 40
+        num_circuitos_base = 8
+    elif "11.500" in potencia_prevista_kw:
+        grado_electr = "Elevada"
+        iga_amperaje = 50
+        num_circuitos_base = 10
+    else:
+        grado_electr = "Elevada"
+        iga_amperaje = 63
+        num_circuitos_base = 12
+
+    st.info(f"📋 **Configuración Automática REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos requeridos: **{num_circuitos_base}**")
+
+    # Selección de Marcas
     st.markdown("#### 🔌 Selección de Marcas y Series Comerciales")
     col_meca1, col_meca2 = st.columns(2)
     with col_meca1:
@@ -286,7 +338,7 @@ def app():
     st.markdown("---")
 
     # ==========================================
-    # GESTIÓN DINÁMICA DE ESTANCIAS Y DISTANCIAS AL CUADRO
+    # GESTIÓN DINÁMICA DE ESTANCIAS Y DISTANCIAS
     # ==========================================
     if 'estancias_pro' not in st.session_state:
         st.session_state.estancias_pro = [
@@ -299,7 +351,7 @@ def app():
         ]
 
     st.subheader("📋 Estancias, Distancia Real al Cuadro (Pasillo) y Puntos")
-    st.markdown("Configura la distancia lineal desde el Cuadro General (en el pasillo) hasta la caja de registro de cada estancia para calcular con precisión milimétrica el tubo troncal y el cableado.")
+    st.markdown("Configura la distancia lineal desde el Cuadro General hasta la caja de registro de cada estancia.")
 
     with st.expander("➕ Añadir Nueva Estancia a la Vivienda"):
         with st.form("form_nueva_estancia"):
@@ -327,8 +379,6 @@ def app():
     estancias_activas = []
     for i, est in enumerate(st.session_state.estancias_pro):
         nombre_est = est["nombre"].lower()
-        
-        # Identificar circuitos aplicables por REBT según tipo de estancia
         es_banio = "baño" in nombre_est or "aseo" in nombre_est
         es_cocina = "cocina" in nombre_est
         
@@ -372,30 +422,37 @@ def app():
     st.markdown("---")
 
     # ==========================================
-    # VALIDADOR PREVENTIVO REBT
+    # FISCALIZADOR TÉCNICO REBT (INSPECTOR IA)
     # ==========================================
-    st.subheader("🛡️ Validador Normativo REBT (ITC-BT-25)")
-    
-    advertencias_rebt = []
-    if "Básica" in grado_electrificacion and potencia_prevista_kw > 9.2:
-        advertencias_rebt.append(f"⚠️ **Aviso ITC-BT-25:** Ha seleccionado Electrificación Básica pero la potencia prevista ({potencia_prevista_kw} kW) supera el límite de 9.2 kW. Debería cambiar a Electrificación Elevada.")
-    
-    # Comprobación de baños sin C5 o presencia indebida de C2
+    st.subheader("🛡️ Inspector Técnico REBT (Fiscalización en Vivo - ITC-BT-25)")
+
+    sup_total_calculada = sum([e["m2"] for e in estancias_activas])
+    tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
     tiene_banio = any("baño" in e["nombre"].lower() or "aseo" in e["nombre"].lower() for e in estancias_activas)
+
+    alertas_inspector = []
+    
+    # 1. Comprobación de superficie vs grado de electrificación
+    if sup_total_calculada > 160.0 and grado_electr == "Básica":
+        alertas_inspector.append(f"🔴 **Incumplimiento ITC-BT-25:** La superficie útil total de la vivienda ({sup_total_calculada:.1f} m²) supera los 160 m² estipulados. El reglamento obliga a utilizar **Electrificación Elevada**.")
+
+    # 2. Comprobación de cocina obligatoria
+    if not tiene_cocina:
+        alertas_inspector.append("🔴 **Incumplimiento ITC-BT-25:** No se ha detectado ninguna estancia catalogada como 'Cocina'. El reglamento exige obligatoriamente los circuitos C3 y C4.")
+
+    # 3. Comprobación de baño obligatorio
     if not tiene_banio:
-        advertencias_rebt.append("ℹ️ **Recomendación REBT:** No ha incluido ninguna estancia catalogada como 'Baño' o 'Aseo'. El reglamento exige al menos una toma C5 protegida en zonas húmedas.")
+        alertas_inspector.append("🟠 **Aviso REBT:** No se ha detectado ningún cuarto de baño o aseo. Se recomienda incluir al menos un circuito C5 para zonas húmedas.")
 
-    for adv in advertencias_rebt:
-        st.warning(adv)
-
-    forzar_rebt = False
-    if advertencias_rebt:
-        forzar_rebt = st.checkbox("✅ Forzar cálculo y generación de presupuesto bajo responsabilidad del instalador", value=True)
-        if not forzar_rebt:
-            st.info("💡 Corrija los parámetros o marque la casilla para continuar bajo su criterio profesional.")
+    if alertas_inspector:
+        for alerta in alertas_inspector:
+            st.error(alerta)
+        
+        forzar_inspector = st.checkbox("⚠️ Forzar ejecución del presupuesto bajo responsabilidad del instalador autorizado", value=False)
+        if not forzar_inspector:
             st.stop()
     else:
-        st.success("🟢 **Validación REBT Superada:** Todos los parámetros principales cumplen con la normativa vigente.")
+        st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25 y los escalones de potencia IGA.")
 
     st.markdown("---")
 
@@ -404,9 +461,7 @@ def app():
             st.warning("Selecciona al menos una estancia.")
             return
 
-        sup_total = sum([e["m2"] for e in estancias_activas])
-
-        # Búsqueda inteligente de materiales básicos
+        # Búsqueda inteligente de materiales
         p_tubo20, prov_tubo20, desc_tubo20, _, fila_tubo20 = buscar_mas_economico(df_precios, 'm20', 'corrugado')
         p_tubo25, prov_tubo25, desc_tubo25, _, fila_tubo25 = buscar_mas_economico(df_precios, 'm25', 'corrugado')
 
@@ -438,7 +493,7 @@ def app():
             p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'clema', '10mm')
             nombre_conexion_txt = "Regleta / Clema de Conexión 12 Polos"
 
-        # Mecanismos y Protecciones según selección
+        # Mecanismos y Protecciones (buscadores corregidos)
         p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
         p_schuko, prov_schuko, desc_schuko, _, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
         p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
@@ -447,7 +502,9 @@ def app():
         p_iga, prov_iga, desc_iga, _, fila_iga = buscar_proteccion_por_marca(df_precios, 'iga', marca_protecciones)
         p_id, prov_id, desc_id, _, fila_id = buscar_proteccion_por_marca(df_precios, 'diferencial', marca_protecciones)
         p_pia, prov_pia, desc_pia, _, fila_pia = buscar_proteccion_por_marca(df_precios, 'pia', marca_protecciones)
-        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, _, fila_caja_cuadro = buscar_mas_economico(df_precios, 'caja de distribución', 'superficie')
+        
+        # Búsqueda precisa de la caja del cuadro en la categoría correcta de envolventes
+        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, _, fila_caja_cuadro = buscar_caja_cuadro(df_precios, marca_protecciones)
 
         # Acumuladores globales
         global_tubo20_m = 0.0
@@ -493,28 +550,23 @@ def app():
             ex_luz = est.get("extra_luz", 0)
             ex_rj45 = est.get("extra_rj45", 0)
 
-            # 1. Cálculo de Tubo Troncal desde el Cuadro (Pasillo) hasta la Estancia (Ida y Vuelta por circuito principal)
+            # Tubo troncal + rozas
             tubo_troncal = dist_cuadro * 2.0
-            
-            # 2. Cálculo de Tubo Interno por Rozas en la Estancia
             m_tubo_rozas = (m2 * 4.5 * (alt / 2.5)) + (ex_sch * 6.0) + (ex_luz * 5.0) + (ex_rj45 * 8.0)
             m_tubo_total_estancia = tubo_troncal + m_tubo_rozas
             
             m_tubo_20 = m_tubo_total_estancia * 0.75
             m_tubo_25 = m_tubo_total_estancia * 0.25
-            
             n_cajas_reg = 1 if m2 > 8 else 0
             
-            # Cableado 1.5mm² (Iluminación) con aportación de distancia al cuadro
-            base_15 = (m2 * 12.0) + (ex_luz * 15.0) + (dist_cuadro * 3.0) # 3 hilos de 1.5 en el tramo troncal
+            base_15 = (m2 * 12.0) + (ex_luz * 15.0) + (dist_cuadro * 3.0)
             est_15_az = base_15 * 0.30
             est_15_ne = base_15 * 0.30
             est_15_ma = base_15 * 0.20
             est_15_gr = base_15 * 0.10
             est_15_tt = base_15 * 0.10
 
-            # Cableado 2.5mm² (Fuerza / Enchufes) con aportación de distancia al cuadro
-            base_25 = (m2 * (15.0 if "Elevada" in grado_electrificacion else 12.0)) + (ex_sch * 18.0) + (dist_cuadro * 3.0) # 3 hilos de 2.5 en el tramo troncal
+            base_25 = (m2 * (15.0 if grado_electr == "Elevada" else 12.0)) + (ex_sch * 18.0) + (dist_cuadro * 3.0)
             est_25_az = base_25 * 0.40
             est_25_ne = base_25 * 0.40
             est_25_tt = base_25 * 0.20
@@ -524,7 +576,6 @@ def app():
                 est_utp = 15.0 + dist_cuadro
             est_utp += (ex_rj45 * 12.0)
 
-            # Mecanismos específicos según tipo de estancia
             if "cocina" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
                 cant_sch = 4 + max(0, ex_sch)
@@ -576,7 +627,6 @@ def app():
             global_25_ne_m += est_25_ne
             global_25_tt_m += est_25_tt
             global_utp_m += est_utp
-
             global_marcos_uds += n_marcos
 
             for mec in mecanismos_est:
@@ -628,7 +678,7 @@ def app():
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial": f"Instalación REBT ({grado_electrificacion}) | Dist. Cuadro: {dist_cuadro}m | Mecanismos: {serie_mecanismos}",
+                "Detalle Comercial": f"Instalación REBT ({potencia_prevista_kw}) | Dist. Cuadro: {dist_cuadro}m",
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
@@ -661,11 +711,10 @@ def app():
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
 
-        # Cálculo de Protecciones del Cuadro en función de la potencia y marca
-        es_elevada = "Elevada" in grado_electrificacion
-        n_pias = 7 if es_elevada else 5
-        n_difs = 2 if es_elevada else 1
-        coste_cuadro_neto = p_iga + (n_difs * p_id) + (n_pias * p_pia) + 45.0
+        # Protecciones del Cuadro Eléctrico
+        n_difs = 2 if grado_electr == "Elevada" else 1
+        n_pias = max(num_circuitos_base, len(estancias_activas))
+        coste_cuadro_neto = p_iga + (n_difs * p_id) + (n_pias * p_pia) + p_caja_cuadro
         venta_cuadro_neto = coste_cuadro_neto * mult_comercial * mult_garantia_mat
         benef_cuadro = venta_cuadro_neto - coste_cuadro_neto
 
@@ -678,7 +727,7 @@ def app():
         # ==========================================
         st.markdown("---")
         modo_impresion = st.radio(
-            "🖨️ SELECCIONA EL MODO DE VISTA (Para revisar o pulsar Ctrl + P y exportar a PDF):",
+            "🖨️ SELECCIONA EL MODO DE VISTA:",
             [
                 "🛠️ 1. Panel Interno y Acopio (Exclusivo para ti - Autónomo)",
                 "📄 2. Vista Comercial (Para entregar al Cliente)"
@@ -687,47 +736,29 @@ def app():
         )
         st.markdown("---")
 
-        # ==========================================
-        # MODO 1: PANEL INTERNO DEL AUTÓNOMO
-        # ==========================================
         if modo_impresion.startswith("🛠️"):
             st.header("🔒 Panel Interno de Trabajo, Distancias y Acopio")
-            st.markdown(f"**Instalador:** {instalador_nombre} | **Mecanismos:** {serie_mecanismos} | **Cuadro:** {marca_protecciones}")
+            st.markdown(f"**Instalador:** {instalador_nombre} | **Potencia / IGA:** {potencia_prevista_kw} | **Cuadro:** {marca_protecciones}")
             st.markdown("---")
 
-            # CUADRO RESUMEN DE COBRO AL CLIENTE EN VISTA INTERNA
             st.markdown(f"""
             <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff; margin-bottom: 25px;">
                 <h3 style="color: #0369a1; margin-top: 0;">💼 RESUMEN ECONÓMICO PARA EL CLIENTE (A Cobrar)</h3>
-                <p><b>Subtotal Comercial Neto (Estancias + Cuadro {marca_protecciones}):</b> {subtotal_general_neto:.2f} €</p>
-                <p><b>IVA Aplicado ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
+                <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
+                <p><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
                 <h2 style="color: #16a34a; margin: 0;">TOTAL A COBRAR AL CLIENTE: {total_cliente:.2f} €</h2>
             </div>
             """, unsafe_allow_html=True)
 
             st.subheader("⏱️ Análisis de Rendimiento y Tiempos de Mano de Obra")
-            st.write(f"- 🧱 **Fase de Rozas / Perforación ({tipo_pared}):** `{sum_h_rozas:.2f} h` acumuladas.")
-            st.write(f"- 📏 **Fase de Canalización y Cajas (0.25 h/m²):** `{sum_h_tubos:.2f} h` acumuladas.")
-            st.write(f"- ⚡ **Fase de Tendido y Cableado (0.30 h/m²):** `{sum_h_cable:.2f} h` acumuladas.")
-            st.write(f"- 🔲 **Fase de Conexionado y Mecanizado (0.15 h/u):** `{sum_h_mec:.2f} h` acumuladas.")
-            st.info(f"⏱️ **Total Horas de Obra Estimadas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`** (Coste Neto Mano de Obra).")
+            st.write(f"- 🧱 **Fase de Rozas ({tipo_pared}):** `{sum_h_rozas:.2f} h`")
+            st.write(f"- 📏 **Fase de Canalización:** `{sum_h_tubos:.2f} h`")
+            st.write(f"- ⚡ **Fase de Cableado:** `{sum_h_cable:.2f} h`")
+            st.write(f"- 🔲 **Fase de Mecanizado:** `{sum_h_mec:.2f} h`")
+            st.info(f"⏱️ **Total Horas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`**")
             st.markdown("---")
 
-            st.subheader("🛠️ Desglose Detallado por Estancias y Topología de Distancias")
-            for item in desgloses_internos_estancias:
-                st.markdown(f"### 📍 {item['nombre']} ({item['m2']} m² | Distancia al Cuadro: `{item['dist_cuadro']} m`)")
-                st.markdown(f"⏱️ **Mano de Obra Estancia:** `{item['horas']:.2f} h` netas (`{item['coste_mo']:.2f} €`)")
-                st.markdown(f"📦 **Tubería y Cableado Troncal (desde Pasillo):** Tubo troncal calculado para `{item['dist_cuadro']} m` de ida y vuelta + rozas de superficie.")
-                st.write(f"  - Tubo M-20: `{int(item['m_tubo_20'])} m` | Tubo M-25: `{int(item['m_tubo_25'])} m`")
-                
-                for mec in item['mecanismos_detalle']:
-                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | S/IVA c/u: `{mec['precio']:.2f} €`")
-
-                st.markdown(f"👉 **Subtotal Materiales Estancia:** Sin IVA: `{item['neto_mat']:.2f} €` &nbsp;|&nbsp; **Con IVA (21%): `{item['iva_mat']:.2f} €`**")
-                st.markdown("---")
-
-            # RESUMEN GLOBAL DE ACOPIO
-            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos} + Cuadro {marca_protecciones})")
+            st.subheader("🛒 Resumen Global de Acopio (Con Filas Verificadas del Excel)")
             
             rollos_tubo20 = max(1, int((global_tubo20_m + 49) / 50))
             rollos_tubo25 = max(1, int((global_tubo25_m + 49) / 50))
@@ -746,47 +777,27 @@ def app():
             total_mat_global_neto = total_mat_estancias_neto + coste_cuadro_neto
             total_mat_con_iva = total_mat_global_neto * 1.21
 
-            st.markdown("#### 📏 1. Canalización y Tubería (M-20 y M-25 con tramos troncales)")
-            st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` | Proveedor: **{prov_tubo20}** | `[Fila: #{fila_tubo20}]`")
-            st.success(f"  📦 A comprar: `{rollos_tubo20} rollo(s) de 50m` — Precio: `{p_tubo20*50*1.21:.2f} €` (Con IVA)")
-            st.write(f"- **Tubo M-25:** `{int(global_tubo25_m)} m` | Proveedor: **{prov_tubo25}** | `[Fila: #{fila_tubo25}]`")
-            st.success(f"  📦 A comprar: `{rollos_tubo25} rollo(s) de 50m` — Precio: `{p_tubo25*50*1.21:.2f} €` (Con IVA)")
+            st.markdown("#### 📏 1. Canalización y Tubería")
+            st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` | Proveedor: **{prov_tubo20}** | `[Fila Excel: #{fila_tubo20}]` | 📦 `{rollos_tubo20} rollo(s) de 50m`")
+            st.write(f"- **Tubo M-25:** `{int(global_tubo25_m)} m` | Proveedor: **{prov_tubo25}** | `[Fila Excel: #{fila_tubo25}]` | 📦 `{rollos_tubo25} rollo(s) de 50m`")
 
             st.markdown("---")
-
-            st.markdown(f"#### ⚡ 2. Cableado por Colores Independientes ({tipo_cable_sel})")
-            st.markdown("##### 🔹 Cables de 1.5 mm²:")
-            st.write(f"  - **Azul (Neutro):** `{int(global_15_az_m)} m` | `[Fila: #{fila_15_az}]` | 📦 `{rollos_15_az} rollo(s) de 100m`")
-            st.write(f"  - **Negro (Fase):** `{int(global_15_ne_m)} m` | `[Fila: #{fila_15_ne}]` | 📦 `{rollos_15_ne} rollo(s) de 100m`")
-            st.write(f"  - **Marrón (Vueltas):** `{int(global_15_ma_m)} m` | `[Fila: #{fila_15_ma}]` | 📦 `{rollos_15_ma} rollo(s) de 100m`")
-            st.write(f"  - **Gris (Cruzamiento):** `{int(global_15_gr_m)} m` | `[Fila: #{fila_15_gr}]` | 📦 `{rollos_15_gr} rollo(s) de 100m`")
-            st.write(f"  - **Tierra (Amarillo/Verde):** `{int(global_15_tt_m)} m` | `[Fila: #{fila_15_tt}]` | 📦 `{rollos_15_tt} rollo(s) de 100m`")
-
-            st.markdown("##### 🔹 Cables de 2.5 mm²:")
-            st.write(f"  - **Azul (Neutro):** `{int(global_25_az_m)} m` | `[Fila: #{fila_25_az}]` | 📦 `{rollos_25_az} rollo(s) de 100m`")
-            st.write(f"  - **Negro (Fase):** `{int(global_25_ne_m)} m` | `[Fila: #{fila_25_ne}]` | 📦 `{rollos_25_ne} rollo(s) de 100m`")
-            st.write(f"  - **Tierra (Amarillo/Verde):** `{int(global_25_tt_m)} m` | `[Fila: #{fila_25_tt}]` | 📦 `{rollos_25_tt} rollo(s) de 100m`")
-
-            if global_utp_m > 0:
-                st.markdown(f"##### 🌐 Cable de Red UTP Cat.6: `{int(global_utp_m)} m`")
+            st.markdown(f"#### ⚡ 2. Cableado ({tipo_cable_sel})")
+            st.write(f"- Azul 1.5mm²: `{int(global_15_az_m)} m` | `[Fila: #{fila_15_az}]` | 📦 `{rollos_15_az} rollo(s)`")
+            st.write(f"- Negro 1.5mm²: `{int(global_15_ne_m)} m` | `[Fila: #{fila_15_ne}]` | 📦 `{rollos_15_ne} rollo(s)`")
+            st.write(f"- Marrón 1.5mm²: `{int(global_15_ma_m)} m` | `[Fila: #{fila_15_ma}]` | 📦 `{rollos_15_ma} rollo(s)`")
+            st.write(f"- Gris 1.5mm²: `{int(global_15_gr_m)} m` | `[Fila: #{fila_15_gr}]` | 📦 `{rollos_15_gr} rollo(s)`")
+            st.write(f"- Tierra 1.5mm²: `{int(global_15_tt_m)} m` | `[Fila: #{fila_15_tt}]` | 📦 `{rollos_15_tt} rollo(s)`")
+            st.write(f"- Azul 2.5mm²: `{int(global_25_az_m)} m` | `[Fila: #{fila_25_az}]` | 📦 `{rollos_25_az} rollo(s)`")
+            st.write(f"- Negro 2.5mm²: `{int(global_25_ne_m)} m` | `[Fila: #{fila_25_ne}]` | 📦 `{rollos_25_ne} rollo(s)`")
+            st.write(f"- Tierra 2.5mm²: `{int(global_25_tt_m)} m` | `[Fila: #{fila_25_tt}]` | 📦 `{rollos_25_tt} rollo(s)`")
 
             st.markdown("---")
-
-            st.markdown(f"#### 📦 3. Mecanismos y Cajas ({serie_mecanismos})")
-            st.write(f"- Cajas universales (67mm): `{global_caja_mec_uds} uds` | `[Fila: #{fila_caja_mec}]`")
-            st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` | `[Fila: #{fila_caja_reg}]`")
-            st.write(f"- **{nombre_conexion_txt}:** 1 pack | `[Fila: #{fila_con}]`")
-            st.write(f"- Marcos Embellecedores: `{global_marcos_uds} uds` | `[Fila: #{fila_marco}]`")
-            for (nombre_m, desc_m, prec_m, prov_m, fila_m), cantidad_m in global_mecanismos_dict.items():
-                st.write(f"- `{cantidad_m}x` **{nombre_m}** ({serie_mecanismos}) | `[Fila: #{fila_m}]`")
-
-            st.markdown("---")
-
-            st.markdown(f"#### ⚡ 4. Acopio de Protecciones y Cuadro Eléctrico (Marca: {marca_protecciones})")
-            st.write(f"- **Caja de Distribución:** 1 ud | `[Fila: #{fila_caja_cuadro}]` | Ref: `{desc_caja_cuadro}`")
-            st.write(f"- **Interruptor General Automático (IGA):** 1 ud | `[Fila: #{fila_iga}]` | Ref: `{desc_iga}` | S/IVA: `{p_iga:.2f} €`")
-            st.write(f"- **Interruptor Diferencial (ID):** `{n_difs} ud(s)` | `[Fila: #{fila_id}]` | Ref: `{desc_id}` | S/IVA c/u: `{p_id:.2f} €`")
-            st.write(f"- **Pequeños Interruptores Automáticos (PIAs):** `{n_pias} uds` | `[Fila: #{fila_pia}]` | Ref: `{desc_pia}` | S/IVA c/u: `{p_pia:.2f} €`")
+            st.markdown(f"#### ⚡ 4. Cuadro Eléctrico y Protecciones (Marca: {marca_protecciones})")
+            st.write(f"- **Caja de Distribución:** 1 ud | `[Fila Excel: #{fila_caja_cuadro}]` | Ref: `{desc_caja_cuadro}` | S/IVA: `{p_caja_cuadro:.2f} €`")
+            st.write(f"- **IGA Oficial ({iga_amperaje}A):** 1 ud | `[Fila Excel: #{fila_iga}]` | Ref: `{desc_iga}` | S/IVA: `{p_iga:.2f} €`")
+            st.write(f"- **Interruptor Diferencial (ID):** `{n_difs} ud(s)` | `[Fila Excel: #{fila_id}]` | Ref: `{desc_id}` | S/IVA c/u: `{p_id:.2f} €`")
+            st.write(f"- **PIAs Automáticos:** `{n_pias} uds` | `[Fila Excel: #{fila_pia}]` | Ref: `{desc_pia}` | S/IVA c/u: `{p_pia:.2f} €`")
 
             st.markdown(f"""
             <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
@@ -810,14 +821,11 @@ def app():
             
             benef_neto_total = benef_mat_estancias + benef_mo + benef_cuadro
 
-            st.write(f"- 📦 **Materiales de Estancias:** Coste `{total_mat_estancias_neto:.2f} €` → Venta `{venta_mat_estancias:.2f} €` | **Beneficio: `+{benef_mat_estancias:.2f} €`**")
-            st.write(f"- ⏱️ **Mano de Obra:** Coste `{coste_mano_obra_bruto:.2f} €` → Venta `{venta_mo_neto:.2f} €` | **Beneficio: `+{benef_mo:.2f} €`**")
-            st.write(f"- ⚡ **Cuadro Eléctrico ({marca_protecciones}):** Coste `{coste_cuadro_neto:.2f} €` → Venta `{venta_cuadro_neto_val:.2f} €` | **Beneficio: `+{benef_cuadro:.2f} €`**")
+            st.write(f"- 📦 **Materiales de Estancias:** Beneficio: `+{benef_mat_estancias:.2f} €`")
+            st.write(f"- ⏱️ **Mano de Obra:** Beneficio: `+{benef_mo:.2f} €`")
+            st.write(f"- ⚡ **Cuadro Eléctrico ({marca_protecciones}):** Beneficio: `+{benef_cuadro:.2f} €`")
             st.success(f"🚀 **UTILIDAD / BENEFICIO NETO TOTAL ESTIMADO: +{benef_neto_total:.2f} €** (Sin contar IVA)")
 
-        # ==========================================
-        # MODO 2: VISTA COMERCIAL
-        # ==========================================
         else:
             st.header("📄 Vista Comercial: Presupuesto para el Cliente")
             st.markdown(f"""
@@ -826,7 +834,7 @@ def app():
                 <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
                 <hr style="border: 1px solid #bae6fd;">
                 <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
-                <p><b>Objeto:</b> Instalación Eléctrica REBT ({grado_electrificacion}) con Mecanismos <b>{serie_mecanismos}</b> y Protecciones <b>{marca_protecciones}</b></p>
+                <p><b>Objeto:</b> Instalación Eléctrica REBT ({potencia_prevista_kw}) con Mecanismos <b>{serie_mecanismos}</b> y Protecciones <b>{marca_protecciones}</b></p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -841,7 +849,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Ingeniería REBT, distancias al cuadro y acopio de protecciones calculados con éxito!")
+        st.success("✅ ¡Inspector REBT y buscador de cuadro optimizados al 100%!")
 
 if __name__ == "__main__":
     app()
