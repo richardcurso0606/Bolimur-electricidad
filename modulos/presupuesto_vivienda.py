@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Enlace 100% con Excel Maestro Actualizado, Trazabilidad, Proveedores y Acopio
+Módulo Profesional de Presupuestos: Enlace 100% con Excel Maestro, Selector Wago/Clemas y Acopio
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -95,7 +95,6 @@ def app():
         }
         keywords = kw_map.get(tipo, ['interruptor'])
 
-        # Pass 1: Búsqueda estricta por coincidencia de serie y palabra clave
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
@@ -106,7 +105,6 @@ def app():
                         if any(t in serie_item for t in serie_lower.split() if len(t) > 3):
                             return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
 
-        # Pass 2: Coincidencia por marca general (Simon, Schneider, Niessen, etc.)
         brand_terms = [t for t in ['simon', 'schneider', 'niessen', 'legrand', 'solera', 'lexman'] if t in serie_lower]
         for kw in keywords:
             for idx, row in df.iterrows():
@@ -118,7 +116,6 @@ def app():
                     if any(bt in marca_item or bt in serie_item for bt in brand_terms):
                         return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
 
-        # Pass 3: Fallback general de mecanismos
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
@@ -165,6 +162,13 @@ def app():
                 "Niessen Zenit (Gama Alta / Moderna)"
             ]
         )
+
+    # NUEVO SELECTOR: Tipo de Conectores / Fichas de Empalme
+    tipo_conexion = st.radio(
+        "🔌 Sistema de Conexión en Cajas de Registro y Mecanismos:",
+        ["Conectores Rápidos Wago 221 (Profesional / Alta Calidad)", "Fichas de Empalme / Clemas Tradicionales de Tornillo"],
+        horizontal=True
+    )
 
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
@@ -264,17 +268,34 @@ def app():
 
         sup_total = sum([e["m2"] for e in estancias_activas])
 
-        # Búsquedas precisas conectadas 100% al Excel actualizado
-        p_tubo, prov_tubo, desc_tubo, enc_tubo, fila_tubo = buscar_general(df_precios, 'm20', 'corrugado')
-        p_caja_mec, prov_caja_mec, desc_caja_mec, enc_caja_mec, fila_caja_mec = buscar_general(df_precios, '67mm', 'mecanismos')
-        p_caja_reg, prov_caja_reg, desc_caja_reg, enc_caja_reg, fila_caja_reg = buscar_general(df_precios, '100x100', 'registro')
-        p_15, prov_15, desc_15, enc_15, fila_15 = buscar_general(df_precios, '1.5 mm²', 'libre')
-        p_25, prov_25, desc_25, enc_25, fila_25 = buscar_general(df_precios, '2.5 mm²', 'libre')
+        # Búsquedas precisas de tubos (M-20 y M-25)
+        p_tubo20, prov_tubo20, desc_tubo20, _, fila_tubo20 = buscar_general(df_precios, 'm20', 'corrugado')
+        p_tubo25, prov_tubo25, desc_tubo25, _, fila_tubo25 = buscar_general(df_precios, 'm25', 'corrugado')
+
+        p_caja_mec, prov_caja_mec, desc_caja_mec, _, fila_caja_mec = buscar_general(df_precios, '67mm', 'mecanismos')
+        p_caja_reg, prov_caja_reg, desc_caja_reg, _, fila_caja_reg = buscar_general(df_precios, '100x100', 'registro')
         
-        p_int, prov_int, desc_int, enc_int, fila_int = buscar_mecanismo(df_precios, 'interruptor', serie_mecanismos)
-        p_schuko, prov_schuko, desc_schuko, enc_schuko, fila_schuko = buscar_mecanismo(df_precios, 'schuko', serie_mecanismos)
-        p_rj45, prov_rj45, desc_rj45, enc_rj45, fila_rj45 = buscar_mecanismo(df_precios, 'rj45', serie_mecanismos)
-        p_marco, prov_marco, desc_marco, enc_marco, fila_marco = buscar_mecanismo(df_precios, 'marco', serie_mecanismos)
+        # Búsqueda de cables por colores (1.5mm² y 2.5mm²)
+        p_15_az, prov_15_az, desc_15_az, _, fila_15_az = buscar_general(df_precios, '1.5 mm²', 'azul')
+        p_15_ma, prov_15_ma, desc_15_ma, _, fila_15_ma = buscar_general(df_precios, '1.5 mm²', 'marrón')
+        p_15_tt, prov_15_tt, desc_15_tt, _, fila_15_tt = buscar_general(df_precios, '1.5 mm²', 'amarillo')
+
+        p_25_az, prov_25_az, desc_25_az, _, fila_25_az = buscar_general(df_precios, '2.5 mm²', 'azul')
+        p_25_ma, prov_25_ma, desc_25_ma, _, fila_25_ma = buscar_general(df_precios, '2.5 mm²', 'marrón')
+        p_25_tt, prov_25_tt, desc_25_tt, _, fila_25_tt = buscar_general(df_precios, '2.5 mm²', 'amarillo')
+
+        # Conexión seleccionada (Wago o Clemas)
+        if "Wago" in tipo_conexion:
+            p_con, prov_con, desc_con, _, fila_con = buscar_general(df_precios, 'wago 221', '3 conductores')
+            nombre_conexion_txt = "Conectores Rápidos Wago 221 (Caja 50ud)"
+        else:
+            p_con, prov_con, desc_con, _, fila_con = buscar_general(df_precios, 'clema', '10mm')
+            nombre_conexion_txt = "Regleta / Clema de Conexión 12 Polos"
+
+        p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo(df_precios, 'interruptor', serie_mecanismos)
+        p_schuko, prov_schuko, desc_schuko, _, fila_schuko = buscar_mecanismo(df_precios, 'schuko', serie_mecanismos)
+        p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo(df_precios, 'rj45', serie_mecanismos)
+        p_marco, prov_marco, desc_marco, _, fila_marco = buscar_mecanismo(df_precios, 'marco', serie_mecanismos)
 
         # Auditoría REBT
         tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
@@ -287,9 +308,11 @@ def app():
         st.success(f"✅ **Auditoría REBT Superada ({grado_electrificacion}):** Artículos enlazados con éxito desde `{excel_cargado}` bajo serie **{serie_mecanismos}**.")
 
         # Acumuladores globales
-        global_tubo_m = 0.0
+        global_tubo20_m = 0.0
+        global_tubo25_m = 0.0
         global_caja_mec_uds = 0
         global_caja_reg_uds = 0
+        
         global_cable_15_fn_m = 0.0
         global_cable_15_tierra_m = 0.0
         global_cable_15_vueltas_m = 0.0
@@ -317,6 +340,9 @@ def app():
             nombre_est = est["nombre"].lower()
 
             m_tubo = m2 * 4.5 * (alt / 2.5)
+            m_tubo_20 = m_tubo * 0.75
+            m_tubo_25 = m_tubo * 0.25
+            
             n_cajas_reg = 1 if m2 > 8 else 0
             
             m_15_ilum_fn = m2 * 5.0
@@ -351,7 +377,8 @@ def app():
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
             n_marcos = max(total_mecanismos, int(total_mecanismos * 0.8))
 
-            global_tubo_m += m_tubo
+            global_tubo20_m += m_tubo_20
+            global_tubo25_m += m_tubo_25
             global_caja_mec_uds += total_mecanismos
             global_caja_reg_uds += n_cajas_reg
             global_cable_15_fn_m += m_15_ilum_fn
@@ -368,21 +395,22 @@ def app():
             coste_marcos_est = n_marcos * p_marco
             coste_cajas_mec_est = total_mecanismos * p_caja_mec
 
+            precio_promedio_15 = (p_15_az + p_15_ma + p_15_tt) / 3.0
+            precio_promedio_25 = (p_25_az + p_25_ma + p_25_tt) / 3.0
+
             coste_mat_estancia_neto = (
-                (m_tubo * p_tubo) +
+                (m_tubo_20 * p_tubo20) +
+                (m_tubo_25 * p_tubo25) +
                 coste_cajas_mec_est +
                 (n_cajas_reg * p_caja_reg if n_cajas_reg > 0 else 0) +
-                (m_15_ilum_fn * p_15) +
-                (m_15_ilum_tt * p_15) +
-                (m_15_vueltas * p_15) +
-                (m_25_fuerza * p_25) +
+                ((m_15_ilum_fn + m_15_ilum_tt + m_15_vueltas) * precio_promedio_15) +
+                (m_25_fuerza * precio_promedio_25) +
                 coste_mecanismos_est +
                 coste_marcos_est
             )
             coste_mat_estancia_con_iva = coste_mat_estancia_neto * 1.21
             coste_total_materiales_bruto += coste_mat_estancia_neto
 
-            # Horas según soporte
             if "Pladur" in tipo_pared:
                 h_rozas = (m2 * 0.10) if hace_rozas_electricista else 0.0
             else:
@@ -426,12 +454,12 @@ def app():
                 "cable": h_cableado,
                 "mec": h_mecanizado,
                 "mecanismos_detalle": mecanismos_est,
-                "m_tubo": m_tubo,
+                "m_tubo_20": m_tubo_20,
+                "m_tubo_25": m_tubo_25,
                 "n_cajas_reg": n_cajas_reg
             })
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
-        coste_total_autonomo = coste_total_materiales_bruto + coste_mano_obra_bruto
 
         # ==========================================
         # SELECTOR DE MODO DE VISTA E IMPRESIÓN (RADIO)
@@ -471,52 +499,77 @@ def app():
                 st.markdown(f"⏱️ **Mano de Obra Estancia:** `{item['horas']:.2f} h` netas (`{item['coste_mo']:.2f} €`) — Tareas: Rozas `{item['rozas']:.2f}h`, Tubos `{item['tubos']:.2f}h`, Cable `{item['cable']:.2f}h`, Mecanizado `{item['mec']:.2f}h`")
                 
                 st.markdown("📦 **Materiales de la Estancia:**")
-                st.write(f"  - **Tubo M-20:** `{int(item['m_tubo'])} m` | Proveedor: `{prov_tubo}` | `[Fila Excel: #{fila_tubo}]` | Ref: `{desc_tubo}` | S/IVA: `{p_tubo:.2f} €/m` (Con IVA: `{(p_tubo*1.21):.2f} €/m`)")
-                st.write(f"  - **Cajas Universales (67mm):** Proveedor: `{prov_caja_mec}` | `[Fila Excel: #{fila_caja_mec}]` | Ref: `{desc_caja_mec}` | S/IVA: `{p_caja_mec:.2f} €`")
+                st.write(f"  - **Tubo M-20:** `{int(item['m_tubo_20'])} m` | Proveedor: `{prov_tubo20}` | `[Fila Excel: #{fila_tubo20}]` | Ref: `{desc_tubo20}`")
+                st.write(f"  - **Tubo M-25:** `{int(item['m_tubo_25'])} m` | Proveedor: `{prov_tubo25}` | `[Fila Excel: #{fila_tubo25}]` | Ref: `{desc_tubo25}`")
+                st.write(f"  - **Cajas Universales (67mm):** Proveedor: `{prov_caja_mec}` | `[Fila Excel: #{fila_caja_mec}]` | Ref: `{desc_caja_mec}`")
                 if item['n_cajas_reg'] > 0:
-                    st.write(f"  - **Caja de Registro (100x100):** Proveedor: `{prov_caja_reg}` | `[Fila Excel: #{fila_caja_reg}]` | Ref: `{desc_caja_reg}` | S/IVA: `{p_caja_reg:.2f} €`")
+                    st.write(f"  - **Caja de Registro (100x100):** Proveedor: `{prov_caja_reg}` | `[Fila Excel: #{fila_caja_reg}]` | Ref: `{desc_caja_reg}`")
 
                 for mec in item['mecanismos_detalle']:
-                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | Proveedor: `{mec['prov']}` | `[Fila Excel: #{mec['fila']}]` | S/IVA c/u: `{mec['precio']:.2f} €` (Con IVA: `{(mec['precio']*1.21):.2f} €`)")
+                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | Proveedor: `{mec['prov']}` | `[Fila Excel: #{fila_fila := mec['fila']}]` | S/IVA c/u: `{mec['precio']:.2f} €`")
 
                 st.markdown(f"👉 **Subtotal Materiales Estancia:** Sin IVA: `{item['neto_mat']:.2f} €` &nbsp;|&nbsp; **Con IVA (21%): `{item['iva_mat']:.2f} €`**")
                 st.markdown("---")
 
-            # RESUMEN GLOBAL DE ACOPIO (VERTICAL CONTINUO - SIN COLUMNAS PARTIDAS)
+            # RESUMEN GLOBAL DE ACOPIO
             st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos}) — Dónde Comprar y Trazabilidad Excel")
             st.markdown("Lista oficial para compras en almacén organizada en formato vertical continuo con indicación exacta de filas de tu Excel.")
 
-            rollos_tubo = max(1, int((global_tubo_m + 99) / 100))
-            total_cable_15_m = global_cable_15_fn_m + global_cable_15_tierra_m + global_cable_15_vueltas_m
-            rollos_cable_15 = max(1, int((total_cable_15_m + 99) / 100))
-            rollos_cable_25 = max(1, int((global_cable_25_fuerza_m + 99) / 100))
+            rollos_tubo20 = max(1, int((global_tubo20_m + 49) / 50))
+            rollos_tubo25 = max(1, int((global_tubo25_m + 49) / 50))
+
+            total_15_cada_color = global_cable_15_fn_m + global_cable_15_tierra_m + global_cable_15_vueltas_m
+            rollos_15_az = max(1, int((total_15_cada_color + 99) / 100))
+            rollos_15_ma = max(1, int((total_15_cada_color + 99) / 100))
+            rollos_15_tt = max(1, int((total_15_cada_color + 99) / 100))
+
+            rollos_25_az = max(1, int((global_cable_25_fuerza_m + 99) / 100))
+            rollos_25_ma = max(1, int((global_cable_25_fuerza_m + 99) / 100))
+            rollos_25_tt = max(1, int((global_cable_25_fuerza_m + 99) / 100))
 
             total_mat_neto = coste_total_materiales_bruto
             total_mat_con_iva = total_mat_neto * 1.21
 
-            # BLOQUE 1: TUBERÍA
-            st.markdown("#### 📏 1. Canalización y Tubería M-20")
-            st.write(f"- Metros requeridos: `{int(global_tubo_m)} m` | Proveedor: **{prov_tubo}** | `[Fila Excel: #{fila_tubo}]` | Ref: `{desc_tubo}`")
-            st.write(f"  • Precio metro: `{p_tubo:.2f} €` (Neto) | `{(p_tubo*1.21):.2f} €` (Con IVA)")
-            st.success(f"📦 **A comprar en almacén:** `{rollos_tubo} rollo(s) de 100m`")
-            st.info(f"💵 **Precio por Rollo de 100m:** `{p_tubo*100:.2f} €` (Neto) / **`{p_tubo*100*1.21:.2f} €` (Con IVA 21%)**")
-
-            st.markdown("---")
-
-            # BLOQUE 2: CABLEADO
-            st.markdown(f"#### ⚡ 2. Cableado ({tipo_cable_sel})")
-            st.write(f"- **Cable 1.5 mm²:** Total metros: `{int(total_cable_15_m)} m` | Proveedor: **{prov_15}** | `[Fila Excel: #{fila_15}]` | Ref: `{desc_15}`")
-            st.info(f"📦 A comprar: `{rollos_cable_15} rollo(s) de 100m` | Precio Rollo 100m: `{p_15*100:.2f} €` (Neto) / **`{p_15*100*1.21:.2f} €` (Con IVA)**")
+            # BLOQUE 1: TUBERÍA (M-20 y M-25)
+            st.markdown("#### 📏 1. Canalización y Tubería (M-20 y M-25)")
+            st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` | Proveedor: **{prov_tubo20}** | `[Fila Excel: #{fila_tubo20}]` | Ref: `{desc_tubo20}`")
+            st.success(f"  📦 A comprar: `{rollos_tubo20} rollo(s) de 50m` — Precio rollo: `{p_tubo20*50:.2f} €` (Neto) / **`{p_tubo20*50*1.21:.2f} €` (Con IVA)**")
             
-            st.write(f"- **Cable 2.5 mm²:** Total metros: `{int(global_cable_25_fuerza_m)} m` | Proveedor: **{prov_25}** | `[Fila Excel: #{fila_25}]` | Ref: `{desc_25}`")
-            st.info(f"📦 A comprar: `{rollos_cable_25} rollo(s) de 100m` | Precio Rollo 100m: `{p_25*100:.2f} €` (Neto) / **`{p_25*100*1.21:.2f} €` (Con IVA)**")
+            st.write(f"- **Tubo M-25:** `{int(global_tubo25_m)} m` | Proveedor: **{prov_tubo25}** | `[Fila Excel: #{fila_tubo25}]` | Ref: `{desc_tubo25}`")
+            st.success(f"  📦 A comprar: `{rollos_tubo25} rollo(s) de 50m` — Precio rollo: `{p_tubo25*50:.2f} €` (Neto) / **`{p_tubo25*50*1.21:.2f} €` (Con IVA)**")
 
             st.markdown("---")
 
-            # BLOQUE 3: MECANISMOS Y CAJAS
-            st.markdown(f"#### 📦 3. Mecanismos, Cajas y Marcos ({serie_mecanismos})")
+            # BLOQUE 2: CABLEADO POR COLORES
+            st.markdown(f"#### ⚡ 2. Cableado por Colores ({tipo_cable_sel})")
+            
+            st.markdown("##### 🔹 Cables de 1.5 mm² (Iluminación y Vueltas):")
+            st.write(f"  - **Azul (Neutro):** `{int(total_15_cada_color)} m` | Proveedor: **{prov_15_az}** | `[Fila Excel: #{fila_15_az}]` | Ref: `{desc_15_az}`")
+            st.info(f"    📦 A comprar: `{rollos_15_az} rollo(s) de 100m` | Precio: `{p_15_az*100*1.21:.2f} €` (Con IVA)")
+            st.write(f"  - **Marrón/Negro (Fase):** `{int(total_15_cada_color)} m` | Proveedor: **{prov_15_ma}** | `[Fila Excel: #{fila_15_ma}]` | Ref: `{desc_15_ma}`")
+            st.info(f"    📦 A comprar: `{rollos_15_ma} rollo(s) de 100m` | Precio: `{p_15_ma*100*1.21:.2f} €` (Con IVA)")
+            st.write(f"  - **Amarillo/Verde (Tierra):** `{int(total_15_cada_color)} m` | Proveedor: **{prov_15_tt}** | `[Fila Excel: #{fila_15_tt}]` | Ref: `{desc_15_tt}`")
+            st.info(f"    📦 A comprar: `{rollos_15_tt} rollo(s) de 100m` | Precio: `{p_15_tt*100*1.21:.2f} €` (Con IVA)")
+
+            st.markdown("##### 🔹 Cables de 2.5 mm² (Tomas de Corriente / Fuerza):")
+            st.write(f"  - **Azul (Neutro):** `{int(global_cable_25_fuerza_m)} m` | Proveedor: **{prov_25_az}** | `[Fila Excel: #{fila_25_az}]` | Ref: `{desc_25_az}`")
+            st.info(f"    📦 A comprar: `{rollos_25_az} rollo(s) de 100m` | Precio: `{p_25_az*100*1.21:.2f} €` (Con IVA)")
+            st.write(f"  - **Marrón/Negro (Fase):** `{int(global_cable_25_fuerza_m)} m` | Proveedor: **{prov_25_ma}** | `[Fila Excel: #{fila_25_ma}]` | Ref: `{desc_25_ma}`")
+            st.info(f"    📦 A comprar: `{rollos_25_ma} rollo(s) de 100m` | Precio: `{p_25_ma*100*1.21:.2f} €` (Con IVA)")
+            st.write(f"  - **Amarillo/Verde (Tierra):** `{int(global_cable_25_fuerza_m)} m` | Proveedor: **{prov_25_tt}** | `[Fila Excel: #{fila_25_tt}]` | Ref: `{desc_25_tt}`")
+            st.info(f"    📦 A comprar: `{rollos_25_tt} rollo(s) de 100m` | Precio: `{p_25_tt*100*1.21:.2f} €` (Con IVA)")
+
+            st.markdown("---")
+
+            # BLOQUE 3: MECANISMOS, CAJAS Y CONEXIONES (WAGO / CLEMAS)
+            st.markdown(f"#### 📦 3. Mecanismos, Cajas, Conexiones y Marcos ({serie_mecanismos})")
             st.write(f"- Cajas universales (67mm): `{global_caja_mec_uds} uds` | Proveedor: **{prov_caja_mec}** | `[Fila Excel: #{fila_caja_mec}]` | Ref: `{desc_caja_mec}`")
             st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` | Proveedor: **{prov_caja_reg}** | `[Fila Excel: #{fila_caja_reg}]` | Ref: `{desc_caja_reg}`")
+            
+            # Conexión seleccionada
+            cant_con = max(1, int((global_caja_reg_uds + global_caja_mec_uds) / 15))
+            st.write(f"- **{nombre_conexion_txt}:** `{cant_con} unidad(es)` | Proveedor: **{prov_con}** | `[Fila Excel: #{fila_con}]` | Ref: `{desc_con}` | Precio c/u: `{p_con:.2f} €` (Con IVA: `{(p_con*1.21):.2f} €`)")
+
             st.write(f"- Marcos Embellecedores: `{global_marcos_uds} uds` | Proveedor: **{prov_marco}** | `[Fila Excel: #{fila_marco}]` | Ref: `{desc_marco}`")
             for (nombre_m, desc_m, prec_m, prov_m, fila_m), cantidad_m in global_mecanismos_dict.items():
                 st.write(f"- `{cantidad_m}x` **{nombre_m}** ({serie_mecanismos}) | Proveedor: **{prov_m}** | `[Fila Excel: #{fila_m}]` | Ref: `{desc_m}` | Precio c/u con IVA: `{(prec_m*1.21):.2f} €`")
@@ -597,7 +650,7 @@ def app():
             st.markdown("##### 📝 Condiciones Generales y Garantía")
             st.info(f"• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT con mecanismos **{serie_mecanismos}**.")
 
-        st.success("✅ ¡Base de datos Excel integrada y validada con éxito!")
+        st.success("✅ ¡Selección de Wago / Clemas, Tubos M20/M25 y Cables por colores integrada con éxito!")
 
 if __name__ == "__main__":
     app()
