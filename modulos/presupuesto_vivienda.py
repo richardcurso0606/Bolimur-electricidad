@@ -214,7 +214,7 @@ def app():
         p_marco, prov_marco, desc_marco, _ = buscar_articulo_detallado(df_precios, ['marco', 'embellecedor'], gama_sel, 1.80)
 
         # ==========================================
-        # AUDITORÍA TÉCNICA REBT (CORRECCIÓN DE VARIABLE)
+        # AUDITORÍA TÉCNICA REBT
         # ==========================================
         st.markdown("---")
         st.header("🔍 Auditoría Técnica REBT de Integridad")
@@ -230,7 +230,7 @@ def app():
             st.warning("⚠️ **Aviso de Auditoría:** No se ha detectado ninguna estancia 'Baño'. El circuito C5 debe contemplarse.")
             auditoria_ok = False
             
-        if auditor_ok:
+        if auditoria_ok:
             st.success(f"✅ **Auditoría REBT Superada ({grado_electrificacion}):** Estancias normativas detectadas. El dimensionamiento de circuitos y protecciones cumple con el Reglamento Electrotécnico.")
 
         # ==========================================
@@ -350,7 +350,7 @@ def app():
                 
                 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;⚡ *Desglose de Mecanismos ({gama_sel}):*")
                 for mec in mecanismos_est:
-                    st.write(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• `{mec['cant']}x` **{mec['nombre']}** x `{mec['precio']:.2f} €` = **{mec['cant']*mec['precio']:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{mec['prov']}* — **{desc_desc := mec['desc']}**")
+                    st.write(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• `{mec['cant']}x` **{mec['nombre']}** x `{mec['precio']:.2f} €` = **{mec['cant']*mec['precio']:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{mec['prov']}* — **{mec['desc']}**")
                 
                 st.write(f"- **Marcos embellecedores:** `{n_marcos} uds` x `{p_marco:.2f} €/ud` = **{coste_marcos_est:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_marco}* — **{desc_marco}**")
                 st.markdown(f"👉 **Subtotal Gastos Materiales Estancia:** `{coste_mat_estancia:.2f} €`")
