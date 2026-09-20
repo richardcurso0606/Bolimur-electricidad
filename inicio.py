@@ -4,39 +4,37 @@ import sqlite3
 st.set_page_config(page_title="CÁLCULOS ELÉCTRICOS", page_icon="⚡", layout="wide")
 
 # =========================================================================
-# IMPORTACIÓN SEGURA DE MÓDULOS (Para capturar cualquier error interno)
+# IMPORTACIÓN SEGURA DE MÓDULOS
 # =========================================================================
 try:
     from modulos import calculo_rapido
 except Exception as e:
-    st.error(f"Error al cargar el módulo calculo_rapido: {e}")
+    calculo_rapido = None
 
 try:
     from modulos import prevision_cargas
 except Exception as e:
-    st.error(f"Error al cargar el módulo prevision_cargas: {e}")
+    prevision_cargas = None
 
 try:
     from modulos import lga
 except Exception as e:
-    st.error(f"Error al cargar el módulo lga: {e}")
+    lga = None
 
 try:
     from modulos import di
 except Exception as e:
-    st.error(f"Error al cargar el módulo di: {e}")
+    di = None
 
-# Módulo IRVE
 try:
     from modulos import irve
 except Exception as e:
-    st.error(f"Error al cargar el módulo irve: {e}")
+    irve = None
 
-# NUEVO: Módulo de Presupuesto Inteligente por Estancias
 try:
     from modulos import presupuesto_vivienda
 except Exception as e:
-    st.error(f"Error al cargar el módulo presupuesto_vivienda: {e}")
+    presupuesto_vivienda = None
 
 # =========================================================================
 # ESTILOS CSS GLOBALES
@@ -68,7 +66,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================================
-# MENÚ LATERAL (BOTONES EN FORMATO RECUADRO)
+# MENÚ LATERAL
 # =========================================================================
 with st.sidebar:
     st.markdown("""
@@ -107,7 +105,6 @@ with st.sidebar:
         st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
         st.rerun()
 
-    # NUEVO: Botón de acceso directo al módulo de Presupuestos Inteligentes
     if st.button("🏡  Presupuesto Vivienda", use_container_width=True):
         st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
         st.rerun()
@@ -119,48 +116,49 @@ with st.sidebar:
     seleccion_modulo = st.session_state.menu_activo
 
 # =========================================================================
-# EL ENRUTADOR (CARGA DE VENTANAS)
+# EL ENRUTADOR
 # =========================================================================
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ CÁLCULOS ELÉCTRICOS")
     st.write("Bienvenido al panel de cálculo eléctrico. Selecciona una opción en el menú lateral para empezar.")
 
 elif seleccion_modulo.startswith("🧮"):
-    try:
+    if calculo_rapido:
         calculo_rapido.renderizar()
-    except Exception as e:
-        st.error(f"Error al ejecutar Cálculo Rápido: {e}")
+    else:
+        st.error("Módulo Cálculo Rápido no disponible.")
 
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
-    try:
+    if prevision_cargas:
         prevision_cargas.renderizar()
-    except Exception as e:
-        st.error(f"Error al ejecutar Previsión de Cargas: {e}")
+    else:
+        st.error("Módulo Previsión de Cargas no disponible.")
 
 elif seleccion_modulo.startswith("⚡"):
-    try:
+    if lga:
         lga.renderizar()
-    except Exception as e:
-        st.error(f"Error al ejecutar LGA: {e}")
+    else:
+        st.error("Módulo LGA no disponible.")
 
 elif seleccion_modulo.startswith("🔌"):
-    try:
+    if di:
         di.renderizar()
-    except Exception as e:
-        st.error(f"Error al ejecutar DI: {e}")
+    else:
+        st.error("Módulo DI no disponible.")
 
 elif seleccion_modulo.startswith("🚗"):
-    try:
+    if irve:
         irve.renderizar()
-    except Exception as e:
-        st.error(f"Error al ejecutar Línea IRVE: {e}")
+    else:
+        st.error("Módulo IRVE no disponible.")
 
-# NUEVO: Enrutador para el módulo de Presupuesto
 elif seleccion_modulo.startswith("🏡"):
-    try:
+    if presupuesto_vivienda:
         presupuesto_vivienda.app()
-    except Exception as e:
-        st.error(f"Error al ejecutar Presupuesto Vivienda: {e}")
+    else:
+        st.error("Error: El módulo presupuesto_vivienda no se pudo importar correctamente.")
 
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Tablas REBT")
+inicio.py
+Mostrando inicio.py.
