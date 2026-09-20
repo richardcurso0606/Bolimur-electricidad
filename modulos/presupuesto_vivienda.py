@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Control Técnico por Estancias y Vista Comercial por Habitaciones
+Módulo Profesional de Presupuestos: Desglose Pormenorizado por Estancias (Costes Internos y Vista Comercial)
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -24,8 +24,8 @@ def app():
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🏡 Generador de Presupuestos: Control por Estancias y Costes de Autónomo")
-    st.markdown("Desglose pormenorizado por habitación (Materiales, Colores de Cable con Conmutadas en Gris/Marrón, Horas de Mano de Obra y Vista Comercial por Estancias).")
+    st.title("🏡 Generador de Presupuestos: Desglose Detallado por Estancias")
+    st.markdown("Control milimétrico por habitación: Materiales, Colores de Cable (Fase, Neutro, Tierra y Vueltas Gris/Marrón), Costes y Horas de Mano de Obra desglosadas.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -100,7 +100,7 @@ def app():
 
     st.markdown("---")
 
-    # 3. Estado de Sesión para Estancias y Partidas Extra
+    # Estado de Sesión para Estancias
     if 'estancias_pro' not in st.session_state:
         st.session_state.estancias_pro = [
             {"nombre": "Salón - Comedor", "m2": 25.0, "altura": 2.6, "incluir": True},
@@ -122,127 +122,108 @@ def app():
         with cols[0]:
             est["nombre"] = st.text_input(f"Nombre {i}", value=est["nombre"], key=f"nombre_est_{i}", label_visibility="collapsed")
         with cols[1]:
-            est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"m2_est_{i}", label_visibility="collapsed")
+            est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"m2_m2_{i}", label_visibility="collapsed")
         with cols[2]:
-            est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"alt_est_{i}", label_visibility="collapsed")
+            est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"m2_alt_{i}", label_visibility="collapsed")
         with cols[3]:
-            est["incluir"] = st.checkbox(f"Inc {i}", value=est["incluir"], key=f"inc_est_{i}", label_visibility="collapsed")
+            est["incluir"] = st.checkbox(f"Inc {i}", value=est["incluir"], key=f"m2_inc_{i}", label_visibility="collapsed")
         
         if est["incluir"]:
             estancias_activas.append(est)
 
     st.markdown("---")
 
-    # GESTIÓN DE PARTIDAS EXTRA
-    st.subheader("🛠️ Partidas Extra / Imprevistos")
-    with st.form("form_extra"):
-        c_ex1, c_ex2, c_ex3 = st.columns([3, 2, 1])
-        with c_ex1:
-            desc_ext = st.text_input("Concepto (Ej: Punto de luz terraza)")
-        with c_ex2:
-            precio_ext = st.number_input("Coste Neto (€)", min_value=0.0, step=10.0)
-        with c_ex3:
-            cant_ext = st.number_input("Cantidad", min_value=1, value=1)
-        if st.form_submit_button("Añadir Partida Extra"):
-            if desc_ext:
-                st.session_state.partidas_extra.append({"Concepto": desc_ext, "Precio": precio_ext, "Cantidad": cant_ext})
-                st.success("Añadido correctamente.")
-
-    if st.session_state.partidas_extra:
-        for idx, p in enumerate(st.session_state.partidas_extra):
-            st.write(f"- {p['Concepto']} | {p['Precio']}€ x {p['Cantidad']}")
-            if st.button("Eliminar", key=f"del_{idx}"):
-                st.session_state.partidas_extra.pop(idx)
-                st.rerun()
-
-    st.markdown("---")
-
-    if st.button("🚀 Calcular Presupuesto y Desgloses", type="primary"):
+    if st.button("🚀 Calcular Presupuesto y Desgloses Pormenorizados", type="primary"):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
 
         sup_total = sum([e["m2"] for e in estancias_activas])
-        
-        # ---------------------------------------------------------
-        # CÁLCULO PORMENORIZADO POR ESTANCIA (COSTES DE AUTÓNOMO)
-        # ---------------------------------------------------------
-        detalle_tecnico = []
-        coste_total_materiales_bruto = 0.0
-        horas_totales_obra = 0.0
-
-        for est in estancias_activas:
-            m2 = est["m2"]
-            alt = est["altura"]
-            
-            m_tubo = m2 * 4.2 * (alt / 2.5)
-            m_c1 = m2 * 12.0  # 1.5mm² (Iluminación y Vueltas)
-            m_c2 = m2 * 15.0  # 2.5mm² (Enchufes y Fuerza)
-            mecanismos = max(3, int(m2 / 4))
-            
-            mat_coste = (m_tubo * 0.45) + (m_c1 * 0.35) + (m_c2 * 0.50) + (mecanismos * 6.5)
-            coste_total_materiales_bruto += mat_coste
-            
-            horas_est = round(m2 * 0.75, 1)
-            horas_totales_obra += horas_est
-
-            detalle_tecnico.append({
-                "Estancia": est["nombre"],
-                "Sup (m²)": m2,
-                "Tubo M-20": f"{int(m_tubo)} m",
-                "Cable 1.5mm² (Fases, Neutro y Vueltas Gris/Marrón)": f"{int(m_c1)} m",
-                "Cable 2.5mm² (Fases, Neutro y Tierra)": f"{int(m_c2)} m",
-                "Mecanismos": f"{mecanismos} uds",
-                "Horas Trab.": f"{horas_est} h",
-                "Coste Mat. Neto (€)": round(mat_coste, 2)
-            })
-
-        df_tecnico = pd.DataFrame(detalle_tecnico)
-
-        perimetro = sup_total * 0.8 * 4
-        rozas_ml = perimetro * 1.5 if "Empotrada" in tipo_obra else 0
-        sacos_yeso = max(2, int(rozas_ml / 12)) if "Empotrada" in tipo_obra else 0
-        coste_albañileria_bruto = (rozas_ml * 3.5) + (sacos_yeso * 7.5)
-        coste_total_materiales_bruto += coste_albañileria_bruto
-
-        coste_mano_obra_bruto = horas_totales_obra * precio_hora
-        total_extras_neto = sum([p["Precio"] * p["Cantidad"] for p in st.session_state.partidas_extra])
 
         # ==========================================
-        # 1. INFORME TÉCNICO INTERNO (PARA EL AUTÓNOMO)
+        # 1. INFORME TÉCNICO PORMENORIZADO (AUTÓNOMO)
         # ==========================================
         st.markdown("---")
         st.header("🛠️ 1. INFORME TÉCNICO Y DE COSTES (Para el Instalador)")
-        st.info("Desglose milimétrico por habitación con metrajes, colores de cable especificados (incluyendo gris y marrón para conmutadas) y costes netos para ti.")
+        st.info("Desglose detallado estancia por estancia con materiales, colores de cable específicos y desglose de horas de mano de obra.")
 
-        st.dataframe(df_tecnico, use_container_width=True)
+        coste_total_materiales_bruto = 0.0
+        horas_totales_obra = 0.0
 
-        st.markdown("### 🎨 Especificación de Colores de Cables (Normativa REBT y Práctica):")
-        st.markdown("""
-        * **Fase Principal (L):** Marrón / Negro.
-        * **Neutro (N):** Azul claro.
-        * **Protección / Tierra (PE):** Verde - Amarillo.
-        * **Vueltas de Interruptor, Conmutadas y Cruzamientos:** Hilos de color **Gris** y **Marrón** (para identificar claramente las maniobras en registros y mecanismos).
-        """)
+        for idx, est in enumerate(estancias_activas):
+            m2 = est["m2"]
+            alt = est["altura"]
 
-        st.markdown("### 💰 Resumen Financiero Interno (Lo que te cuesta ejecutar la obra)")
+            # Cálculos técnicos por estancia
+            m_tubo = m2 * 4.2 * (alt / 2.5)
+            m_fase = m2 * 5.0      # Cable Fase (Marrón/Negro)
+            m_neutro = m2 * 5.0    # Cable Neutro (Azul)
+            m_tierra = m2 * 5.0    # Cable Tierra (Verde-Amarillo)
+            m_vuelta = m2 * 4.0    # Cable Vueltas / Conmutadas (Gris / Marrón)
+            mecanismos = max(3, int(m2 / 4))
+
+            # Costes netos de materiales por estancia
+            coste_mat_estancia = (
+                (m_tubo * 0.45) +
+                (m_fase * 0.35) +
+                (m_neutro * 0.35) +
+                (m_tierra * 0.40) +
+                (m_vuelta * 0.35) +
+                (mecanismos * 6.50)
+            )
+            coste_total_materiales_bruto += coste_mat_estancia
+
+            # Horas de mano de obra desglosadas por estancia
+            h_rozas = (m2 * 0.35) if "Empotrada" in tipo_obra else 0.0  # Rozas y albañilería / tapado
+            h_tubo = m2 * 0.20       # Colocación de tubo y cajas
+            h_cableado = m2 * 0.25   # Metida de cables y colores
+            h_mecanizado = mecanismos * 0.15 # Conexión de mecanismos
+
+            h_estancia_total = h_rozas + h_tubo + h_cableado + h_mecanizado
+            horas_totales_obra += h_estancia_total
+            coste_mo_estancia = h_estancia_total * precio_hora
+
+            # Mostrar bloque por estancia
+            with st.expander(f"📍 Estancia {idx+1}: {est['nombre']} ({m2} m²)"):
+                st.markdown(f"**Materiales requeridos:**")
+                st.write(f"- Tubo Corrugado M-20: **{int(m_tubo)} m** (Coste aprox: {m_tubo*0.45:.2f} €)")
+                st.write(f"- Cable Fase (Marrón/Negro): **{int(m_fase)} m** (Coste aprox: {m_fase*0.35:.2f} €)")
+                st.write(f"- Cable Neutro (Azul): **{int(m_neutro)} m** (Coste aprox: {m_neutro*0.35:.2f} €)")
+                st.write(f"- Cable Protección / Tierra (Verde-Amarillo): **{int(m_tierra)} m** (Coste aprox: {m_tierra*0.40:.2f} €)")
+                st.write(f"- Cable Vueltas / Conmutadas (Gris / Marrón): **{int(m_vuelta)} m** (Coste aprox: {m_vuelta*0.35:.2f} €)")
+                st.write(f"- Mecanismos de superf/empotar ({gama_sel}): **{mecanismos} uds** (Coste aprox: {mecanismos*6.50:.2f} €)")
+                st.markdown(f"👉 **Total Gastos Materiales en esta estancia:** `{coste_mat_estancia:.2f} €`")
+
+                st.markdown(f"**Mano de Obra y Tiempos estimados:**")
+                if "Empotrada" in tipo_obra:
+                    st.write(f"- Picado de Rozas y Albañilería (Yeso/Mortero): **{h_rozas:.2f} horas**")
+                st.write(f"- Colocación de Tubo y Cajas de Registro: **{h_tubo:.2f} horas**")
+                st.write(f"- Cableado y Etiquetado de Colores: **{h_cableado:.2f} horas**")
+                st.write(f"- Conexionado y Mecanizado final: **{h_mecanizado:.2f} horas**")
+                st.markdown(f"⏱️ **Total Horas Estancia:** `{h_estancia_total:.2f} h` | 💵 **Coste Mano de Obra Neto:** `{coste_mo_estancia:.2f} €`")
+
+        # Resumen general de costes para el autónomo
+        coste_mano_obra_bruto = horas_totales_obra * precio_hora
+        coste_total_autonomo = coste_total_materiales_bruto + coste_mano_obra_bruto
+
+        st.markdown("---")
+        st.markdown("### 💰 Resumen Financiero Global (Costes Netos de Autónomo)")
         col_r1, col_r2, col_r3 = st.columns(3)
         with col_r1:
-            st.metric("Coste Neto Materiales", f"{coste_total_materiales_bruto:.2f} €")
+            st.metric("Total Materiales Brutos", f"{coste_total_materiales_bruto:.2f} €")
         with col_r2:
-            st.metric("Horas Totales / Operarios", f"{horas_totales_obra} h ({num_operarios} operarios)")
+            st.metric("Total Horas de Trabajo", f"{horas_totales_obra:.1f} h ({num_operarios} op.)")
         with col_r3:
-            st.metric("Coste Neto Mano de Obra", f"{coste_mano_obra_bruto:.2f} €")
-
-        coste_total_autonomo = coste_total_materiales_bruto + coste_mano_obra_bruto + total_extras_neto
-        st.error(f"🔴 **COSTE TOTAL PARA TI COMO AUTÓNOMO (Sin Margen): {coste_total_autonomo:.2f} €**")
+            st.metric("Total Mano de Obra Neta", f"{coste_mano_obra_bruto:.2f} €")
+        
+        st.error(f"🔴 **COSTE TOTAL DE EJECUCIÓN PARA TI (Sin Margen): {coste_total_autonomo:.2f} €**")
 
         # ==========================================
-        # 2. VISTA COMERCIAL PROFESIONAL (PARA EL CLIENTE)
+        # 2. VISTA COMERCIAL PROFESIONAL (CLIENTE)
         # ==========================================
         st.markdown("---")
         st.header("📄 2. VISTA COMERCIAL: Presupuesto Detallado por Estancias para el Cliente")
-        st.markdown("Lista comercial con materiales y margen aplicado habitación por habitación. Pulsa **Ctrl + P** en tu teclado para imprimir o guardar como PDF limpio.")
+        st.markdown("Oferta comercial con el margen aplicado por habitación. Pulsa **Ctrl + P** para imprimir o guardar como PDF limpio.")
 
         st.markdown(f"""
         <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
@@ -255,48 +236,40 @@ def app():
         </div>
         """, unsafe_allow_html=True)
 
-        # Construir tabla comercial detallada por estancias con márgenes
         multiplicador = (1 + margen_comercial / 100.0)
-        
         comercial_estancias = []
         subtotal_neto_comercial = 0.0
 
         for est in estancias_activas:
             m2 = est["m2"]
-            coste_base_m2 = 42.0 if "Empotrada" in tipo_obra else 32.0
-            precio_comercial_m2 = coste_base_m2 * multiplicador
-            importe_estancia = m2 * precio_comercial_m2
-            subtotal_neto_comercial += importe_estancia
+            coste_base_estancia = (m2 * 42.0) if "Empotrada" in tipo_obra else (m2 * 32.0)
+            precio_venta_estancia = coste_base_estancia * multiplicador
+            subtotal_neto_comercial += precio_venta_estancia
 
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle de Suministro, Canalización, Cableado y Mecanismos": f"Instalación completa: Tubo M-20, cableado libre de halógenos (fase, neutro, tierra y hilos de color gris/marrón para conmutadas y vueltas), cajas de registro y mecanismos gama {gama_sel}.",
-                "Importe (€)": round(importe_estancia, 2)
+                "Detalle Comercial (Materiales + Mano de Obra y Conexionado)": f"Suministro e instalación completa: Canalización con tubo M-20, cableado de seguridad libre de halógenos (fases, neutro, tierra y hilos de color gris/marrón para conmutadas), cajas de registro y mecanismos gama {gama_sel}.",
+                "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
         df_comercial = pd.DataFrame(comercial_estancias)
         st.dataframe(df_comercial, use_container_width=True)
 
-        # Capítulo adicional para Cuadro y Boletín (CIE)
+        # Capítulo cuadro y boletín
         importe_cuadro_comercial = 450.0 * multiplicador
         subtotal_neto_comercial += importe_cuadro_comercial
-
-        if total_extras_neto > 0:
-            importe_extras_comercial = total_extras_neto * multiplicador
-            subtotal_neto_comercial += importe_extras_comercial
 
         st.markdown(f"""
         <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; background-color: #f8fafc; margin-top: 10px;">
             <h4>Capítulo Adicional: Cuadro General de Protección y Boletín Oficial (CIE)</h4>
-            <p>Suministro de cuadro de distribución, protecciones obligatorias (IGA, Sobretensiones, Diferenciales) y tramitación de boletín REBT: <b>{importe_cuadro_comercial:.2f} €</b></p>
+            <p>Suministro de cuadro de distribución, protecciones obligatorias REBT (IGA, Sobretensiones, Diferenciales) y tramitación del boletín: <b>{importe_cuadro_comercial:.2f} €</b></p>
         </div>
         """, unsafe_allow_html=True)
 
         cuota_iva = subtotal_neto_comercial * (iva_sel / 100.0)
         total_cliente = subtotal_neto_comercial + cuota_iva
 
-        # Totales finales comerciales
         st.markdown(f"""
         <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
             <p><b>Subtotal Comercial Neto:</b> {subtotal_neto_comercial:.2f} €</p>
@@ -309,7 +282,7 @@ def app():
         st.markdown("##### 📝 Condiciones Generales y Garantía")
         st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT.")
 
-        st.success("✅ ¡Presupuesto y desgloses actualizados correctamente con colores de cables y vista comercial por estancias!")
+        st.success("✅ ¡Informes pormenorizados generados con éxito!")
 
 if __name__ == "__main__":
     app()
