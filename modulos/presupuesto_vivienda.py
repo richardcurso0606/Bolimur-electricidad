@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Desglose Lógico por Capítulos e Informe Técnico
+Módulo Profesional de Presupuestos: Desglose por Estancias (Costes Internos vs Vista Comercial)
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -10,7 +10,7 @@ import openpyxl
 import os
 
 def app():
-    # Estilo CSS para impresión limpia
+    # Estilo CSS para impresión limpia (Oculta menús al pulsar Ctrl+P)
     st.markdown("""
         <style>
             @media print {
@@ -24,8 +24,8 @@ def app():
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🏡 Generador Profesional de Presupuestos y Control Técnico")
-    st.markdown("Herramienta avanzada para autónomos: Desglose transparente por capítulos comerciales y control interno de materiales.")
+    st.title("🏡 Generador de Presupuestos: Control por Estancias y Costes de Autónomo")
+    st.markdown("Desglose pormenorizado por habitación (Materiales, Colores de Cable, Horas de Mano de Obra y Márgenes Comerciales).")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -64,7 +64,7 @@ def app():
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}`")
 
     # ==========================================
-    # DATOS DE LA EMPRESA / INSTALADOR AUTORIZADO
+    # DATOS DE LA EMPRESA / INSTALADOR
     # ==========================================
     st.sidebar.header("🏢 Datos del Instalador")
     empresa_nombre = st.sidebar.text_input("Nombre Empresa", value="BOLIMUR INSTALACIONES Y REFORMAS")
@@ -74,33 +74,29 @@ def app():
     telefono = st.sidebar.text_input("Teléfono Contacto", value="+34 600 000 000")
 
     # ==========================================
-    # PARÁMETROS GENERALES DE OBRA
+    # PARÁMETROS GLOBALES DE MANO DE OBRA Y MARGEN
     # ==========================================
     st.markdown("---")
-    st.subheader("⚙️ Parámetros Generales de Ejecución")
+    st.subheader("⚙️ Parámetros de Costes y Rendimiento (Autónomo)")
     
-    col_p1, col_p2, col_p3 = st.columns(3)
-    with col_p1:
-        tipo_obra = st.selectbox(
-            "Sistema de Ejecución / Obra",
-            ["Empotrada en Rozas (Ladrillo + Yeso)", "Falso Techo / Pladur (Obra Seca)", "Superficie (Tubo visto / Canaleta)"]
-        )
-    with col_p2:
-        gama_sel = st.selectbox(
-            "Nivel de Gama de Mecanismos",
-            ['1. Ultra Económica', '2. Económica Estándar', '3. Media Residencial', '4. Alta Decorativa']
-        )
-    with col_p3:
-        proveedor_sel = st.selectbox(
-            "Proveedor Principal",
-            ['Optimizado (Mejor Precio)', 'Obramat', 'Leroy Merlin']
-        )
+    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+    with col_c1:
+        precio_hora = st.number_input("Precio Mano de Obra (€/hora)", min_value=10.0, max_value=60.0, value=25.0, step=1.0)
+    with col_c2:
+        num_operarios = st.number_input("Nº de Operarios en Obra", min_value=1, max_value=5, value=1, step=1)
+    with col_c3:
+        margen_comercial = st.slider("Margen Comercial / Beneficio (%)", 0, 50, 20)
+    with col_c4:
+        iva_sel = st.selectbox("Tipo de IVA", [10, 21])
 
-    col_p4, col_p5 = st.columns(2)
-    with col_p4:
-        margen = st.slider("Margen Comercial / Beneficio Industrial (%)", 0, 50, 20)
-    with col_p5:
-        iva_sel = st.selectbox("Tipo de IVA Aplicable", [10, 21])
+    tipo_obra = st.selectbox(
+        "Sistema de Ejecución General",
+        ["Empotrada en Rozas (Ladrillo + Yeso)", "Falso Techo / Pladur (Obra Seca)", "Superficie (Tubo visto / Canaleta)"]
+    )
+    gama_sel = st.selectbox(
+        "Nivel de Gama de Mecanismos",
+        ['1. Ultra Económica', '2. Económica Estándar', '3. Media Residencial', '4. Alta Decorativa']
+    )
 
     st.markdown("---")
 
@@ -137,135 +133,124 @@ def app():
 
     st.markdown("---")
 
-    # ==========================================
-    # GESTIÓN DE PARTIDAS EXTRA & ASISTENTE IA
-    # ==========================================
-    st.subheader("🛠️ Gestión de Partidas y Asistente IA")
-    
-    col_m1, col_m2 = st.columns(2)
-    with col_m1:
-        with st.form("form_manual"):
-            st.markdown("##### ➕ Añadir Partida Manual")
-            desc_manual = st.text_input("Concepto / Descripción")
-            precio_manual = st.number_input("Importe Unitario (€)", min_value=0.0, step=10.0)
-            cant_manual = st.number_input("Cantidad", min_value=1, value=1)
-            if st.form_submit_button("Añadir al Presupuesto"):
-                if desc_manual:
-                    st.session_state.partidas_extra.append({"Concepto": desc_manual, "Precio": precio_manual, "Cantidad": cant_manual})
-                    st.success("Partida añadida correctamente.")
-                else:
-                    st.warning("Introduce un concepto válido.")
-
-    with col_m2:
-        with st.form("form_ia"):
-            st.markdown("##### 🎙️ Asistente de IA (Lenguaje Natural)")
-            orden_ia = st.text_input("Instrucción (Ej: Añadir A/C por 350€)")
-            precio_ia = st.number_input("Precio estimado (€)", min_value=0.0, value=150.0, step=10.0)
-            if st.form_submit_button("Procesar con IA"):
-                if orden_ia:
-                    st.session_state.partidas_extra.append({"Concepto": f"[IA] {orden_ia}", "Precio": precio_ia, "Cantidad": 1})
-                    st.success("¡Instrucción interpretada y añadida!")
-                else:
-                    st.warning("Escribe una instrucción.")
+    # GESTIÓN DE PARTIDAS EXTRA
+    st.subheader("🛠️ Partidas Extra / Imprevistos")
+    with st.form("form_extra"):
+        c_ex1, c_ex2, c_ex3 = st.columns([3, 2, 1])
+        with c_ex1:
+            desc_ext = st.text_input("Concepto (Ej: Punto de luz terraza)")
+        with c_ex2:
+            precio_ext = st.number_input("Coste Neto (€)", min_value=0.0, step=10.0)
+        with c_ex3:
+            cant_ext = st.number_input("Cantidad", min_value=1, value=1)
+        if st.form_submit_button("Añadir Partida Extra"):
+            if desc_ext:
+                st.session_state.partidas_extra.append({"Concepto": desc_ext, "Precio": precio_ext, "Cantidad": cant_ext})
+                st.success("Añadido correctamente.")
 
     if st.session_state.partidas_extra:
-        st.markdown("##### 📝 Partidas Extra / Modificaciones Actuales:")
         for idx, p in enumerate(st.session_state.partidas_extra):
-            c_ex = st.columns([4, 2, 2, 1])
-            c_ex[0].write(p["Concepto"])
-            c_ex[1].write(f"{p['Precio']} € x {p['Cantidad']}")
-            c_ex[2].write(f"Total: {p['Precio'] * p['Cantidad']} €")
-            if c_ex[3].button("🗑️", key=f"del_ex_{idx}"):
+            st.write(f"- {p['Concepto']} | {p['Precio']}€ x {p['Cantidad']}")
+            if st.button("Eliminar", key=f"del_{idx}"):
                 st.session_state.partidas_extra.pop(idx)
                 st.rerun()
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto y Generar Informes", type="primary"):
+    if st.button("🚀 Calcular Presupuesto y Desgloses", type="primary"):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
 
         sup_total = sum([e["m2"] for e in estancias_activas])
-        alt_media = sum([e["altura"] for e in estancias_activas]) / len(estancias_activas)
+        
+        # ---------------------------------------------------------
+        # CÁLCULO PORMENORIZADO POR ESTANCIA (COSTES DE AUTÓNOMO)
+        # ---------------------------------------------------------
+        detalle_tecnico = []
+        coste_total_materiales_bruto = 0.0
+        horas_totales_obra = 0.0
 
-        # Cálculos técnicos por estancia
-        detalle_estancias = []
         for est in estancias_activas:
-            m2_e = est["m2"]
-            alt_e = est["altura"]
-            tubo_e = m2_e * 4.2 * (alt_e / 2.5)
-            c1_e = m2_e * 12.0
-            c2_e = m2_e * 15.0
-            mecanismos_e = max(3, int(m2_e / 4))
-            detalle_estancias.append({
+            m2 = est["m2"]
+            alt = est["altura"]
+            
+            # Estimación técnica de materiales por estancia
+            m_tubo = m2 * 4.2 * (alt / 2.5)
+            m_c1 = m2 * 12.0  # 1.5mm² (Iluminación)
+            m_c2 = m2 * 15.0  # 2.5mm² (Enchufes)
+            mecanismos = max(3, int(m2 / 4))
+            
+            # Costes unitarios brutos (para el autónomo)
+            mat_coste = (m_tubo * 0.45) + (m_c1 * 0.35) + (m_c2 * 0.50) + (mecanismos * 6.5)
+            coste_total_materiales_bruto += mat_coste
+            
+            # Horas de trabajo estimadas por estancia (rozado, tubo, cableado, mecanizado)
+            horas_est = round(m2 * 0.75, 1) # ~45 min por m² de ejecución integral media
+            horas_totales_obra += horas_est
+
+            detalle_tecnico.append({
                 "Estancia": est["nombre"],
-                "Sup (m²)": m2_e,
-                "Tubo M-20 (m)": round(tubo_e, 1),
-                "Cable 1.5mm² (m)": round(c1_e, 1),
-                "Cable 2.5mm² (m)": round(c2_e, 1),
-                "Mecanismos": mecanismos_e
+                "Sup (m²)": m2,
+                "Tubo M-20": f"{int(m_tubo)} m",
+                "Cable 1.5mm² (Fase/Neutro/Vueltas Gris-Marrón)": f"{int(m_c1)} m",
+                "Cable 2.5mm² (Fase/Neutro/Tierra)": f"{int(m_c2)} m",
+                "Mecanismos": f"{mecanismos} uds",
+                "Horas Trab.": f"{horas_est} h",
+                "Coste Mat. (€)": round(mat_coste, 2)
             })
 
-        df_detalle_est = pd.DataFrame(detalle_estancias)
+        df_tecnico = pd.DataFrame(detalle_tecnico)
 
-        # Totales generales de materiales y costes reales
+        # Albañilería general (Rozas y yeso)
         perimetro = sup_total * 0.8 * 4
-        rozas = perimetro * 1.5 if "Empotrada" in tipo_obra else 0
-        sacos_yeso = max(2, int(rozas / 12)) if "Empotrada" in tipo_obra else 0
-        tubo_total = sum([d["Tubo M-20 (m)"] for d in detalle_estancias])
-        c1_total = sum([d["Cable 1.5mm² (m)"] for d in detalle_estancias])
-        c2_total = sum([d["Cable 2.5mm² (m)"] for d in detalle_estancias])
-        c3_total = sup_total * 5.0
+        rozas_ml = perimetro * 1.5 if "Empotrada" in tipo_obra else 0
+        sacos_yeso = max(2, int(rozas_ml / 12)) if "Empotrada" in tipo_obra else 0
+        coste_albañileria_bruto = (rozas_ml * 3.5) + (sacos_yeso * 7.5)
 
-        # Costes reales desglosados para estructurar los capítulos comerciales
-        coste_cuadro = 350.0 + (sup_total * 1.5)  # Materiales de cuadro y protecciones REBT
-        coste_canalizacion_mat = (tubo_total * 0.45) + (c1_total * 0.35) + (c2_total * 0.50) + (c3_total * 0.90) + (len(estancias_activas) * 35.0)
-        coste_canalizacion_MO = sup_total * 14.0   # Mano de obra de tendido, cableado y mecanismos
-        coste_albañileria_mat = sacos_yeso * 7.5
-        coste_albañileria_MO = rozas * 8.0 if "Empotrada" in tipo_obra else 50.0
+        coste_total_materiales_bruto += coste_albañileria_bruto
 
-        total_extras = sum([p["Precio"] * p["Cantidad"] for p in st.session_state.partidas_extra])
+        # Mano de obra total
+        coste_mano_obra_bruto = horas_totales_obra * precio_hora
 
-        # Importes con margen comercial aplicado por capítulo
-        factor_margen = (1 + margen / 100.0)
-        
-        neto_cap1 = coste_cuadro * factor_margen
-        neto_cap2 = (coste_canalizacion_mat + coste_canalizacion_MO) * factor_margen
-        neto_cap3 = (coste_albañileria_mat + coste_albañileria_MO) * factor_margen
-        neto_extras = total_extras * factor_margen
-
-        subtotal_neto = neto_cap1 + neto_cap2 + neto_cap3 + neto_extras
-        cuota_iva = subtotal_neto * (iva_sel / 100.0)
-        total_presupuesto = subtotal_neto + cuota_iva
+        # Partidas extra netas
+        total_extras_neto = sum([p["Precio"] * p["Cantidad"] for p in st.session_state.partidas_extra])
 
         # ==========================================
-        # 1. INFORME TÉCNICO PORMENORIZADO (PARA TI)
+        # 1. INFORME TÉCNICO INTERNO (PARA EL AUTÓNOMO)
         # ==========================================
         st.markdown("---")
-        st.header("🛠️ INFORME TÉCNICO INTERNO (Para el Instalador)")
-        st.info("Informe de control exclusivo para ti. Aquí tienes el desglose exacto por habitación, metrajes y consumibles de obra para acopiar material con precisión milimétrica.")
+        st.header("🛠️ 1. INFORME TÉCNICO Y DE COSTES (Para el Instalador)")
+        st.info("Desglose milimétrico por habitación con metrajes, colores de cable previstos (incluyendo gris y marrón para conmutadas/vueltas) y costes directos.")
 
-        st.subheader("Desglose Estancia por Estancia")
-        st.dataframe(df_detalle_est, use_container_width=True)
+        st.dataframe(df_tecnico, use_container_width=True)
 
-        st.subheader("Resumen de Consumibles y Costes Directos")
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            st.metric("Metros Totales de Tubo M-20", f"{int(tubo_total)} m")
-            st.metric("Cable H07V-K 1.5 mm² (Iluminación)", f"{int(c1_total)} m")
-            st.metric("Cable H07V-K 2.5 mm² (Enchufes)", f"{int(c2_total)} m")
-        with col_t2:
-            st.metric("Metros de Rozas a Picar", f"{int(rozas)} m.l.")
-            st.metric("Sacos de Yeso / Mortero (25kg)", f"{int(sacos_yeso)} sacos")
-            st.metric("Coste Directo Estimado Total", f"{(coste_cuadro + coste_canalizacion_mat + coste_canalizacion_MO + coste_albañileria_mat + coste_albañileria_MO):.2f} €")
+        st.markdown("### 🎨 Código de Colores Interno para la Instalación:")
+        st.markdown("""
+        * **Fases Principales:** Marrón / Negro.
+        * **Neutro:** Azul claro.
+        * **Protección (Tierra):** Verde - Amarillo.
+        * **Vueltas de Interruptor y Conmutadas:** Color **Gris** y **Marrón** (para distinguir claramente idas y retornos en cajas de registro).
+        """)
+
+        st.markdown("### 💰 Resumen Financiero Interno (Lo que te cuesta ejecutar la obra)")
+        col_r1, col_r2, col_r3 = st.columns(3)
+        with col_r1:
+            st.metric("Coste Neto Materiales", f"{coste_total_materiales_bruto:.2f} €")
+        with col_r2:
+            st.metric("Horas Totales / Operarios", f"{horas_totales_obra} h ({num_operarios} operarios)")
+        with col_r3:
+            st.metric("Coste Neto Mano de Obra", f"{coste_mano_obra_bruto:.2f} €")
+
+        coste_total_autonomo = coste_total_materiales_bruto + coste_mano_obra_bruto + total_extras_neto
+        st.error(f"🔴 **COSTE TOTAL PARA TI COMO AUTÓNOMO (Sin Margen): {coste_total_autonomo:.2f} €**")
 
         # ==========================================
         # 2. VISTA COMERCIAL PROFESIONAL (PARA EL CLIENTE)
         # ==========================================
         st.markdown("---")
-        st.header("📄 VISTA COMERCIAL: Presupuesto para el Cliente")
-        st.markdown("Presenta esta sección limpia a tu cliente. Pulsa **Ctrl + P** en tu teclado para imprimir o guardar directamente como PDF.")
+        st.header("📄 2. VISTA COMERCIAL: Presupuesto por Estancias para el Cliente")
+        st.markdown("Lista comercial con materiales y margen aplicado por estancia. Pulsa **Ctrl + P** para imprimir o guardar como PDF limpio.")
 
         st.markdown(f"""
         <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
@@ -273,56 +258,62 @@ def app():
             <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
             <hr style="border: 1px solid #bae6fd;">
             <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
-            <p><b>Objeto:</b> Instalación Eléctrica Completa en Vivienda ({sup_total:.1f} m²)</p>
-            <p><b>Sistema de Ejecución:</b> {tipo_obra}</p>
+            <p><b>Objeto:</b> Instalación Eléctrica Completa por Estancias ({sup_total:.1f} m²)</p>
+            <p><b>Sistema:</b> {tipo_obra} | **Gama:** {gama_sel}</p>
         </div>
         """, unsafe_allow_html=True)
 
-        st.subheader("Desglose de Capítulos de la Oferta")
+        # Construir tabla comercial con márgenes aplicados
+        multiplicador = (1 + margen_comercial / 100.0)
         
-        capitulos = [
-            {
-                "Capítulo": "Capítulo 1", 
-                "Descripción": "Cuadro General de Mando y Protección (CGMP), Protecciones (IGA, Sobretensiones, Diferenciales) y Tramitación/CIE REBT", 
-                "Importe (€)": round(neto_cap1, 2)
-            },
-            {
-                "Capítulo": "Capítulo 2", 
-                "Descripción": f"Suministro de Materiales (Tubos, Cableado y Mecanismos de gama {gama_sel}) y Mano de Obra de Canalización, Cableado y Mecanizado", 
-                "Importe (€)": round(neto_cap2, 2)
-            },
-            {
-                "Capítulo": "Capítulo 3", 
-                "Descripción": "Trabajos de Albañilería, Picado de Rozas, Inserción de Cajas y Tapado con Yeso/Mortero", 
-                "Importe (€)": round(neto_cap3, 2)
-            },
-        ]
+        comercial_estancias = []
+        for est in estancias_activas:
+            m2 = est["m2"]
+            # Precio comercial por m² incluyendo materiales, mano de obra y margen
+            precio_m2_comercial = 55.0 * multiplicador if "Empotrada" in tipo_obra else 45.0 * multiplicador
+            subtotal_est = m2 * precio_m2_comercial
+            comercial_estancias.append({
+                "Estancia": est["nombre"],
+                "Superficie": f"{m2} m²",
+                "Descripción de Suministro e Instalación Eléctrica": f"Canalización con tubo M-20, cableado libre de halógenos (fases, neutro, tierra y conmutadas gris/marrón), cajas de registro y mecanismos ({gama_sel})",
+                "Importe Total (€)": round(subtotal_est, 2)
+            })
+
+        df_comercial = pd.DataFrame(comercial_estancias)
+        st.dataframe(df_comercial, use_container_width=True)
+
+        # Capítulo especial para Cuadro y Boletín (CIE)
+        neto_cuadro = 450.0 * multiplicador
         
-        if st.session_state.partidas_extra:
-            for ex in st.session_state.partidas_extra:
-                capitulos.append({
-                    "Capítulo": "Partida Extra / Adicional", 
-                    "Descripción": ex["Concepto"], 
-                    "Importe (€)": round(ex["Precio"] * ex["Cantidad"] * factor_margen, 2)
-                })
+        # Totales comerciales
+        subtotal_neto_comercial = sum([e["Importe Total (€)"] for e in comercial_estancias]) + neto_cuadro
+        if total_extras_neto > 0:
+            subtotal_neto_comercial += (total_extras_neto * multiplicador)
 
-        df_capitulos = pd.DataFrame(capitulos)
-        st.dataframe(df_capitulos, use_container_width=True)
+        cuota_iva = subtotal_neto_comercial * (iva_sel / 100.0)
+        total_cliente = subtotal_neto_comercial + cuota_iva
 
-        # Totales
         st.markdown(f"""
-        <div style="text-align: right; font-size: 18px; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
-            <p><b>Subtotal Neto:</b> {subtotal_neto:.2f} €</p>
+        <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; background-color: #f8fafc; margin-top: 10px;">
+            <h4>Capítulo Adicional: Cuadro General de Protección y Boletín REBT (CIE)</h4>
+            <p>Suministro de CGMP, protecciones (IGA, Sobretensiones, Diferenciales) y tramitación oficial: <b>{neto_cuadro:.2f} €</b></p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Totales finales
+        st.markdown(f"""
+        <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
+            <p><b>Subtotal Comercial Neto:</b> {subtotal_neto_comercial:.2f} €</p>
             <p><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
-            <h2 style="color: #16a34a; margin: 0;">TOTAL PRESUPUESTO: {total_presupuesto:.2f} €</h2>
+            <h2 style="color: #16a34a; margin: 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:.2f} €</h2>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("---")
-        st.markdown("##### 📝 Condiciones Generales y Garantía del Servicio")
-        st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Exclusiones:** No incluye pintura ni azulejos especiales decorativos.")
+        st.markdown("##### 📝 Condiciones Generales y Garantía")
+        st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT.")
 
-        st.success("✅ Informes generados con éxito. ¡Todo listo para verificar tu material y entregar la oferta al cliente!")
+        st.success("✅ ¡Informes generados con éxito! Tienes tu control interno de autónomo y la vista limpia para entregar al cliente.")
 
 if __name__ == "__main__":
     app()
