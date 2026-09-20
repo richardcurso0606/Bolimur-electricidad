@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Análisis de Tiempos de Mano de Obra, Soporte Pladur, Acopio y Utilidad
+Módulo Profesional de Presupuestos: Trazabilidad de Filas Excel, Proveedores, Marcado con * y Acopio
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -35,7 +35,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Panel Profesional de Autónomo")
-    st.markdown("Control de costes, acopio en almacén, análisis de tiempos de mano de obra y rentabilidad.")
+    st.markdown("Control de costes, trazabilidad de filas Excel, proveedores y análisis de tiempos.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -73,6 +73,7 @@ def app():
     else:
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}`")
 
+    # Función de búsqueda con trazabilidad de fila de Excel y marcado con asterisco (*) si no existe
     def buscar_articulo_detallado(df, keywords, gama_filtro, precio_defecto=0.45):
         for keyword in keywords:
             for idx, row in df.iterrows():
@@ -87,10 +88,13 @@ def app():
                         val = float(row.get('Precio S/IVA (€)', 0.0))
                         prov = str(row.get('Proveedor / Tienda Principal', 'Obramat'))
                         if val > 0:
-                            return val, prov, desc, True
+                            # Retorna: precio, proveedor, descripción real, encontrado (True), línea de Excel (idx + 2)
+                            return val, prov, desc, True, idx + 2
                     except:
                         pass
-        return precio_defecto, "Obramat (Tarifa Base)", f"Artículo estándar ({keywords[0]})", False
+        # Si no se encuentra en el Excel, se marca con asterisco (*) y se asigna valor estimado
+        desc_def = f"Artículo estándar ({keywords[0]})"
+        return precio_defecto, "Obramat (Estimado / No hallado en BD)", desc_def, False, -1
 
     # ==========================================
     # DATOS DE LA EMPRESA / INSTALADOR
@@ -142,7 +146,7 @@ def app():
     st.markdown("#### 🧱 Criterio de Rozas y Albañilería / Soporte")
     col_roz1, col_roz2 = st.columns(2)
     with col_roz1:
-        hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True, help="Si es Pladur, se calcula perforación de montantes y colocación de cajas de garras.")
+        hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True, help="Si es Pladur, se calcula perforación de montantes y cajas de garras.")
     with col_roz2:
         tipo_pared = st.selectbox(
             "Tipo de Pared / Soporte",
@@ -232,16 +236,17 @@ def app():
         kw_cable_15 = ['h07z1-k 1.5', 'libre de halógenos 1.5', '1.5 mm'] if "Halógenos" in tipo_cable_sel else ['h07v-k 1.5', 'cable 1.5', '1.5 mm']
         kw_cable_25 = ['h07z1-k 2.5', 'libre de halógenos 2.5', '2.5 mm'] if "Halógenos" in tipo_cable_sel else ['h07v-k 2.5', 'cable 2.5', '2.5 mm']
 
-        p_tubo, prov_tubo, desc_tubo, _ = buscar_articulo_detallado(df_precios, ['tubo corrugado', 'm-20', 'tubo 20'], serie_mecanismos, 0.45)
-        p_caja_mec, prov_caja_mec, desc_caja_mec, _ = buscar_articulo_detallado(df_precios, ['caja universal', 'caja mecanismo'], serie_mecanismos, 0.30)
-        p_caja_reg, prov_caja_reg, desc_caja_reg, _ = buscar_articulo_detallado(df_precios, ['caja de registro', 'derivación'], serie_mecanismos, 1.50)
-        p_15, prov_15, desc_15, _ = buscar_articulo_detallado(df_precios, kw_cable_15, serie_mecanismos, 0.38 if "Halógenos" in tipo_cable_sel else 0.32)
-        p_25, prov_25, desc_25, _ = buscar_articulo_detallado(df_precios, kw_cable_25, serie_mecanismos, 0.55 if "Halógenos" in tipo_cable_sel else 0.48)
+        # Búsquedas con extracción de fila y proveedor reales
+        p_tubo, prov_tubo, desc_tubo, enc_tubo, fila_tubo = buscar_articulo_detallado(df_precios, ['tubo corrugado', 'm-20', 'tubo 20'], serie_mecanismos, 0.45)
+        p_caja_mec, prov_caja_mec, desc_caja_mec, enc_caja_mec, fila_caja_mec = buscar_articulo_detallado(df_precios, ['caja universal', 'caja mecanismo'], serie_mecanismos, 0.30)
+        p_caja_reg, prov_caja_reg, desc_caja_reg, enc_caja_reg, fila_caja_reg = buscar_articulo_detallado(df_precios, ['caja de registro', 'derivación'], serie_mecanismos, 1.50)
+        p_15, prov_15, desc_15, enc_15, fila_15 = buscar_articulo_detallado(df_precios, kw_cable_15, serie_mecanismos, 0.38 if "Halógenos" in tipo_cable_sel else 0.32)
+        p_25, prov_25, desc_25, enc_25, fila_25 = buscar_articulo_detallado(df_precios, kw_cable_25, serie_mecanismos, 0.55 if "Halógenos" in tipo_cable_sel else 0.48)
         
-        p_int, prov_int, desc_int, _ = buscar_articulo_detallado(df_precios, ['interruptor', 'conmutador'], serie_mecanismos, 3.50)
-        p_schuko, prov_schuko, desc_schuko, _ = buscar_articulo_detallado(df_precios, ['schuko', 'base de enchufe'], serie_mecanismos, 4.20)
-        p_rj45, prov_rj45, desc_rj45, _ = buscar_articulo_detallado(df_precios, ['rj45', 'datos', 'multimedia'], serie_mecanismos, 8.50)
-        p_marco, prov_marco, desc_marco, _ = buscar_articulo_detallado(df_precios, ['marco', 'embellecedor'], serie_mecanismos, 1.80)
+        p_int, prov_int, desc_int, enc_int, fila_int = buscar_articulo_detallado(df_precios, ['interruptor', 'conmutador'], serie_mecanismos, 3.50)
+        p_schuko, prov_schuko, desc_schuko, enc_schuko, fila_schuko = buscar_articulo_detallado(df_precios, ['schuko', 'base de enchufe'], serie_mecanismos, 4.20)
+        p_rj45, prov_rj45, desc_rj45, enc_rj45, fila_rj45 = buscar_articulo_detallado(df_precios, ['rj45', 'datos', 'multimedia'], serie_mecanismos, 8.50)
+        p_marco, prov_marco, desc_marco, enc_marco, fila_marco = buscar_articulo_detallado(df_precios, ['marco', 'embellecedor'], serie_mecanismos, 1.80)
 
         # Auditoría REBT
         tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
@@ -270,7 +275,6 @@ def app():
         comercial_estancias = []
         desgloses_internos_estancias = []
 
-        # Acumuladores de horas globales por tarea
         sum_h_rozas = 0.0
         sum_h_tubos = 0.0
         sum_h_cable = 0.0
@@ -291,30 +295,29 @@ def app():
             m_15_ilum_tt = m2 * 2.5
             m_15_vueltas = m2 * 4.0
             m_25_fuerza = m2 * (15.0 if "Elevada" in grado_electrificacion else 12.0)
-            n_puntos_luz = max(1, int(m2 / 10))
 
             if "cocina" in nombre_est:
                 mecanismos_est = [
-                    {"nombre": f"Interruptor simple ({serie_mecanismos})", "cant": 1, "precio": p_int, "prov": prov_int},
-                    {"nombre": f"Base Schuko 16A ({serie_mecanismos})", "cant": 4, "precio": p_schuko, "prov": prov_schuko},
-                    {"nombre": f"Base fuerza 25A Horno/Vitro ({serie_mecanismos})", "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko},
-                    {"nombre": f"Bases Schuko lavavajillas/lavadora ({serie_mecanismos})", "cant": 2, "precio": p_schuko, "prov": prov_schuko}
+                    {"nombre": f"Interruptor simple", "desc_real": desc_int, "cant": 1, "precio": p_int, "prov": prov_int, "fila": fila_int, "enc": enc_int},
+                    {"nombre": f"Base Schuko 16A", "desc_real": desc_schuko, "cant": 4, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "enc": enc_schuko},
+                    {"nombre": f"Base fuerza 25A Horno/Vitro", "desc_real": desc_schuko, "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko, "enc": enc_schuko},
+                    {"nombre": f"Bases Schuko lavavajillas/lavadora", "desc_real": desc_schuko, "cant": 2, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "enc": enc_schuko}
                 ]
             elif "baño" in nombre_est:
                 mecanismos_est = [
-                    {"nombre": f"Interruptor luz espejo ({serie_mecanismos})", "cant": 1, "precio": p_int, "prov": prov_int},
-                    {"nombre": f"Base Schuko tapa estanca IP44 ({serie_mecanismos})", "cant": 2, "precio": p_schuko * 1.2, "prov": prov_schuko}
+                    {"nombre": f"Interruptor luz espejo", "desc_real": desc_int, "cant": 1, "precio": p_int, "prov": prov_int, "fila": fila_int, "enc": enc_int},
+                    {"nombre": f"Base Schuko tapa estanca IP44", "desc_real": desc_schuko, "cant": 2, "precio": p_schuko * 1.2, "prov": prov_schuko, "fila": fila_schuko, "enc": enc_schuko}
                 ]
             elif "salón" in nombre_est or "comedor" in nombre_est:
                 mecanismos_est = [
-                    {"nombre": f"Conmutador / Cruzamiento ({serie_mecanismos})", "cant": 2, "precio": p_int, "prov": prov_int},
-                    {"nombre": f"Bases Schuko zona TV/Sofá ({serie_mecanismos})", "cant": 6, "precio": p_schuko, "prov": prov_schuko},
-                    {"nombre": f"Toma de datos RJ45 ({serie_mecanismos})", "cant": 2, "precio": p_rj45, "prov": prov_rj45}
+                    {"nombre": f"Conmutador / Cruzamiento", "desc_real": desc_int, "cant": 2, "precio": p_int, "prov": prov_int, "fila": fila_int, "enc": enc_int},
+                    {"nombre": f"Bases Schuko zona TV/Sofá", "desc_real": desc_schuko, "cant": 6, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "enc": enc_schuko},
+                    {"nombre": f"Toma de datos RJ45", "desc_real": desc_rj45, "cant": 2, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "enc": enc_rj45}
                 ]
             else:
                 mecanismos_est = [
-                    {"nombre": f"Conmutador / Interruptor ({serie_mecanismos})", "cant": 2, "precio": p_int, "prov": prov_int},
-                    {"nombre": f"Bases Schuko 16A ({serie_mecanismos})", "cant": 3, "precio": p_schuko, "prov": prov_schuko}
+                    {"nombre": f"Conmutador / Interruptor", "desc_real": desc_int, "cant": 2, "precio": p_int, "prov": prov_int, "fila": fila_int, "enc": enc_int},
+                    {"nombre": f"Bases Schuko 16A", "desc_real": desc_schuko, "cant": 3, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "enc": enc_schuko}
                 ]
 
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
@@ -330,7 +333,7 @@ def app():
             global_marcos_uds += n_marcos
 
             for mec in mecanismos_est:
-                key_m = (mec["nombre"], mec["precio"], mec["prov"])
+                key_m = (mec["nombre"], mec["desc_real"], mec["precio"], mec["prov"], mec["fila"], mec["enc"])
                 global_mecanismos_dict[key_m] = global_mecanismos_dict.get(key_m, 0) + mec["cant"]
 
             coste_mecanismos_est = sum([m["cant"] * m["precio"] for m in mecanismos_est])
@@ -351,7 +354,7 @@ def app():
             coste_mat_estancia_con_iva = coste_mat_estancia_neto * 1.21
             coste_total_materiales_bruto += coste_mat_estancia_neto
 
-            # Cálculo de horas según soporte
+            # Horas según soporte
             if "Pladur" in tipo_pared:
                 h_rozas = (m2 * 0.10) if hace_rozas_electricista else 0.0
             else:
@@ -393,7 +396,10 @@ def app():
                 "rozas": h_rozas,
                 "tubos": h_tubo_cajas,
                 "cable": h_cableado,
-                "mec": h_mecanizado
+                "mec": h_mecanizado,
+                "mecanismos_detalle": mecanismos_est,
+                "m_tubo": m_tubo,
+                "n_cajas_reg": n_cajas_reg
             })
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
@@ -421,25 +427,45 @@ def app():
             st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Serie:** {serie_mecanismos} | **Soporte:** {tipo_pared}")
             st.markdown("---")
 
-            # NUEVO BLOQUE: ANÁLISIS DE TIEMPOS DE MANO DE OBRA
+            # ANÁLISIS DE TIEMPOS
             st.subheader("⏱️ Análisis de Rendimiento y Tiempos de Mano de Obra")
-            st.markdown("Desglose técnico de los coeficientes de tiempo aplicados para calcular las horas reales de ejecución:")
             st.write(f"- 🧱 **Fase de Rozas / Perforación ({tipo_pared}):** `{sum_h_rozas:.2f} h` acumuladas.")
             st.write(f"- 📏 **Fase de Canalización y Cajas (0.25 h/m²):** `{sum_h_tubos:.2f} h` acumuladas.")
-            st.write(f"- ⚡ **Fase de Tendido y Metida de Cableado (0.30 h/m²):** `{sum_h_cable:.2f} h` acumuladas.")
-            st.write(f"- 🔲 **Fase de Conexionado y Mecanizado (0.15 h/unidad):** `{sum_h_mec:.2f} h` acumuladas.")
+            st.write(f"- ⚡ **Fase de Tendido y Cableado (0.30 h/m²):** `{sum_h_cable:.2f} h` acumuladas.")
+            st.write(f"- 🔲 **Fase de Conexionado y Mecanizado (0.15 h/u):** `{sum_h_mec:.2f} h` acumuladas.")
             st.info(f"⏱️ **Total Horas de Obra Estimadas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`** (Coste Neto Mano de Obra).")
             st.markdown("---")
 
-            st.subheader("🛠️ Desglose por Estancias")
+            # DESGLOSE DETALLADO POR ESTANCIAS (MATERIALES, PROVEEDORES, LÍNEAS DE EXCEL Y MANO DE OBRA)
+            st.subheader("🛠️ Desglose Detallado por Estancias (Materiales, Proveedor, Fila Excel y Mano de Obra)")
             for item in desgloses_internos_estancias:
-                st.markdown(f"**📍 Estancia: {item['nombre']} ({item['m2']} m²)**")
-                st.write(f"- Coste Materiales: `{item['neto_mat']:.2f} €` (Sin IVA) | **`{item['iva_mat']:.2f} €` (Con IVA 21%)**")
-                st.write(f"- Mano de Obra: `{item['horas']:.2f} h` total (`{item['coste_mo']:.2f} €` netos)")
-                st.write(f"  • Tareas -> Rozas/Taladros: `{item['rozas']:.2f} h` | Tubos: `{item['tubos']:.2f} h` | Cable: `{item['cable']:.2f} h` | Mecanismos: `{item['mec']:.2f} h`")
+                st.markdown(f"### 📍 {item['nombre']} ({item['m2']} m²)")
+                st.markdown(f"⏱️ **Mano de Obra Estancia:** `{item['horas']:.2f} h` netas (`{item['coste_mo']:.2f} €`) — Desglose tareas: Rozas `{item['rozas']:.2f}h`, Tubos `{item['tubos']:.2f}h`, Cable `{item['cable']:.2f}h`, Mecanizado `{item['mec']:.2f}h`")
+                
+                st.markdown("📦 **Materiales de la Estancia:**")
+                # Tubo
+                tag_tubo = f"[Fila Excel: #{fila_tubo}]" if enc_tubo else "⚠️ * [Estimado / No hallado en BD]"
+                st.write(f"  - **Tubo M-20:** `{int(item['m_tubo'])} m` | Proveedor: `{prov_tubo}` | {tag_tubo} | Precio s/iva: `{p_tubo:.2f} €/m` (Con iva: `{(p_tubo*1.21):.2f} €/m`)")
+                
+                # Cajas mec y reg
+                tag_caja = f"[Fila Excel: #{fila_caja_mec}]" if enc_caja_mec else "⚠️ * [Estimado / No hallado en BD]"
+                st.write(f"  - **Cajas Universales:** Proveedor: `{prov_caja_mec}` | {tag_caja} | S/IVA: `{p_caja_mec:.2f} €` (Con IVA: `{(p_caja_mec*1.21):.2f} €`)")
+                if item['n_cajas_reg'] > 0:
+                    tag_reg = f"[Fila Excel: #{fila_caja_reg}]" if enc_caja_reg else "⚠️ * [Estimado / No hallado en BD]"
+                    st.write(f"  - **Caja de Registro (100x100):** Proveedor: `{prov_caja_reg}` | {tag_reg} | S/IVA: `{p_caja_reg:.2f} €`")
+
+                # Mecanismos específicos de la estancia
+                for mec in item['mecanismos_detalle']:
+                    t_fila = f"[Fila Excel: #{mec['fila']}]" if mec['enc'] else "⚠️ * [Estimado / No hallado en BD]"
+                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. BD: `{mec['desc_real']}` | Proveedor: `{mec['prov']}` | {t_fila} | Precio s/iva c/u: `{mec['precio']:.2f} €` (Con IVA: `{(mec['precio']*1.21):.2f} €`)")
+
+                st.markdown(f"👉 **Subtotal Materiales Estancia:** Sin IVA: `{item['neto_mat']:.2f} €` &nbsp;|&nbsp; **Con IVA (21%): `{item['iva_mat']:.2f} €`**")
                 st.markdown("---")
 
-            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos})")
+            # RESUMEN GLOBAL DE ACOPIO CON PROVEEDOR Y FILAS EXCEL
+            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos}) — Dónde Comprar y Trazabilidad Excel")
+            st.markdown("Lista oficial para compras en almacén con indicación de rollos, proveedor, precio con/sin IVA y trazabilidad de tu hoja Excel.")
+
             rollos_tubo = max(1, int((global_tubo_m + 99) / 100))
             total_cable_15_m = global_cable_15_fn_m + global_cable_15_tierra_m + global_cable_15_vueltas_m
             rollos_cable_15 = max(1, int((total_cable_15_m + 99) / 100))
@@ -448,36 +474,41 @@ def app():
             total_mat_neto = coste_total_materiales_bruto
             total_mat_con_iva = total_mat_neto * 1.21
 
+            tag_t_ex = f"[Fila Excel: #{fila_tubo}]" if enc_tubo else "⚠️ * [Estimado / No hallado en BD]"
+            tag_15_ex = f"[Fila Excel: #{fila_15}]" if enc_15 else "⚠️ * [Estimado / No hallado en BD]"
+            tag_25_ex = f"[Fila Excel: #{fila_25}]" if enc_25 else "⚠️ * [Estimado / No hallado en BD]"
+
             col_g1, col_g2 = st.columns(2)
             with col_g1:
-                st.markdown("**📏 Canalización y Tubería**")
-                st.write(f"- Tubo M-20 Requerido: `{int(global_tubo_m)} m`")
+                st.markdown("**📏 Canalización y Tubería M-20**")
+                st.write(f"- Metros requeridos: `{int(global_tubo_m)} m` | Proveedor: **{prov_tubo}** | {tag_t_ex}")
                 st.write(f"  • Precio metro: `{p_tubo:.2f} €` (Neto) | `{(p_tubo*1.21):.2f} €` (Con IVA)")
-                st.success(f"📦 A comprar: `{rollos_tubo} rollo(s) de 100m`")
-                st.info(f"💵 Precio Rollo 100m: `{p_tubo*100:.2f} €` (Neto) / **`{p_tubo*100*1.21:.2f} €` (Con IVA 21%)**")
+                st.success(f"📦 **A comprar en almacén:** `{rollos_tubo} rollo(s) de 100m`")
+                st.info(f"💵 **Precio por Rollo de 100m:** `{p_tubo*100:.2f} €` (Neto) / **`{p_tubo*100*1.21:.2f} €` (Con IVA 21%)**")
 
                 st.markdown(f"**⚡ Cableado 1.5 mm² ({tipo_cable_sel})**")
-                st.write(f"- Total Cable 1.5 mm²: `{int(total_cable_15_m)} m`")
-                st.info(f"📦 A comprar: `{rollos_cable_15} rollo(s) de 100m` | Precio Rollo 100m: `{p_15*100:.2f} €` (Neto) / **`{p_15*100*1.21:.2f} €` (Con IVA)**")
+                st.write(f"- Total metros: `{int(total_cable_15_m)} m` | Proveedor: **{prov_15}** | {tag_15_ex}")
+                st.info(f"📦 **A comprar:** `{rollos_cable_15} rollo(s) de 100m` | **Precio Rollo 100m:** `{p_15*100:.2f} €` (Neto) / **`{p_15*100*1.21:.2f} €` (Con IVA)**")
 
             with col_g2:
                 st.markdown(f"**⚡ Cableado 2.5 mm² ({tipo_cable_sel})**")
-                st.write(f"- Total Cable 2.5 mm²: `{int(global_cable_25_fuerza_m)} m`")
-                st.info(f"📦 A comprar: `{rollos_cable_25} rollo(s) de 100m` | Precio Rollo 100m: `{p_25*100:.2f} €` (Neto) / **`{p_25*100*1.21:.2f} €` (Con IVA)**")
+                st.write(f"- Total metros: `{int(global_cable_25_fuerza_m)} m` | Proveedor: **{prov_25}** | {tag_25_ex}")
+                st.info(f"📦 **A comprar:** `{rollos_cable_25} rollo(s) de 100m` | **Precio Rollo 100m:** `{p_25*100:.2f} €` (Neto) / **`{p_25*100*1.21:.2f} €` (Con IVA)**")
 
                 st.markdown(f"**📦 Mecanismos y Cajas ({serie_mecanismos})**")
-                st.write(f"- Cajas universales (60x60): `{global_caja_mec_uds} uds` (Precio c/u con IVA: `{p_caja_mec*1.21:.2f} €`)")
-                st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` (Precio c/u con IVA: `{p_caja_reg*1.21:.2f} €`)")
-                st.write(f"- Marcos Embellecedores: `{global_marcos_uds} uds` (Precio c/u con IVA: `{p_marco*1.21:.2f} €`)")
-                for (nombre_m, prec_m, prov_m), cantidad_m in global_mecanismos_dict.items():
-                    st.write(f"- `{cantidad_m}x` {nombre_m} (Precio c/u con IVA: `{(prec_m*1.21):.2f} €`)")
+                st.write(f"- Cajas universales (60x60): `{global_caja_mec_uds} uds` | Proveedor: **{prov_caja_mec}**")
+                st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` | Proveedor: **{prov_caja_reg}**")
+                st.write(f"- Marcos Embellecedores: `{global_marcos_uds} uds` | Proveedor: **{prov_marco}**")
+                for (nombre_m, desc_m, prec_m, prov_m, fila_m, enc_m), cantidad_m in global_mecanismos_dict.items():
+                    t_f = f"[Fila Excel: #{fila_m}]" if enc_m else "⚠️ * [Estimado / No hallado en BD]"
+                    st.write(f"- `{cantidad_m}x` **{nombre_m}** ({serie_mecanismos}) | Proveedor: **{prov_m}** | {t_f} | Precio c/u con IVA: `{(prec_m*1.21):.2f} €`")
 
             st.markdown(f"""
             <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
                 <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO DE MATERIAL)</h3>
                 <p><b>Coste Total Materiales (Sin IVA):</b> {total_mat_neto:.2f} €</p>
                 <h2 style="color: #16a34a; margin: 0;">TOTAL A PAGAR EN EL ALMACÉN (Con 21% IVA): {total_mat_con_iva:.2f} €</h2>
-                <p style="font-size: 13px; color: #64748b; margin-top: 8px;">* Importe exacto a abonar en el mostrador de Obramat incluyendo la serie <b>{serie_mecanismos}</b>.</p>
+                <p style="font-size: 13px; color: #64748b; margin-top: 8px;">* Importe exacto a abonar en el mostrador de Obramat / Proveedores incluyendo la serie <b>{serie_mecanismos}</b>.</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -548,7 +579,7 @@ def app():
             st.markdown("##### 📝 Condiciones Generales y Garantía")
             st.info(f"• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT con mecanismos **{serie_mecanismos}**.")
 
-        st.success("✅ ¡Análisis de tiempos de mano de obra y paneles generados con éxito!")
+        st.success("✅ ¡Trazabilidad de filas Excel y desgloses detallados aplicados con éxito!")
 
 if __name__ == "__main__":
     app()
