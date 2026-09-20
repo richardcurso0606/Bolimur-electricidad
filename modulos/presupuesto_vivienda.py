@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Búsqueda en Base de Datos de Precios por Estancias y Costes de Autónomo
+Módulo Profesional de Presupuestos: Desglose Pormenorizado REBT por Estancias y Costes de Autónomo
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -24,8 +24,8 @@ def app():
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🏡 Generador de Presupuestos: Precios Reales desde Base de Datos")
-    st.markdown("Desglose pormenorizado por habitación extrayendo los costes reales de material de tu base de datos oficial.")
+    st.title("🏡 Generador de Presupuestos: Desglose Estricto REBT por Estancias")
+    st.markdown("Control milimétrico por habitación: Tubos, Cajas de Mecanismos, Cajas de Registro, Cables de 1.5mm² y 2.5mm² para fuerza, colores de conmutadas y costes de autónomo.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -144,33 +144,27 @@ def app():
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto con Precios de Base de Datos", type="primary"):
+    if st.button("🚀 Calcular Presupuesto REBT con Precios de Base de Datos", type="primary"):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
 
         sup_total = sum([e["m2"] for e in estancias_activas])
 
-        # Obtener precios unitarios reales desde el Excel (con valores por defecto si no se hallan)
-        p_tubo, en_bd_tubo = obtener_precio_bd(df_precios, ['tubo corrugado', 'm-20', 'tubo 20'], 0.45)
-        p_fase, en_bd_fase = obtener_precio_bd(df_precios, ['1.5 mm', 'h07v-k 1.5', 'cable 1.5'], 0.35)
-        p_neutro, en_bd_neutro = obtener_precio_bd(df_precios, ['1.5 mm', 'h07v-k 1.5'], 0.35)
-        p_tierra, en_bd_tierra = obtener_precio_bd(df_precios, ['2.5 mm', 'h07v-k 2.5', 'cable 2.5'], 0.50)
-        p_vuelta, en_bd_vuelta = obtener_precio_bd(df_precios, ['1.5 mm', 'h07v-k 1.5'], 0.35)
-        p_meca, en_bd_meca = obtener_precio_bd(df_precios, ['mecanismo', 'interruptor', 'schuko'], 6.50)
-
-        # Aviso si algún material no estaba en la base de datos oficial
-        if not en_bd_tubo:
-            st.warning("⚠️ El 'Tubo M-20' no se encontró textualmente en la base de datos oficial; se ha aplicado un precio de coste estimado.")
-        if not en_bd_meca:
-            st.warning("⚠️ Los 'Mecanismos' no se hallaron en la tarifa exacta; se ha aplicado un precio de referencia.")
+        # Precios unitarios desde BD con valores de seguridad por defecto
+        p_tubo, _ = obtener_precio_bd(df_precios, ['tubo corrugado', 'm-20', 'tubo 20'], 0.45)
+        p_caja_mec, _ = obtener_precio_bd(df_precios, ['caja universal', 'caja mecanismo', 'mecanismo empotrar'], 0.30)
+        p_caja_reg, _ = obtener_precio_bd(df_precios, ['caja de registro', 'derivación'], 1.50)
+        p_15, _ = obtener_precio_bd(df_precios, ['1.5 mm', 'h07v-k 1.5', 'cable 1.5'], 0.35)
+        p_25, _ = obtener_precio_bd(df_precios, ['2.5 mm', 'h07v-k 2.5', 'cable 2.5'], 0.50)
+        p_meca, _ = obtener_precio_bd(df_precios, ['mecanismo', 'interruptor', 'schuko'], 6.50)
 
         # ==========================================
         # 1. INFORME TÉCNICO PORMENORIZADO (AUTÓNOMO)
         # ==========================================
         st.markdown("---")
-        st.header("🛠️ 1. INFORME TÉCNICO Y DE COSTES (Para el Instalador)")
-        st.info("Costes reales extraídos de tu base de datos de precios, con desglose de materiales por estancia y horas de mano de obra.")
+        st.header("🛠️ 1. INFORME TÉCNICO Y DE COSTES REBT (Para el Instalador)")
+        st.info("Desglose estricto por habitación incluyendo tubos, cajas de mecanismos, cajas de registro, cableado REBT de 1.5mm² y 2.5mm² para fuerza, y costes de mano de obra.")
 
         coste_total_materiales_bruto = 0.0
         horas_totales_obra = 0.0
@@ -179,50 +173,56 @@ def app():
             m2 = est["m2"]
             alt = est["altura"]
 
+            # Mediciones técnicas conformes a REBT por estancia
             m_tubo = m2 * 4.2 * (alt / 2.5)
-            m_fase = m2 * 5.0
-            m_neutro = m2 * 5.0
-            m_tierra = m2 * 5.0
-            m_vuelta = m2 * 4.0
-            mecanismos = max(3, int(m2 / 4))
+            n_mecanismos = max(3, int(m2 / 4))
+            n_cajas_reg = 1 if m2 > 8 else 0  # Caja de derivación por estancia grande
 
-            # Costes calculados con precios de la BD
+            # Cableado REBT desglosado
+            m_15_ilum = m2 * 6.0    # Fase y neutro iluminación
+            m_15_vueltas = m2 * 4.0 # Hilos de vuelta / conmutadas (Gris / Marrón)
+            m_25_fuerza = m2 * 12.0 # Circuito C2 Tomas de fuerza (Fase, Neutro, Tierra)
+
+            # Costes netos de materiales por estancia
             coste_mat_estancia = (
                 (m_tubo * p_tubo) +
-                (m_fase * p_fase) +
-                (m_neutro * p_neutro) +
-                (m_tierra * p_tierra) +
-                (m_vuelta * p_vuelta) +
-                (mecanismos * p_meca)
+                (n_mecanismos * p_caja_mec) +
+                (n_cajas_reg * p_caja_reg) +
+                (m_15_ilum * p_15) +
+                (m_15_vueltas * p_15) +
+                (m_25_fuerza * p_25) +
+                (n_mecanismos * p_meca)
             )
             coste_total_materiales_bruto += coste_mat_estancia
 
-            # Horas de mano de obra desglosadas
+            # Horas de mano de obra desglosadas por labores
             h_rozas = (m2 * 0.35) if "Empotrada" in tipo_obra else 0.0
-            h_tubo = m2 * 0.20
-            h_cableado = m2 * 0.25
-            h_mecanizado = mecanismos * 0.15
+            h_tubo_cajas = m2 * 0.25  # Colocación de tubo, cajas de mecanismo y registro
+            h_cableado = m2 * 0.30    # Metida de cables de 1.5 y 2.5 con código de colores
+            h_mecanizado = n_mecanismos * 0.15 # Conexionado de mecanismos
 
-            h_estancia_total = h_rozas + h_tubo + h_cableado + h_mecanizado
+            h_estancia_total = h_rozas + h_tubo_cajas + h_cableado + h_mecanizado
             horas_totales_obra += h_estancia_total
             coste_mo_estancia = h_estancia_total * precio_hora
 
-            with st.expander(f"📍 Estancia {idx+1}: {est['nombre']} ({m2} m²) - Coste Neto: {coste_mat_estancia + coste_mo_estancia:.2f} €"):
-                st.markdown(f"**📦 Detalle de Materiales (Precios de Coste BD):**")
+            with st.expander(f"📍 Estancia {idx+1}: {est['nombre']} ({m2} m²) - Coste Neto Total: {coste_mat_estancia + coste_mo_estancia:.2f} €"):
+                st.markdown(f"**📦 Lista Detallada de Materiales (Precios de Coste BD):**")
                 st.write(f"- Tubo Corrugado M-20: **{int(m_tubo)} m** x {p_tubo:.2f} €/m = `{m_tubo*p_tubo:.2f} €`")
-                st.write(f"- Cable Fase (Marrón/Negro) 1.5mm²: **{int(m_fase)} m** x {p_fase:.2f} €/m = `{m_fase*p_fase:.2f} €`")
-                st.write(f"- Cable Neutro (Azul) 1.5mm²: **{int(m_neutro)} m** x {p_neutro:.2f} €/m = `{m_neutro*p_neutro:.2f} €`")
-                st.write(f"- Cable Tierra (Verde-Amarillo) 2.5mm²: **{int(m_tierra)} m** x {p_tierra:.2f} €/m = `{m_tierra*p_tierra:.2f} €`")
-                st.write(f"- Cable Vueltas / Conmutadas (Gris / Marrón) 1.5mm²: **{int(m_vuelta)} m** x {p_vuelta:.2f} €/m = `{m_vuelta*p_vuelta:.2f} €`")
-                st.write(f"- Mecanismos ({gama_sel}): **{mecanismos} uds** x {p_meca:.2f} €/ud = `{mecanismos*p_meca:.2f} €`")
+                st.write(f"- Cajas Universales de Mecanismo: **{n_mecanismos} uds** x {p_caja_mec:.2f} €/ud = `{n_mecanismos*p_caja_mec:.2f} €`")
+                if n_cajas_reg > 0:
+                    st.write(f"- Caja de Registro / Derivación: **{n_cajas_reg} ud** x {p_caja_reg:.2f} €/ud = `{n_cajas_reg*p_caja_reg:.2f} €`")
+                st.write(f"- Cable 1.5 mm² (Fase Marrón/Negro y Neutro Azul - Iluminación): **{int(m_15_ilum)} m** x {p_15:.2f} €/m = `{m_15_ilum*p_15:.2f} €`")
+                st.write(f"- Cable 1.5 mm² (Vueltas y Conmutadas en Color **Gris y Marrón**): **{int(m_15_vueltas)} m** x {p_15:.2f} €/m = `{m_15_vueltas*p_15:.2f} €`")
+                st.write(f"- Cable 2.5 mm² (Fuerza / Tomas de Corriente C2: Fase, Neutro y Tierra Verde-Amarillo): **{int(m_25_fuerza)} m** x {p_25:.2f} €/m = `{m_25_fuerza*p_25:.2f} €`")
+                st.write(f"- Mecanismos ({gama_sel}): **{n_mecanismos} uds** x {p_meca:.2f} €/ud = `{n_mecanismos*p_meca:.2f} €`")
                 st.markdown(f"👉 **Subtotal Gastos Materiales Estancia:** `{coste_mat_estancia:.2f} €`")
 
-                st.markdown(f"**⏱️ Desglose de Mano de Obra (Horas):**")
+                st.markdown(f"**⏱️ Desglose de Mano de Obra (Horas de Trabajo):**")
                 if "Empotrada" in tipo_obra:
                     st.write(f"- Picado de Rozas y Albañilería (Yeso/Mortero): **{h_rozas:.2f} h**")
-                st.write(f"- Colocación de Tubo y Cajas: **{h_tubo:.2f} h**")
-                st.write(f"- Cableado e Identificación de Colores: **{h_cableado:.2f} h**")
-                st.write(f"- Conexionado y Mecanizado de Tomas: **{h_mecanizado:.2f} h**")
+                st.write(f"- Colocación de Tubo, Cajas de Mecanismo y Registro: **{h_tubo_cajas:.2f} h**")
+                st.write(f"- Metida de Cableado REBT (1.5mm² y 2.5mm²): **{h_cableado:.2f} h**")
+                st.write(f"- Conexionado y Mecanizado Final: **{h_mecanizado:.2f} h**")
                 st.markdown(f"⏱️ **Total Horas Estancia:** `{h_estancia_total:.2f} h` | 💵 **Coste Mano de Obra Neto:** `{coste_mo_estancia:.2f} €`")
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
@@ -253,7 +253,7 @@ def app():
             <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
             <hr style="border: 1px solid #bae6fd;">
             <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
-            <p><b>Objeto:</b> Instalación Eléctrica Completa por Estancias ({sup_total:.1f} m²)</p>
+            <p><b>Objeto:</b> Instalación Eléctrica REBT Completa por Estancias ({sup_total:.1f} m²)</p>
             <p><b>Sistema:</b> {tipo_obra} | **Gama:** {gama_sel}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -264,14 +264,14 @@ def app():
 
         for est in estancias_activas:
             m2 = est["m2"]
-            coste_base_estancia = (m2 * 42.0) if "Empotrada" in tipo_obra else (m2 * 32.0)
+            coste_base_estancia = (m2 * 45.0) if "Empotrada" in tipo_obra else (m2 * 35.0)
             precio_venta_estancia = coste_base_estancia * multiplicador
             subtotal_neto_comercial += precio_venta_estancia
 
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial (Materiales + Mano de Obra y Conexionado)": f"Suministro e instalación completa: Canalización con tubo M-20, cableado de seguridad libre de halógenos (fases, neutro, tierra y hilos de color gris/marrón para conmutadas), cajas de registro y mecanismos gama {gama_sel}.",
+                "Detalle Comercial (Materiales + Mano de Obra REBT)": f"Suministro e instalación completa conforme a REBT: Tubo M-20, cajas de mecanismo y registro, cableado libre de halógenos de 1.5mm² (iluminación y vueltas gris/marrón) y 2.5mm² (tomas de fuerza), y mecanismos gama {gama_sel}.",
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
@@ -304,7 +304,7 @@ def app():
         st.markdown("##### 📝 Condiciones Generales y Garantía")
         st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT.")
 
-        st.success("✅ ¡Informes pormenorizados generados con éxito utilizando los precios de tu base de datos!")
+        st.success("✅ ¡Informes pormenorizados REBT generados con éxito!")
 
 if __name__ == "__main__":
     app()
