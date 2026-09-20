@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos y Modificación Inteligente por IA
+Módulo Profesional de Presupuestos: Informe Técnico (Autónomo) y Oferta Comercial (Cliente)
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -10,10 +10,24 @@ import openpyxl
 import os
 
 def app():
-    st.title("🏡 Generador Profesional de Presupuestos y Modificación por IA")
-    st.markdown("Crea, modifica y personaliza presupuestos de instalaciones eléctricas con total control técnico y comercial.")
+    # Estilo CSS para impresión limpia (Oculta menús y sidebar al imprimir)
+    st.markdown("""
+        <style>
+            @media print {
+                [data-testid="stSidebar"] {display: none;}
+                [data-testid="stHeader"] {display: none;}
+                .stButton {display: none;}
+                .stTextInput {display: none;}
+                .stSelectbox {display: none;}
+                .stSlider {display: none;}
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # 1. Cargar base de datos maestra de precios y datos del instalador
+    st.title("🏡 Generador Profesional de Presupuestos y Control Técnico")
+    st.markdown("Herramienta avanzada para autónomos: Verificación técnica por estancias y generación de presupuestos comerciales.")
+
+    # 1. Cargar base de datos maestra de precios
     excel_cargado = None
     nombres_posibles = [
         "base_datos_precio_oficial.xlsx",
@@ -60,10 +74,10 @@ def app():
     telefono = st.sidebar.text_input("Teléfono Contacto", value="+34 600 000 000")
 
     # ==========================================
-    # PARÁMETROS GENERALES DE OBRA (VISIBLE EN PANTALLA)
+    # PARÁMETROS GENERALES DE OBRA
     # ==========================================
     st.markdown("---")
-    st.subheader("⚙️ Parámetros Generales de Obra")
+    st.subheader("⚙️ Parámetros Generales de Ejecución")
     
     col_p1, col_p2, col_p3 = st.columns(3)
     with col_p1:
@@ -124,11 +138,10 @@ def app():
     st.markdown("---")
 
     # ==========================================
-    # GESTIÓN DE PARTIDAS (AÑADIR, MODIFICAR, QUITAR) & ASISTENTE IA
+    # GESTIÓN DE PARTIDAS EXTRA & ASISTENTE IA
     # ==========================================
-    st.subheader("🛠️ Gestión de Partidas, Modificaciones y Asistente IA")
-    st.markdown("Puedes añadir imprevistos manualmente o dictar una instrucción para que la IA la incorpore al presupuesto.")
-
+    st.subheader("🛠️ Gestión de Partidas y Asistente IA")
+    
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         with st.form("form_manual"):
@@ -155,7 +168,6 @@ def app():
                 else:
                     st.warning("Escribe una instrucción.")
 
-    # Mostrar tabla de partidas extra con opción de eliminar
     if st.session_state.partidas_extra:
         st.markdown("##### 📝 Partidas Extra / Modificaciones Actuales:")
         for idx, p in enumerate(st.session_state.partidas_extra):
@@ -169,7 +181,7 @@ def app():
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto y Generar Oferta Comercial", type="primary"):
+    if st.button("🚀 Calcular Presupuesto y Generar Informes", type="primary"):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
@@ -177,16 +189,37 @@ def app():
         sup_total = sum([e["m2"] for e in estancias_activas])
         alt_media = sum([e["altura"] for e in estancias_activas]) / len(estancias_activas)
 
-        # Cálculos técnicos transparentes
+        # Cálculos técnicos por estancia
+        detalle_estancias = []
+        for est in estancias_activas:
+            m2_e = est["m2"]
+            alt_e = est["altura"]
+            # Estimación técnica por estancia
+            tubo_e = m2_e * 4.2 * (alt_e / 2.5)
+            c1_e = m2_e * 12.0
+            c2_e = m2_e * 15.0
+            mecanismos_e = max(3, int(m2_e / 4))
+            detalle_estancias.append({
+                "Estancia": est["nombre"],
+                "Sup (m²)": m2_e,
+                "Tubo M-20 (m)": round(tubo_e, 1),
+                "Cable 1.5mm² (m)": round(c1_e, 1),
+                "Cable 2.5mm² (m)": round(c2_e, 1),
+                "Mecanismos": mecanismos_e
+            })
+
+        df_detalle_est = pd.DataFrame(detalle_estancias)
+
+        # Totales generales de materiales y obra
         perimetro = sup_total * 0.8 * 4
         rozas = perimetro * 1.5 if "Empotrada" in tipo_obra else 0
         sacos_yeso = max(2, int(rozas / 12)) if "Empotrada" in tipo_obra else 0
-        tubo = sup_total * 4.5 * (alt_media / 2.5)
-        c1 = sup_total * 12.0
-        c2 = sup_total * 16.0
-        c3 = sup_total * 5.0
+        tubo_total = sum([d["Tubo M-20 (m)"] for d in detalle_estancias])
+        c1_total = sum([d["Cable 1.5mm² (m)"] for d in detalle_estancias])
+        c2_total = sum([d["Cable 2.5mm² (m)"] for d in detalle_estancias])
+        c3_total = sup_total * 5.0
 
-        coste_materiales = (tubo * 0.45) + (c1 * 0.35) + (c2 * 0.50) + (c3 * 0.90) + (sacos_yeso * 7.5) + (len(estancias_activas) * 35.0)
+        coste_materiales = (tubo_total * 0.45) + (c1_total * 0.35) + (c2_total * 0.50) + (c3_total * 0.90) + (sacos_yeso * 7.5) + (len(estancias_activas) * 35.0)
         total_extras = sum([p["Precio"] * p["Cantidad"] for p in st.session_state.partidas_extra])
         mano_obra = sup_total * 22.0
 
@@ -195,28 +228,33 @@ def app():
         total_presupuesto = subtotal_neto + cuota_iva
 
         # ==========================================
-        # VERIFICACIÓN TÉCNICA (DESGLOSE INTERNO PARA EL AUTÓNOMO)
+        # 1. INFORME TÉCNICO PORMENORIZADO (PARA TI)
         # ==========================================
-        with st.expander("🔍 Verificación Técnica Interna (Desglose de Materiales y Mano de Obra)"):
-            st.markdown("### Resumen de Metrajes y Consumibles Calculados")
-            datos_tecnicos = [
-                {"Concepto": "Superficie Útil Total", "Cantidad": f"{sup_total:.1f}", "Unidad": "m²"},
-                {"Concepto": "Tubo Corrugado M-20", "Cantidad": f"{int(tubo)}", "Unidad": "Metros"},
-                {"Concepto": "Cable H07V-K 1.5 mm² (Iluminación)", "Cantidad": f"{int(c1)}", "Unidad": "Metros"},
-                {"Concepto": "Cable H07V-K 2.5 mm² (Enchufes)", "Cantidad": f"{int(c2)}", "Unidad": "Metros"},
-                {"Concepto": "Cable H07V-K 4 mm² (Cocina/Horno)", "Cantidad": f"{int(c3)}", "Unidad": "Metros"},
-                {"Concepto": "Picado y Ejecución de Rozas", "Cantidad": f"{int(rozas)}", "Unidad": "Metros lineales"},
-                {"Concepto": "Sacos de Yeso / Mortero Tapado", "Cantidad": f"{int(sacos_yeso)}", "Unidad": "Sacos (25kg)"},
-                {"Concepto": "Mano de Obra Estimada Ejecución", "Cantidad": f"{mano_obra:.2f}", "Unidad": "€ Coste Directo"},
-            ]
-            st.dataframe(pd.DataFrame(datos_tecnicos), use_container_width=True)
+        st.markdown("---")
+        st.header("🛠️ INFORME TÉCNICO INTERNO (Para el Instalador)")
+        st.info("Este informe es exclusivo para ti. Aquí ves el desglose exacto por habitación, metrajes de cable, tubos y albañilería para que puedas verificarlo y acopiar material sin errores.")
+
+        st.subheader("Desglose Estancia por Estancia")
+        st.dataframe(df_detalle_est, use_container_width=True)
+
+        st.subheader("Resumen de Consumibles y Obra Civil")
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            st.metric("Metros Totales de Tubo M-20", f"{int(tubo_total)} m")
+            st.metric("Cable H07V-K 1.5 mm² (Iluminación)", f"{int(c1_total)} m")
+            st.metric("Cable H07V-K 2.5 mm² (Enchufes)", f"{int(c2_total)} m")
+        with col_t2:
+            st.metric("Metros de Rozas a Picar", f"{int(rozas)} m.l.")
+            st.metric("Sacos de Yeso / Mortero (25kg)", f"{int(sacos_yeso)} sacos")
+            st.metric("Coste Directo Mano de Obra", f"{mano_obra:.2f} €")
 
         # ==========================================
-        # VISTA COMERCIAL PROFESIONAL PARA EL CLIENTE
+        # 2. VISTA COMERCIAL PROFESIONAL (PARA EL CLIENTE)
         # ==========================================
         st.markdown("---")
         st.header("📄 VISTA COMERCIAL: Presupuesto para el Cliente")
-        
+        st.markdown("Presenta esta sección a tu cliente (puedes pulsar **Ctrl + P** en tu teclado para imprimir o guardar directamente como PDF limpio).")
+
         st.markdown(f"""
         <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
             <h3 style="color: #0369a1; margin-top: 0;">{empresa_nombre}</h3>
@@ -224,7 +262,7 @@ def app():
             <hr style="border: 1px solid #bae6fd;">
             <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
             <p><b>Objeto:</b> Instalación Eléctrica Completa en Vivienda ({sup_total:.1f} m²)</p>
-            <p><b>Sistema:</b> {tipo_obra}</p>
+            <p><b>Sistema de Ejecución:</b> {tipo_obra}</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -256,18 +294,7 @@ def app():
         st.markdown("##### 📝 Condiciones Generales y Garantía del Servicio")
         st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Exclusiones:** No incluye pintura ni azulejos especiales decorativos.")
 
-        # BOTÓN DE IMPRESIÓN PDF
-        st.markdown("---")
-        st.markdown("### 🖨️ Exportación y Entrega")
-        if st.button("🖨️ Imprimir / Guardar Presupuesto en PDF"):
-            st.markdown("""
-                <script>
-                    window.print();
-                </script>
-            """, unsafe_allow_html=True)
-            st.info("💡 Se ha abierto el panel de impresión de tu navegador. Selecciona 'Guardar como PDF' para descargar la oferta comercial.")
-
-        st.success("✅ Presupuesto profesional generado con éxito. ¡Listo para presentar al cliente!")
+        st.success("✅ Informes generados con éxito. ¡Todo listo para verificar tu material y entregar la oferta al cliente!")
 
 if __name__ == "__main__":
     app()
