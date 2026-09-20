@@ -86,20 +86,7 @@ def app():
 
     def buscar_mecanismo(df, tipo, serie_sel):
         serie_lower = serie_sel.lower()
-        target_series = []
-        if 'simon 10' in serie_lower or 'solera' in serie_lower or 'económica' in serie_lower:
-            target_series = ['serie europa', 'lika', 'simon 31']
-        elif 'simon 27' in serie_lower or 'estándar' in serie_lower:
-            target_series = ['simon 31', 'ovalis', 'new unica', 'simon 27 play']
-        elif 'simon 82' in serie_lower or 'alta' in serie_lower:
-            target_series = ['simon 82', 'valena next', 'zenit']
-        elif 'asfora' in serie_lower or 'schneider' in serie_lower or 'media' in serie_lower:
-            target_series = ['ovalis', 'miluz', 'new unica']
-        elif 'zenit' in serie_lower or 'niessen' in serie_lower:
-            target_series = ['zenit']
-        else:
-            target_series = ['simon 31', 'new unica']
-
+        
         kw_map = {
             'interruptor': ['interruptor', 'conmutador'],
             'schuko': ['schuko', 'enchufe'],
@@ -108,15 +95,30 @@ def app():
         }
         keywords = kw_map.get(tipo, ['interruptor'])
 
+        # Pass 1: Búsqueda estricta por coincidencia de serie y palabra clave
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
                 serie_item = str(row.get('Serie / Gama', '')).strip().lower()
+                
                 if kw in desc:
-                    for ts in target_series:
-                        if ts in serie_item:
+                    if any(term in serie_item or term in desc for term in ['simon 10', 'simon 27 play', 'simon 82', 'zenit', 'asfora', 'ovalis', 'miluz', 'niloé step', 'suno', 'new unica', 'valena next', 'simon 270'] if term in serie_lower):
+                        if any(t in serie_item for t in serie_lower.split() if len(t) > 3):
                             return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
 
+        # Pass 2: Coincidencia por marca general (Simon, Schneider, Niessen, etc.)
+        brand_terms = [t for t in ['simon', 'schneider', 'niessen', 'legrand', 'solera', 'lexman'] if t in serie_lower]
+        for kw in keywords:
+            for idx, row in df.iterrows():
+                desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                serie_item = str(row.get('Serie / Gama', '')).strip().lower()
+                marca_item = str(row.get('Marca', '')).strip().lower()
+                
+                if kw in desc:
+                    if any(bt in marca_item or bt in serie_item for bt in brand_terms):
+                        return float(row['Precio S/IVA (€)']), str(row['Proveedor / Tienda']), str(row['Descripción Exacta del Artículo']), True, idx + 2
+
+        # Pass 3: Fallback general de mecanismos
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
