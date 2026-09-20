@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Desglose por Estancia con Puntos Personalizables, Comparativa Obramat/Leroy y Acopio
+Módulo Profesional de Presupuestos: Desglose por Estancia, Puntos Personalizables, Selector de Gama o Marca y Acopio
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -100,8 +100,10 @@ def app():
             
         return 0.45, "Obramat", "Artículo estándar", False, -1
 
-    def buscar_mecanismo(df, tipo, serie_sel):
-        serie_lower = serie_sel.lower()
+    def buscar_mecanismo_por_filtro(df, tipo, modo_sel, valor_sel):
+        """
+        Busca mecanismos permitiendo filtrar por Gama o por Marca directamente.
+        """
         kw_map = {
             'interruptor': ['interruptor', 'conmutador'],
             'schuko': ['schuko', 'enchufe'],
@@ -111,14 +113,26 @@ def app():
         keywords = kw_map.get(tipo, ['interruptor'])
         mejores_candidatos = []
 
+        valor_lower = valor_sel.lower()
+
+        # Primera pasada: filtrado estricto por la gama o marca elegida
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
                 serie_item = str(row.get('Serie / Gama', '')).strip().lower()
                 marca_item = str(row.get('Marca', '')).strip().lower()
+                gama_item = str(row.get('Nivel de Gama / Aplicación', '')).strip().lower()
                 
                 if kw in desc:
-                    if any(term in serie_item or term in desc for term in ['simon 10', 'simon 27 play', 'simon 82', 'zenit', 'asfora', 'ovalis', 'miluz', 'niloé step', 'suno', 'new unica', 'valena next', 'simon 270'] if term in serie_lower):
+                    match = False
+                    if modo_sel == "Por Clasificación de Gamas":
+                        if valor_lower in serie_item or valor_lower in desc or valor_lower in gama_item:
+                            match = True
+                    else:  # Por Marca Directa
+                        if valor_lower in marca_item or valor_lower in serie_item:
+                            match = True
+
+                    if match:
                         try:
                             precio = float(row['Precio S/IVA (€)'])
                             prov = str(row.get('Proveedor / Tienda', 'Obramat'))
@@ -128,6 +142,7 @@ def app():
                         except:
                             continue
 
+        # Si no encuentra stock exacto con ese filtro estricto, busca cualquier coincidencia de la palabra clave
         if not mejores_candidatos:
             for kw in keywords:
                 for idx, row in df.iterrows():
@@ -159,12 +174,12 @@ def app():
     telefono = st.sidebar.text_input("Teléfono Contacto", value="+34 600 000 000")
 
     # ==========================================
-    # PARÁMETROS GLOBALES Y SERIES COMERCIALES
+    # PARÁMETROS GLOBALES Y SELECTOR DE GAMA / MARCA
     # ==========================================
     st.markdown("---")
-    st.subheader("⚙️ Parámetros de Costes, Márgenes y Selección de Series")
+    st.subheader("⚙️ Parámetros de Costes, Márgenes y Selección de Materiales")
     
-    col_par1, col_par2, col_par3 = st.columns(3)
+    col_par1, col_par2 = st.columns(2)
     with col_par1:
         grado_electrificacion = st.selectbox(
             "Grado de Electrificación (REBT)",
@@ -175,17 +190,36 @@ def app():
             "Tecnología de Cableado",
             ["Libre de Halógenos (H07Z1-K)", "PVC Normal / Estándar (H07V-K)"]
         )
-    with col_par3:
-        serie_mecanismos = st.selectbox(
-            "Serie y Fabricante de Mecanismos",
-            [
-                "Simon 10 (Gama Económica / Básica)",
-                "Simon 27 Play (Gama Estándar / Residencial)",
-                "Simon 82 Detail (Gama Alta / Decorativa)",
-                "Schneider Asfora (Gama Media)",
-                "Niessen Zenit (Gama Alta / Moderna)"
-            ]
+
+    st.markdown("#### 🔌 Criterio de Selección de Mecanismos (Gama o Marca)")
+    col_sel1, col_sel2 = st.columns(2)
+    with col_sel1:
+        modo_seleccion = st.radio(
+            "¿Cómo deseas elegir los mecanismos?",
+            ["Por Clasificación de Gamas", "Por Marca Directa"],
+            horizontal=True
         )
+    with col_sel2:
+        if modo_seleccion == "Por Clasificación de Gamas":
+            serie_mecanismos = st.selectbox(
+                "Selecciona la Gama / Serie:",
+                [
+                    "Simon 10 (Gama Económica / Básica)",
+                    "Simon 27 Play (Gama Estándar / Residencial)",
+                    "Simon 82 Detail (Gama Alta / Decorativa)",
+                    "Schneider Asfora (Gama Media)",
+                    "Niessen Zenit (Gama Alta / Moderna)"
+                ]
+            )
+        else:
+            # Extraer marcas limpias y únicas del Excel
+            marcas_disponibles = sorted([str(m) for m in df_precios['Marca'].dropna().unique() if m not in ['Obramat', 'Leroy Merlin', 'General']])
+            if not marcas_disponibles:
+                marcas_disponibles = ["Simon", "Schneider", "Legrand", "Niessen", "Solera"]
+            serie_mecanismos = st.selectbox(
+                "Selecciona la Marca:",
+                marcas_disponibles
+            )
 
     tipo_conexion = st.radio(
         "🔌 Sistema de Conexión en Cajas de Registro y Mecanismos:",
@@ -334,10 +368,24 @@ def app():
             p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'clema', '10mm')
             nombre_conexion_txt = "Regleta / Clema de Conexión 12 Polos"
 
-        p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo(df_precios, 'interruptor', serie_mecanismos)
-        p_schuko, prov_schuko, desc_schuko, _, fila_schuko = buscar_mecanismo(df_precios, 'schuko', serie_mecanismos)
-        p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo(df_precios, 'rj45', serie_mecanismos)
-        p_marco, prov_marco, desc_marco, _, fila_marco = buscar_mecanismo(df_precios, 'marco', serie_mecanismos)
+        p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
+        p_schuko, prov_schuko, desc_schuko, _, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
+        p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
+        p_marco, prov_marco, desc_marco, _, fila_marco = buscar_mecanismo_por_filtro(df_precios, 'marco', modo_seleccion, serie_mecanismos)
+
+        # Búsqueda de elementos del Cuadro Eléctrico en el Excel
+        p_iga, prov_iga, desc_iga, _, fila_iga = buscar_mas_economico(df_precios, 'iga', 'schneider')
+        if not fila_iga or p_iga == 0.45:
+            p_iga, prov_iga, desc_iga, _, fila_iga = buscar_mas_economico(df_precios, 'interruptor general automático', '40a')
+
+        p_id, prov_id, desc_id, _, fila_id = buscar_mas_economico(df_precios, 'diferencial', '40a')
+        p_pia, prov_pia, desc_pia, _, fila_pia = buscar_mas_economico(df_precios, 'pequeño interruptor automático', 'pia')
+        if not fila_pia or p_pia == 0.45:
+            p_pia, prov_pia, desc_pia, _, fila_pia = buscar_mas_economico(df_precios, 'automático', '16a')
+
+        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, _, fila_caja_cuadro = buscar_mas_economico(df_precios, 'caja de distribución', 'superficie')
+        if not fila_caja_cuadro or p_caja_cuadro == 0.45:
+            p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, _, fila_caja_cuadro = buscar_mas_economico(df_precios, 'cuadro', 'elementos')
 
         # Acumuladores globales
         global_tubo20_m = 0.0
@@ -540,9 +588,13 @@ def app():
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
 
-        # Cálculo de totales comerciales para el cliente
-        importe_cuadro_neto = (550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial
-        subtotal_general_neto = subtotal_neto_comercial + importe_cuadro_neto
+        # Costes y Ventas del Cuadro Eléctrico
+        es_elevada = "Elevada" in grado_electrificacion
+        coste_cuadro_neto = 400.0 if es_elevada else 320.0
+        venta_cuadro_neto = (550.0 if es_elevada else 450.0) * mult_comercial
+        benef_cuadro = venta_cuadro_neto - coste_cuadro_neto
+
+        subtotal_general_neto = subtotal_neto_comercial + venta_cuadro_neto
         cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
         total_cliente = subtotal_general_neto + cuota_iva
 
@@ -565,7 +617,7 @@ def app():
         # ==========================================
         if modo_impresion.startswith("🛠️"):
             st.header("🔒 Panel Interno de Trabajo y Acopio (Uso Exclusivo)")
-            st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Serie:** {serie_mecanismos} | **Soporte:** {tipo_pared}")
+            st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Selección ({modo_seleccion}):** {serie_mecanismos} | **Soporte:** {tipo_pared}")
             st.markdown("---")
 
             # CUADRO RESUMEN DE COBRO AL CLIENTE EN VISTA INTERNA
@@ -586,7 +638,7 @@ def app():
             st.info(f"⏱️ **Total Horas de Obra Estimadas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`** (Coste Neto Mano de Obra).")
             st.markdown("---")
 
-            st.subheader("🛠️ Desglose Detallado por Estancias (Enlazado con Precios Más Económicos y Puntos Personalizados)")
+            st.subheader("🛠️ Desglose Detallado por Estancias")
             for item in desgloses_internos_estancias:
                 st.markdown(f"### 📍 {item['nombre']} ({item['m2']} m²)")
                 st.markdown(f"⏱️ **Mano de Obra Estancia:** `{item['horas']:.2f} h` netas (`{item['coste_mo']:.2f} €`) — Tareas: Rozas `{item['rozas']:.2f}h`, Tubos `{item['tubos']:.2f}h`, Cable `{item['cable']:.2f}h`, Mecanizado `{item['mec']:.2f}h`")
@@ -620,7 +672,7 @@ def app():
                 st.markdown("---")
 
             # RESUMEN GLOBAL DE ACOPIO
-            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos}) — Selección Automática del Más Económico (Obramat / Leroy Merlin)")
+            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos}) — Selección Automática del Más Económico")
             st.markdown("Lista oficial optimizada con los mejores precios del mercado según tu base de datos.")
 
             rollos_tubo20 = max(1, int((global_tubo20_m + 49) / 50))
@@ -636,8 +688,9 @@ def app():
             rollos_25_ne = max(1, int((global_25_ne_m + 99) / 100))
             rollos_25_tt = max(1, int((global_25_tt_m + 99) / 100))
 
-            total_mat_neto = coste_total_materiales_bruto
-            total_mat_con_iva = total_mat_neto * 1.21
+            total_mat_estancias_neto = coste_total_materiales_bruto
+            total_mat_global_neto = total_mat_estancias_neto + coste_cuadro_neto
+            total_mat_con_iva = total_mat_global_neto * 1.21
 
             st.markdown("#### 📏 1. Canalización y Tubería (M-20 y M-25)")
             st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` | Proveedor: **{prov_tubo20}** | `[Fila Excel: #{fila_tubo20}]` | Ref: `{desc_tubo20}`")
@@ -674,7 +727,7 @@ def app():
 
             st.markdown("---")
 
-            st.markdown(f"#### 📦 3. Mecanismos, Cajas, Conexiones y Marcos ({serie_mecanismos})")
+            st.markdown(f"#### 📦 3. Mecanismos, Cajas y Conexiones ({serie_mecanismos})")
             st.write(f"- Cajas universales (67mm): `{global_caja_mec_uds} uds` | Proveedor: **{prov_caja_mec}** | `[Fila Excel: #{fila_caja_mec}]`")
             st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` | Proveedor: **{prov_caja_reg}** | `[Fila Excel: #{fila_caja_reg}]`")
             
@@ -685,25 +738,38 @@ def app():
             for (nombre_m, desc_m, prec_m, prov_m, fila_m), cantidad_m in global_mecanismos_dict.items():
                 st.write(f"- `{cantidad_m}x` **{nombre_m}** ({serie_mecanismos}) | Proveedor: **{prov_m}** | `[Fila Excel: #{fila_m}]` | Ref: `{desc_m}`")
 
+            st.markdown("---")
+
+            st.markdown(f"#### ⚡ 4. Acopio de Protecciones y Cuadro Eléctrico ({grado_electrificacion})")
+            st.write(f"- **Caja / Envolvente de Distribución:** 1 ud | Proveedor: **{prov_caja_cuadro}** | `[Fila Excel: #{fila_caja_cuadro}]` | Ref: `{desc_caja_cuadro}`")
+            st.write(f"- **Interruptor General Automático (IGA):** 1 ud | Proveedor: **{prov_iga}** | `[Fila Excel: #{fila_iga}]` | Ref: `{desc_iga}`")
+            st.write(f"- **Interruptor Diferencial (ID 40A 30mA):** {'2 uds' if es_elevada else '1 ud'} | Proveedor: **{prov_id}** | `[Fila Excel: #{fila_id}]` | Ref: `{desc_id}`")
+            n_pias = 7 if es_elevada else 5
+            st.write(f"- **Pequeños Interruptores Automáticos (PIAs 10A/16A/20A/25A):** `{n_pias} uds` | Proveedor: **{prov_pia}** | `[Fila Excel: #{fila_pia}]` | Ref: `{desc_pia}`")
+
             st.markdown(f"""
             <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
-                <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO DE MATERIAL)</h3>
-                <p><b>Coste Total Materiales (Sin IVA):</b> {total_mat_neto:.2f} €</p>
+                <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO DE MATERIAL COMPLETO)</h3>
+                <p><b>Coste Materiales Estancias:</b> {total_mat_estancias_neto:.2f} € &nbsp;|&nbsp; <b>Coste Protecciones Cuadro:</b> {coste_cuadro_neto:.2f} €</p>
+                <p><b>Coste Total Materiales Neto (Sin IVA):</b> {total_mat_global_neto:.2f} €</p>
                 <h2 style="color: #16a34a; margin: 0;">TOTAL A PAGAR EN EL ALMACÉN (Con 21% IVA): {total_mat_con_iva:.2f} €</h2>
             </div>
             """, unsafe_allow_html=True)
 
             st.markdown("---")
-            st.subheader("📊 Análisis de Utilidad y Rentabilidad")
-            venta_mat_neto = coste_total_materiales_bruto * mult_comercial * mult_garantia_mat
-            benef_mat = venta_mat_neto - coste_total_materiales_bruto
+            st.subheader("📊 Análisis detallado de Utilidad y Rentabilidad")
+            venta_mat_estancias = total_mat_estancias_neto * mult_comercial * mult_garantia_mat
+            benef_mat_estancias = venta_mat_estancias - total_mat_estancias_neto
+            
             venta_mo_neto = coste_mano_obra_bruto * mult_comercial
             benef_mo = venta_mo_neto - coste_mano_obra_bruto
-            benef_cuadro = ((550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial) - (400.0 if "Elevada" in grado_electrificacion else 320.0)
-            benef_neto_total = benef_mat + benef_mo + benef_cuadro
+            
+            benef_cuadro = venta_cuadro_neto - coste_cuadro_neto
+            benef_neto_total = benef_mat_estancias + benef_mo + benef_cuadro
 
-            st.write(f"- 📦 **Coste Neto Materiales:** `{coste_total_materiales_bruto:.2f} €` (Venta: `{venta_mat_neto:.2f} €` | Beneficio: `+{benef_mat:.2f} €`)")
-            st.write(f"- ⏱️ **Coste Mano de Obra:** `{coste_mano_obra_bruto:.2f} €` (Venta: `{venta_mo_neto:.2f} €` | Beneficio: `+{benef_mo:.2f} €`)")
+            st.write(f"- 📦 **Materiales de Estancias:** Coste `{total_mat_estancias_neto:.2f} €` → Venta `{venta_mat_estancias:.2f} €` (Margen {margen_comercial}% + Garantía {porc_garantia}%) | **Beneficio: `+{benef_mat_estancias:.2f} €`**")
+            st.write(f"- ⏱️ **Mano de Obra:** Coste `{coste_mano_obra_bruto:.2f} €` → Venta `{venta_mo_neto:.2f} €` (Margen {margen_comercial}%) | **Beneficio: `+{benef_mo:.2f} €`**")
+            st.write(f"- ⚡ **Cuadro Eléctrico / Protecciones:** Coste `{coste_cuadro_neto:.2f} €` → Venta `{venta_cuadro_neto:.2f} €` (Margen {margen_comercial}%) | **Beneficio: `+{benef_cuadro:.2f} €`**")
             st.success(f"🚀 **UTILIDAD / BENEFICIO NETO TOTAL ESTIMADO: +{benef_neto_total:.2f} €** (Sin contar IVA)")
 
         # ==========================================
@@ -732,7 +798,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Panel de autónomo actualizado con el resumen de cobro al cliente incluido!")
+        st.success("✅ ¡Selector de Gamas o Marcas Directas integrado con éxito!")
 
 if __name__ == "__main__":
     app()
