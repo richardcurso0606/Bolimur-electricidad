@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos y Modificación Inteligente por IA / Voz
+Módulo Profesional de Presupuestos y Modificación Inteligente por IA
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -21,7 +21,6 @@ def app():
         "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy.xlsx"
     ]
     
-    # Buscar también cualquier excel en el directorio que tenga 'precio' o 'master'
     for f in os.listdir('.'):
         if f.endswith('.xlsx') and ('precio' in f.lower() or 'master' in f.lower() or 'oficial' in f.lower()):
             nombres_posibles.insert(0, f)
@@ -31,7 +30,6 @@ def app():
         if os.path.exists(nombre):
             try:
                 wb = openpyxl.load_workbook(nombre)
-                # Buscar la hoja adecuada
                 hoja_activa = wb.sheetnames[0]
                 for h in wb.sheetnames:
                     if "maestra" in h.lower() or "completa" in h.lower() or "tarifa" in h.lower():
@@ -46,7 +44,7 @@ def app():
                 continue
 
     if df_precios is None:
-        st.error("⚠️ No se pudo encontrar ni cargar el archivo Excel de precios. Asegúrate de que el archivo con la base de datos de precios esté subido en la raíz del proyecto.")
+        st.error("⚠️ No se pudo encontrar ni cargar el archivo Excel de precios en la raíz del proyecto.")
         return
     else:
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}`")
@@ -101,9 +99,9 @@ def app():
 
     st.markdown("---")
 
-    # 4. ASISTENTE DE ORDENES / IA (Dictado o Texto libre)
+    # 4. ASISTENTE DE ORDENES / IA
     st.subheader("🎙️ 2. Asistente de IA (Modificación por Dictado / Lenguaje Natural)")
-    st.markdown("Escribe o dicta instrucciones directas para modificar el presupuesto (Ej: *'Añadir preinstalación de aire acondicionado por 350€'* o *'Sumar 4 tomas de red RJ45'*).")
+    st.markdown("Escribe instrucciones directas para modificar el presupuesto (Ej: *'Añadir preinstalación de aire acondicionado por 350€'*).")
     
     orden_ia = st.text_input("Instrucción verbal para la IA:", placeholder="Ej: Añadir punto de luz en terraza por 60€")
     if st.button("✨ Procesar Orden con IA"):
@@ -123,7 +121,6 @@ def app():
         sup_total = sum([e["m2"] for e in estancias_activas])
         alt_media = sum([e["altura"] for e in estancias_activas]) / len(estancias_activas)
 
-        # Cálculo automático de materiales base
         perimetro = sup_total * 0.8 * 4
         rozas = perimetro * 1.5 if "Empotrada" in tipo_obra else 0
         sacos_yeso = max(2, int(rozas / 12)) if "Empotrada" in tipo_obra else 0
@@ -132,20 +129,14 @@ def app():
         c2 = sup_total * 16.0
         c3 = sup_total * 5.0
 
-        # Coste estimado de materiales base
         coste_materiales = (tubo * 0.45) + (c1 * 0.35) + (c2 * 0.50) + (c3 * 0.90) + (sacos_yeso * 7.5) + (len(estancias_activas) * 35.0)
-        
-        # Sumar partidas extra de IA / manuales
         total_extras = sum([p["Precio"] * p["Cantidad"] for p in st.session_state.partidas_extra])
-        
-        # Mano de obra estimada (autónomo)
         mano_obra = sup_total * 22.0
 
         subtotal_neto = (coste_materiales + mano_obra + total_extras) * (1 + margen / 100.0)
         cuota_iva = subtotal_neto * (iva_sel / 100.0)
         total_presupuesto = subtotal_neto + cuota_iva
 
-        # 5. VISTA COMERCIAL PROFESIONAL PARA EL CLIENTE
         st.markdown("---")
         st.header("📄 VISTA COMERCIAL: Presupuesto para el Cliente")
         
@@ -175,7 +166,6 @@ def app():
         df_capitulos = pd.DataFrame(capitulos)
         st.dataframe(df_capitulos, use_container_width=True)
 
-        # Totales
         st.markdown(f"""
         <div style="text-align: right; font-size: 18px; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
             <p><b>Subtotal Neto:</b> {subtotal_neto:.2f} €</p>
@@ -192,4 +182,5 @@ def app():
 
 if __name__ == "__main__":
     app()
-presupuesto_vivienda.py
+modulos/presupuesto_vivienda.py
+Mostrando modulos/presupuesto_vivienda.py.
