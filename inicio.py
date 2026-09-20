@@ -160,5 +160,3 @@ elif seleccion_modulo.startswith("🏡"):
 
 elif seleccion_modulo.startswith("📚"):
     st.title("📚 Tablas REBT")
-inicio.py
-Mostrando inicio.py.
