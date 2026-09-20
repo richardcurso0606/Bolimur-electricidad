@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Desglose Pormenorizado REBT por Estancias con Precios y Proveedores Visibles
+Módulo Profesional de Presupuestos: Desglose Quirúrgico REBT, Mecanismos, Embellecedores y Proveedores
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -24,8 +24,8 @@ def app():
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🏡 Generador de Presupuestos: Desglose Transparente por Estancias")
-    st.markdown("Informe técnico de autónomo con precios unitarios de coste, proveedor visible y puntos de luz detallados por habitación.")
+    st.title("🏡 Generador de Presupuestos: Lista de Compras de Autónomo (REBT)")
+    st.markdown("Desglose milimétrico por habitación: Materiales, Mecanismos, Embellecedores, RJ45, Precios de Coste y Descripciones Exactas de Base de Datos.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -63,25 +63,25 @@ def app():
     else:
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}`")
 
-    # Función robusta para buscar artículo, precio y proveedor exacto en el DataFrame
-    def buscar_precio_y_proveedor(df, keywords, gama_filtro, precio_defecto=0.45):
+    # Función robusta para buscar precio, proveedor y descripción exacta en el DataFrame
+    def buscar_articulo_detallado(df, keywords, gama_filtro, precio_defecto=0.45):
         for keyword in keywords:
             for idx, row in df.iterrows():
-                desc = str(row.get('Descripción Exacta del Artículo', '')).lower()
+                desc = str(row.get('Descripción Exacta del Artículo', '')).strip()
+                desc_lower = desc.lower()
                 gama_item = str(row.get('Nivel de Gama / Aplicación', '')).lower()
                 
-                if keyword.lower() in desc:
-                    # Coincidencia de gama si aplica
+                if keyword.lower() in desc_lower:
                     if gama_filtro.lower() not in gama_item and 'general' not in gama_item and 'tubo' not in keyword.lower() and 'cable' not in keyword.lower():
                         continue
                     try:
                         val = float(row.get('Precio S/IVA (€)', 0.0))
                         prov = str(row.get('Proveedor / Tienda Principal', 'Obramat'))
                         if val > 0:
-                            return val, prov, True
+                            return val, prov, desc, True
                     except:
                         pass
-        return precio_defecto, "Obramat (Tarifa Base)", False
+        return precio_defecto, "Obramat (Tarifa Base)", f"Artículo estándar ({keywords[0]})", False
 
     # ==========================================
     # DATOS DE LA EMPRESA / INSTALADOR
@@ -150,27 +150,31 @@ def app():
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto Detallado REBT", type="primary"):
+    if st.button("🚀 Calcular Lista de Compras y Presupuesto REBT", type="primary"):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
 
         sup_total = sum([e["m2"] for e in estancias_activas])
 
-        # Obtener precios y proveedores desde la BD
-        p_tubo, prov_tubo, _ = buscar_precio_y_proveedor(df_precios, ['tubo corrugado', 'm-20', 'tubo 20'], gama_sel, 0.45)
-        p_caja_mec, prov_caja_mec, _ = buscar_precio_y_proveedor(df_precios, ['caja universal', 'caja mecanismo'], gama_sel, 0.30)
-        p_caja_reg, prov_caja_reg, _ = buscar_precio_y_proveedor(df_precios, ['caja de registro', 'derivación'], gama_sel, 1.50)
-        p_15, prov_15, _ = buscar_precio_y_proveedor(df_precios, ['1.5 mm', 'h07v-k 1.5'], gama_sel, 0.35)
-        p_25, prov_25, _ = buscar_precio_y_proveedor(df_precios, ['2.5 mm', 'h07v-k 2.5'], gama_sel, 0.50)
-        p_meca, prov_meca, _ = buscar_precio_y_proveedor(df_precios, ['interruptor', 'schuko', 'mecanismo'], gama_sel, 4.50)
+        # Obtener precios, proveedores y descripciones exactas desde la BD
+        p_tubo, prov_tubo, desc_tubo, _ = buscar_articulo_detallado(df_precios, ['tubo corrugado', 'm-20', 'tubo 20'], gama_sel, 0.45)
+        p_caja_mec, prov_caja_mec, desc_caja_mec, _ = buscar_articulo_detallado(df_precios, ['caja universal', 'caja mecanismo'], gama_sel, 0.30)
+        p_caja_reg, prov_caja_reg, desc_caja_reg, _ = buscar_articulo_detallado(df_precios, ['caja de registro', 'derivación'], gama_sel, 1.50)
+        p_15, prov_15, desc_15, _ = buscar_articulo_detallado(df_precios, ['1.5 mm', 'h07v-k 1.5'], gama_sel, 0.35)
+        p_25, prov_25, desc_25, _ = buscar_articulo_detallado(df_precios, ['2.5 mm', 'h07v-k 2.5'], gama_sel, 0.50)
+        
+        p_int, prov_int, desc_int, _ = buscar_articulo_detallado(df_precios, ['interruptor', 'conmutador'], gama_sel, 3.50)
+        p_schuko, prov_schuko, desc_schuko, _ = buscar_articulo_detallado(df_precios, ['schuko', 'base de enchufe'], gama_sel, 4.20)
+        p_rj45, prov_rj45, desc_rj45, _ = buscar_articulo_detallado(df_precios, ['rj45', 'datos', 'multimedia'], gama_sel, 8.50)
+        p_marco, prov_marco, desc_marco, _ = buscar_articulo_detallado(df_precios, ['marco', 'embellecedor'], gama_sel, 1.80)
 
         # ==========================================
-        # 1. INFORME TÉCNICO PORMENORIZADO (AUTÓNOMO)
+        # 1. INFORME TÉCNICO Y LISTA DE COMPRAS (AUTÓNOMO)
         # ==========================================
         st.markdown("---")
-        st.header("🛠️ 1. INFORME TÉCNICO Y DE COSTES (Para el Instalador)")
-        st.info("Desglose milimétrico por habitación con unidades, metros, precios unitarios de coste y proveedor visible a la derecha.")
+        st.header("🛠️ 1. LISTA DE COMPRAS Y CONTROL TÉCNICO (Para el Instalador)")
+        st.info("Desglose exacto por estancia con unidades, metros, precios de coste unitarios, proveedor y descripción exacta del artículo a la derecha.")
 
         coste_total_materiales_bruto = 0.0
         horas_totales_obra = 0.0
@@ -182,25 +186,55 @@ def app():
 
             # Mediciones REBT
             m_tubo = m2 * 4.2 * (alt / 2.5)
-            n_mecanismos = max(3, int(m2 / 4))
             n_cajas_reg = 1 if m2 > 8 else 0
-            
-            # Puntos de luz (centros de luz) de la estancia
-            n_puntos_luz = max(1, int(m2 / 10))
-
             m_15_ilum = m2 * 5.0
             m_15_vueltas = m2 * 4.0
             m_25_fuerza = m2 * 12.0
+            n_puntos_luz = max(1, int(m2 / 10))
 
-            # Costes netos de materiales con precios y proveedores de la BD
+            # Definición específica de mecanismos por estancia
+            if "cocina" in nombre_est:
+                mecanismos_est = [
+                    {"nombre": "Interruptor simple iluminación", "cant": 1, "precio": p_int, "prov": prov_int, "desc": desc_int},
+                    {"nombre": "Base Schuko 16A encimera / general", "cant": 3, "precio": p_schuko, "prov": prov_schuko, "desc": desc_schuko},
+                    {"nombre": "Base enchufe especial Horno / Vitro (25A)", "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "desc": "Base de fuerza 25A / vitrocerámica"},
+                    {"nombre": "Bases Schuko lavavajillas / lavadora", "cant": 2, "precio": p_schuko, "prov": prov_schuko, "desc": desc_schuko}
+                ]
+            elif "baño" in nombre_est:
+                mecanismos_est = [
+                    {"nombre": "Interruptor luz espejo", "cant": 1, "precio": p_int, "prov": prov_int, "desc": desc_int},
+                    {"nombre": "Base Schuko 16A con tapa estanca", "cant": 2, "precio": p_schuko * 1.2, "prov": prov_schuko, "desc": "Base schuko con tapa protección IP44"}
+                ]
+            elif "salón" in nombre_est or "comedor" in nombre_est:
+                mecanismos_est = [
+                    {"nombre": "Conmutador / Cruzamiento iluminación", "cant": 2, "precio": p_int, "prov": prov_int, "desc": desc_int},
+                    {"nombre": "Bases Schuko 16A zona sofá/TV", "cant": 5, "precio": p_schuko, "prov": prov_schuko, "desc": desc_schuko},
+                    {"nombre": "Toma de datos RJ45 / Multimedia", "cant": 1, "precio": p_rj45, "prov": prov_rj45, "desc": desc_rj45}
+                ]
+            else:  # Dormitorios / Pasillos
+                mecanismos_est = [
+                    {"nombre": "Conmutador acceso / cabecera", "cant": 2, "precio": p_int, "prov": prov_int, "desc": desc_int},
+                    {"nombre": "Bases Schuko 16A generales", "cant": 3, "precio": p_schuko, "prov": prov_schuko, "desc": desc_schuko}
+                ]
+
+            total_mecanismos = sum([m["cant"] for m in mecanismos_est])
+            # Número de marcos embellecedores necesarios (asumiendo agrupación estándar en placas de 1 a 3 elementos)
+            n_marcos = max(total_mecanismos, int(total_mecanismos * 0.8))
+
+            # Coste de materiales de la estancia
+            coste_mecanismos_est = sum([m["cant"] * m["precio"] for m in mecanismos_est])
+            coste_marcos_est = n_marcos * p_marco
+            coste_cajas_mec_est = total_mecanismos * p_caja_mec
+
             coste_mat_estancia = (
                 (m_tubo * p_tubo) +
-                (n_mecanismos * p_caja_mec) +
+                coste_cajas_mec_est +
                 (n_cajas_reg * p_caja_reg if n_cajas_reg > 0 else 0) +
                 (m_15_ilum * p_15) +
                 (m_15_vueltas * p_15) +
                 (m_25_fuerza * p_25) +
-                (n_mecanismos * p_meca)
+                coste_mecanismos_est +
+                coste_marcos_est
             )
             coste_total_materiales_bruto += coste_mat_estancia
 
@@ -208,31 +242,44 @@ def app():
             h_rozas = (m2 * 0.35) if "Empotrada" in tipo_obra else 0.0
             h_tubo_cajas = m2 * 0.25
             h_cableado = m2 * 0.30
-            h_mecanizado = n_mecanismos * 0.15
+            h_mecanizado = total_mecanismos * 0.15
 
             h_estancia_total = h_rozas + h_tubo_cajas + h_cableado + h_mecanizado
             horas_totales_obra += h_estancia_total
             coste_mo_estancia = h_estancia_total * precio_hora
 
             with st.expander(f"📍 Estancia {idx+1}: {est['nombre']} ({m2} m²) — Coste Neto Total: {coste_mat_estancia + coste_mo_estancia:.2f} €"):
-                st.markdown(f"**📦 Detalle de Materiales con Precios de Coste y Proveedor:**")
+                st.markdown(f"**📦 Lista de Artículos para Comprar (Coste Unitario y Descripción en Base de Datos):**")
                 
-                # Tabla limpia por línea
-                st.write(f"1. **Tubo Corrugado M-20:** `{int(m_tubo)} m` x `{p_tubo:.2f} €/m` = **{m_tubo*p_tubo:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_tubo}*")
-                st.write(f"2. **Cajas Universales de Mecanismo:** `{n_mecanismos} uds` x `{p_caja_mec:.2f} €/ud` = **{n_mecanismos*p_caja_mec:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_caja_mec}*")
+                # 1. Tubo
+                st.write(f"- **Tubo M-20:** `{int(m_tubo)} m` x `{p_tubo:.2f} €/m` = **{m_tubo*p_tubo:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_tubo}* — **{desc_tubo}**")
+                # 2. Cajas mecanismos
+                st.write(f"- **Cajas universales de empotrar:** `{total_mecanismos} uds` x `{p_caja_mec:.2f} €/ud` = **{coste_cajas_mec_est:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_caja_mec}* — **{desc_caja_mec}**")
+                # 3. Caja registro
                 if n_cajas_reg > 0:
-                    st.write(f"3. **Cajas de Registro / Derivación:** `{n_cajas_reg} ud` x `{p_caja_reg:.2f} €/ud` = **{n_cajas_reg*p_caja_reg:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_caja_reg}*")
-                st.write(f"4. **Puntos de Luz (Centros de Luz / Puntos de Mando):** `{n_puntos_luz} puntos` instalados (incluye cableado y conexionado)")
-                st.write(f"5. **Cable 1.5 mm² (Fase y Neutro - Iluminación):** `{int(m_15_ilum)} m` x `{p_15:.2f} €/m` = **{m_15_ilum*p_15:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_15}*")
-                st.write(f"6. **Cable 1.5 mm² (Vueltas y Conmutadas - Color **Gris y Marrón**):** `{int(m_15_vueltas)} m` x `{p_15:.2f} €/m` = **{m_15_vueltas*p_15:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_15}*")
-                st.write(f"7. **Cable 2.5 mm² (Fuerza C2 - Fase, Neutro, Tierra Verde-Amarillo):** `{int(m_25_fuerza)} m` x `{p_25:.2f} €/m` = **{m_25_fuerza*p_25:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_25}*")
-                st.write(f"8. **Mecanismos ({gama_sel}):** `{n_mecanismos} uds` (Interruptores/Schukos) x `{p_meca:.2f} €/ud` = **{n_mecanismos*p_meca:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_meca}*")
+                    st.write(f"- **Caja de derivación/registro:** `{n_cajas_reg} ud` x `{p_caja_reg:.2f} €/ud` = **{n_cajas_reg*p_caja_reg:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_caja_reg}* — **{desc_caja_reg}**")
+                # 4. Puntos de luz
+                st.write(f"- **Puntos de luz (Centros):** `{n_puntos_luz} puntos` instalados (incluye casquillo, regletas y conexión)")
+                # 5. Cables 1.5 ilum
+                st.write(f"- **Cable 1.5 mm² (Fase/Neutro):** `{int(m_15_ilum)} m` x `{p_15:.2f} €/m` = **{m_15_ilum*p_15:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_15}* — **{desc_15}**")
+                # 6. Cables 1.5 vueltas (Gris/Marrón)
+                st.write(f"- **Cable 1.5 mm² (Vueltas Gris/Marrón):** `{int(m_15_vueltas)} m` x `{p_15:.2f} €/m` = **{m_15_vueltas*p_15:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_15}* — **{desc_15} (Color Gris/Marrón)**")
+                # 7. Cable 2.5 fuerza
+                st.write(f"- **Cable 2.5 mm² (Fuerza C2):** `{int(m_25_fuerza)} m` x `{p_25:.2f} €/m` = **{m_25_fuerza*p_25:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_25}* — **{desc_25}**")
                 
+                # 8. Mecanismos específicos detallados
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;⚡ *Desglose de Mecanismos y Embellecedores ({gama_sel}):*")
+                for mec in mecanismos_est:
+                    st.write(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• `{mec['cant']}x` **{mec['nombre']}** x `{mec['precio']:.2f} €` = **{mec['cant']*mec['precio']:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{mec['prov']}* — **{mec['desc']}**")
+                
+                # 9. Marcos
+                st.write(f"- **Marcos embellecedores:** `{n_marcos} uds` x `{p_marco:.2f} €/ud` = **{coste_marcos_est:.2f} €** &nbsp;&nbsp;|&nbsp;&nbsp; 🏷️ *{prov_marco}* — **{desc_marco}**")
+
                 st.markdown(f"👉 **Subtotal Gastos Materiales Estancia:** `{coste_mat_estancia:.2f} €`")
 
                 st.markdown(f"**⏱️ Desglose de Mano de Obra (Horas):**")
                 if "Empotrada" in tipo_obra:
-                    st.write(f"- Picado de Rozas y Albañilería (Yeso/Mortero): **{h_rozas:.2f} h**")
+                    st.write(f"- Picado de Rozas y Albañilería: **{h_rozas:.2f} h**")
                 st.write(f"- Colocación de Tubo y Cajas: **{h_tubo_cajas:.2f} h**")
                 st.write(f"- Cableado REBT (1.5mm² y 2.5mm² con colores): **{h_cableado:.2f} h**")
                 st.write(f"- Conexionado y Mecanizado Final: **{h_mecanizado:.2f} h**")
@@ -284,7 +331,7 @@ def app():
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial (Materiales + Mecanismos + Puntos de Luz + Mano de Obra)": f"Instalación completa REBT: Canalización en tubo M-20, cajas de registro y mecanismo, puntos de luz, cableado libre de halógenos de 1.5mm² (iluminación y vueltas gris/marrón) y 2.5mm² (fuerza), y mecanismos gama {gama_sel}.",
+                "Detalle Comercial (Materiales + Mecanismos + Puntos de Luz + Mano de Obra)": f"Instalación completa REBT: Canalización en tubo M-20, cajas de registro y mecanismo, puntos de luz, cableado libre de halógenos de 1.5mm² (iluminación y vueltas gris/marrón), 2.5mm² (fuerza), mecanismos con embellecedores y tomas especiales gama {gama_sel}.",
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
@@ -317,7 +364,7 @@ def app():
         st.markdown("##### 📝 Condiciones Generales y Garantía")
         st.info("• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la finalización y entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT.")
 
-        st.success("✅ ¡Desglose pormenorizado con precios de coste y proveedores visibles generado con éxito!")
+        st.success("✅ ¡Lista de compras detallada con descripciones exactas y embellecedores generada con éxito!")
 
 if __name__ == "__main__":
     app()
