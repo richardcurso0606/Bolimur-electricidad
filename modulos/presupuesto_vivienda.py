@@ -7,20 +7,49 @@ Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 import streamlit as st
 import pandas as pd
 import openpyxl
+import os
 
 def app():
     st.title("🏡 Generador Profesional de Presupuestos y Modificación por IA")
     st.markdown("Crea, modifica y personaliza presupuestos de instalaciones eléctricas con total control técnico y comercial.")
 
-    # 1. Cargar base de datos maestra
-    try:
-        wb = openpyxl.load_workbook("Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx")
-        ws = wb["Tarifa Maestra Completa"]
-        data = list(ws.iter_rows(values_only=True))
-        df_precios = pd.DataFrame(data[1:], columns=data[0])
-    except Exception as e:
-        st.error(f"Error al cargar la base de datos de precios oficial: {e}")
+    # 1. Cargar base de datos maestra con detección automática del nombre de archivo
+    excel_cargado = None
+    nombres_posibles = [
+        "base_datos_precio_oficial.xlsx",
+        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx",
+        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy.xlsx"
+    ]
+    
+    # Buscar también cualquier excel en el directorio que tenga 'precio' o 'master'
+    for f in os.listdir('.'):
+        if f.endswith('.xlsx') and ('precio' in f.lower() or 'master' in f.lower() or 'oficial' in f.lower()):
+            nombres_posibles.insert(0, f)
+
+    df_precios = None
+    for nombre in nombres_posibles:
+        if os.path.exists(nombre):
+            try:
+                wb = openpyxl.load_workbook(nombre)
+                # Buscar la hoja adecuada
+                hoja_activa = wb.sheetnames[0]
+                for h in wb.sheetnames:
+                    if "maestra" in h.lower() or "completa" in h.lower() or "tarifa" in h.lower():
+                        hoja_activa = h
+                        break
+                ws = wb[hoja_activa]
+                data = list(ws.iter_rows(values_only=True))
+                df_precios = pd.DataFrame(data[1:], columns=data[0])
+                excel_cargado = nombre
+                break
+            except Exception as e:
+                continue
+
+    if df_precios is None:
+        st.error("⚠️ No se pudo encontrar ni cargar el archivo Excel de precios. Asegúrate de que el archivo con la base de datos de precios esté subido en la raíz del proyecto.")
         return
+    else:
+        st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}`")
 
     # 2. Configuración en Barra Lateral
     st.sidebar.header("⚙️ Parámetros Generales de Obra")
@@ -164,5 +193,3 @@ def app():
 if __name__ == "__main__":
     app()
 presupuesto_vivienda.py
-presupuesto_vivienda.py
-Mostrando presupuesto_vivienda.py.
