@@ -278,7 +278,6 @@ def app():
                     st.session_state.estancias_pro.pop(i)
                     st.rerun()
 
-            # Controles desplegables para añadir o quitar puntos específicos en la estancia
             with st.expander(f"⚙️ Ajustar Puntos Extra en: {est['nombre']}"):
                 col_p1, col_p2, col_p3 = st.columns(3)
                 with col_p1:
@@ -317,6 +316,7 @@ def app():
         # Cables 2.5mm²
         p_25_az, prov_25_az, desc_25_az, _, fila_25_az = buscar_mas_economico(df_precios, '2.5 mm²', 'azul')
         p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = buscar_mas_economico(df_precios, '2.5 mm²', 'negro')
+        p_25_ma, prov_25_ma, desc_25_ma, _, fila_25_ma = buscar_mas_economico(df_precios, '2.5 mm²', 'marrón')
         if not fila_25_ne or p_25_ne == 0.45:
             p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = p_25_ma, prov_25_ma, desc_25_ma, _, fila_25_ma
         p_25_tt, prov_25_tt, desc_25_tt, _, fila_25_tt = buscar_mas_economico(df_precios, '2.5 mm²', 'amarillo')
@@ -405,7 +405,6 @@ def app():
                 est_utp = 15.0
             est_utp += (ex_rj45 * 12.0)
 
-            # Mecanismos base según estancia + extras
             if "cocina" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
                 cant_sch = 4 + max(0, ex_sch)
@@ -442,7 +441,6 @@ def app():
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
             n_marcos = max(total_mecanismos, int(total_mecanismos * 0.8))
 
-            # Acumular globales
             global_tubo20_m += m_tubo_20
             global_tubo25_m += m_tubo_25
             global_caja_mec_uds += total_mecanismos
@@ -483,7 +481,6 @@ def app():
             coste_mat_estancia_con_iva = coste_mat_estancia_neto * 1.21
             coste_total_materiales_bruto += coste_mat_estancia_neto
 
-            # Horas
             if "Pladur" in tipo_pared:
                 h_rozas = (m2 * 0.10) if hace_rozas_electricista else 0.0
             else:
@@ -573,7 +570,6 @@ def app():
             st.info(f"⏱️ **Total Horas de Obra Estimadas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`** (Coste Neto Mano de Obra).")
             st.markdown("---")
 
-            # DESGLOSE DETALLADO POR ESTANCIAS
             st.subheader("🛠️ Desglose Detallado por Estancias (Enlazado con Precios Más Económicos y Puntos Personalizados)")
             for item in desgloses_internos_estancias:
                 st.markdown(f"### 📍 {item['nombre']} ({item['m2']} m²)")
@@ -586,7 +582,6 @@ def app():
                 if item['n_cajas_reg'] > 0:
                     st.write(f"  - **Caja de Registro (100x100):** Proveedor: **{prov_caja_reg}** | `[Fila Excel: #{fila_caja_reg}]`")
 
-                # CABLES 1.5 mm²
                 st.markdown(f"  - **Cables 1.5 mm² ({tipo_cable_sel}):**")
                 st.write(f"    • Azul (Neutro): `{int(item['cable_15_az'])} m` | `[Fila Excel: #{fila_15_az}]` | **{prov_15_az}**")
                 st.write(f"    • Negro (Fase Principal): `{int(item['cable_15_ne'])} m` | `[Fila Excel: #{fila_15_ne}]` | **{prov_15_ne}**")
@@ -594,13 +589,11 @@ def app():
                 st.write(f"    • Gris (Cruzamientos / Cruces): `{int(item['cable_15_gr'])} m` | `[Fila Excel: #{fila_15_gr}]` | **{prov_15_gr}**")
                 st.write(f"    • Amarillo/Verde (Tierra): `{int(item['cable_15_tt'])} m` | `[Fila Excel: #{fila_15_tt}]` | **{prov_15_tt}**")
 
-                # CABLES 2.5 mm²
                 st.markdown(f"  - **Cables 2.5 mm² ({tipo_cable_sel}):**")
                 st.write(f"    • Azul (Neutro): `{int(item['cable_25_az'])} m` | `[Fila Excel: #{fila_25_az}]` | **{prov_25_az}**")
                 st.write(f"    • Negro (Fase): `{int(item['cable_25_ne'])} m` | `[Fila Excel: #{fila_25_ne}]` | **{prov_25_ne}**")
                 st.write(f"    • Amarillo/Verde (Tierra): `{int(item['cable_25_tt'])} m` | `[Fila Excel: #{fila_25_tt}]` | **{prov_25_tt}**")
 
-                # CABLE UTP SI APLICA
                 if item['cable_utp'] > 0:
                     st.markdown(f"  - **Cable de Datos UTP Cat.6:** `{int(item['cable_utp'])} m` | Proveedor: **{prov_utp}** | `[Fila Excel: #{fila_utp}]` | Ref: `{desc_utp}`")
 
@@ -630,7 +623,6 @@ def app():
             total_mat_neto = coste_total_materiales_bruto
             total_mat_con_iva = total_mat_neto * 1.21
 
-            # BLOQUE 1: TUBERÍA
             st.markdown("#### 📏 1. Canalización y Tubería (M-20 y M-25)")
             st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` | Proveedor: **{prov_tubo20}** | `[Fila Excel: #{fila_tubo20}]` | Ref: `{desc_tubo20}`")
             st.success(f"  📦 A comprar: `{rollos_tubo20} rollo(s) de 50m` — Precio: `{p_tubo20*50*1.21:.2f} €` (Con IVA)")
@@ -639,7 +631,6 @@ def app():
 
             st.markdown("---")
 
-            # BLOQUE 2: CABLEADO
             st.markdown(f"#### ⚡ 2. Cableado por Colores Independientes ({tipo_cable_sel})")
             st.markdown("##### 🔹 Cables de 1.5 mm²:")
             st.write(f"  - **Azul (Neutro):** `{int(global_15_az_m)} m` | Proveedor: **{prov_15_az}** | `[Fila Excel: #{fila_15_az}]`")
@@ -667,7 +658,6 @@ def app():
 
             st.markdown("---")
 
-            # BLOQUE 3: MECANISMOS Y CONEXIONES
             st.markdown(f"#### 📦 3. Mecanismos, Cajas, Conexiones y Marcos ({serie_mecanismos})")
             st.write(f"- Cajas universales (67mm): `{global_caja_mec_uds} uds` | Proveedor: **{prov_caja_mec}** | `[Fila Excel: #{fila_caja_mec}]`")
             st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` | Proveedor: **{prov_caja_reg}** | `[Fila Excel: #{fila_caja_reg}]`")
@@ -731,7 +721,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Presupuesto calculado con éxito con estancias personalizadas y comparativa de precios!")
+        st.success("✅ ¡Error solucionado y puntos extra por estancia habilitados correctamente!")
 
 if __name__ == "__main__":
     app()
