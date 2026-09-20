@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Inspector REBT (ITC-BT-25), IGA Oficial por Potencia, Distancias Reales y Acopio
+Módulo Profesional de Presupuestos: Inspector REBT con Desdoblamiento de C4, IGA Oficial y Acopio
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -34,7 +34,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Panel de Ingeniería REBT e Inspector IA")
-    st.markdown("Cumplimiento estricto de la ITC-BT-25, cálculo de distancias reales al cuadro y acopio en firme.")
+    st.markdown("Gestión avanzada de circuitos, desdoblamiento de C4, cumplimiento ITC-BT-25 y acopio en firme.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -173,7 +173,6 @@ def app():
                 marca_item = str(row.get('Marca', '')).strip().lower()
                 
                 if kw in desc and marca_lower in marca_item:
-                    # Evitar que coja especiales de VE si buscamos IGA general
                     if tipo_prot == 'iga' and 'vehículo' in desc:
                         continue
                     try:
@@ -228,7 +227,7 @@ def app():
     # PARÁMETROS DE POTENCIA REBT E IGA OFICIAL
     # ==========================================
     st.markdown("---")
-    st.subheader("⚙️ Parámetros de Potencia y Escalones IGA (Guía-BT-10 / ITC-BT-25)")
+    st.subheader("⚙️ Parámetros de Potencia, Escalones IGA y Configuración de Circuitos")
 
     col_pot1, col_pot2 = st.columns(2)
     with col_pot1:
@@ -248,7 +247,13 @@ def app():
             ["Libre de Halógenos (H07Z1-K)", "PVC Normal / Estándar (H07V-K)"]
         )
 
-    # Traducción automática de potencia e IGA según selección oficial
+    # Opción para desdoblar el C4 solicitada por el usuario
+    desdoblar_c4 = st.checkbox(
+        "⚙️ Desdoblar circuito C4 (Separar Lavadora/Lavavajillas de la línea del Termo en circuitos independientes)", 
+        value=True,
+        help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente sin errores."
+    )
+
     if "5.750" in potencia_prevista_kw:
         grado_electr = "Básica"
         iga_amperaje = 25
@@ -270,7 +275,11 @@ def app():
         iga_amperaje = 63
         num_circuitos_base = 12
 
-    st.info(f"📋 **Configuración Automática REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos requeridos: **{num_circuitos_base}**")
+    # Si se desdobla el C4, se añade un circuito operativo adicional al recuento mínimo
+    if desdoblar_c4:
+        num_circuitos_base += 1
+
+    st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos (con C4 desdoblado): **{num_circuitos_base}**")
 
     # Selección de Marcas
     st.markdown("#### 🔌 Selección de Marcas y Series Comerciales")
@@ -338,7 +347,7 @@ def app():
     st.markdown("---")
 
     # ==========================================
-    # GESTIÓN DINÁMICA DE ESTANCIAS Y DISTANCIAS
+    # GESTIÓN DINÁMICA DE ESTANCIAS Y MÉTRICA DE m²
     # ==========================================
     if 'estancias_pro' not in st.session_state:
         st.session_state.estancias_pro = [
@@ -351,6 +360,19 @@ def app():
         ]
 
     st.subheader("📋 Estancias, Distancia Real al Cuadro (Pasillo) y Puntos")
+    
+    estancias_activas_temp = [e for e in st.session_state.estancias_pro]
+    sup_total_actual = sum([e["m2"] for e in estancias_activas_temp])
+    
+    col_met1, col_met2, col_met3 = st.columns(3)
+    with col_met1:
+        st.metric(label="📐 Superficie Útil Total", value=f"{sup_total_actual:.1f} m²")
+    with col_met2:
+        st.metric(label="⚖️ Límite ITC-BT-25 Básica", value="160.0 m²")
+    with col_met3:
+        estado_sup = "🟢 Correcto (Básica)" if sup_total_actual <= 160.0 else "🔴 Supera 160 m² (Exige Elevada)"
+        st.metric(label="🔍 Estado Normativo m²", value=estado_sup)
+
     st.markdown("Configura la distancia lineal desde el Cuadro General hasta la caja de registro de cada estancia.")
 
     with st.expander("➕ Añadir Nueva Estancia a la Vivienda"):
@@ -386,7 +408,8 @@ def app():
         if es_banio:
             circuitos_asociados = "C1 (Luz) + C5 (Tomas húmedas baño)"
         elif es_cocina:
-            circuitos_asociados = "C1 (Luz) + C3 (Horno/Vitro 25A) + C4 (Lavavajillas/Lavadora/Termo 20A) + C5 (Encimera)"
+            c4_txt = " + C4-A & C4-B (Desdoblados)" if desdoblar_c4 else " + C4 (Lavadora/Termo)"
+            circuitos_asociados = f"C1 (Luz) + C3 (Horno/Vitro) {c4_txt} + C5 (Encimera)"
 
         with st.container():
             cols = st.columns([3, 1.5, 1.5, 2, 0.8, 0.8])
@@ -432,15 +455,12 @@ def app():
 
     alertas_inspector = []
     
-    # 1. Comprobación de superficie vs grado de electrificación
     if sup_total_calculada > 160.0 and grado_electr == "Básica":
-        alertas_inspector.append(f"🔴 **Incumplimiento ITC-BT-25:** La superficie útil total de la vivienda ({sup_total_calculada:.1f} m²) supera los 160 m² estipulados. El reglamento obliga a utilizar **Electrificación Elevada**.")
+        alertas_inspector.append(f"🔴 **Incumplimiento ITC-BT-25:** La superficie útil total de la vivienda ({sup_total_calculada:.1f} m²) supera los 160 m² estipulados para electrificación básica. El reglamento obliga a utilizar **Electrificación Elevada**.")
 
-    # 2. Comprobación de cocina obligatoria
     if not tiene_cocina:
-        alertas_inspector.append("🔴 **Incumplimiento ITC-BT-25:** No se ha detectado ninguna estancia catalogada como 'Cocina'. El reglamento exige obligatoriamente los circuitos C3 y C4.")
+        alertas_inspector.append("🔴 **Incumplimiento ITC-BT-25:** No se ha detectado ninguna estancia catalogada como 'Cocina'. El reglamento exige obligatoriamente los circuitos de fuerza y cocina.")
 
-    # 3. Comprobación de baño obligatorio
     if not tiene_banio:
         alertas_inspector.append("🟠 **Aviso REBT:** No se ha detectado ningún cuarto de baño o aseo. Se recomienda incluir al menos un circuito C5 para zonas húmedas.")
 
@@ -452,7 +472,7 @@ def app():
         if not forzar_inspector:
             st.stop()
     else:
-        st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25 y los escalones de potencia IGA.")
+        st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25, los escalones de potencia IGA y el desdoblamiento de líneas.")
 
     st.markdown("---")
 
@@ -461,14 +481,12 @@ def app():
             st.warning("Selecciona al menos una estancia.")
             return
 
-        # Búsqueda inteligente de materiales
         p_tubo20, prov_tubo20, desc_tubo20, _, fila_tubo20 = buscar_mas_economico(df_precios, 'm20', 'corrugado')
         p_tubo25, prov_tubo25, desc_tubo25, _, fila_tubo25 = buscar_mas_economico(df_precios, 'm25', 'corrugado')
 
         p_caja_mec, prov_caja_mec, desc_caja_mec, _, fila_caja_mec = buscar_mas_economico(df_precios, '67mm', 'mecanismos')
         p_caja_reg, prov_caja_reg, desc_caja_reg, _, fila_caja_reg = buscar_mas_economico(df_precios, '100x100', 'registro')
         
-        # Cables 1.5mm² y 2.5mm²
         p_15_az, prov_15_az, desc_15_az, _, fila_15_az = buscar_mas_economico(df_precios, '1.5 mm²', 'azul')
         p_15_ne, prov_15_ne, desc_15_ne, _, fila_15_ne = buscar_mas_economico(df_precios, '1.5 mm²', 'negro')
         p_15_ma, prov_15_ma, desc_15_ma, _, fila_15_ma = buscar_mas_economico(df_precios, '1.5 mm²', 'marrón')
@@ -493,7 +511,6 @@ def app():
             p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'clema', '10mm')
             nombre_conexion_txt = "Regleta / Clema de Conexión 12 Polos"
 
-        # Mecanismos y Protecciones (buscadores corregidos)
         p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
         p_schuko, prov_schuko, desc_schuko, _, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
         p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
@@ -503,10 +520,8 @@ def app():
         p_id, prov_id, desc_id, _, fila_id = buscar_proteccion_por_marca(df_precios, 'diferencial', marca_protecciones)
         p_pia, prov_pia, desc_pia, _, fila_pia = buscar_proteccion_por_marca(df_precios, 'pia', marca_protecciones)
         
-        # Búsqueda precisa de la caja del cuadro en la categoría correcta de envolventes
         p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, _, fila_caja_cuadro = buscar_caja_cuadro(df_precios, marca_protecciones)
 
-        # Acumuladores globales
         global_tubo20_m = 0.0
         global_tubo25_m = 0.0
         global_caja_mec_uds = 0
@@ -550,7 +565,6 @@ def app():
             ex_luz = est.get("extra_luz", 0)
             ex_rj45 = est.get("extra_rj45", 0)
 
-            # Tubo troncal + rozas
             tubo_troncal = dist_cuadro * 2.0
             m_tubo_rozas = (m2 * 4.5 * (alt / 2.5)) + (ex_sch * 6.0) + (ex_luz * 5.0) + (ex_rj45 * 8.0)
             m_tubo_total_estancia = tubo_troncal + m_tubo_rozas
@@ -566,7 +580,10 @@ def app():
             est_15_gr = base_15 * 0.10
             est_15_tt = base_15 * 0.10
 
-            base_25 = (m2 * (15.0 if grado_electr == "Elevada" else 12.0)) + (ex_sch * 18.0) + (dist_cuadro * 3.0)
+            # Si es cocina y se desdobla el C4, añadimos un extra de metros de cable para la segunda línea dedicada (C4-B Termo)
+            extra_cable_c4_desdoblado = (dist_cuadro * 2.0 + 12.0) if ("cocina" in nombre_est and desdoblar_c4) else 0.0
+
+            base_25 = (m2 * (15.0 if grado_electr == "Elevada" else 12.0)) + (ex_sch * 18.0) + (dist_cuadro * 3.0) + extra_cable_c4_desdoblado
             est_25_az = base_25 * 0.40
             est_25_ne = base_25 * 0.40
             est_25_tt = base_25 * 0.20
@@ -578,12 +595,12 @@ def app():
 
             if "cocina" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
-                cant_sch = 4 + max(0, ex_sch)
+                cant_sch = (5 if desdoblar_c4 else 4) + max(0, ex_sch)
                 mecanismos_est = [
                     {"nombre": "Interruptor simple", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
                     {"nombre": "Base Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
                     {"nombre": "Base fuerza 25A Horno/Vitro", "desc_real": desc_schuko, "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko},
-                    {"nombre": "Bases Schuko lavavajillas/lavadora", "desc_real": desc_schuko, "cant": 2, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
+                    {"nombre": "Bases Schuko lavavajillas/lavadora/termo", "desc_real": desc_schuko, "cant": (3 if desdoblar_c4 else 2), "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
                 ]
             elif "baño" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
@@ -711,7 +728,6 @@ def app():
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
 
-        # Protecciones del Cuadro Eléctrico
         n_difs = 2 if grado_electr == "Elevada" else 1
         n_pias = max(num_circuitos_base, len(estancias_activas))
         coste_cuadro_neto = p_iga + (n_difs * p_id) + (n_pias * p_pia) + p_caja_cuadro
@@ -738,7 +754,8 @@ def app():
 
         if modo_impresion.startswith("🛠️"):
             st.header("🔒 Panel Interno de Trabajo, Distancias y Acopio")
-            st.markdown(f"**Instalador:** {instalador_nombre} | **Potencia / IGA:** {potencia_prevista_kw} | **Cuadro:** {marca_protecciones}")
+            c4_estado_txt = "Desdoblado (C4-A y C4-B independientes)" if desdoblar_c4 else "Estándar unificado"
+            st.markdown(f"**Instalador:** {instalador_nombre} | **Potencia / IGA:** {potencia_prevista_kw} | **Circuito C4:** {c4_estado_txt}")
             st.markdown("---")
 
             st.markdown(f"""
@@ -797,7 +814,7 @@ def app():
             st.write(f"- **Caja de Distribución:** 1 ud | `[Fila Excel: #{fila_caja_cuadro}]` | Ref: `{desc_caja_cuadro}` | S/IVA: `{p_caja_cuadro:.2f} €`")
             st.write(f"- **IGA Oficial ({iga_amperaje}A):** 1 ud | `[Fila Excel: #{fila_iga}]` | Ref: `{desc_iga}` | S/IVA: `{p_iga:.2f} €`")
             st.write(f"- **Interruptor Diferencial (ID):** `{n_difs} ud(s)` | `[Fila Excel: #{fila_id}]` | Ref: `{desc_id}` | S/IVA c/u: `{p_id:.2f} €`")
-            st.write(f"- **PIAs Automáticos:** `{n_pias} uds` | `[Fila Excel: #{fila_pia}]` | Ref: `{desc_pia}` | S/IVA c/u: `{p_pia:.2f} €`")
+            st.write(f"- **PIAs Automáticos:** `{n_pias} uds` (Incluyendo desdoblamiento de C4) | `[Fila Excel: #{fila_pia}]` | Ref: `{desc_pia}` | S/IVA c/u: `{p_pia:.2f} €`")
 
             st.markdown(f"""
             <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
@@ -849,7 +866,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Inspector REBT y buscador de cuadro optimizados al 100%!")
+        st.success("✅ ¡Desdoblamiento de C4 y cálculo de cables sincronizados con éxito!")
 
 if __name__ == "__main__":
     app()
