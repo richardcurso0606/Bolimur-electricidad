@@ -163,7 +163,7 @@ def app():
             ]
         )
 
-    # NUEVO SELECTOR: Tipo de Conectores / Fichas de Empalme
+    # Selector de Tipo de Conexión (Wago o Clemas)
     tipo_conexion = st.radio(
         "🔌 Sistema de Conexión en Cajas de Registro y Mecanismos:",
         ["Conectores Rápidos Wago 221 (Profesional / Alta Calidad)", "Fichas de Empalme / Clemas Tradicionales de Tornillo"],
@@ -506,7 +506,8 @@ def app():
                     st.write(f"  - **Caja de Registro (100x100):** Proveedor: `{prov_caja_reg}` | `[Fila Excel: #{fila_caja_reg}]` | Ref: `{desc_caja_reg}`")
 
                 for mec in item['mecanismos_detalle']:
-                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | Proveedor: `{mec['prov']}` | `[Fila Excel: #{fila_fila := mec['fila']}]` | S/IVA c/u: `{mec['precio']:.2f} €`")
+                    # CORREGIDO: Se usa mec['fila'] directamente sin la variable errónea fila_fila
+                    st.write(f"  - `{mec['cant']}x` **{mec['nombre']}** ({serie_mecanismos}) — Ref. Excel: `{mec['desc_real']}` | Proveedor: `{mec['prov']}` | `[Fila Excel: #{mec['fila']}]` | S/IVA c/u: `{mec['precio']:.2f} €`")
 
                 st.markdown(f"👉 **Subtotal Materiales Estancia:** Sin IVA: `{item['neto_mat']:.2f} €` &nbsp;|&nbsp; **Con IVA (21%): `{item['iva_mat']:.2f} €`**")
                 st.markdown("---")
@@ -561,12 +562,11 @@ def app():
 
             st.markdown("---")
 
-            # BLOQUE 3: MECANISMOS, CAJAS Y CONEXIONES (WAGO / CLEMAS)
+            # BLOQUE 3: MECANISMOS, CAJAS Y CONEXIONES
             st.markdown(f"#### 📦 3. Mecanismos, Cajas, Conexiones y Marcos ({serie_mecanismos})")
             st.write(f"- Cajas universales (67mm): `{global_caja_mec_uds} uds` | Proveedor: **{prov_caja_mec}** | `[Fila Excel: #{fila_caja_mec}]` | Ref: `{desc_caja_mec}`")
             st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` | Proveedor: **{prov_caja_reg}** | `[Fila Excel: #{fila_caja_reg}]` | Ref: `{desc_caja_reg}`")
             
-            # Conexión seleccionada
             cant_con = max(1, int((global_caja_reg_uds + global_caja_mec_uds) / 15))
             st.write(f"- **{nombre_conexion_txt}:** `{cant_con} unidad(es)` | Proveedor: **{prov_con}** | `[Fila Excel: #{fila_con}]` | Ref: `{desc_con}` | Precio c/u: `{p_con:.2f} €` (Con IVA: `{(p_con*1.21):.2f} €`)")
 
@@ -650,7 +650,7 @@ def app():
             st.markdown("##### 📝 Condiciones Generales y Garantía")
             st.info(f"• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT con mecanismos **{serie_mecanismos}**.")
 
-        st.success("✅ ¡Selección de Wago / Clemas, Tubos M20/M25 y Cables por colores integrada con éxito!")
+        st.success("✅ ¡Error solucionado! Cálculos actualizados con éxito.")
 
 if __name__ == "__main__":
     app()
