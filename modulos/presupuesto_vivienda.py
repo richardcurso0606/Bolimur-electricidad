@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Series de Mecanismos (Simon 10/27, etc.), Panel Interno y Acopio
+Módulo Profesional de Presupuestos: Selector de Modo (Autónomo vs Cliente), Precios por Rollo y CSS de Impresión Limpia
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -10,7 +10,7 @@ import openpyxl
 import os
 
 def app():
-    # Estilo CSS avanzado para impresión limpia en PDF sin cortes de scroll
+    # Estilo CSS avanzado para impresión limpia en PDF sin cortes ni elementos sobrantes
     st.markdown("""
         <style>
             @media print {
@@ -21,6 +21,7 @@ def app():
                 .stSelectbox {display: none !important;}
                 .stSlider {display: none !important;}
                 .stCheckbox {display: none !important;}
+                div.row-widget.stRadio {display: none !important;}
                 
                 html, body, [data-testid="stAppViewContainer"], .main, .block-container {
                     height: auto !important;
@@ -34,7 +35,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Panel Profesional de Autónomo")
-    st.markdown("Gestión con selección de **Series Comerciales (Simon 10, Simon 27, etc.)**, precios por rollo y Panel Interno.")
+    st.markdown("Control total de costes, acopio en almacén y rentabilidad.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -216,14 +217,13 @@ def app():
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto, Costes y Panel de Autónomo", type="primary"):
+    if st.button("🚀 Calcular Presupuesto y Generar Paneles", type="primary"):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
 
         sup_total = sum([e["m2"] for e in estancias_activas])
 
-        # Keywords de cableado
         kw_cable_15 = ['h07z1-k 1.5', 'libre de halógenos 1.5', '1.5 mm'] if "Halógenos" in tipo_cable_sel else ['h07v-k 1.5', 'cable 1.5', '1.5 mm']
         kw_cable_25 = ['h07z1-k 2.5', 'libre de halógenos 2.5', '2.5 mm'] if "Halógenos" in tipo_cable_sel else ['h07v-k 2.5', 'cable 2.5', '2.5 mm']
 
@@ -238,15 +238,9 @@ def app():
         p_rj45, prov_rj45, desc_rj45, _ = buscar_articulo_detallado(df_precios, ['rj45', 'datos', 'multimedia'], serie_mecanismos, 8.50)
         p_marco, prov_marco, desc_marco, _ = buscar_articulo_detallado(df_precios, ['marco', 'embellecedor'], serie_mecanismos, 1.80)
 
-        # ==========================================
-        # AUDITORÍA TÉCNICA REBT
-        # ==========================================
-        st.markdown("---")
-        st.header("🔍 Auditoría Técnica REBT de Integridad")
-        
+        # Auditoría REBT
         tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
         tiene_bano = any("baño" in e["nombre"].lower() for e in estancias_activas)
-        
         if not tiene_cocina:
             st.warning("⚠️ **Aviso de Auditoría:** No se ha detectado ninguna estancia 'Cocina'. El circuito C3 es obligatorio en viviendas.")
         if not tiene_bano:
@@ -265,17 +259,11 @@ def app():
         global_marcos_uds = 0
         global_mecanismos_dict = {}
 
-        # ==========================================
-        # 1. INFORME TÉCNICO Y DESGLOSE POR ESTANCIAS
-        # ==========================================
-        st.markdown("---")
-        st.header(f"🛠️ 1. INFORME TÉCNICO Y MATERIALES ({serie_mecanismos})")
-        st.info("Desglose detallado por estancias con indicación exacta de la serie seleccionada.")
-
         coste_total_materiales_bruto = 0.0
         horas_totales_obra = 0.0
         subtotal_neto_comercial = 0.0
         comercial_estancias = []
+        desgloses_internos_estancias = []
 
         mult_comercial = (1 + margen_comercial / 100.0)
         mult_garantia_mat = (1 + porc_garantia / 100.0)
@@ -304,7 +292,7 @@ def app():
             elif "baño" in nombre_est:
                 mecanismos_est = [
                     {"nombre": f"Interruptor luz espejo ({serie_mecanismos})", "cant": 1, "precio": p_int, "prov": prov_int},
-                    {"nombre": f"Base Schuko con tapa estanca IP44 ({serie_mecanismos})", "cant": 2, "precio": p_schuko * 1.2, "prov": prov_schuko}
+                    {"nombre": f"Base Schuko tapa estanca IP44 ({serie_mecanismos})", "cant": 2, "precio": p_schuko * 1.2, "prov": prov_schuko}
                 ]
             elif "salón" in nombre_est or "comedor" in nombre_est:
                 mecanismos_est = [
@@ -370,147 +358,166 @@ def app():
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial (Incluye Serie y Garantía)": f"Instalación REBT ({grado_electrificacion}) con mecanismos **{serie_mecanismos}**, canalización M-20, cableado {tipo_cable_sel} y protecciones.",
+                "Detalle Comercial": f"Instalación REBT ({grado_electrificacion}) con mecanismos **{serie_mecanismos}**, canalización M-20 y cableado {tipo_cable_sel}.",
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
-            with st.expander(f"📍 Estancia {idx+1}: {est['nombre']} ({m2} m²) — Coste Neto: {coste_mat_estancia_neto + coste_mo_estancia:.2f} € | Venta: {precio_venta_estancia:.2f} €"):
-                st.markdown(f"**📦 Detalle de Materiales ({serie_mecanismos}):**")
-                st.write(f"- **Tubo M-20:** `{int(m_tubo)} m` x `{p_tubo:.2f} €` (Neto) / `{(p_tubo*1.21):.2f} €` (Con IVA)")
-                st.write(f"- **Mecanismos serie {serie_mecanismos}:** `{total_mecanismos} mecanismos` y `{n_marcos} marcos` embellecedores.")
-                st.markdown(f"👉 **Subtotal Materiales Estancia:** Sin IVA: `{coste_mat_estancia_neto:.2f} €` &nbsp;|&nbsp; **Con IVA (21%): `{coste_mat_estancia_con_iva:.2f} €`**")
-                st.markdown(f"⏱️ **Total Horas:** `{h_estancia_total:.2f} h` | 💵 **Coste Mano de Obra Neto:** `{coste_mo_estancia:.2f} €`")
+            desgloses_internos_estancias.append({
+                "nombre": est["nombre"],
+                "m2": m2,
+                "neto_mat": coste_mat_estancia_neto,
+                "iva_mat": coste_mat_estancia_con_iva,
+                "horas": h_estancia_total,
+                "coste_mo": coste_mo_estancia,
+                "rozas": h_rozas,
+                "tubos": h_tubo_cajas,
+                "cable": h_cableado,
+                "mec": h_mecanizado
+            })
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
         coste_total_autonomo = coste_total_materiales_bruto + coste_mano_obra_bruto
 
         # ==========================================
-        # 2. RESUMEN GLOBAL CONSOLIDADO DE COMPRAS (CON PRECIOS POR ROLLO)
+        # SELECTOR DE MODO DE VISTA E IMPRESIÓN (RADIO)
         # ==========================================
         st.markdown("---")
-        st.header("🛒 2. RESUMEN GLOBAL CONSOLIDADO DE COMPRAS (Precios por Metro y por Rollo de 100m)")
-        st.info(f"Lista de acopio en Obramat para la serie **{serie_mecanismos}** con indicación de rollos y precios con IVA.")
-
-        rollos_tubo = max(1, int((global_tubo_m + 99) / 100))
-        total_cable_15_m = global_cable_15_fn_m + global_cable_15_tierra_m + global_cable_15_vueltas_m
-        rollos_cable_15 = max(1, int((total_cable_15_m + 99) / 100))
-        rollos_cable_25 = max(1, int((global_cable_25_fuerza_m + 99) / 100))
-
-        total_mat_neto = coste_total_materiales_bruto
-        total_mat_con_iva = total_mat_neto * 1.21
-
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            st.markdown("#### 📏 Canalización y Tubería")
-            st.write(f"- **Tubo M-20 Requerido:** `{int(global_tubo_m)} m`")
-            st.write(f"  • Precio metro: `{p_tubo:.2f} €` (Neto) | `{(p_tubo*1.21):.2f} €` (Con IVA)")
-            st.success(f"📦 **A comprar en Almacén:** `{rollos_tubo} rollo(s) de 100m`")
-            st.info(f"💵 **Precio por Rollo de 100m:** `{p_tubo*100:.2f} €` (Neto) / **`{p_tubo*100*1.21:.2f} €` (Con IVA 21%)**")
-
-            st.markdown(f"#### ⚡ Cableado 1.5 mm² ({tipo_cable_sel})")
-            st.write(f"- Total Cable 1.5 mm²: `{int(total_cable_15_m)} m`")
-            st.info(f"📦 **A comprar:** `{rollos_cable_15} rollo(s) de 100m` | **Precio Rollo 100m:** `{p_15*100:.2f} €` (Neto) / **`{p_15*100*1.21:.2f} €` (Con IVA)**")
-
-        with col_g2:
-            st.markdown(f"#### ⚡ Cableado 2.5 mm² ({tipo_cable_sel})")
-            st.write(f"- Total Cable 2.5 mm²: `{int(global_cable_25_fuerza_m)} m`")
-            st.info(f"📦 **A comprar:** `{rollos_cable_25} rollo(s) de 100m` | **Precio Rollo 100m:** `{p_25*100:.2f} €` (Neto) / **`{p_25*100*1.21:.2f} €` (Con IVA)**")
-
-            st.markdown(f"#### 📦 Mecanismos y Cajas ({serie_mecanismos})")
-            st.write(f"- **Cajas universales (60x60 mm):** `{global_caja_mec_uds} uds`")
-            st.write(f"- **Cajas de registro (100x100 mm):** `{global_caja_reg_uds} uds`")
-            st.write(f"- **Marcos Embellecedores ({serie_mecanismos}):** `{global_marcos_uds} uds` (Precio c/u: `{p_marco*1.21:.2f} €` con IVA)")
-            for (nombre_m, prec_m, prov_m), cantidad_m in global_mecanismos_dict.items():
-                st.write(f"- `{cantidad_m}x` **{nombre_m}** (Precio c/u: `{(prec_m*1.21):.2f} €` con IVA)")
-
-        st.markdown(f"""
-        <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
-            <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO DE MATERIAL)</h3>
-            <p><b>Coste Total Materiales (Sin IVA):</b> {total_mat_neto:.2f} €</p>
-            <h2 style="color: #16a34a; margin: 0;">TOTAL A PAGAR EN EL ALMACÉN (Con 21% IVA): {total_mat_con_iva:.2f} €</h2>
-            <p style="font-size: 13px; color: #64748b; margin-top: 8px;">* Importe exacto a abonar en el mostrador de Obramat incluyendo la serie <b>{serie_mecanismos}</b>.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # ==========================================
-        # 3. PANEL DE ANÁLISIS INTERNO DEL AUTÓNOMO (PRIVADO)
-        # ==========================================
+        modo_impresion = st.radio(
+            "🖨️ SELECCIONA EL MODO DE VISTA (Para revisar o pulsar Ctrl + P y exportar a PDF):",
+            [
+                "🛠️ 1. Panel Interno y Acopio (Exclusivo para ti - Autónomo)",
+                "📄 2. Vista Comercial (Para entregar al Cliente)"
+            ],
+            horizontal=True
+        )
         st.markdown("---")
-        st.header("🔒 Panel Interno de Análisis y Utilidad del Autónomo (Privado)")
-        st.markdown("Desglose matemático completo para tu análisis de rentabilidad, beneficio y márgenes aplicados.")
-
-        venta_total_materiales_neto = coste_total_materiales_bruto * mult_comercial * mult_garantia_mat
-        beneficio_materiales = venta_total_materiales_neto - coste_total_materiales_bruto
-
-        venta_total_mo_neto = coste_mano_obra_bruto * mult_comercial
-        beneficio_mano_obra = venta_total_mo_neto - coste_mano_obra_bruto
-
-        importe_cuadro_neto = (550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial
-        coste_estimado_cuadro = (400.0 if "Elevada" in grado_electrificacion else 320.0)
-        beneficio_cuadro = importe_cuadro_neto - coste_estimado_cuadro
-
-        beneficio_neto_total = beneficio_materiales + beneficio_mano_obra + beneficio_cuadro
-        subtotal_general_neto = subtotal_neto_comercial + importe_cuadro_neto
-
-        st.info(f"""
-        **📊 Resumen Financiero y Utilidad de la Obra ({serie_mecanismos}):**
-        - 📦 **Coste Neto Materiales (Tus compras en almacén):** `{coste_total_materiales_bruto:.2f} €`
-        - 🏷️ **Venta Neta Materiales al Cliente (Con Margen {margen_comercial}% + Garantía {porc_garantia}%):** `{venta_total_materiales_neto:.2f} €`
-        - 💡 **Tu Beneficio Neto en Materiales:** **`+{beneficio_materiales:.2f} €`**
-        <hr style="margin: 8px 0;">
-        - ⏱️ **Coste Real Mano de Obra ({horas_totales_obra:.1f} h a {precio_hora} €/h):** `{coste_mano_obra_bruto:.2f} €`
-        - 💰 **Venta Neta Mano de Obra al Cliente:** `{venta_total_mo_neto:.2f} €`
-        - 💡 **Tu Beneficio Neto en Mano de Obra:** **`+{beneficio_mano_obra:.2f} €`**
-        <hr style="margin: 8px 0;">
-        - ⚡ **Beneficio en Cuadro General / Boletín:** **`+{beneficio_cuadro:.2f} €`**
-        <hr style="margin: 8px 0;">
-        - 🚀 **UTILIDAD / BENEFICIO NETO TOTAL ESTIMADO PARA TI:** **`+{beneficio_neto_total:.2f} €`** (Sin contar IVA)
-        """)
 
         # ==========================================
-        # 4. VISTA COMERCIAL PROFESIONAL (CLIENTE)
+        # MODO 1: PANEL INTERNO DEL AUTÓNOMO
         # ==========================================
-        st.markdown("---")
-        st.header("📄 4. VISTA COMERCIAL: Presupuesto Detallado por Estancias para el Cliente")
-        st.markdown("Lista comercial para entregar al cliente. Pulsa **Ctrl + P** para imprimir en PDF limpio.")
+        if modo_impresion.startswith("🛠️"):
+            st.header("🔒 Panel Interno de Trabajo y Acopio (Uso Exclusivo)")
+            st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Serie:** {serie_mecanismos}")
+            st.markdown("---")
 
-        st.markdown(f"""
-        <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
-            <h3 style="color: #0369a1; margin-top: 0;">{empresa_nombre}</h3>
-            <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
-            <hr style="border: 1px solid #bae6fd;">
-            <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
-            <p><b>Objeto:</b> Instalación Eléctrica REBT ({grado_electrificacion}) por Estancias ({sup_total:.1f} m²)</p>
-            <p><b>Sistema:</b> {tipo_obra} | **Cable:** {tipo_cable_sel} | **Serie:** {serie_mecanismos}</p>
-        </div>
-        """, unsafe_allow_html=True)
+            st.subheader("🛠️ Desglose Técnico y Mano de Obra por Estancias")
+            for item in desgloses_internos_estancias:
+                st.markdown(f"**📍 Estancia: {item['nombre']} ({item['m2']} m²)**")
+                st.write(f"- Coste Materiales: `{item['neto_mat']:.2f} €` (Sin IVA) | **`{item['iva_mat']:.2f} €` (Con IVA 21%)**")
+                st.write(f"- Mano de Obra: `{item['horas']:.2f} h` total (`{item['coste_mo']:.2f} €` netos)")
+                st.write(f"  • Desglose tareas -> Rozas: `{item['rozas']:.2f} h` | Tubos/Cajas: `{item['tubos']:.2f} h` | Cableado: `{item['cable']:.2f} h` | Mecanizado: `{item['mec']:.2f} h`")
+                st.markdown("---")
 
-        df_comercial = pd.DataFrame(comercial_estancias)
-        st.dataframe(df_comercial, use_container_width=True)
+            st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos})")
+            rollos_tubo = max(1, int((global_tubo_m + 99) / 100))
+            total_cable_15_m = global_cable_15_fn_m + global_cable_15_tierra_m + global_cable_15_vueltas_m
+            rollos_cable_15 = max(1, int((total_cable_15_m + 99) / 100))
+            rollos_cable_25 = max(1, int((global_cable_25_fuerza_m + 99) / 100))
 
-        st.markdown(f"""
-        <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; background-color: #f8fafc; margin-top: 10px;">
-            <h4>Capítulo Adicional: Cuadro General de Protección ({grado_electrificacion}) y Boletín Oficial (CIE)</h4>
-            <p>Suministro de cuadro de distribución, protecciones obligatorias REBT y tramitación del boletín: <b>{importe_cuadro_neto:.2f} €</b></p>
-        </div>
-        """, unsafe_allow_html=True)
+            total_mat_neto = coste_total_materiales_bruto
+            total_mat_con_iva = total_mat_neto * 1.21
 
-        cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
-        total_cliente = subtotal_general_neto + cuota_iva
+            col_g1, col_g2 = st.columns(2)
+            with col_g1:
+                st.markdown("**📏 Canalización y Tubería**")
+                st.write(f"- Tubo M-20 Requerido: `{int(global_tubo_m)} m`")
+                st.write(f"  • Precio metro: `{p_tubo:.2f} €` (Neto) | `{(p_tubo*1.21):.2f} €` (Con IVA)")
+                st.success(f"📦 A comprar: `{rollos_tubo} rollo(s) de 100m`")
+                st.info(f"💵 Precio Rollo 100m: `{p_tubo*100:.2f} €` (Neto) / **`{p_tubo*100*1.21:.2f} €` (Con IVA 21%)**")
 
-        st.markdown(f"""
-        <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
-            <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
-            <p><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
-            <h2 style="color: #16a34a; margin: 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:.2f} €</h2>
-        </div>
-        """, unsafe_allow_html=True)
+                st.markdown(f"**⚡ Cableado 1.5 mm² ({tipo_cable_sel})**")
+                st.write(f"- Total Cable 1.5 mm²: `{int(total_cable_15_m)} m`")
+                st.info(f"📦 A comprar: `{rollos_cable_15} rollo(s) de 100m` | Precio Rollo 100m: `{p_15*100:.2f} €` (Neto) / **`{p_15*100*1.21:.2f} €` (Con IVA)**")
 
-        st.markdown("---")
-        st.markdown("##### 📝 Condiciones Generales y Garantía")
-        st.info(f"• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT con mecanismos **{serie_mecanismos}**.")
+            with col_g2:
+                st.markdown(f"**⚡ Cableado 2.5 mm² ({tipo_cable_sel})**")
+                st.write(f"- Total Cable 2.5 mm²: `{int(global_cable_25_fuerza_m)} m`")
+                st.info(f"📦 A comprar: `{rollos_cable_25} rollo(s) de 100m` | Precio Rollo 100m: `{p_25*100:.2f} €` (Neto) / **`{p_25*100*1.21:.2f} €` (Con IVA)**")
 
-        st.success("✅ ¡Panel de autónomo, selección de series y formato de impresión corregidos con éxito!")
+                st.markdown(f"**📦 Mecanismos y Cajas ({serie_mecanismos})**")
+                st.write(f"- Cajas universales (60x60): `{global_caja_mec_uds} uds` (Precio c/u con IVA: `{p_caja_mec*1.21:.2f} €`)")
+                st.write(f"- Cajas de registro (100x100): `{global_caja_reg_uds} uds` (Precio c/u con IVA: `{p_caja_reg*1.21:.2f} €`)")
+                st.write(f"- Marcos Embellecedores: `{global_marcos_uds} uds` (Precio c/u con IVA: `{p_marco*1.21:.2f} €`)")
+                for (nombre_m, prec_m, prov_m), cantidad_m in global_mecanismos_dict.items():
+                    st.write(f"- `{cantidad_m}x` {nombre_m} (Precio c/u con IVA: `{(prec_m*1.21):.2f} €`)")
+
+            st.markdown(f"""
+            <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
+                <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO DE MATERIAL)</h3>
+                <p><b>Coste Total Materiales (Sin IVA):</b> {total_mat_neto:.2f} €</p>
+                <h2 style="color: #16a34a; margin: 0;">TOTAL A PAGAR EN EL ALMACÉN (Con 21% IVA): {total_mat_con_iva:.2f} €</h2>
+                <p style="font-size: 13px; color: #64748b; margin-top: 8px;">* Importe exacto a abonar en el mostrador de Obramat incluyendo la serie <b>{serie_mecanismos}</b>.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("---")
+            st.subheader("📊 Análisis de Utilidad y Rentabilidad")
+            venta_total_materiales_neto = coste_total_materiales_bruto * mult_comercial * mult_garantia_mat
+            beneficio_materiales = venta_total_materiales_neto - coste_total_materiales_bruto
+
+            venta_total_mo_neto = coste_mano_obra_bruto * mult_comercial
+            beneficio_mano_obra = venta_total_mo_neto - coste_mano_obra_bruto
+
+            importe_cuadro_neto = (550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial
+            coste_estimado_cuadro = (400.0 if "Elevada" in grado_electrificacion else 320.0)
+            beneficio_cuadro = importe_cuadro_neto - coste_estimado_cuadro
+
+            beneficio_neto_total = beneficio_materiales + beneficio_mano_obra + beneficio_cuadro
+
+            st.write(f"- 📦 **Coste Neto Materiales (Tus compras):** `{coste_total_materiales_bruto:.2f} €`")
+            st.write(f"- 🏷️ **Venta Neta Materiales al Cliente:** `{venta_total_materiales_neto:.2f} €` (Beneficio: `+{beneficio_materiales:.2f} €`)")
+            st.write(f"- ⏱️ **Coste Real Mano de Obra ({horas_totales_obra:.1f} h a {precio_hora} €/h):** `{coste_mano_obra_bruto:.2f} €`")
+            st.write(f"- 💰 **Venta Neta Mano de Obra al Cliente:** `{venta_total_mo_neto:.2f} €` (Beneficio: `+{beneficio_mano_obra:.2f} €`)")
+            st.write(f"- ⚡ **Beneficio en Cuadro General / Boletín:** `+{beneficio_cuadro:.2f} €`")
+            st.success(f"🚀 **UTILIDAD / BENEFICIO NETO TOTAL ESTIMADO PARA TI: +{beneficio_neto_total:.2f} €** (Sin contar IVA)")
+
+        # ==========================================
+        # MODO 2: VISTA COMERCIAL PARA EL CLIENTE
+        # ==========================================
+        else:
+            st.header("📄 Vista Comercial: Presupuesto para el Cliente")
+            st.markdown("Lista comercial lista para entregar. Pulsa **Ctrl + P** para imprimir únicamente este presupuesto formal.")
+
+            st.markdown(f"""
+            <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
+                <h3 style="color: #0369a1; margin-top: 0;">{empresa_nombre}</h3>
+                <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
+                <hr style="border: 1px solid #bae6fd;">
+                <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
+                <p><b>Objeto:</b> Instalación Eléctrica REBT ({grado_electrificacion}) por Estancias ({sup_total:.1f} m²)</p>
+                <p><b>Sistema:</b> {tipo_obra} | **Cable:** {tipo_cable_sel} | **Serie:** {serie_mecanismos}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            df_comercial = pd.DataFrame(comercial_estancias)
+            st.dataframe(df_comercial, use_container_width=True)
+
+            importe_cuadro_neto = (550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial
+            subtotal_general_neto = subtotal_neto_comercial + importe_cuadro_neto
+
+            st.markdown(f"""
+            <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; background-color: #f8fafc; margin-top: 10px;">
+                <h4>Capítulo Adicional: Cuadro General de Protección ({grado_electrificacion}) y Boletín Oficial (CIE)</h4>
+                <p>Suministro de cuadro de distribución, protecciones obligatorias REBT y tramitación del boletín: <b>{importe_cuadro_neto:.2f} €</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
+            total_cliente = subtotal_general_neto + cuota_iva
+
+            st.markdown(f"""
+            <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
+                <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
+                <p><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
+                <h2 style="color: #16a34a; margin: 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:.2f} €</h2>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("---")
+            st.markdown("##### 📝 Condiciones Generales y Garantía")
+            st.info(f"• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT con mecanismos **{serie_mecanismos}**.")
+
+        st.success("✅ ¡Paneles generados con éxito!")
 
 if __name__ == "__main__":
     app()
