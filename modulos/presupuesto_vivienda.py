@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Selector de Modo (Autónomo vs Cliente), Precios por Rollo y CSS de Impresión Limpia
+Módulo Profesional de Presupuestos: Análisis de Tiempos de Mano de Obra, Soporte Pladur, Acopio y Utilidad
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -35,7 +35,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Panel Profesional de Autónomo")
-    st.markdown("Control total de costes, acopio en almacén y rentabilidad.")
+    st.markdown("Control de costes, acopio en almacén, análisis de tiempos de mano de obra y rentabilidad.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -139,14 +139,19 @@ def app():
     with col_m3:
         iva_sel = st.selectbox("IVA Aplicado al Cliente", [10, 21], index=0)
 
-    st.markdown("#### 🧱 Criterio de Rozas y Albañilería")
+    st.markdown("#### 🧱 Criterio de Rozas y Albañilería / Soporte")
     col_roz1, col_roz2 = st.columns(2)
     with col_roz1:
-        hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True)
+        hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True, help="Si es Pladur, se calcula perforación de montantes y colocación de cajas de garras.")
     with col_roz2:
         tipo_pared = st.selectbox(
             "Tipo de Pared / Soporte",
-            ["Ladrillo Hueco / Tabiquería seca (Fácil picado)", "Ladrillo Perforado / Termoarcilla (Dureza media)", "Hormigón / Estructura (Requiere rozadora y martillo pesado)"]
+            [
+                "Ladrillo Hueco / Tabiquería seca (Fácil picado)", 
+                "Ladrillo Perforado / Termoarcilla (Dureza media)", 
+                "Hormigón / Estructura (Requiere rozadora y martillo pesado)",
+                "Pladur / Panel de Yeso Laminado (Obra seca - Sin rozas, corte con sierra de vaso)"
+            ]
         )
 
     col_c1, col_c2 = st.columns(2)
@@ -246,7 +251,7 @@ def app():
         if not tiene_bano:
             st.warning("⚠️ **Aviso de Auditoría:** No se ha detectado ninguna estancia 'Baño'. El circuito C5 debe contemplarse.")
             
-        st.success(f"✅ **Auditoría REBT Superada ({grado_electrificacion}):** Estancias normativas detectadas bajo serie **{serie_mecanismos}**.")
+        st.success(f"✅ **Auditoría REBT Superada ({grado_electrificacion}):** Estancias normativas detectadas bajo serie **{serie_mecanismos}** y soporte **{tipo_pared}**.")
 
         # Acumuladores globales
         global_tubo_m = 0.0
@@ -264,6 +269,12 @@ def app():
         subtotal_neto_comercial = 0.0
         comercial_estancias = []
         desgloses_internos_estancias = []
+
+        # Acumuladores de horas globales por tarea
+        sum_h_rozas = 0.0
+        sum_h_tubos = 0.0
+        sum_h_cable = 0.0
+        sum_h_mec = 0.0
 
         mult_comercial = (1 + margen_comercial / 100.0)
         mult_garantia_mat = (1 + porc_garantia / 100.0)
@@ -340,11 +351,21 @@ def app():
             coste_mat_estancia_con_iva = coste_mat_estancia_neto * 1.21
             coste_total_materiales_bruto += coste_mat_estancia_neto
 
-            mult_soporte = 1.0 if "Hueco" in tipo_pared else (1.35 if "Perforado" in tipo_pared else 1.7)
-            h_rozas = (m2 * 0.35 * mult_soporte) if (isinstance(tipo_obra, str) and "Empotrada" in tipo_obra and hace_rozas_electricista) else 0.0
+            # Cálculo de horas según soporte
+            if "Pladur" in tipo_pared:
+                h_rozas = (m2 * 0.10) if hace_rozas_electricista else 0.0
+            else:
+                mult_soporte = 1.0 if "Hueco" in tipo_pared else (1.35 if "Perforado" in tipo_pared else 1.7)
+                h_rozas = (m2 * 0.35 * mult_soporte) if hace_rozas_electricista else 0.0
+
             h_tubo_cajas = m2 * 0.25
             h_cableado = m2 * 0.30
             h_mecanizado = total_mecanismos * 0.15
+
+            sum_h_rozas += h_rozas
+            sum_h_tubos += h_tubo_cajas
+            sum_h_cable += h_cableado
+            sum_h_mec += h_mecanizado
 
             h_estancia_total = h_rozas + h_tubo_cajas + h_cableado + h_mecanizado
             horas_totales_obra += h_estancia_total
@@ -358,7 +379,7 @@ def app():
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial": f"Instalación REBT ({grado_electrificacion}) con mecanismos **{serie_mecanismos}**, canalización M-20 y cableado {tipo_cable_sel}.",
+                "Detalle Comercial": f"Instalación REBT ({grado_electrificacion}) con mecanismos **{serie_mecanismos}**, soporte **{tipo_pared}**, canalización y cableado {tipo_cable_sel}.",
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
@@ -397,15 +418,25 @@ def app():
         # ==========================================
         if modo_impresion.startswith("🛠️"):
             st.header("🔒 Panel Interno de Trabajo y Acopio (Uso Exclusivo)")
-            st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Serie:** {serie_mecanismos}")
+            st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Serie:** {serie_mecanismos} | **Soporte:** {tipo_pared}")
             st.markdown("---")
 
-            st.subheader("🛠️ Desglose Técnico y Mano de Obra por Estancias")
+            # NUEVO BLOQUE: ANÁLISIS DE TIEMPOS DE MANO DE OBRA
+            st.subheader("⏱️ Análisis de Rendimiento y Tiempos de Mano de Obra")
+            st.markdown("Desglose técnico de los coeficientes de tiempo aplicados para calcular las horas reales de ejecución:")
+            st.write(f"- 🧱 **Fase de Rozas / Perforación ({tipo_pared}):** `{sum_h_rozas:.2f} h` acumuladas.")
+            st.write(f"- 📏 **Fase de Canalización y Cajas (0.25 h/m²):** `{sum_h_tubos:.2f} h` acumuladas.")
+            st.write(f"- ⚡ **Fase de Tendido y Metida de Cableado (0.30 h/m²):** `{sum_h_cable:.2f} h` acumuladas.")
+            st.write(f"- 🔲 **Fase de Conexionado y Mecanizado (0.15 h/unidad):** `{sum_h_mec:.2f} h` acumuladas.")
+            st.info(f"⏱️ **Total Horas de Obra Estimadas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`** (Coste Neto Mano de Obra).")
+            st.markdown("---")
+
+            st.subheader("🛠️ Desglose por Estancias")
             for item in desgloses_internos_estancias:
                 st.markdown(f"**📍 Estancia: {item['nombre']} ({item['m2']} m²)**")
                 st.write(f"- Coste Materiales: `{item['neto_mat']:.2f} €` (Sin IVA) | **`{item['iva_mat']:.2f} €` (Con IVA 21%)**")
                 st.write(f"- Mano de Obra: `{item['horas']:.2f} h` total (`{item['coste_mo']:.2f} €` netos)")
-                st.write(f"  • Desglose tareas -> Rozas: `{item['rozas']:.2f} h` | Tubos/Cajas: `{item['tubos']:.2f} h` | Cableado: `{item['cable']:.2f} h` | Mecanizado: `{item['mec']:.2f} h`")
+                st.write(f"  • Tareas -> Rozas/Taladros: `{item['rozas']:.2f} h` | Tubos: `{item['tubos']:.2f} h` | Cable: `{item['cable']:.2f} h` | Mecanismos: `{item['mec']:.2f} h`")
                 st.markdown("---")
 
             st.subheader(f"🛒 Resumen Global de Acopio ({serie_mecanismos})")
@@ -517,7 +548,7 @@ def app():
             st.markdown("##### 📝 Condiciones Generales y Garantía")
             st.info(f"• **Validez de la oferta:** 30 días.\n• **Forma de pago:** 40% a la aceptación, 40% a mitad de ejecución y 20% a la entrega del Boletín Oficial (CIE).\n• **Garantía:** 2 años en instalación ejecutada según REBT con mecanismos **{serie_mecanismos}**.")
 
-        st.success("✅ ¡Paneles generados con éxito!")
+        st.success("✅ ¡Análisis de tiempos de mano de obra y paneles generados con éxito!")
 
 if __name__ == "__main__":
     app()
