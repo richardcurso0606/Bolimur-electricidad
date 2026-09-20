@@ -540,6 +540,12 @@ def app():
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
 
+        # Cálculo de totales comerciales para el cliente
+        importe_cuadro_neto = (550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial
+        subtotal_general_neto = subtotal_neto_comercial + importe_cuadro_neto
+        cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
+        total_cliente = subtotal_general_neto + cuota_iva
+
         # ==========================================
         # SELECTOR DE MODO DE VISTA E IMPRESIÓN
         # ==========================================
@@ -561,6 +567,16 @@ def app():
             st.header("🔒 Panel Interno de Trabajo y Acopio (Uso Exclusivo)")
             st.markdown(f"**Instalador:** {instalador_nombre} | **Empresa:** {empresa_nombre} | **Serie:** {serie_mecanismos} | **Soporte:** {tipo_pared}")
             st.markdown("---")
+
+            # CUADRO RESUMEN DE COBRO AL CLIENTE EN VISTA INTERNA
+            st.markdown(f"""
+            <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff; margin-bottom: 25px;">
+                <h3 style="color: #0369a1; margin-top: 0;">💼 RESUMEN ECONÓMICO PARA EL CLIENTE (A Cobrar)</h3>
+                <p><b>Subtotal Comercial Neto (Estancias + Cuadro):</b> {subtotal_general_neto:.2f} €</p>
+                <p><b>IVA Aplicado ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
+                <h2 style="color: #16a34a; margin: 0;">TOTAL A COBRAR AL CLIENTE: {total_cliente:.2f} €</h2>
+            </div>
+            """, unsafe_allow_html=True)
 
             st.subheader("⏱️ Análisis de Rendimiento y Tiempos de Mano de Obra")
             st.write(f"- 🧱 **Fase de Rozas / Perforación ({tipo_pared}):** `{sum_h_rozas:.2f} h` acumuladas.")
@@ -708,11 +724,6 @@ def app():
             df_comercial = pd.DataFrame(comercial_estancias)
             st.dataframe(df_comercial, use_container_width=True)
 
-            importe_cuadro_neto = (550.0 if "Elevada" in grado_electrificacion else 450.0) * mult_comercial
-            subtotal_general_neto = subtotal_neto_comercial + importe_cuadro_neto
-            cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
-            total_cliente = subtotal_general_neto + cuota_iva
-
             st.markdown(f"""
             <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
                 <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
@@ -721,7 +732,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Error solucionado y puntos extra por estancia habilitados correctamente!")
+        st.success("✅ ¡Panel de autónomo actualizado con el resumen de cobro al cliente incluido!")
 
 if __name__ == "__main__":
     app()
