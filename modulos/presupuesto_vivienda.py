@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Inspector REBT con Desdoblamiento de C4, IGA Oficial y Acopio
+Módulo Profesional de Presupuestos: Inspector REBT, Buscadores Inteligentes, Tipo de Techo y Días de Obra
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -34,7 +34,7 @@ def app():
     """, unsafe_allow_html=True)
 
     st.title("🏡 Generador de Presupuestos: Panel de Ingeniería REBT e Inspector IA")
-    st.markdown("Gestión avanzada de circuitos, desdoblamiento de C4, cumplimiento ITC-BT-25 y acopio en firme.")
+    st.markdown("Gestión de circuitos, desdoblamiento de C4, tipo de techo, cumplimiento ITC-BT-25 y acopio en firme.")
 
     # 1. Cargar base de datos maestra de precios
     excel_cargado = None
@@ -73,7 +73,7 @@ def app():
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}` ({len(df_precios)} artículos)")
 
     # ==========================================
-    # FUNCIONES DE BÚSQUEDA INTELIGENTE
+    # FUNCIONES DE BÚSQUEDA INTELIGENTE Y ROBUSTA
     # ==========================================
     def buscar_mas_economico(df, main_kw, sub_kw=None):
         mejores_candidatos = []
@@ -157,24 +157,15 @@ def app():
 
         return 3.50, "Obramat", "Artículo estándar", False, -1
 
-    def buscar_proteccion_por_marca(df, tipo_prot, marca_sel):
+    def buscar_proteccion_por_marca(df, tipo_prot, marca_sel, amperaje=25):
         marca_lower = marca_sel.lower()
-        kw_map = {
-            'iga': ['interruptor general automático', 'iga'],
-            'diferencial': ['interruptor diferencial', 'diferencial'],
-            'pia': ['magnetotérmico', 'interrup.', 'automático']
-        }
-        keywords = kw_map.get(tipo_prot, ['automático'])
         mejores_candidatos = []
 
-        for kw in keywords:
+        if tipo_prot == 'iga':
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
                 marca_item = str(row.get('Marca', '')).strip().lower()
-                
-                if kw in desc and marca_lower in marca_item:
-                    if tipo_prot == 'iga' and 'vehículo' in desc:
-                        continue
+                if marca_lower in marca_item and ('2p' in desc or 'bipolar' in desc) and f'{amperaje}a' in desc and 'magnetotérmico' in desc:
                     try:
                         precio = float(row['Precio S/IVA (€)'])
                         prov = str(row.get('Proveedor / Tienda', 'Obramat'))
@@ -183,9 +174,49 @@ def app():
                         mejores_candidatos.append((precio, prov, art_desc, fila))
                     except:
                         continue
-
-        if not mejores_candidatos:
-            return buscar_mas_economico(df, keywords[0])
+            if not mejores_candidatos:
+                for idx, row in df.iterrows():
+                    desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                    marca_item = str(row.get('Marca', '')).strip().lower()
+                    if marca_lower in marca_item and ('2p' in desc or 'bipolar' in desc) and 'magnetotérmico' in desc:
+                        try:
+                            precio = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            fila = idx + 2
+                            mejores_candidatos.append((precio, prov, art_desc, fila))
+                        except:
+                            continue
+        elif tipo_prot == 'diferencial':
+            keywords = ['interruptor diferencial', 'diferencial']
+            for kw in keywords:
+                for idx, row in df.iterrows():
+                    desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                    marca_item = str(row.get('Marca', '')).strip().lower()
+                    if kw in desc and marca_lower in marca_item:
+                        try:
+                            precio = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            fila = idx + 2
+                            mejores_candidatos.append((precio, prov, art_desc, fila))
+                        except:
+                            continue
+        else:
+            keywords = ['magnetotérmico', 'interrup.', 'automático']
+            for kw in keywords:
+                for idx, row in df.iterrows():
+                    desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                    marca_item = str(row.get('Marca', '')).strip().lower()
+                    if kw in desc and marca_lower in marca_item:
+                        try:
+                            precio = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            fila = idx + 2
+                            mejores_candidatos.append((precio, prov, art_desc, fila))
+                        except:
+                            continue
 
         if mejores_candidatos:
             mejores_candidatos.sort(key=lambda x: x[0])
@@ -194,20 +225,20 @@ def app():
         return 15.00, "Obramat", "Protección estándar", False, -1
 
     def buscar_caja_cuadro(df, marca_sel):
-        marca_lower = marca_sel.lower()
         mejores_candidatos = []
         for idx, row in df.iterrows():
             desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
-            marca_item = str(row.get('Marca', '')).strip().lower()
-            if ('caja' in desc or 'automatismos' in desc or 'envolvente' in desc) and marca_lower in marca_item:
-                try:
-                    precio = float(row['Precio S/IVA (€)'])
-                    prov = str(row.get('Proveedor / Tienda', 'Obramat'))
-                    art_desc = str(row.get('Descripción Exacta del Artículo', ''))
-                    fila = idx + 2
-                    mejores_candidatos.append((precio, prov, art_desc, fila))
-                except:
-                    continue
+            cat = str(row.get('Familia / Categoria', '')).strip().lower()
+            if 'cuadros' in cat or 'envolventes' in cat or 'caja' in desc:
+                if '12' in desc or 'empotrar' in desc or 'resi9' in desc or 'practibox' in desc:
+                    try:
+                        precio = float(row['Precio S/IVA (€)'])
+                        prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                        art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                        fila = idx + 2
+                        mejores_candidatos.append((precio, prov, art_desc, fila))
+                    except:
+                        continue
         if mejores_candidatos:
             mejores_candidatos.sort(key=lambda x: x[0])
             return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
@@ -247,11 +278,10 @@ def app():
             ["Libre de Halógenos (H07Z1-K)", "PVC Normal / Estándar (H07V-K)"]
         )
 
-    # Opción para desdoblar el C4 solicitada por el usuario
     desdoblar_c4 = st.checkbox(
         "⚙️ Desdoblar circuito C4 (Separar Lavadora/Lavavajillas de la línea del Termo en circuitos independientes)", 
         value=True,
-        help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente sin errores."
+        help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente."
     )
 
     if "5.750" in potencia_prevista_kw:
@@ -275,11 +305,10 @@ def app():
         iga_amperaje = 63
         num_circuitos_base = 12
 
-    # Si se desdobla el C4, se añade un circuito operativo adicional al recuento mínimo
     if desdoblar_c4:
         num_circuitos_base += 1
 
-    st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos (con C4 desdoblado): **{num_circuitos_base}**")
+    st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos: **{num_circuitos_base}**")
 
     # Selección de Marcas
     st.markdown("#### 🔌 Selección de Marcas y Series Comerciales")
@@ -323,7 +352,7 @@ def app():
     with col_m3:
         iva_sel = st.selectbox("IVA Aplicado al Cliente", [10, 21], index=0)
 
-    st.markdown("#### 🧱 Criterio de Rozas y Albañilería / Soporte")
+    st.markdown("#### 🧱 Criterio de Rozas, Techos, Operarios y Jornadas de Trabajo")
     col_roz1, col_roz2 = st.columns(2)
     with col_roz1:
         hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True)
@@ -338,11 +367,21 @@ def app():
             ]
         )
 
-    col_c1, col_c2 = st.columns(2)
+    tipo_techo = st.selectbox(
+        "🏗️ Tipo de Techo / Forjado",
+        [
+            "Falso Techo de Pladur / Escayola (Cableado superior ágil - Menor rozado vertical de luz)",
+            "Techo Macizo / Hormigón o Viguetas (Exige rozado completo en paredes y techos para alumbrado)"
+        ]
+    )
+
+    col_c1, col_c2, col_c3 = st.columns(3)
     with col_c1:
         precio_hora = st.number_input("Precio Mano de Obra (€/h neto)", min_value=10.0, max_value=60.0, value=25.0, step=1.0)
     with col_c2:
         num_operarios = st.number_input("Nº Operarios", min_value=1, max_value=5, value=1, step=1)
+    with col_c3:
+        horas_jornada = st.number_input("Horas por Jornada / Día", min_value=4.0, max_value=12.0, value=8.0, step=0.5)
 
     st.markdown("---")
 
@@ -472,7 +511,7 @@ def app():
         if not forzar_inspector:
             st.stop()
     else:
-        st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25, los escalones de potencia IGA y el desdoblamiento de líneas.")
+        st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25 y los escalones de potencia IGA.")
 
     st.markdown("---")
 
@@ -516,7 +555,7 @@ def app():
         p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
         p_marco, prov_marco, desc_marco, _, fila_marco = buscar_mecanismo_por_filtro(df_precios, 'marco', modo_seleccion, serie_mecanismos)
 
-        p_iga, prov_iga, desc_iga, _, fila_iga = buscar_proteccion_por_marca(df_precios, 'iga', marca_protecciones)
+        p_iga, prov_iga, desc_iga, _, fila_iga = buscar_proteccion_por_marca(df_precios, 'iga', marca_protecciones, amperaje=iga_amperaje)
         p_id, prov_id, desc_id, _, fila_id = buscar_proteccion_por_marca(df_precios, 'diferencial', marca_protecciones)
         p_pia, prov_pia, desc_pia, _, fila_pia = buscar_proteccion_por_marca(df_precios, 'pia', marca_protecciones)
         
@@ -555,6 +594,8 @@ def app():
         mult_comercial = (1 + margen_comercial / 100.0)
         mult_garantia_mat = (1 + porc_garantia / 100.0)
 
+        factor_techo = 0.85 if "Falso Techo" in tipo_techo else 1.15
+
         for idx, est in enumerate(estancias_activas):
             m2 = est["m2"]
             alt = est["altura"]
@@ -566,23 +607,21 @@ def app():
             ex_rj45 = est.get("extra_rj45", 0)
 
             tubo_troncal = dist_cuadro * 2.0
-            m_tubo_rozas = (m2 * 4.5 * (alt / 2.5)) + (ex_sch * 6.0) + (ex_luz * 5.0) + (ex_rj45 * 8.0)
+            m_tubo_rozas = ((m2 * 4.5 * (alt / 2.5)) + (ex_sch * 6.0) + (ex_luz * 5.0) + (ex_rj45 * 8.0)) * factor_techo
             m_tubo_total_estancia = tubo_troncal + m_tubo_rozas
             
             m_tubo_20 = m_tubo_total_estancia * 0.75
             m_tubo_25 = m_tubo_total_estancia * 0.25
             n_cajas_reg = 1 if m2 > 8 else 0
             
-            base_15 = (m2 * 12.0) + (ex_luz * 15.0) + (dist_cuadro * 3.0)
+            base_15 = ((m2 * 12.0) + (ex_luz * 15.0) + (dist_cuadro * 3.0)) * factor_techo
             est_15_az = base_15 * 0.30
             est_15_ne = base_15 * 0.30
             est_15_ma = base_15 * 0.20
             est_15_gr = base_15 * 0.10
             est_15_tt = base_15 * 0.10
 
-            # Si es cocina y se desdobla el C4, añadimos un extra de metros de cable para la segunda línea dedicada (C4-B Termo)
             extra_cable_c4_desdoblado = (dist_cuadro * 2.0 + 12.0) if ("cocina" in nombre_est and desdoblar_c4) else 0.0
-
             base_25 = (m2 * (15.0 if grado_electr == "Elevada" else 12.0)) + (ex_sch * 18.0) + (dist_cuadro * 3.0) + extra_cable_c4_desdoblado
             est_25_az = base_25 * 0.40
             est_25_ne = base_25 * 0.40
@@ -622,7 +661,7 @@ def app():
                 cant_int = 2 + max(0, ex_luz)
                 cant_sch = 3 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
+                    {"nombre": "Conmutador / Interruptor", "desc_real": cant_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
                     {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
                 ]
 
@@ -672,10 +711,10 @@ def app():
                 h_rozas = (m2 * 0.10) if hace_rozas_electricista else 0.0
             else:
                 mult_soporte = 1.0 if "Hueco" in tipo_pared else (1.35 if "Perforado" in tipo_pared else 1.7)
-                h_rozas = (m2 * 0.35 * mult_soporte) if hace_rozas_electricista else 0.0
+                h_rozas = (m2 * 0.35 * mult_soporte * (0.9 if "Falso Techo" in tipo_techo else 1.1)) if hace_rozas_electricista else 0.0
 
-            h_tubo_cajas = m2 * 0.25
-            h_cableado = m2 * 0.30
+            h_tubo_cajas = (m2 * 0.25) * factor_techo
+            h_cableado = (m2 * 0.30) * factor_techo
             h_mecanizado = total_mecanismos * 0.15
 
             sum_h_rozas += h_rozas
@@ -695,7 +734,7 @@ def app():
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial": f"Instalación REBT ({potencia_prevista_kw}) | Dist. Cuadro: {dist_cuadro}m",
+                "Detalle Comercial": f"Instalación REBT ({potencia_prevista_kw}) | Techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}",
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
@@ -727,6 +766,8 @@ def app():
             })
 
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
+        horas_totales_equipo = horas_totales_obra / num_operarios
+        dias_estimados = horas_totales_equipo / horas_jornada
 
         n_difs = 2 if grado_electr == "Elevada" else 1
         n_pias = max(num_circuitos_base, len(estancias_activas))
@@ -767,12 +808,13 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-            st.subheader("⏱️ Análisis de Rendimiento y Tiempos de Mano de Obra")
-            st.write(f"- 🧱 **Fase de Rozas ({tipo_pared}):** `{sum_h_rozas:.2f} h`")
+            st.subheader("⏱️ Análisis de Rendimiento, Tiempos y Plazos de Obra")
+            st.write(f"- 🧱 **Fase de Rozas ({tipo_pared} | Techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}):** `{sum_h_rozas:.2f} h`")
             st.write(f"- 📏 **Fase de Canalización:** `{sum_h_tubos:.2f} h`")
             st.write(f"- ⚡ **Fase de Cableado:** `{sum_h_cable:.2f} h`")
             st.write(f"- 🔲 **Fase de Mecanizado:** `{sum_h_mec:.2f} h`")
-            st.info(f"⏱️ **Total Horas:** `{horas_totales_obra:.2f} h` x `{precio_hora:.2f} €/h` = **`{coste_mano_obra_bruto:.2f} €`**")
+            st.info(f"⏱️ **Total Horas de Trabajo:** `{horas_totales_obra:.2f} h` netas (`{coste_mano_obra_bruto:.2f} €` coste MO)")
+            st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
             st.markdown("---")
 
             st.subheader("🛒 Resumen Global de Acopio (Con Filas Verificadas del Excel)")
@@ -866,7 +908,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Desdoblamiento de C4 y cálculo de cables sincronizados con éxito!")
+        st.success("✅ ¡Tipo de techo, operarios, jornadas y desdoblamiento de C4 sincronizados!")
 
 if __name__ == "__main__":
     app()
