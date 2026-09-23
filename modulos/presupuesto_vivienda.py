@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Módulo Profesional de Presupuestos: Inspector REBT, Buscadores Inteligentes, Tipo de Techo y Días de Obra
+Módulo Profesional de Presupuestos: Inspector REBT, Buscadores Inteligentes, Tipo de Techo y Resumen por Punto
 Autor: Richard Orlando Choque Tejerina (Bolimur Electricidad)
 """
 
@@ -18,7 +18,7 @@ def app():
                 .stButton {display: none !important;}
                 .stTextInput {display: none !important;}
                 .stSelectbox {display: none !important;}
-                .stSlider {display: none !important;}
+                .stNumberInput {display: none !important;}
                 .stCheckbox {display: none !important;}
                 div.row-widget.stRadio {display: none !important;}
                 
@@ -346,9 +346,17 @@ def app():
 
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
-        margen_comercial = st.slider("Margen Comercial General (%)", 0, 50, 20)
+        margen_comercial = st.number_input(
+            "Margen Comercial General (%)", 
+            min_value=0, max_value=200, value=50, step=5,
+            help="Puedes escribir directamente el número o usar las flechas para subir/bajar de 5 en 5."
+        )
     with col_m2:
-        porc_garantia = st.slider("Colchón de Garantía en Materiales (%)", 0, 20, 10)
+        porc_garantia = st.number_input(
+            "Colchón de Garantía en Materiales (%)", 
+            min_value=0, max_value=100, value=10, step=1,
+            help="Colchón adicional para imprevistos en materiales."
+        )
     with col_m3:
         iva_sel = st.selectbox("IVA Aplicado al Cliente", [10, 21], index=0)
 
@@ -579,6 +587,7 @@ def app():
         global_utp_m = 0.0
         global_marcos_uds = 0
         global_mecanismos_dict = {}
+        total_puntos_mecanismos = 0
 
         coste_total_materiales_bruto = 0.0
         horas_totales_obra = 0.0
@@ -661,11 +670,12 @@ def app():
                 cant_int = 2 + max(0, ex_luz)
                 cant_sch = 3 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Conmutador / Interruptor", "desc_real": cant_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
+                    {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
                     {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
                 ]
 
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
+            total_puntos_mecanismos += total_mecanismos
             n_marcos = max(total_mecanismos, int(total_mecanismos * 0.8))
 
             global_tubo20_m += m_tubo_20
@@ -779,6 +789,9 @@ def app():
         cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
         total_cliente = subtotal_general_neto + cuota_iva
 
+        # Precio medio por punto instalado (Calculado sobre el total con IVA o Total Neto según prefieras; aquí usamos Total Cliente Con IVA / Puntos)
+        precio_medio_por_punto = (total_cliente / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+
         # ==========================================
         # SELECTOR DE MODO DE VISTA E IMPRESIÓN
         # ==========================================
@@ -807,6 +820,12 @@ def app():
                 <h2 style="color: #16a34a; margin: 0;">TOTAL A COBRAR AL CLIENTE: {total_cliente:.2f} €</h2>
             </div>
             """, unsafe_allow_html=True)
+
+            st.subheader("📊 Resumen Global de Puntos y Coste Medio por Punto")
+            st.write(f"- 🔌 **Número Total de Puntos / Mecanismos Instalados:** `{total_puntos_mecanismos} uds` (Interruptores, Schukos, Tomas de Fuerza y Red)")
+            st.write(f"- 💶 **Precio Medio por Punto (Aplicando el Total con IVA):** **`{precio_medio_por_punto:.2f} € / punto`**")
+            st.info(f"💡 *Nota:* Este indicador te muestra a cuánto sale de media cada punto instalado (incluyendo cableado, canalización, protecciones y mano de obra prorrateados).")
+            st.markdown("---")
 
             st.subheader("⏱️ Análisis de Rendimiento, Tiempos y Plazos de Obra")
             st.write(f"- 🧱 **Fase de Rozas ({tipo_pared} | Techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}):** `{sum_h_rozas:.2f} h`")
@@ -908,7 +927,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Tipo de techo, operarios, jornadas y desdoblamiento de C4 sincronizados!")
+        st.success("✅ ¡Resumen de puntos y precio medio por punto sincronizado con éxito!")
 
 if __name__ == "__main__":
     app()
