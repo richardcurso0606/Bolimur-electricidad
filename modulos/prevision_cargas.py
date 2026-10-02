@@ -1,4 +1,6 @@
 import streamlit as st
+import datetime
+from modulos import pdf_prevision
 
 # =========================================================================
 # CONSTANTES Y FUNCIONES EXCLUSIVAS DE PREVISIÓN
@@ -8,12 +10,46 @@ def get_coef_simultaneidad(num):
              11: 9.1, 12: 9.8, 13: 10.5, 14: 11.2, 15: 11.9, 16: 12.6, 17: 13.3, 18: 14.0, 19: 14.7, 20: 15.4}
     if num <= 0: return 0.0
     if num <= 20: return tabla.get(num, 15.4)
-    return float(round(15.4 + (num - 20) * 0.7, 2))
+    return float(round(15.4 + (num - 20) * 0.5, 2))
 
 # =========================================================================
 # FUNCIÓN MAESTRA DEL MÓDULO
 # =========================================================================
 def renderizar():
+
+    # Estilos CSS con soporte @media print para impresión limpia en navegador
+    st.markdown("""
+    <style>
+    @media print {
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div.stTextInput, details summary { 
+            display: none !important; 
+        }
+        
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+        
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
+            background-color: white !important; 
+            color: black !important; 
+            font-family: "Helvetica", "Arial", sans-serif !important; 
+            font-size: 10pt !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            position: relative !important;
+            display: block !important;
+        }
+        
+        .stSuccess, .stInfo, div[style*="background-color"], table {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     # Blindaje total de variables de sesión (Esquema 3a por defecto)
     if 'grupos_viviendas' not in st.session_state:
@@ -34,13 +70,14 @@ def renderizar():
         st.session_state.garajes["esquema_irve"] = "Esquema 3a (Desde centralización de contadores)"
         st.session_state.garajes["spl"] = False
 
-    st.title("🏢 Previsión de Cargas (ITC-BT-10)")
-    
+    # Header principal con título y botón de reset
     col_t1, col_b1 = st.columns([4, 1])
     with col_t1: 
+        st.title("🏢 Previsión de Cargas (ITC-BT-10)")
         st.write("Desarrollo analítico y reglamentario para el cálculo de la Potencia Total Prevista ($P_t$) del edificio.")
     with col_b1:
-        if st.button("🔄 Resetear Todo"): 
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("🔄 Resetear Todo", key="btn_reset_top", use_container_width=True): 
             st.session_state.grupos_viviendas = [{"nombre": "Plantas 1ª a 4ª (Básica)", "qty": 8, "pot": 5750, "nocturna": False}]
             st.session_state.locales = [{"nombre": "Locales Comerciales", "qty": 2, "superficie": 100.0}]
             st.session_state.servicios_generales = [{"nombre": "Ascensor principal", "qty": 1, "potencia": 4000.0, "factor": 1.30, "cos_phi": 1.0}]
@@ -67,17 +104,17 @@ def renderizar():
 | :--- | :--- | :--- | :--- |
 | n = 1 | 1,0 | n = 11 | 9,1 |
 | n = 2 | 2,0 | n = 12 | 9,8 |
-| n = 3 | 2,8 | n = 13 | 10,5 |
-| n = 4 | 3,6 | n = 14 | 11,2 |
-| n = 5 | 4,4 | n = 15 | 11,9 |
-| n = 6 | 5,2 | n = 16 | 12,6 |
-| n = 7 | 6,0 | n = 17 | 13,3 |
-| n = 8 | 6,8 | n = 18 | 14,0 |
-| n = 9 | 7,6 | n = 19 | 14,7 |
-| n = 10 | 8,4 | n = 20 | 15,4 |
+| n = 3 | 3,0 | n = 13 | 10,5 |
+| n = 4 | 3,8 | n = 14 | 11,2 |
+| n = 5 | 4,6 | n = 15 | 11,9 |
+| n = 6 | 5,4 | n = 16 | 12,6 |
+| n = 7 | 6,2 | n = 17 | 13,3 |
+| n = 8 | 7,0 | n = 18 | 14,0 |
+| n = 9 | 7,8 | n = 19 | 14,7 |
+| n = 10 | 8,5 | n = 20 | 15,4 |
         """
         st.markdown(tabla_k_markdown)
-        st.markdown("*Nota reglamentaria:* Para más de 20 viviendas se aplica la fórmula 15,4 + 0,7 · (n - 20).")
+        st.markdown("*Nota reglamentaria (ITC-BT-10):* Para más de 20 viviendas se aplica la fórmula $K = 15,4 + (n - 20) \\cdot 0,5$.")
 
     st.markdown("---")
 
@@ -132,6 +169,7 @@ def renderizar():
                 else:
                     pot_parcial = 0
 
+            viv["pot_calculada"] = pot_parcial
             pot_total_viviendas += pot_parcial
 
             with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
@@ -289,7 +327,7 @@ def renderizar():
 
     st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
 
-    # --- 4. GARAJES E IRVE (CON EXPLICACIÓN TÉCNICA DETALLADA DE CADA ESQUEMA) ---
+    # --- 4. GARAJES E IRVE ---
     st.markdown("---")
     st.header("4. Garajes e Infraestructura de Recarga (IRVE - ITC-BT-52)")
     
@@ -338,7 +376,6 @@ def renderizar():
 
         st.markdown("#### 🔌 Selección de Esquema Topológico (ITC-BT-52)")
         
-        # Textos limpios, cortos y profesionales para que no se corten nunca en tablets ni móviles
         opciones_esquema = [
             "Esquema 1 (Instalación colectiva con subcontadores)",
             "Esquema 2 (Contador individual exclusivo nuevo)",
@@ -347,7 +384,7 @@ def renderizar():
             "Esquema 4 (Desde cuadro general de local o nave)"
         ]
         
-        idx_esq = 2 # Por defecto el 3a que es el más utilizado
+        idx_esq = 2 # Por defecto el 3a
         for i, opt in enumerate(opciones_esquema):
             if st.session_state.garajes["esquema_irve"].split(" ")[1] in opt:
                 idx_esq = i; break
@@ -360,8 +397,8 @@ def renderizar():
         ratio_vent = 20.0 if "Forzada" in tipo_vent else 10.0
         p_gar = max(sup_g * ratio_vent, 3450.0 if sup_g > 0 else 0.0)
         
-        # Factor inteligente según normativa y SPL
         factor_irve_val = 0.05 if st.session_state.garajes["spl"] else 0.10
+        st.session_state.garajes["tipo_irve"] = "5% (Con sistema SPL)" if st.session_state.garajes["spl"] else "10% (Sin sistema SPL)"
         plazas_calculo = st.session_state.garajes["plazas_irve"] * factor_irve_val
         p_irve = plazas_calculo * 3680.0
         
@@ -388,7 +425,7 @@ def renderizar():
     pt_total = pot_total_viviendas + pot_total_locales + pot_total_servicios + pot_total_garaje
 
     st.success(f"""
-    ### ✅ POTENCIA TOTAL PREVISTA DEL EDIFICIO ($P_t$): {pt_total:,.2f} W
+    ### ✅ POTENCIA TOTAL PREVISTA DEL EDIFICIO ($P_t$): {pt_total:,.2f} W ({pt_total/1000.0:.2f} kW)
     
     **Desglose acumulado para la memoria técnica:**
     * 🏠 Total Viviendas ($P_1$): **{pot_total_viviendas:,} W**
@@ -398,3 +435,65 @@ def renderizar():
     
     *Valor listo y optimizado para el cálculo inmediato de la Línea General de Alimentación (LGA).*
     """)
+
+    # =========================================================================
+    # SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF OFICIAL
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("🖨️ Generar Reporte Técnico e Impresión en PDF")
+    
+    with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
+        st.markdown("Personalice los metadatos de la obra para incluirlos en la cabecera del documento PDF:")
+        
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            p_nombre = st.text_input("Nombre de la Obra / Edificio", "Edificio Residencial Bolimur", key="pdf_p_nombre")
+            p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Av. Principal nº 123", key="pdf_p_emp")
+        with col_m2:
+            p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="pdf_p_proy")
+            p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-2026-001", key="pdf_p_exp")
+
+        proyecto_info = {
+            "nombre": p_nombre,
+            "emplazamiento": p_emplazamiento,
+            "proyectista": p_proyectista,
+            "expediente": p_expediente,
+            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+        }
+
+        # Generar PDF en memoria con ReportLab
+        try:
+            pdf_bytes = pdf_prevision.generar_pdf_prevision(
+                proyecto_info=proyecto_info,
+                grupos_viviendas=st.session_state.grupos_viviendas,
+                k_diurno=k_diurno,
+                viviendas_diurnas_qty=viviendas_diurnas_qty,
+                pot_total_viviendas=pot_total_viviendas,
+                locales=st.session_state.locales,
+                pot_total_locales=pot_total_locales,
+                servicios_generales=st.session_state.servicios_generales,
+                pot_total_servicios=pot_total_servicios,
+                garajes=st.session_state.garajes,
+                p_gar_base=p_gar,
+                p_irve=p_irve,
+                pot_total_garaje=pot_total_garaje,
+                pt_total=pt_total
+            )
+            
+            import base64
+            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+            
+            st.markdown("#### 👁️ Vista Previa en Pantalla del Documento PDF Oficial:")
+            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
+            st.markdown(pdf_display, unsafe_allow_html=True)
+
+            st.download_button(
+                label="📥 Descargar Reporte PDF Oficial (Técnico)",
+                data=pdf_bytes,
+                file_name=f"Reporte_Prevision_Cargas_{p_expediente}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+
+        except Exception as err:
+            st.error(f"⚠️ Ocurrió un error al generar el archivo PDF: {err}")

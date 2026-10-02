@@ -1,5 +1,8 @@
 import streamlit as st
 import math
+import datetime
+from modulos import rebt_tablas as rebt
+from modulos import pdf_lga
 
 METODOS_INSTALACION = {
     "B1 (Bajo tubo empotrado)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
@@ -7,33 +10,45 @@ METODOS_INSTALACION = {
     "C (Multiconductor en pared)": {"ref": "C", "desc": "Cable multiconductor fijado directo"},
     "D (Cables enterrados bajo tubo)": {"ref": "D", "desc": "Instalación subterránea"}
 }
-SECCIONES_COMERCIALES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240]
-IZ_COBRE_TUBO = {1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0, 120: 210.0, 150: 240.0, 185: 275.0, 240: 320.0}
-IZ_COBRE_ENTERRADO = {1.5: 22.0, 2.5: 29.0, 4: 38.0, 6: 48.0, 10: 65.0, 16: 85.0, 25: 110.0, 35: 135.0, 50: 160.0, 70: 170.0, 95: 202.0, 120: 230.0, 150: 270.0, 185: 310.0, 240: 360.0}
-CALIBRES_INTERRUPTORES = [10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630]
+SECCIONES_COMERCIALES = rebt.SECCIONES_COMERCIALES
+CALIBRES_INTERRUPTORES = rebt.CALIBRES_INTERRUPTORES_GENERALES
 
-def seleccionar_seccion_optima(s_necesaria):
-    for sec in SECCIONES_COMERCIALES:
-        if sec >= s_necesaria: return sec
-    return SECCIONES_COMERCIALES[-1]
+def seleccionar_seccion_optima(s_necesaria, material="cobre", s_minima=10.0):
+    return rebt.seleccionar_seccion_optima(s_necesaria, material, s_minima)
 
 def seleccionar_proteccion(ib):
-    for cal in CALIBRES_INTERRUPTORES:
-        if cal >= ib: return cal
-    return CALIBRES_INTERRUPTORES[-1]
+    return rebt.seleccionar_proteccion(ib, tipo="general")
 
-# --- CALLBACK PARA RESETEO INFALIBLE ---
 def reset_valores_lga():
     st.session_state['lga_long'] = 0.0
     st.session_state['lga_pot_man'] = 0.0
 
 def renderizar():
-    st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
-    
-    # --- AYUDA TÉCNICA DESPLEGABLE ---
+    st.markdown("""
+    <style>
+    @media print {
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div.stTextInput, details summary { 
+            display: none !important; 
+        }
+        @page { size: A4 portrait; margin: 12mm; }
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
+            background-color: white !important; color: black !important; font-family: "Helvetica", "Arial", sans-serif !important; font-size: 10pt !important;
+            height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important;
+        }
+        .stSuccess, .stInfo, div[style*="background-color"], table { break-inside: avoid !important; page-break-inside: avoid !important; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_tit_h, col_b1_h = st.columns([4, 1])
+    with col_tit_h:
+        st.title("⚡ Línea General de Alimentación - LGA (ITC-BT-14)")
+    with col_b1_h:
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+        st.button("🔄 Restablecer", on_click=reset_valores_lga, use_container_width=True)
+
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
-        
         st.markdown("""
         <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 10px;">
         <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -80,16 +95,9 @@ def renderizar():
         </div>
         """, unsafe_allow_html=True)
     
-    # --- BOTÓN DE RESETEO VINCULADO AL CALLBACK ---
-    col_tit, col_btn = st.columns([3, 1])
-    with col_tit:
-        st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
-    with col_btn:
-        st.button("🔄 Restablecer a 0", on_click=reset_valores_lga, use_container_width=True)
+    st.markdown("### ⚙️ Parámetros de Diseño de la Línea")
 
-    # --- RECUPERACIÓN AUTOMÁTICA Y REAL DE LA PREVISIÓN DE CARGAS ---
     viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))
-    
     tabla_k = {1: 1.0, 2: 2.0, 3: 3.0, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7.0, 9: 7.8, 10: 8.5, 
                11: 9.1, 12: 9.8, 13: 10.5, 14: 11.2, 15: 11.9, 16: 12.6, 17: 13.3, 18: 14.0, 19: 14.7, 20: 15.4}
     n_viv_calc = max(viviendas_diurnas_qty, 1)
@@ -114,16 +122,15 @@ def renderizar():
         else:
             p_serv_total += s.get("potencia", 0.0) * s.get("qty", 1) * f_serv
 
-    garaje_data = st.session_state.get('garajes', {"sup": 240.0, "plazas_irve": 18, "tipo_irve": "10% (Sin sistema de gestión)"})
+    garaje_data = st.session_state.get('garajes', {"sup": 240.0, "plazas_irve": 18, "spl": False})
     sup_gar = garaje_data.get("sup", 0.0)
     p_gar_vent = max(sup_gar * 20.0, 3450.0 if sup_gar > 0 else 0.0)
-    factor_irve = 0.10 if "10%" in garaje_data.get("tipo_irve", "") else 0.05
+    factor_irve = 0.05 if garaje_data.get("spl", False) or "5%" in str(garaje_data.get("tipo_irve", "")) else 0.10
     p_gar_irve = (garaje_data.get("plazas_irve", 0) * factor_irve) * 3680.0
     p_gar_total = p_gar_vent + p_gar_irve
 
     pt_auto = float(p_viv_total + p_loc_total + p_serv_total + p_gar_total)
 
-    # --- SELECCIÓN DE MODO Y CONTROLES DINÁMICOS ---
     lga_modo_potencia = st.radio("Origen de la Potencia (Pt):", ["Automático", "Manual"], horizontal=True, key="lga_modo")
     
     if lga_modo_potencia == "Automático":
@@ -147,23 +154,26 @@ def renderizar():
         submitted = st.form_submit_button("🔄 Recalcular / Actualizar Cálculo")
 
     dv_pct_lga = 0.5 if "concentrados" in tipo_enlace_lga else 1.0
-    gamma_lga = 44.0 if "XLPE" in lga_aisl else 48.5
-    ib_lga = lga_pot / (math.sqrt(3) * 400 * 0.9)
-    dv_max_lga = 400 * (dv_pct_lga / 100.0)
-    s_cdt_lga = (lga_pot * lga_long) / (gamma_lga * dv_max_lga * 400) if gamma_lga * dv_max_lga * 400 > 0 else 10.0
+    gamma_lga = rebt.obtener_gamma(lga_mat, lga_aisl)
+    ib_lga = rebt.calcular_intensidad_diseno(lga_pot, 400.0, 0.9, es_trifasico=True)
+    dv_max_lga = 400.0 * (dv_pct_lga / 100.0)
+    s_cdt_lga = rebt.calcular_seccion_por_cdt(lga_pot, lga_long, gamma_lga, dv_pct_lga, 400.0, es_trifasico=True)
     
-    tabla_iz = IZ_COBRE_ENTERRADO if "D (" in metodo_lga_key else IZ_COBRE_TUBO
+    min_reg_lga = 16.0 if "alum" in lga_mat.lower() else 10.0
+    tabla_iz = rebt.obtener_tabla_iz(lga_mat, lga_aisl, metodo_lga_key)
     in_lga_auto = seleccionar_proteccion(ib_lga)
-    s_final_lga = seleccionar_seccion_optima(max(s_cdt_lga, 10.0))
+    s_final_lga = rebt.seleccionar_seccion_optima(max(s_cdt_lga, min_reg_lga), material=lga_mat, s_minima=min_reg_lga)
     
+    secciones_disponibles_lga = rebt.obtener_secciones_disponibles(lga_mat)
     while True:
         iz_a = tabla_iz.get(s_final_lga, 230.0)
         if in_lga_auto <= 0.91 * iz_a and iz_a >= ib_lga: break
-        idx_s = SECCIONES_COMERCIALES.index(s_final_lga) if s_final_lga in SECCIONES_COMERCIALES else 5
-        if idx_s < len(SECCIONES_COMERCIALES) - 1: s_final_lga = SECCIONES_COMERCIALES[idx_s + 1]
+        idx_s = secciones_disponibles_lga.index(s_final_lga) if s_final_lga in secciones_disponibles_lga else 0
+        if idx_s < len(secciones_disponibles_lga) - 1: s_final_lga = secciones_disponibles_lga[idx_s + 1]
         else: break
 
-    dv_real_lga_pct = ((lga_pot * lga_long) / (gamma_lga * s_final_lga * 400) / 400) * 100 if gamma_lga * s_final_lga * 400 > 0 else 0.0
+    dv_real_lga_v = rebt.calcular_caida_tension_v(lga_pot, lga_long, gamma_lga, s_final_lga, 400.0, es_trifasico=True)
+    dv_real_lga_pct = rebt.calcular_caida_tension_pct(dv_real_lga_v, 400.0)
 
     rho_lga = 1.0 / gamma_lga if gamma_lga > 0 else 0.0
     r_lga_cable = (rho_lga * lga_long) / s_final_lga if s_final_lga > 0 else 0.0
@@ -175,170 +185,76 @@ def renderizar():
     st.markdown("---")
     st.markdown("<h3>📋 Memoria Analítica Detallada (LGA - ITC-BT-14)</h3>", unsafe_allow_html=True)
 
-    # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
     st.info(f"""
     #### 1. Intensidad de Diseño Trifásica ($I_b$)
     
     **Criterio y Fórmula Reglamentaria:**
     $$I_b = \\frac{{P}}{{\\sqrt{{3}} \\cdot V \\cdot \\cos\\varphi}}$$
     
-    **Leyenda y Definición de Variables:**
-    * **I_b**: Intensidad de cálculo o de diseño por fase (A).
-    * **P**: Potencia total prevista de transporte en la línea ($P_t$ = {lga_pot:,.2f} W).
-    * **V**: Tensión nominal compuesta entre fases (400 V).
-    * **cos φ**: Factor de potencia estimado para instalaciones generales (0.9).
-    * **√3**: Constante trifásica ($\\approx 1.732$).
-    
     **Sustitución Numérica y Resultado:**
-    $$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\frac{{{lga_pot:,.2f}}}{{623.54}} = \\mathbf{{ {ib_lga:.2f} \\text{{ A}} }}$$
+    $$I_b = \\frac{{{lga_pot:,.2f} \\text{{ W}}}}{{\\sqrt{{3}} \\cdot 400 \\text{{ V}} \\cdot 0.9}} = \\mathbf{{ {ib_lga:.2f} \\text{{ A}} }}$$
     """)
 
-    # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
     st.info(f"""
     #### 2. Sección Teórica por Caída de Tensión ($\\Delta V$)
     
     **Criterio y Fórmula Reglamentaria:**
     $$S = \\frac{{P \\cdot L}}{{\\gamma \\cdot \\Delta V \\cdot V}}$$
     
-    **Leyenda y Definición de Variables:**
-    * **S**: Sección teórica mínima exigida del conductor ($\\text{{mm}}^2$).
-    * **P**: Potencia total de cálculo ({lga_pot:,.2f} W).
-    * **L**: Longitud unifilar de la línea ({lga_long} m).
-    * **γ**: Conductividad del material a servicio normal ({gamma_lga} m/(Ω·mm²) para {lga_aisl}).
-    * **ΔV**: Caída de tensión máxima admisible ({dv_pct_lga}% de 400V = {dv_max_lga:.2f} V).
-    * **V**: Tensión nominal (400 V).
-    
     **Sustitución Numérica y Resultado:**
     $$S = \\frac{{{lga_pot:,.2f} \\cdot {lga_long}}}{{{gamma_lga} \\cdot {dv_max_lga:.2f} \\cdot 400}} = \\mathbf{{ {s_cdt_lga:.2f} \\text{{ mm}}^2 }}$$
     """)
     
-    # --- BLOQUE 3: ICC MÍNIMA Y FUSIBLES ---
     st.info(f"""
     #### 3. Icc Mínima y Fusibles de Compañía (CGP)
     
-    **Criterio y Fórmula Reglamentaria (ITC-BT-14 / ITC-BT-22):**
-    Verificamos que los fusibles de protección tipo gG situados en la CGP fundirán a tiempo en caso de un cortocircuito franco al final de la Línea General de Alimentación.
-    
-    $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{cable}}}}$$
-    
-    **Leyenda y Definición de Variables:**
-    * **I_cc,final**: Corriente de cortocircuito estimada al final de la LGA (A).
-    * **V**: Tensión nominal compuesta de referencia (400 V).
-    * **I_cc,origen**: Corriente de cortocircuito en el origen de la línea ({lga_icc_orig * 1000:,.0f} A).
-    * **R_cable**: Resistencia activa del conductor en el tramo ($R = \\frac{{\\rho \\cdot L}}{{S}} = {r_lga_cable:.5f}\\ \\Omega$).
-    * **In**: Calibre de los fusibles gG de protección en origen ({in_lga_auto} A).
-    
-    **Sustitución Numérica y Verificación Reglamentaria:**
-    $$I_{{cc,final}} = \\frac{{400}}{{\\left(\\frac{{400}}{{{lga_icc_orig * 1000.0}}}\\right) + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_orig_lga_ohms:.5f} + {r_lga_cable:.5f}}} = \\frac{{400}}{{{z_tot_lga:.5f}}} = \\mathbf{{ {icc_fin_lga:.1f} \\text{{ A}} }}$$
-    
     * **Icc al final de la LGA:** **{icc_fin_lga:.1f} A** ({icc_fin_lga / 1000.0:.2f} kA)
-    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los márgenes reglamentarios exigidos por el REBT.
+    * **Veredicto de Coordinación:** ✅ La corriente de cortocircuito al final de la línea garantiza la fusión de los fusibles de protección de **{in_lga_auto} A (Tipo gG)** dentro de los márgenes reglamentarios.
     """)
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ FUSIBLES RECOMENDADOS EN CGP: {in_lga_auto} A (Tipo gG)</div>""", unsafe_allow_html=True)
 
-    # --- BLOQUE 4: RECOMENDACIÓN DE TUBO Y CANALIZACIÓN (ITC-BT-14) ---
-    st.markdown("---")
-    st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-14 / ITC-BT-21)")
+    tubo_diam, razon_tubo = rebt.dimensionar_tubo_lga(s_final_lga)
 
-    if s_final_lga <= 16:
-        tubo_diam = "Ø 40 mm o Ø 50 mm"
-        razon_tubo = "Suficiente para albergar hilos de menor calibre respetando el espacio de llenaje permitido."
-    elif s_final_lga <= 35:
-        tubo_diam = "Ø 50 mm o Ø 63 mm"
-        razon_tubo = "Requerido para alojar sin apretar los 4 conductores unipolares de sección media."
-    elif s_final_lga <= 50:
-        tubo_diam = "Ø 63 mm"
-        razon_tubo = f"Para tus hilos de cobre de {s_final_lga} mm² (sección de cable), se exigen al menos 4 hilos en trifásica. Respetando la ley de llenaje (máximo 30-40% del tubo para que no se ahoguen y se puedan pasar tirando en la obra), el tubo exterior comercial perfecto es el de 63 mm."
-    else:
-        tubo_diam = "Ø 90 mm, Ø 110 mm o Bandeja técnica"
-        razon_tubo = "Secciones muy pesadas que requieren tubos de gran calibre o bandejas registrables debido a la rigidez del cable."
+    st.markdown("---")
+    st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-14 Tabla 1)")
 
     st.info(
         f"**Análisis del Tubo para tu sección óptima de cable de {s_final_lga} mm²:**\n\n"
         f"* **Diámetro exterior del tubo recomendado:** **{tubo_diam}**\n"
-        f"* **¿Por qué se elige este tamaño? (Explicación técnica):** {razon_tubo}\n"
-        f"* **Normativa aplicable:** ITC-BT-14 e ITC-BT-21 (Factores de llenaje y protección mecánica IK07)."
+        f"* **Explicación técnica:** {razon_tubo}\n"
+        f"* **Normativa aplicable:** ITC-BT-14 Tabla 1."
     )
 
-    # --- LÓGICA DINÁMICA PARA LA TABLA DE TUBOS ---
-    def get_style(is_active):
-        if is_active:
-            return 'background-color: #f0fdf4;', 'color: #166534;', '<span style="font-size: 11px; background: #dcfce7; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">Actual</span>'
-        return '', '', ''
-
-    bg1, c1, bd1 = get_style(s_final_lga <= 16)
-    bg2, c2, bd2 = get_style(25 <= s_final_lga <= 35)
-    bg3, c3, bd3 = get_style(s_final_lga == 50)
-    bg4, c4, bd4 = get_style(70 <= s_final_lga <= 95)
-    bg5, c5, bd5 = get_style(s_final_lga >= 120)
-
-    st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (ITC-BT-14)")
-    
-    html_tabla_tubos = f"""
-    <div style="overflow-x: auto; margin-bottom: 20px;">
-    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <thead>
-            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
-                <th style="padding: 12px 16px;">SECCIÓN DEL CABLE (LGA)</th>
-                <th style="padding: 12px 16px;">DIÁMETRO EXTERIOR DEL TUBO</th>
-                <th style="padding: 12px 16px;">MOTIVO TÉCNICO / REGLAMENTARIO</th>
-            </tr>
-        </thead>
-        <tbody style="font-size: 14px; color: #334155;">
-            <tr style="border-bottom: 1px solid #e2e8f0; {bg1}">
-                <td style="padding: 12px 16px; font-weight: bold; {c1}">10 mm² a 16 mm² {bd1}</td>
-                <td style="padding: 12px 16px; font-weight: bold; {c1}">Ø 40 mm o Ø 50 mm</td>
-                <td style="padding: 12px 16px; {c1}">Espacio adecuado para hilos finos en acometidas pequeñas.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; {bg2}">
-                <td style="padding: 12px 16px; font-weight: bold; {c2}">25 mm² a 35 mm² {bd2}</td>
-                <td style="padding: 12px 16px; font-weight: bold; {c2}">Ø 50 mm o Ø 63 mm</td>
-                <td style="padding: 12px 16px; {c2}">Capacidad para 4 conductores de sección media sin sobrepresión.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; {bg3}">
-                <td style="padding: 12px 16px; font-weight: bold; {c3}">50 mm² {bd3}</td>
-                <td style="padding: 12px 16px; font-weight: bold; {c3}">Ø 63 mm</td>
-                <td style="padding: 12px 16px; {c3}">El tamaño ideal para cumplir el factor de llenaje del 30-40%.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; {bg4}">
-                <td style="padding: 12px 16px; font-weight: bold; {c4}">70 mm² a 95 mm² {bd4}</td>
-                <td style="padding: 12px 16px; font-weight: bold; {c4}">Ø 90 mm</td>
-                <td style="padding: 12px 16px; {c4}">Tubo corrugado de gran calibre para hilos pesados y rígidos.</td>
-            </tr>
-            <tr style="background-color: #f8fafc; {bg5}">
-                <td style="padding: 12px 16px; font-weight: bold; {c5}">≥ 120 mm² {bd5}</td>
-                <td style="padding: 12px 16px; font-weight: bold; {c5}">Bandeja / Canaladura</td>
-                <td style="padding: 12px 16px; {c5}">Canales de obra o bandejas registrables por imposibilidad de curvado en tubo.</td>
-            </tr>
-        </tbody>
-    </table>
-    </div>
-    """
-    st.markdown(html_tabla_tubos, unsafe_allow_html=True)
-
-    # --- TABLA HTML ESTILADA DE CORRIENTES ADMISIBLES ---
     st.markdown("### 📊 Tabla de Corrientes Admisibles y Verificación (REBT)")
     
     filas_lista = []
-    for s_com in SECCIONES_COMERCIALES:
+    tabla_secciones_list = []
+
+    for s_com in secciones_disponibles_lga:
         iz_val_t = tabla_iz.get(s_com, 0)
-        dv_c_pct = ((lga_pot * lga_long) / (gamma_lga * s_com * 400) / 400) * 100 if s_com > 0 else 0.0
+        dv_c_v = rebt.calcular_caida_tension_v(lga_pot, lga_long, gamma_lga, s_com, 400.0, es_trifasico=True)
+        dv_c_pct = rebt.calcular_caida_tension_pct(dv_c_v, 400.0)
         cond_s_lga = 0.91 * iz_val_t
         
         bg_row = "background-color: #f0fdf4;" if s_com == s_final_lga else ""
         
         if iz_val_t < ib_lga:
             est = "❌ Falla Calentamiento"
+            est_clean = "Falla Calentamiento"
         elif in_lga_auto > cond_s_lga:
             est = f"❌ Falla (I<sub>n</sub> {in_lga_auto}A > {cond_s_lga:.1f}A)"
+            est_clean = f"Falla (In {in_lga_auto}A > {cond_s_lga:.1f}A)"
         elif s_com == s_final_lga:
             est = f"✅ <b>CUMPLE IDEAL</b> (I<sub>n</sub> {in_lga_auto}A ≤ {cond_s_lga:.1f}A)"
+            est_clean = f"CUMPLE IDEAL (In {in_lga_auto}A ≤ {cond_s_lga:.1f}A)"
         else:
             est = "Válido pero sobredimensionado"
+            est_clean = "Válido sobredimensionado"
             
         fila_str = f'<tr style="border-bottom: 1px solid #e2e8f0; {bg_row}"><td style="padding: 12px 16px; font-weight: bold;">{s_com} mm²</td><td style="padding: 12px 16px;">{iz_val_t} A</td><td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px;">{est}</td></tr>'
         filas_lista.append(fila_str)
+        tabla_secciones_list.append({"sec": s_com, "iz": iz_val_t, "cdt": dv_c_pct, "estado": est_clean})
 
     html_tabla_secciones = f"""
     <div style="overflow-x: auto; margin-bottom: 20px;">
@@ -363,3 +279,72 @@ def renderizar():
     ### ✅ SECCIÓN ÓPTIMA LGA: {s_final_lga} mm² de {lga_mat.upper()}
     Garantiza una caída real del **{dv_real_lga_pct:.3f}%**. Protegida en origen por **Fusibles gG de {in_lga_auto} A** y canalizada bajo **tubo de {tubo_diam}**.
     """)
+
+    # --- SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF ---
+    st.markdown("---")
+    st.subheader("🖨️ Generar Reporte Técnico e Impresión LGA en PDF")
+    
+    with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            p_nombre = st.text_input("Nombre de la Obra / Edificio", "Edificio Residencial Bolimur", key="lga_pdf_nombre")
+            p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Av. Principal nº 123", key="lga_pdf_emp")
+        with col_m2:
+            p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="lga_pdf_proy")
+            p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-LGA-2026", key="lga_pdf_exp")
+
+        proyecto_info = {
+            "nombre": p_nombre,
+            "emplazamiento": p_emplazamiento,
+            "proyectista": p_proyectista,
+            "expediente": p_expediente,
+            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+        }
+
+        lga_params = {
+            "pot": lga_pot,
+            "long": lga_long,
+            "mat": lga_mat,
+            "aisl": lga_aisl,
+            "metodo": metodo_lga_key,
+            "enlace": tipo_enlace_lga,
+            "icc_orig": lga_icc_orig,
+            "dv_pct": dv_pct_lga
+        }
+
+        lga_results = {
+            "ib": ib_lga,
+            "dv_max": dv_max_lga,
+            "s_cdt": s_cdt_lga,
+            "s_final": s_final_lga,
+            "in_auto": in_lga_auto,
+            "dv_real_v": dv_real_lga_v,
+            "dv_real_pct": dv_real_lga_pct,
+            "r_cable": r_lga_cable,
+            "z_tot": z_tot_lga,
+            "icc_fin": icc_fin_lga,
+            "tubo_diam": tubo_diam,
+            "razon_tubo": razon_tubo,
+            "gamma": gamma_lga,
+            "tabla_secciones": tabla_secciones_list
+        }
+
+        try:
+            pdf_bytes_lga = pdf_lga.generar_pdf_lga(proyecto_info, lga_params, lga_results)
+            
+            import base64
+            base64_pdf_lga = base64.b64encode(pdf_bytes_lga).decode('utf-8')
+            
+            st.markdown("#### 👁️ Vista Previa en Pantalla del Documento PDF Oficial:")
+            pdf_display_lga = f'<iframe src="data:application/pdf;base64,{base64_pdf_lga}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
+            st.markdown(pdf_display_lga, unsafe_allow_html=True)
+
+            st.download_button(
+                label="📥 Descargar Reporte PDF Oficial LGA",
+                data=pdf_bytes_lga,
+                file_name=f"Reporte_LGA_{p_expediente}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as err:
+            st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de LGA: {err}")

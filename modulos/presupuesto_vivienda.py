@@ -8,6 +8,52 @@ import streamlit as st
 import pandas as pd
 import openpyxl
 import os
+import io
+import datetime
+from modulos import pdf_presupuesto
+
+@st.cache_data(show_spinner="Cargando base de datos de precios...")
+def cargar_precios_excel():
+    nombres_posibles = [
+        "base_datos_precio_oficial.xlsx",
+        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx",
+        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy.xlsx"
+    ]
+    try:
+        for f in os.listdir('.'):
+            if f.endswith('.xlsx') and ('precio' in f.lower() or 'master' in f.lower() or 'oficial' in f.lower()):
+                if f not in nombres_posibles:
+                    nombres_posibles.insert(0, f)
+    except Exception:
+        pass
+
+    for nombre in nombres_posibles:
+        if os.path.exists(nombre):
+            try:
+                wb = openpyxl.load_workbook(nombre, read_only=True)
+                hoja_activa = wb.sheetnames[0]
+                for h in wb.sheetnames:
+                    if "maestra" in h.lower() or "completa" in h.lower() or "tarifa" in h.lower():
+                        hoja_activa = h
+                        break
+                wb.close()
+                df = pd.read_excel(nombre, sheet_name=hoja_activa, engine='openpyxl')
+                return df, nombre
+            except Exception:
+                continue
+    return None, None
+
+def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total, instalador_info):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_comercial.to_excel(writer, sheet_name='Presupuesto', index=False)
+        df_resumen = pd.DataFrame([
+            {"Concepto": "Subtotal Comercial Neto", "Importe (€)": round(subtotal, 2)},
+            {"Concepto": f"IVA ({iva_pct}%)", "Importe (€)": round(cuota_iva, 2)},
+            {"Concepto": "TOTAL PRESUPUESTO", "Importe (€)": round(total, 2)}
+        ])
+        df_resumen.to_excel(writer, sheet_name='Resumen Económico', index=False)
+    return output.getvalue()
 
 def app():
     st.markdown("""
@@ -36,35 +82,8 @@ def app():
     st.title("🏡 Generador de Presupuestos: Panel de Ingeniería REBT e Inspector IA")
     st.markdown("Gestión de circuitos, desdoblamiento de C4, tipo de techo, cumplimiento ITC-BT-25 y acopio en firme.")
 
-    # 1. Cargar base de datos maestra de precios
-    excel_cargado = None
-    nombres_posibles = [
-        "base_datos_precio_oficial.xlsx",
-        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx",
-        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy.xlsx"
-    ]
-    
-    for f in os.listdir('.'):
-        if f.endswith('.xlsx') and ('precio' in f.lower() or 'master' in f.lower() or 'oficial' in f.lower()):
-            nombres_posibles.insert(0, f)
-
-    df_precios = None
-    for nombre in nombres_posibles:
-        if os.path.exists(nombre):
-            try:
-                wb = openpyxl.load_workbook(nombre)
-                hoja_activa = wb.sheetnames[0]
-                for h in wb.sheetnames:
-                    if "maestra" in h.lower() or "completa" in h.lower() or "tarifa" in h.lower():
-                        hoja_activa = h
-                        break
-                ws = wb[hoja_activa]
-                data = list(ws.iter_rows(values_only=True))
-                df_precios = pd.DataFrame(data[1:], columns=data[0])
-                excel_cargado = nombre
-                break
-            except Exception as e:
-                continue
+    # 1. Cargar base de datos maestra de precios con caché
+    df_precios, excel_cargado = cargar_precios_excel()
 
     if df_precios is None:
         st.error("⚠️ No se pudo encontrar ni cargar el archivo Excel de precios en la raíz del proyecto.")
@@ -919,6 +938,59 @@ def app():
             df_comercial = pd.DataFrame(comercial_estancias)
             st.dataframe(df_comercial, use_container_width=True)
 
+            excel_bytes = exportar_excel_presupuesto(df_comercial, subtotal_general_neto, iva_sel, cuota_iva, total_cliente, {
+                "empresa": empresa_nombre, "instalador": instalador_nombre, "licencia": n_licencia
+            })
+            
+            pdf_bytes_pres = pdf_presupuesto.generar_pdf_presupuesto(
+                proyecto_info={
+                    "empresa": empresa_nombre,
+                    "proyectista": instalador_nombre,
+                    "licencia": n_licencia,
+                    "localidad": localidad,
+                    "telefono": telefono,
+                    "expediente": "PRES-2026-01",
+                    "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                },
+                presupuesto_data={
+                    "df_comercial": df_comercial,
+                    "subtotal_neto": subtotal_general_neto,
+                    "iva_pct": iva_sel,
+                    "cuota_iva": cuota_iva,
+                    "total_cliente": total_cliente,
+                    "total_puntos": total_puntos_mecanismos,
+                    "precio_medio_punto": precio_medio_por_punto,
+                    "serie_mecanismos": serie_mecanismos,
+                    "marca_protecciones": marca_protecciones,
+                    "potencia_kw": potencia_prevista_kw
+                }
+            )
+
+            import base64
+            base64_pdf_pres = base64.b64encode(pdf_bytes_pres).decode('utf-8')
+            
+            st.markdown("#### 👁️ Vista Previa en Pantalla del Presupuesto Oficial PDF:")
+            pdf_display_pres = f'<iframe src="data:application/pdf;base64,{base64_pdf_pres}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
+            st.markdown(pdf_display_pres, unsafe_allow_html=True)
+
+            col_exp1, col_exp2 = st.columns(2)
+            with col_exp1:
+                st.download_button(
+                    label="📥 Descargar Presupuesto en Excel (.xlsx)",
+                    data=excel_bytes,
+                    file_name="Presupuesto_Electrico_Bolimur.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            with col_exp2:
+                st.download_button(
+                    label="📥 Descargar Presupuesto Oficial en PDF",
+                    data=pdf_bytes_pres,
+                    file_name="Presupuesto_Oficial_Bolimur.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+
             st.markdown(f"""
             <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
                 <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
@@ -928,6 +1000,9 @@ def app():
             """, unsafe_allow_html=True)
 
         st.success("✅ ¡Resumen de puntos y precio medio por punto sincronizado con éxito!")
+
+def renderizar():
+    app()
 
 if __name__ == "__main__":
     app()

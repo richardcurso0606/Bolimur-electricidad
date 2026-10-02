@@ -1,40 +1,56 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
-import sqlite3
+import traceback
+import pandas as pd
 
-st.set_page_config(page_title="CÁLCULOS ELÉCTRICOS", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Bolimur - Cálculos Eléctricos REBT", page_icon="⚡", layout="wide")
 
 # =========================================================================
 # IMPORTACIÓN SEGURA DE MÓDULOS
 # =========================================================================
+errores_import = {}
+
 try:
     from modulos import calculo_rapido
 except Exception as e:
     calculo_rapido = None
+    errores_import["calculo_rapido"] = traceback.format_exc()
 
 try:
     from modulos import prevision_cargas
 except Exception as e:
     prevision_cargas = None
+    errores_import["prevision_cargas"] = traceback.format_exc()
 
 try:
     from modulos import lga
 except Exception as e:
     lga = None
+    errores_import["lga"] = traceback.format_exc()
 
 try:
     from modulos import di
 except Exception as e:
     di = None
+    errores_import["di"] = traceback.format_exc()
 
 try:
     from modulos import irve
 except Exception as e:
     irve = None
+    errores_import["irve"] = traceback.format_exc()
 
 try:
     from modulos import presupuesto_vivienda
 except Exception as e:
     presupuesto_vivienda = None
+    errores_import["presupuesto_vivienda"] = traceback.format_exc()
+
+try:
+    from modulos import rebt_tablas as rebt
+except Exception as e:
+    rebt = None
+    errores_import["rebt_tablas"] = traceback.format_exc()
 
 # =========================================================================
 # ESTILOS CSS GLOBALES
@@ -42,7 +58,7 @@ except Exception as e:
 st.markdown("""
     <style>
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #2563eb; border-radius: 6px; background-color: #f8fafc;
+            border: 2px solid #0284c7; border-radius: 6px; background-color: #f8fafc;
         }
         [data-testid="stSidebar"] {
             background-color: #f8fafc; border-right: 1px solid #e2e8f0;
@@ -71,8 +87,8 @@ st.markdown("""
 with st.sidebar:
     st.markdown("""
         <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ CÁLCULOS ELÉCTRICOS</h3>
-            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Panel Técnico REBT</p>
+            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ BOLIMUR REBT</h3>
+            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Panel Técnico de Ingeniería Eléctrica</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -81,37 +97,21 @@ with st.sidebar:
     if 'menu_activo' not in st.session_state:
         st.session_state.menu_activo = "🏠 Menú Principal"
 
-    if st.button("🏠  Menú Principal", use_container_width=True):
-        st.session_state.menu_activo = "🏠 Menú Principal"
-        st.rerun()
-        
-    if st.button("🧮  Cálculo Rápido (CDT & Icc)", use_container_width=True):
-        st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
-        st.rerun()
-        
-    if st.button("🏢  Previsión de Cargas (Pt)", use_container_width=True):
-        st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
-        st.rerun()
-        
-    if st.button("⚡  Línea General (LGA)", use_container_width=True):
-        st.session_state.menu_activo = "⚡ Línea General (LGA)"
-        st.rerun()
-        
-    if st.button("🔌  Derivación Individual (DI)", use_container_width=True):
-        st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
-        st.rerun()
+    opciones = [
+        ("🏠  Menú Principal", "🏠 Menú Principal"),
+        ("🧮  Cálculo Rápido (CDT & Icc)", "🧮 Cálculo Rápido (CDT & Icc)"),
+        ("🏢  Previsión de Cargas (Pt)", "🏢 Previsión de Cargas (Pt)"),
+        ("⚡  Línea General (LGA)", "⚡ Línea General (LGA)"),
+        ("🔌  Derivación Individual (DI)", "🔌 Derivación Individual (DI)"),
+        ("🚗  Línea Recarga (IRVE)", "🚗 Línea Recarga (IRVE)"),
+        ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
+        ("📚  Tablas REBT", "📚 Tablas REBT")
+    ]
 
-    if st.button("🚗  Línea Recarga (IRVE)", use_container_width=True):
-        st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
-        st.rerun()
-
-    if st.button("🏡  Presupuesto Vivienda", use_container_width=True):
-        st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
-        st.rerun()
-        
-    if st.button("📚  Tablas REBT", use_container_width=True):
-        st.session_state.menu_activo = "📚 Tablas REBT"
-        st.rerun()
+    for label, target in opciones:
+        if st.button(label, use_container_width=True):
+            st.session_state.menu_activo = target
+            st.rerun()
 
     seleccion_modulo = st.session_state.menu_activo
 
@@ -119,44 +119,184 @@ with st.sidebar:
 # EL ENRUTADOR
 # =========================================================================
 if seleccion_modulo.startswith("🏠"):
-    st.title("⚡ CÁLCULOS ELÉCTRICOS")
-    st.write("Bienvenido al panel de cálculo eléctrico. Selecciona una opción en el menú lateral para empezar.")
+    st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
+    st.markdown("**Panel Técnico Oficial REBT (Real Decreto 842/2002)**")
+    
+    st.write("Bienvenido al software integral de ingeniería eléctrica. Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores:")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.container(border=True):
+            st.subheader("🧮 Cálculo Rápido (CDT & Icc)")
+            st.write("Dimensionamiento de circuitos por caída de tensión y comprobación térmica ($I_z$). Comprobación de cortocircuito instantáneo y disparo magnético en 0.1s.")
+            if st.button("Abrir Cálculo Rápido", key="btn_home_cr"):
+                st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
+                st.rerun()
+
+        with st.container(border=True):
+            st.subheader("🏢 Previsión de Cargas (Pt)")
+            st.write("Cálculo analítico de la potencia total del edificio conforme a ITC-BT-10. Viviendas, locales, servicios generales y garajes con o sin SPL.")
+            if st.button("Abrir Previsión de Cargas", key="btn_home_pc"):
+                st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
+                st.rerun()
+
+        with st.container(border=True):
+            st.subheader("⚡ Línea General de Alimentación (LGA)")
+            st.write("Cálculo reglamentario de la LGA según ITC-BT-14. Soporta Cobre y Aluminio, contadores concentrados (0.5%) o parciales (1.0%), y tubos según Tabla 1.")
+            if st.button("Abrir LGA", key="btn_home_lga"):
+                st.session_state.menu_activo = "⚡ Línea General (LGA)"
+                st.rerun()
+
+    with c2:
+        with st.container(border=True):
+            st.subheader("🔌 Derivación Individual (DI)")
+            st.write("Dimensionamiento según ITC-BT-15 para enlaces a vivienda. Verificación de IGA Curva C y tubos normalizados (mínimo Ø 32 mm).")
+            if st.button("Abrir Derivación Individual", key="btn_home_di"):
+                st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
+                st.rerun()
+
+        with st.container(border=True):
+            st.subheader("🚗 Línea Recarga Vehículo Eléctrico (IRVE)")
+            st.write("Circuitos terminales según ITC-BT-52. Esquemas 1, 2, 3a, 3b y 4, cálculo al 1% de caída de tensión y protecciones diferenciales Tipo A/B.")
+            if st.button("Abrir IRVE", key="btn_home_irve"):
+                st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
+                st.rerun()
+
+        with st.container(border=True):
+            st.subheader("🏡 Presupuesto de Vivienda y Materiales")
+            st.write("Inspector REBT ITC-BT-25, metraje de rozas, canalizaciones, cableado y mecanismos. Exportación a Excel (.xlsx) de oferta y acopio.")
+            if st.button("Abrir Presupuestos", key="btn_home_pres"):
+                st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
+                st.rerun()
 
 elif seleccion_modulo.startswith("🧮"):
     if calculo_rapido:
         calculo_rapido.renderizar()
     else:
         st.error("Módulo Cálculo Rápido no disponible.")
+        if "calculo_rapido" in errores_import:
+            st.code(errores_import["calculo_rapido"])
 
 elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
     if prevision_cargas:
         prevision_cargas.renderizar()
     else:
         st.error("Módulo Previsión de Cargas no disponible.")
+        if "prevision_cargas" in errores_import:
+            st.code(errores_import["prevision_cargas"])
 
 elif seleccion_modulo.startswith("⚡"):
     if lga:
         lga.renderizar()
     else:
         st.error("Módulo LGA no disponible.")
+        if "lga" in errores_import:
+            st.code(errores_import["lga"])
 
 elif seleccion_modulo.startswith("🔌"):
     if di:
         di.renderizar()
     else:
         st.error("Módulo DI no disponible.")
+        if "di" in errores_import:
+            st.code(errores_import["di"])
 
 elif seleccion_modulo.startswith("🚗"):
     if irve:
         irve.renderizar()
     else:
         st.error("Módulo IRVE no disponible.")
+        if "irve" in errores_import:
+            st.code(errores_import["irve"])
 
 elif seleccion_modulo.startswith("🏡"):
     if presupuesto_vivienda:
-        presupuesto_vivienda.app()
+        presupuesto_vivienda.renderizar()
     else:
         st.error("Error: El módulo presupuesto_vivienda no se pudo importar correctamente.")
+        if "presupuesto_vivienda" in errores_import:
+            st.code(errores_import["presupuesto_vivienda"])
 
 elif seleccion_modulo.startswith("📚"):
-    st.title("📚 Tablas REBT")
+    st.title("📚 Tablas y Fórmulas Oficiales del REBT")
+    st.markdown("Consulta rápida de parámetros normalizados según el Real Decreto 842/2002 y normas UNE asociadas.")
+
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🌡️ Conductividades y Resistividades",
+        "⚡ Intensidades Admisibles (Iz)",
+        "🛠️ Tubos Reglamentarios",
+        "📐 Fórmulas Oficiales"
+    ])
+
+    with tab1:
+        st.subheader("Conductividad (γ) y Resistividad (ρ) a Temperatura de Servicio")
+        st.markdown("""
+        Según la norma **UNE-HD 60364-5-52**, la conductividad del conductor disminuye con la temperatura. Para cálculos en régimen permanente se adoptan los valores a máxima temperatura admisible:
+        """)
+        df_cond = pd.DataFrame([
+            {"Material": "Cobre", "Aislamiento": "XLPE / EPR", "Temp. Máx Servicio": "90 ºC", "Conductividad γ [m/(Ω·mm²)]": 44.0, "Resistividad ρ [Ω·mm²/m]": 0.0227},
+            {"Material": "Cobre", "Aislamiento": "PVC", "Temp. Máx Servicio": "70 ºC", "Conductividad γ [m/(Ω·mm²)]": 48.5, "Resistividad ρ [Ω·mm²/m]": 0.0206},
+            {"Material": "Aluminio", "Aislamiento": "XLPE / EPR", "Temp. Máx Servicio": "90 ºC", "Conductividad γ [m/(Ω·mm²)]": 28.0, "Resistividad ρ [Ω·mm²/m]": 0.0357},
+            {"Material": "Aluminio", "Aislamiento": "PVC", "Temp. Máx Servicio": "70 ºC", "Conductividad γ [m/(Ω·mm²)]": 31.0, "Resistividad ρ [Ω·mm²/m]": 0.0323},
+        ])
+        st.dataframe(df_cond, use_container_width=True, hide_index=True)
+
+    with tab2:
+        st.subheader("Intensidades Admisibles en Conductores (Iz) - UNE-HD 60364-5-52 / ITC-BT-19")
+        c_mat, c_ais, c_met = st.columns(3)
+        with c_mat:
+            sel_m = st.selectbox("Material:", ["Cobre", "Aluminio"], key="tab_m")
+        with c_ais:
+            sel_a = st.selectbox("Aislamiento:", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="tab_a")
+        with c_met:
+            sel_met = st.selectbox("Método de Instalación:", ["Bajo tubo (B1 / B2)", "Enterrado bajo tubo (D)"], key="tab_met")
+
+        if rebt:
+            tabla = rebt.obtener_tabla_iz(sel_m, sel_a, sel_met)
+            df_iz = pd.DataFrame([
+                {"Sección (mm²)": s, "Intensidad Admisible Iz (A)": iz} for s, iz in sorted(tabla.items())
+            ])
+            st.dataframe(df_iz, use_container_width=True, hide_index=True)
+
+    with tab3:
+        st.subheader("Diámetros Exteriores Mínimos de Tubos Protectores")
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            st.markdown("#### Derivaciones Individuales (ITC-BT-15 apdo. 3)")
+            st.info("⚠️ **El diámetro mínimo reglamentario para cualquier Derivación Individual es Ø 32 mm** con previsión para ampliación del 100%.")
+            df_tubo_di = pd.DataFrame([
+                {"Sección Conductor": "Hasta 6 mm²", "Diámetro Tubo": "Ø 32 mm", "Norma": "ITC-BT-15 (Mínimo absoluto)"},
+                {"Sección Conductor": "10 a 16 mm²", "Diámetro Tubo": "Ø 40 mm", "Norma": "ITC-BT-15"},
+                {"Sección Conductor": "25 a 35 mm²", "Diámetro Tubo": "Ø 50 mm", "Norma": "ITC-BT-15"},
+                {"Sección Conductor": "≥ 50 mm²", "Diámetro Tubo": "Ø 63 mm o Bandeja", "Norma": "ITC-BT-15"}
+            ])
+            st.dataframe(df_tubo_di, use_container_width=True, hide_index=True)
+
+        with col_t2:
+            st.markdown("#### Línea General de Alimentación - LGA (ITC-BT-14 Tabla 1)")
+            st.info("⚠️ **El diámetro mínimo reglamentario para LGA trifásica (3F+N+PE) parte de Ø 110 mm**.")
+            df_tubo_lga = pd.DataFrame([
+                {"Sección Conductor": "Hasta 25 mm²", "Diámetro Mínimo Tubo": "Ø 110 mm", "Norma": "ITC-BT-14 Tabla 1"},
+                {"Sección Conductor": "35 mm²", "Diámetro Mínimo Tubo": "Ø 125 mm", "Norma": "ITC-BT-14 Tabla 1"},
+                {"Sección Conductor": "50 a 70 mm²", "Diámetro Mínimo Tubo": "Ø 140 mm", "Norma": "ITC-BT-14 Tabla 1"},
+                {"Sección Conductor": "95 a 120 mm²", "Diámetro Mínimo Tubo": "Ø 160 mm", "Norma": "ITC-BT-14 Tabla 1"},
+                {"Sección Conductor": "150 mm²", "Diámetro Mínimo Tubo": "Ø 180 mm", "Norma": "ITC-BT-14 Tabla 1"},
+                {"Sección Conductor": "≥ 185 mm²", "Diámetro Mínimo Tubo": "Ø 200 a 225 mm", "Norma": "ITC-BT-14 Tabla 1"}
+            ])
+            st.dataframe(df_tubo_lga, use_container_width=True, hide_index=True)
+
+    with tab4:
+        st.subheader("Formulario Reglamentario")
+        st.markdown(r"""
+        * **Intensidad de Diseño Monofásica:**
+          $$I_b = \frac{P}{V \cdot \cos\varphi}$$
+        * **Intensidad de Diseño Trifásica:**
+          $$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$
+        * **Caída de Tensión Monofásica ($230\text{ V}$):**
+          $$\Delta V = \frac{2 \cdot P \cdot L}{\gamma \cdot S \cdot V} \quad \implies \quad \Delta V\% = \frac{\Delta V}{V} \cdot 100$$
+        * **Caída de Tensión Trifásica ($400\text{ V}$):**
+          $$\Delta V = \frac{P \cdot L}{\gamma \cdot S \cdot V} \quad \implies \quad \Delta V\% = \frac{\Delta V}{V} \cdot 100$$
+        * **Previsión de Cargas en Edificios Residenciales (ITC-BT-10):**
+          $$P_t = P_1 (\text{Viviendas}) + P_2 (\text{Locales}) + P_3 (\text{Servicios}) + P_4 (\text{Garajes e IRVE})$$
+          Para $n > 20$ viviendas: $K = 15,4 + (n - 20) \cdot 0,5$.
+        """)

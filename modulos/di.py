@@ -1,29 +1,42 @@
 import streamlit as st
 import math
+import datetime
+from modulos import rebt_tablas as rebt
+from modulos import pdf_di
 
 METODOS_INSTALACION_DI = {
     "B1 (Bajo tubo empotrado)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
     "B2 (Bajo tubo en superficie)": {"ref": "B2", "desc": "Cables unipolares en tubo montado en superficie"},
     "C (Multiconductor en pared)": {"ref": "C", "desc": "Cable multiconductor fijado directo"}
 }
-SECCIONES_COMERCIALES_DI = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95]
-IZ_COBRE_TUBO_DI = {1.5: 14.5, 2.5: 20.0, 4: 26.0, 6: 34.0, 10: 46.0, 16: 61.0, 25: 80.0, 35: 99.0, 50: 119.0, 70: 151.0, 95: 182.0}
-CALIBRES_IGA = [10, 16, 20, 25, 32, 40, 50, 63]
+SECCIONES_COMERCIALES_DI = [6, 10, 16, 25, 35, 50, 70, 95]
+CALIBRES_IGA = [16, 20, 25, 32, 40, 50, 63]
 
 def seleccionar_seccion_optima_di(s_necesaria):
-    for sec in SECCIONES_COMERCIALES_DI:
-        if sec >= s_necesaria: return sec
-    return SECCIONES_COMERCIALES_DI[-1]
+    return rebt.seleccionar_seccion_optima(s_necesaria, material="cobre", s_minima=6.0)
 
 def seleccionar_iga(ib):
-    for cal in CALIBRES_IGA:
-        if cal >= ib: return cal
-    return CALIBRES_IGA[-1]
+    return rebt.seleccionar_proteccion(ib, tipo="pia")
 
 def renderizar():
+    st.markdown("""
+    <style>
+    @media print {
+        [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div.stTextInput, details summary { 
+            display: none !important; 
+        }
+        @page { size: A4 portrait; margin: 12mm; }
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, div[data-testid="stVerticalBlock"] {
+            background-color: white !important; color: black !important; font-family: "Helvetica", "Arial", sans-serif !important; font-size: 10pt !important;
+            height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important;
+        }
+        .stSuccess, .stInfo, div[style*="background-color"], table { break-inside: avoid !important; page-break-inside: avoid !important; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.title("🏠 Derivación Individual - DI (ITC-BT-15)")
-    
-    # --- CONTROLES DE ENTRADA CON FORMULARIO (CÁLCULO AL PULSAR ENTER) ---
+
     st.markdown("### ⚙️ Parámetros de Diseño de la Derivación Individual")
     
     with st.form("form_di_parametros"):
@@ -40,39 +53,35 @@ def renderizar():
 
         submitted_di = st.form_submit_button("🔄 Recalcular / Actualizar Cálculo DI")
 
-    # --- CÁLCULOS TÉCNICOS ---
     es_trifasico = "Trifásico" in tipo_suministro
     v_tension = 400.0 if es_trifasico else 230.0
     cos_phi_di = 1.0 
     
-    ib_di = di_pot / (math.sqrt(3) * v_tension * cos_phi_di) if es_trifasico else di_pot / (v_tension * cos_phi_di)
+    ib_di = rebt.calcular_intensidad_diseno(di_pot, v_tension, cos_phi_di, es_trifasico)
     
     dv_pct_di = 1.0 
-    gamma_di = 44.0 if "XLPE" in di_aisl else 48.5
+    gamma_di = rebt.obtener_gamma(di_mat, di_aisl)
     dv_max_di = v_tension * (dv_pct_di / 100.0)
     
-    if es_trifasico:
-        s_cdt_di = (di_pot * di_long) / (gamma_di * dv_max_di * v_tension) if gamma_di * dv_max_di * v_tension > 0 else 6.0
-    else:
-        s_cdt_di = (2.0 * di_pot * di_long) / (gamma_di * dv_max_di * v_tension) if gamma_di * dv_max_di * v_tension > 0 else 6.0
+    s_cdt_di = rebt.calcular_seccion_por_cdt(di_pot, di_long, gamma_di, dv_pct_di, v_tension, es_trifasico)
 
     in_iga_auto = seleccionar_iga(ib_di)
     s_final_di = seleccionar_seccion_optima_di(max(s_cdt_di, 6.0)) 
     
-    tabla_iz_di = IZ_COBRE_TUBO_DI
+    tabla_iz_di = rebt.obtener_tabla_iz(di_mat, di_aisl, metodo_di_key)
     while True:
         iz_a_di = tabla_iz_di.get(s_final_di, 61.0)
-        if in_iga_auto <= 0.91 * iz_a_di and iz_a_di >= ib_di: break
-        idx_s = SECCIONES_COMERCIALES_DI.index(s_final_di) if s_final_di in SECCIONES_COMERCIALES_DI else 3
+        if in_iga_auto <= iz_a_di and iz_a_di >= ib_di: break
+        idx_s = SECCIONES_COMERCIALES_DI.index(s_final_di) if s_final_di in SECCIONES_COMERCIALES_DI else 0
         if idx_s < len(SECCIONES_COMERCIALES_DI) - 1: s_final_di = SECCIONES_COMERCIALES_DI[idx_s + 1]
         else: break
 
-    dv_real_di_pct = (((math.sqrt(3) if es_trifasico else 2.0) * di_pot * di_long) / (gamma_di * s_final_di * v_tension) / v_tension) * 100 if gamma_di * s_final_di * v_tension > 0 else 0.0
+    dv_real_di_v = rebt.calcular_caida_tension_v(di_pot, di_long, gamma_di, s_final_di, v_tension, es_trifasico)
+    dv_real_di_pct = rebt.calcular_caida_tension_pct(dv_real_di_v, v_tension)
 
     rho_di = 1.0 / gamma_di if gamma_di > 0 else 0.0
     r_cable_di = (rho_di * di_long) / s_final_di if s_final_di > 0 else 0.0
     
-    # Comprobación Icc cortocircuito IGA
     z_orig_ohms = v_tension / (di_icc_orig * 1000.0)
     r_total_cable = (2.0 if not es_trifasico else 1.0) * r_cable_di
     z_tot_di = z_orig_ohms + r_total_cable
@@ -82,13 +91,12 @@ def renderizar():
     st.markdown("---")
     st.markdown("<h3>📋 Memoria Analítica Detallada (DI - ITC-BT-15)</h3>", unsafe_allow_html=True)
 
-    # --- BLOQUE 1: INTENSIDAD DE DISEÑO ---
     if es_trifasico:
         formula_ib_str = r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}"
-        sust_ib_str = f"I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\frac{{{di_pot:,.1f}}}{{692.82}} = \\mathbf{{{ib_di:.2f}\\text{{ A}}}}"
+        sust_ib_str = f"I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_di:.2f}\\text{{ A}}}}"
     else:
         formula_ib_str = r"I_b = \frac{P}{V \cdot \cos\varphi}"
-        sust_ib_str = f"I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\frac{{{di_pot:,.1f}}}{{230}} = \\mathbf{{{ib_di:.2f}\\text{{ A}}}}"
+        sust_ib_str = f"I_b = \\frac{{{di_pot:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_di:.2f}\\text{{ A}}}}"
 
     st.info(f"""
     #### 1. Intensidad de Diseño {'Trifásica' if es_trifasico else 'Monofásica'} ($I_b$)
@@ -96,17 +104,10 @@ def renderizar():
     **Criterio y Fórmula Reglamentaria:**
     $${formula_ib_str}$$
     
-    **Leyenda y Definición de Variables:**
-    * **I_b**: Intensidad máxima de cálculo o diseño (A).
-    * **P**: Potencia contratada o prevista para el suministro ({di_pot:,.1f} W).
-    * **V**: Tensión nominal de alimentación ({v_tension} V).
-    * **cos φ**: Factor de potencia (1.0 para viviendas estándar).
-    
     **Sustitución Numérica y Resultado:**
     $${sust_ib_str}$$
     """)
 
-    # --- BLOQUE 2: SECCIÓN POR CAÍDA DE TENSIÓN ---
     if es_trifasico:
         formula_s_str = r"S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}"
         sust_s_str = f"S = \\frac{{{di_pot:,.1f} \\cdot {di_long}}}{{{gamma_di} \\cdot {dv_max_di:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_di:.2f}\\text{{ mm}}^2}}"
@@ -120,35 +121,12 @@ def renderizar():
     **Criterio y Fórmula Reglamentaria:**
     $${formula_s_str}$$
     
-    **Leyenda y Definición de Variables:**
-    * **S**: Sección teórica mínima exigida del conductor ($\text{{mm}}^2$).
-    * **P**: Potencia de cálculo ({di_pot:,.1f} W).
-    * **L**: Longitud de la derivación individual ({di_long} m).
-    * **γ**: Conductividad del conductor ({gamma_di} m/(Ω·mm²) para {di_aisl}).
-    * **ΔV**: Caída de tensión máxima admisible ({dv_pct_di}% de {v_tension}V = {dv_max_di:.2f} V).
-    
     **Sustitución Numérica y Resultado:**
     $${sust_s_str}$$
     """)
     
-    # --- BLOQUE 3: COMPROBACIÓN CORTOCIRCUITO IGA ---
     st.info(f"""
     #### 3. Comprobación de Cortocircuito y Protección IGA (Disparo Magnético 0.1s)
-    
-    **Criterio y Fórmula Reglamentaria (ITC-BT-22 / ITC-BT-15):**
-    El Interruptor General Automático (IGA) instalado en el cuadro de vivienda debe garantizar el corte ultra-rápido ante un cortocircuito franco al final de la línea mediante su disparo magnético instantáneo (Curva C: $10 \\cdot I_n$).
-    
-    $$I_{{cc,final}} = \\frac{{V}}{{\\left(\\frac{{V}}{{I_{{cc,origen}}}}\\right) + R_{{total,cable}}}}$$
-    
-    **Leyenda y Definición de Variables:**
-    * **I_cc,final**: Corriente de cortocircuito estimada al final de la DI (A).
-    * **V**: Tensión nominal de referencia ({v_tension} V).
-    * **I_cc,origen**: Corriente de cortocircuito en el origen / contadores ({di_icc_orig * 1000:,.0f} A).
-    * **R_total,cable**: Resistencia activa total del bucle de conductores ({'2 · R_cable' if not es_trifasico else 'R_cable'} = {r_total_cable:.5f}\\ \\Omega).
-    * **Umbral Magnético Curva C ($10 \\cdot I_n$)**: Intensidad requerida para asegurar el disparo instantáneo del IGA de {in_iga_auto} A $\\rightarrow$ $10 \\times {in_iga_auto} = \\mathbf{{{umbral_magnetico_iga:.1f}\\text{{ A}}}}$.
-    
-    **Sustitución Numérica y Verificación Reglamentaria:**
-    $$I_{{cc,final}} = \\frac{{{v_tension}}}{{\\left(\\frac{{{v_tension}}}{{{di_icc_orig * 1000.0}}}\\right) + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{z_orig_ohms:.5f} + {r_total_cable:.5f}}} = \\frac{{{v_tension}}}{{{z_tot_di:.5f}}} = \\mathbf{{{icc_fin_di:.1f}\\text{{ A}}}}$$
     
     * **Icc estimada al final de la DI:** **{icc_fin_di:,.1f} A** ({icc_fin_di / 1000:.2f} kA)
     * **Umbral de disparo magnético exigido ($10 \\cdot I_n$):** **{umbral_magnetico_iga:.1f} A**
@@ -157,95 +135,115 @@ def renderizar():
 
     st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ IGA RECOMENDADO EN CUADRO VIVIENDA: {in_iga_auto} A (Curva C)</div>""", unsafe_allow_html=True)
 
-    # --- TABLA DE VERIFICACIÓN DE SECCIONES ---
     st.markdown("### 📊 Tabla de Verificación de Secciones Comerciales (DI)")
-    tabla_di_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le 0.91 \\cdot I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    tabla_di_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le I_z$) |\n| :--- | :--- | :--- | :--- |\n"
+    tabla_secciones_di_list = []
+
     for s_com in [6, 10, 16, 25, 35]:
-        iz_val_di = IZ_COBRE_TUBO_DI.get(s_com, 61.0)
-        dv_c_di_pct = (((math.sqrt(3) if es_trifasico else 2.0) * di_pot * di_long) / (gamma_di * s_com * v_tension) / v_tension) * 100 if s_com > 0 else 0.0
-        cond_s_di = 0.91 * iz_val_di
-        if iz_val_di < ib_di: est = f"❌ Falla Calentamiento"
-        elif in_iga_auto > cond_s_di: est = f"❌ Falla ($I_n$ {in_iga_auto}A > {cond_s_di:.1f}A)"
-        elif s_com == s_final_di: est = f"✅ **CUMPLE IDEAL** ($I_n$ {in_iga_auto}A $\\le$ {cond_s_di:.1f}A)"
-        else: est = "Válido pero sobredimensionado"
+        iz_val_di = tabla_iz_di.get(s_com, 61.0)
+        dv_c_v = rebt.calcular_caida_tension_v(di_pot, di_long, gamma_di, s_com, v_tension, es_trifasico)
+        dv_c_di_pct = rebt.calcular_caida_tension_pct(dv_c_v, v_tension)
+        cond_s_di = iz_val_di
+        if iz_val_di < ib_di:
+            est = "❌ Falla Calentamiento"
+            est_clean = "Falla Calentamiento"
+        elif in_iga_auto > cond_s_di:
+            est = f"❌ Falla ($I_n$ {in_iga_auto}A > {cond_s_di:.1f}A)"
+            est_clean = f"Falla (In {in_iga_auto}A > {cond_s_di:.1f}A)"
+        elif s_com == s_final_di:
+            est = f"✅ **CUMPLE IDEAL** ($I_n$ {in_iga_auto}A $\\le$ {cond_s_di:.1f}A)"
+            est_clean = f"CUMPLE IDEAL (In {in_iga_auto}A ≤ {cond_s_di:.1f}A)"
+        else:
+            est = "Válido pero sobredimensionado"
+            est_clean = "Válido sobredimensionado"
+        
         tabla_di_md += f"| **{s_com} mm²** | {iz_val_di} A | {dv_c_di_pct:.3f}% | {est} |\n"
+        tabla_secciones_di_list.append({"sec": s_com, "iz": iz_val_di, "cdt": dv_c_di_pct, "estado": est_clean})
+        
     st.markdown(tabla_di_md)
 
-    # --- LÓGICA DINÁMICA DE TUBOS PARA LA DI (ITC-BT-15 / ITC-BT-21) ---
-    if s_final_di <= 6:
-        tubo_diam_di = "Ø 25 mm o Ø 32 mm"
-        razon_tubo_di = "Adecuado para alojar conductores unipolares de hasta 6 mm² cumpliendo factores de llenaje en interior de viviendas."
-    elif s_final_di <= 16:
-        tubo_diam_di = "Ø 40 mm"
-        razon_tubo_di = "Requerido para cableado de 10 mm² o 16 mm² en derivaciones individuales estándar de edificios plurifamiliares."
-    elif s_final_di <= 35:
-        tubo_diam_di = "Ø 50 mm o Ø 63 mm"
-        razon_tubo_di = "Necesario para secciones elevadas en suministros de gran potencia o locales comerciales."
-    else:
-        tubo_diam_di = "Ø 90 mm o Bandeja técnica"
-        razon_tubo_di = "Secciones muy pesadas que requieren tubos de gran calibre o canales protectoras."
+    tubo_diam_di, razon_tubo_di = rebt.dimensionar_tubo_di(s_final_di)
 
-    # --- BLOQUE ANALÍTICO DETALLADO DEL TUBO ---
     st.markdown("---")
     st.markdown("### 🛠️ Dimensionamiento Detallado del Tubo Protector (ITC-BT-15 / ITC-BT-21)")
     st.info(
         f"**Análisis del Tubo para tu sección óptima de cable de {s_final_di} mm²:**\n\n"
         f"* **Diámetro exterior del tubo recomendado:** **{tubo_diam_di}**\n"
-        f"* **¿Por qué se elige este tamaño? (Explicación técnica):** {razon_tubo_di}\n"
-        f"* **Normativa aplicable:** ITC-BT-15 e ITC-BT-21 (Protección mecánica e interior de tubos)."
+        f"* **Explicación técnica:** {razon_tubo_di}\n"
+        f"* **Normativa aplicable:** ITC-BT-15 apdo. 3 (Ø 32 mm reserva del 100%)."
     )
 
-    # --- TABLA HTML ESTILADA DE REFERENCIA RÁPIDA DE TUBOS DINÁMICA PARA LA DI ---
-    st.markdown("### 📐 Tabla de Referencia Rápida: Sección de Cable vs. Diámetro de Tubo (DI)")
-    
-    tag_6 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (s_final_di <= 6) else ""
-    tag_16 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (10 <= s_final_di <= 16) else ""
-    tag_35 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (25 <= s_final_di <= 35) else ""
-    tag_95 = '<span style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Actual</span>' if (s_final_di >= 50) else ""
-
-    bg_6 = "background-color: #f0fdf4; font-weight: bold;" if s_final_di <= 6 else ""
-    bg_16 = "background-color: #f0fdf4; font-weight: bold;" if (10 <= s_final_di <= 16) else ""
-    bg_35 = "background-color: #f0fdf4; font-weight: bold;" if (25 <= s_final_di <= 35) else ""
-    bg_95 = "background-color: #f0fdf4; font-weight: bold;" if s_final_di >= 50 else ""
-
-    html_tabla_tubos_di = f"""
-    <div style="overflow-x: auto; margin-bottom: 20px;">
-    <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <thead>
-            <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
-                <th style="padding: 12px 16px;">SECCIÓN DEL CABLE (DI)</th>
-                <th style="padding: 12px 16px;">DIÁMETRO EXTERIOR DEL TUBO</th>
-                <th style="padding: 12px 16px;">MOTIVO TÉCNICO / REGLAMENTARIO</th>
-            </tr>
-        </thead>
-        <tbody style="font-size: 14px; color: #334155;">
-            <tr style="border-bottom: 1px solid #e2e8f0; {bg_6}">
-                <td style="padding: 12px 16px;">Hasta 6 mm² {tag_6}</td>
-                <td style="padding: 12px 16px;">Ø 25 mm o Ø 32 mm</td>
-                <td style="padding: 12px 16px;">Suficiente para viviendas con grado de electrificación básico.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; {bg_16}">
-                <td style="padding: 12px 16px;">10 mm² a 16 mm² {tag_16}</td>
-                <td style="padding: 12px 16px;">Ø 40 mm</td>
-                <td style="padding: 12px 16px;">Estándar obligatorio en derivaciones individuales de grado elevado.</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #e2e8f0; {bg_35}">
-                <td style="padding: 12px 16px;">25 mm² a 35 mm² {tag_35}</td>
-                <td style="padding: 12px 16px;">Ø 50 mm o Ø 63 mm</td>
-                <td style="padding: 12px 16px;">Capacidad para grandes demandas o suministros trifásicos especiales.</td>
-            </tr>
-            <tr style="{bg_95}">
-                <td style="padding: 12px 16px;">≥ 50 mm² {tag_95}</td>
-                <td style="padding: 12px 16px;">Ø 90 mm o Bandeja</td>
-                <td style="padding: 12px 16px;">Grandes secciones en acometidas particulares o edificios singulares.</td>
-            </tr>
-        </tbody>
-    </table>
-    </div>
-    """
-    st.markdown(html_tabla_tubos_di, unsafe_allow_html=True)
-
     st.success(f"""
-    ### ✅ SECCIÓN ÓPTIMA DI: {s_final_di} mm² de {di_mat.upper()}
-    Garantiza una caída de tensión real del **{dv_real_di_pct:.3f}%**. Protegida en origen/cuadro por **IGA de {in_iga_auto} A (Curva C)** con corte efectivo garantizado por cortocircuito, y canalizada bajo **tubo de {tubo_diam_di}**.
+    ### ✅ SECCIÓN ÓPTIMA DI: {s_final_di} mm² de COBRE (CPR ES07Z1-K)
+    Garantiza una caída de tensión real del **{dv_real_di_pct:.3f}%**. Protegida en cuadro por **IGA de {in_iga_auto} A (Curva C)** y tubo de **{tubo_diam_di}**.
     """)
+
+    # --- SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF DI ---
+    st.markdown("---")
+    st.subheader("🖨️ Generar Reporte Técnico e Impresión DI en PDF")
+    
+    with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            p_nombre = st.text_input("Nombre de la Obra / Edificio", "Vivienda Unifamiliar Bolimur", key="di_pdf_nombre")
+            p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Calle Mayor nº 45", key="di_pdf_emp")
+        with col_m2:
+            p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="di_pdf_proy")
+            p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-DI-2026", key="di_pdf_exp")
+
+        proyecto_info = {
+            "nombre": p_nombre,
+            "emplazamiento": p_emplazamiento,
+            "proyectista": p_proyectista,
+            "expediente": p_expediente,
+            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+        }
+
+        di_params = {
+            "pot": di_pot,
+            "long": di_long,
+            "mat": di_mat,
+            "aisl": di_aisl,
+            "metodo": metodo_di_key,
+            "suministro": tipo_suministro,
+            "icc_orig": di_icc_orig,
+            "dv_pct": dv_pct_di,
+            "es_trifasico": es_trifasico
+        }
+
+        di_results = {
+            "ib": ib_di,
+            "dv_max": dv_max_di,
+            "s_cdt": s_cdt_di,
+            "s_final": s_final_di,
+            "in_iga": in_iga_auto,
+            "dv_real_v": dv_real_di_v,
+            "dv_real_pct": dv_real_di_pct,
+            "r_cable": r_cable_di,
+            "icc_fin": icc_fin_di,
+            "umbral_mag": umbral_magnetico_iga,
+            "tubo_diam": tubo_diam_di,
+            "razon_tubo": razon_tubo_di,
+            "gamma": gamma_di,
+            "tabla_secciones": tabla_secciones_di_list
+        }
+
+        try:
+            pdf_bytes_di = pdf_di.generar_pdf_di(proyecto_info, di_params, di_results)
+            
+            import base64
+            base64_pdf_di = base64.b64encode(pdf_bytes_di).decode('utf-8')
+            
+            st.markdown("#### 👁️ Vista Previa en Pantalla del Documento PDF Oficial:")
+            pdf_display_di = f'<iframe src="data:application/pdf;base64,{base64_pdf_di}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
+            st.markdown(pdf_display_di, unsafe_allow_html=True)
+
+            st.download_button(
+                label="📥 Descargar Reporte PDF Oficial DI",
+                data=pdf_bytes_di,
+                file_name=f"Reporte_DI_{p_expediente}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as err:
+            st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de DI: {err}")
