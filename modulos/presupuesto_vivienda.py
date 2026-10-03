@@ -43,17 +43,43 @@ def cargar_precios_excel():
                 continue
     return None, None
 
-def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total, instalador_info):
+def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total, instalador_info, df_orden_compra=None, total_compra_neto=0.0, total_compra_con_iva=0.0):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_comercial.to_excel(writer, sheet_name='Presupuesto', index=False)
+        df_comercial.to_excel(writer, sheet_name='Presupuesto Comercial', index=False)
         df_resumen = pd.DataFrame([
             {"Concepto": "Subtotal Comercial Neto", "Importe (€)": round(subtotal, 2)},
             {"Concepto": f"IVA ({iva_pct}%)", "Importe (€)": round(cuota_iva, 2)},
             {"Concepto": "TOTAL PRESUPUESTO", "Importe (€)": round(total, 2)}
         ])
         df_resumen.to_excel(writer, sheet_name='Resumen Económico', index=False)
+        if df_orden_compra is not None and not df_orden_compra.empty:
+            df_orden_compra.to_excel(writer, sheet_name='Orden de Compra y Acopio', index=False)
+            df_res_compra = pd.DataFrame([
+                {"Concepto": "Total Materiales Neto S/IVA", "Importe (€)": round(total_compra_neto, 2)},
+                {"Concepto": "IVA Materiales (21%)", "Importe (€)": round(total_compra_neto * 0.21, 2)},
+                {"Concepto": "TOTAL A PAGAR EN TIENDA / ALMACÉN", "Importe (€)": round(total_compra_con_iva, 2)}
+            ])
+            df_res_compra.to_excel(writer, sheet_name='Resumen Compra Materiales', index=False)
     return output.getvalue()
+
+def exportar_excel_orden_compra(df_orden_compra, total_neto, cuota_iva, total_con_iva, proyecto_info):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_orden_compra.to_excel(writer, sheet_name='Orden de Compra Acopio', index=False)
+        df_resumen = pd.DataFrame([
+            {"Concepto": "Empresa / Instalador", "Valor": f"{proyecto_info.get('empresa', '')} - {proyecto_info.get('proyectista', '')}"},
+            {"Concepto": "Fecha de Orden", "Valor": proyecto_info.get('fecha', '')},
+            {"Concepto": "Potencia Prevista", "Valor": proyecto_info.get('potencia_kw', '')},
+            {"Concepto": "Serie Mecanismos", "Valor": proyecto_info.get('serie_mecanismos', '')},
+            {"Concepto": "Marca Protecciones", "Valor": proyecto_info.get('marca_protecciones', '')},
+            {"Concepto": "Total Materiales S/IVA (€)", "Valor": round(total_neto, 2)},
+            {"Concepto": "IVA Materiales 21% (€)", "Valor": round(cuota_iva, 2)},
+            {"Concepto": "TOTAL A PAGAR EN TIENDA / ALMACÉN (€)", "Valor": round(total_con_iva, 2)}
+        ])
+        df_resumen.to_excel(writer, sheet_name='Resumen Compra', index=False)
+    return output.getvalue()
+
 
 def app():
     st.markdown("""
@@ -465,6 +491,22 @@ def app():
                     st.warning("Introduce un nombre válido para la estancia.")
 
     estancias_activas = []
+
+    # Encabezados de las columnas de estancias
+    col_hdr = st.columns([3, 1.5, 1.5, 2, 0.8, 0.8])
+    with col_hdr[0]:
+        st.markdown("**🏠 Estancia**")
+    with col_hdr[1]:
+        st.markdown("**📐 Superficie (m²)**")
+    with col_hdr[2]:
+        st.markdown("**📏 Altura (m)**")
+    with col_hdr[3]:
+        st.markdown("**⚡ Distancia al Cuadro (m)**")
+    with col_hdr[4]:
+        st.markdown("**Incluir**")
+    with col_hdr[5]:
+        st.markdown("**Borrar**")
+
     for i, est in enumerate(st.session_state.estancias_pro):
         nombre_est = est["nombre"].lower()
         es_banio = "baño" in nombre_est or "aseo" in nombre_est
@@ -812,21 +854,203 @@ def app():
         precio_medio_por_punto = (total_cliente / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
 
         # ==========================================
+        # CONSTRUCCIÓN DE LA ORDEN DE COMPRA POR CATEGORÍAS
+        # ==========================================
+        rollos_tubo20 = max(1, int((global_tubo20_m + 49) / 50))
+        rollos_tubo25 = max(1, int((global_tubo25_m + 49) / 50))
+
+        rollos_15_az = max(1, int((global_15_az_m + 99) / 100))
+        rollos_15_ne = max(1, int((global_15_ne_m + 99) / 100))
+        rollos_15_ma = max(1, int((global_15_ma_m + 99) / 100))
+        rollos_15_gr = max(1, int((global_15_gr_m + 99) / 100))
+        rollos_15_tt = max(1, int((global_15_tt_m + 99) / 100))
+
+        rollos_25_az = max(1, int((global_25_az_m + 99) / 100))
+        rollos_25_ne = max(1, int((global_25_ne_m + 99) / 100))
+        rollos_25_tt = max(1, int((global_25_tt_m + 99) / 100))
+
+        total_mat_estancias_neto = coste_total_materiales_bruto
+        total_mat_global_neto = total_mat_estancias_neto + coste_cuadro_neto
+        total_mat_con_iva = total_mat_global_neto * 1.21
+        cuota_iva_mat = total_mat_global_neto * 0.21
+
+        categorias_orden_compra = {
+            "🔲 1. Mecanismos y Marcos": [],
+            "⚡ 2. Cables y Conductores": [],
+            "🛡️ 3. Cuadro Eléctrico y Protecciones": [],
+            "📏 4. Tubos y Canalizaciones": [],
+            "📦 5. Cajas y Conexiones": []
+        }
+
+        # 1. Mecanismos
+        for (nom_m, desc_m, p_m, prov_m, fila_m), cant_m in global_mecanismos_dict.items():
+            if cant_m > 0:
+                categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
+                    "articulo": nom_m,
+                    "desc_exacta": desc_m,
+                    "proveedor": prov_m,
+                    "cantidad": cant_m,
+                    "unidad": "ud",
+                    "precio_unitario": p_m,
+                    "subtotal": round(cant_m * p_m, 2)
+                })
+        if global_marcos_uds > 0:
+            categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
+                "articulo": "Marcos Embellecedores",
+                "desc_exacta": desc_marco,
+                "proveedor": prov_marco,
+                "cantidad": global_marcos_uds,
+                "unidad": "ud",
+                "precio_unitario": p_marco,
+                "subtotal": round(global_marcos_uds * p_marco, 2)
+            })
+
+        # 2. Cables y Conductores
+        cables_items = [
+            ("Cable 1.5 mm² Azul", desc_15_az, prov_15_az, global_15_az_m, p_15_az, rollos_15_az),
+            ("Cable 1.5 mm² Negro", desc_15_ne, prov_15_ne, global_15_ne_m, p_15_ne, rollos_15_ne),
+            ("Cable 1.5 mm² Marrón", desc_15_ma, prov_15_ma, global_15_ma_m, p_15_ma, rollos_15_ma),
+            ("Cable 1.5 mm² Gris", desc_15_gr, prov_15_gr, global_15_gr_m, p_15_gr, rollos_15_gr),
+            ("Cable 1.5 mm² Tierra (Amarillo/Verde)", desc_15_tt, prov_15_tt, global_15_tt_m, p_15_tt, rollos_15_tt),
+            ("Cable 2.5 mm² Azul", desc_25_az, prov_25_az, global_25_az_m, p_25_az, rollos_25_az),
+            ("Cable 2.5 mm² Negro / Marrón", desc_25_ne, prov_25_ne, global_25_ne_m, p_25_ne, rollos_25_ne),
+            ("Cable 2.5 mm² Tierra (Amarillo/Verde)", desc_25_tt, prov_25_tt, global_25_tt_m, p_25_tt, rollos_25_tt),
+        ]
+        if global_utp_m > 0:
+            cables_items.append(("Cable Red UTP Cat.6", desc_utp, prov_utp, global_utp_m, p_utp, max(1, int((global_utp_m + 99)/100))))
+
+        for nom_c, desc_c, prov_c, m_c, p_c, rollos_c in cables_items:
+            if m_c > 0:
+                categorias_orden_compra["⚡ 2. Cables y Conductores"].append({
+                    "articulo": nom_c,
+                    "desc_exacta": f"{desc_c} [📦 {rollos_c} rollo(s) de 100m]",
+                    "proveedor": prov_c,
+                    "cantidad": int(round(m_c)),
+                    "unidad": "m",
+                    "precio_unitario": p_c,
+                    "subtotal": round(m_c * p_c, 2)
+                })
+
+        # 3. Cuadro Eléctrico y Protecciones
+        categorias_orden_compra["🛡️ 3. Cuadro Eléctrico y Protecciones"].extend([
+            {
+                "articulo": "Caja Cuadro de Distribución",
+                "desc_exacta": desc_caja_cuadro,
+                "proveedor": prov_caja_cuadro,
+                "cantidad": 1,
+                "unidad": "ud",
+                "precio_unitario": p_caja_cuadro,
+                "subtotal": round(p_caja_cuadro, 2)
+            },
+            {
+                "articulo": f"IGA Oficial ({iga_amperaje}A 2P)",
+                "desc_exacta": desc_iga,
+                "proveedor": prov_iga,
+                "cantidad": 1,
+                "unidad": "ud",
+                "precio_unitario": p_iga,
+                "subtotal": round(p_iga, 2)
+            },
+            {
+                "articulo": "Interruptor Diferencial 40A 30mA",
+                "desc_exacta": desc_id,
+                "proveedor": prov_id,
+                "cantidad": n_difs,
+                "unidad": "ud",
+                "precio_unitario": p_id,
+                "subtotal": round(n_difs * p_id, 2)
+            },
+            {
+                "articulo": "PIAs Magnetotérmicos Circuitos REBT",
+                "desc_exacta": desc_pia,
+                "proveedor": prov_pia,
+                "cantidad": n_pias,
+                "unidad": "ud",
+                "precio_unitario": p_pia,
+                "subtotal": round(n_pias * p_pia, 2)
+            }
+        ])
+
+        # 4. Tubos y Canalizaciones
+        tubos_items = [
+            ("Tubo Corrugado M-20", desc_tubo20, prov_tubo20, global_tubo20_m, p_tubo20, rollos_tubo20),
+            ("Tubo Corrugado M-25", desc_tubo25, prov_tubo25, global_tubo25_m, p_tubo25, rollos_tubo25),
+        ]
+        for nom_t, desc_t, prov_t, m_t, p_t, rollos_t in tubos_items:
+            if m_t > 0:
+                categorias_orden_compra["📏 4. Tubos y Canalizaciones"].append({
+                    "articulo": nom_t,
+                    "desc_exacta": f"{desc_t} [📦 {rollos_t} rollo(s) de 50m]",
+                    "proveedor": prov_t,
+                    "cantidad": int(round(m_t)),
+                    "unidad": "m",
+                    "precio_unitario": p_t,
+                    "subtotal": round(m_t * p_t, 2)
+                })
+
+        # 5. Cajas y Conexiones
+        cajas_items = [
+            ("Cajas Universales Mecanismo 67mm", desc_caja_mec, prov_caja_mec, global_caja_mec_uds, "ud", p_caja_mec),
+            ("Cajas de Registro Empotrar 100x100mm", desc_caja_reg, prov_caja_reg, global_caja_reg_uds, "ud", p_caja_reg),
+            ("Conexión en Cajas (" + ("Wago 221" if "Wago" in tipo_conexion else "Clemas") + ")", desc_con, prov_con, max(1, global_caja_reg_uds * 2), "ud/pack", p_con),
+        ]
+        for nom_cj, desc_cj, prov_cj, cant_cj, unid_cj, p_cj in cajas_items:
+            if cant_cj > 0:
+                categorias_orden_compra["📦 5. Cajas y Conexiones"].append({
+                    "articulo": nom_cj,
+                    "desc_exacta": desc_cj,
+                    "proveedor": prov_cj,
+                    "cantidad": cant_cj,
+                    "unidad": unid_cj,
+                    "precio_unitario": p_cj,
+                    "subtotal": round(cant_cj * p_cj, 2)
+                })
+
+        # Flatten into DataFrame for export and display
+        filas_df_oc = []
+        for cat_nombre, items_cat in categorias_orden_compra.items():
+            for item in items_cat:
+                filas_df_oc.append({
+                    "Categoría": cat_nombre,
+                    "Artículo": item["articulo"],
+                    "Descripción Exacta del Artículo": item["desc_exacta"],
+                    "Tienda / Proveedor": item["proveedor"],
+                    "Cantidad": item["cantidad"],
+                    "Unidad": item["unidad"],
+                    "Precio S/IVA (€)": round(item["precio_unitario"], 2),
+                    "Subtotal S/IVA (€)": round(item["subtotal"], 2),
+                    "Total C/IVA 21% (€)": round(item["subtotal"] * 1.21, 2)
+                })
+        df_orden_compra = pd.DataFrame(filas_df_oc)
+
+        orden_compra_data = {
+            "categorias": categorias_orden_compra,
+            "total_neto": total_mat_global_neto,
+            "iva_pct": 21.0,
+            "cuota_iva": cuota_iva_mat,
+            "total_con_iva": total_mat_con_iva,
+            "potencia_kw": potencia_prevista_kw,
+            "serie_mecanismos": serie_mecanismos,
+            "marca_protecciones": marca_protecciones
+        }
+
+        # ==========================================
         # SELECTOR DE MODO DE VISTA E IMPRESIÓN
         # ==========================================
         st.markdown("---")
         modo_impresion = st.radio(
             "🖨️ SELECCIONA EL MODO DE VISTA:",
             [
-                "🛠️ 1. Panel Interno y Acopio (Exclusivo para ti - Autónomo)",
-                "📄 2. Vista Comercial (Para entregar al Cliente)"
+                "🛠️ 1. Panel Interno y Rentabilidad (Exclusivo para ti - Autónomo)",
+                "🛒 2. Orden de Compra y Acopio de Materiales (Almacén / Tienda)",
+                "📄 3. Vista Comercial (Para entregar al Cliente)"
             ],
             horizontal=True
         )
         st.markdown("---")
 
         if modo_impresion.startswith("🛠️"):
-            st.header("🔒 Panel Interno de Trabajo, Distancias y Acopio")
+            st.header("🔒 Panel Interno de Trabajo, Distancias y Rentabilidad")
             c4_estado_txt = "Desdoblado (C4-A y C4-B independientes)" if desdoblar_c4 else "Estándar unificado"
             st.markdown(f"**Instalador:** {instalador_nombre} | **Potencia / IGA:** {potencia_prevista_kw} | **Circuito C4:** {c4_estado_txt}")
             st.markdown("---")
@@ -843,7 +1067,7 @@ def app():
             st.subheader("📊 Resumen Global de Puntos y Coste Medio por Punto")
             st.write(f"- 🔌 **Número Total de Puntos / Mecanismos Instalados:** `{total_puntos_mecanismos} uds` (Interruptores, Schukos, Tomas de Fuerza y Red)")
             st.write(f"- 💶 **Precio Medio por Punto (Aplicando el Total con IVA):** **`{precio_medio_por_punto:.2f} € / punto`**")
-            st.info(f"💡 *Nota:* Este indicador te muestra a cuánto sale de media cada punto instalado (incluyendo cableado, canalización, protecciones y mano de obra prorrateados).")
+            st.info("💡 *Nota:* Este indicador te muestra a cuánto sale de media cada punto instalado (incluyendo cableado, canalización, protecciones y mano de obra prorrateados).")
             st.markdown("---")
 
             st.subheader("⏱️ Análisis de Rendimiento, Tiempos y Plazos de Obra")
@@ -855,46 +1079,29 @@ def app():
             st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
             st.markdown("---")
 
-            st.subheader("🛒 Resumen Global de Acopio (Con Filas Verificadas del Excel)")
+            st.subheader("🛒 Resumen de Acopio (Con Descripción Completa y Tienda)")
             
-            rollos_tubo20 = max(1, int((global_tubo20_m + 49) / 50))
-            rollos_tubo25 = max(1, int((global_tubo25_m + 49) / 50))
-
-            rollos_15_az = max(1, int((global_15_az_m + 99) / 100))
-            rollos_15_ne = max(1, int((global_15_ne_m + 99) / 100))
-            rollos_15_ma = max(1, int((global_15_ma_m + 99) / 100))
-            rollos_15_gr = max(1, int((global_15_gr_m + 99) / 100))
-            rollos_15_tt = max(1, int((global_15_tt_m + 99) / 100))
-
-            rollos_25_az = max(1, int((global_25_az_m + 99) / 100))
-            rollos_25_ne = max(1, int((global_25_ne_m + 99) / 100))
-            rollos_25_tt = max(1, int((global_25_tt_m + 99) / 100))
-
-            total_mat_estancias_neto = coste_total_materiales_bruto
-            total_mat_global_neto = total_mat_estancias_neto + coste_cuadro_neto
-            total_mat_con_iva = total_mat_global_neto * 1.21
-
             st.markdown("#### 📏 1. Canalización y Tubería")
-            st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` | Proveedor: **{prov_tubo20}** | `[Fila Excel: #{fila_tubo20}]` | 📦 `{rollos_tubo20} rollo(s) de 50m`")
-            st.write(f"- **Tubo M-25:** `{int(global_tubo25_m)} m` | Proveedor: **{prov_tubo25}** | `[Fila Excel: #{fila_tubo25}]` | 📦 `{rollos_tubo25} rollo(s) de 50m`")
+            st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` (📦 `{rollos_tubo20} rollo(s) de 50m`) | **{prov_tubo20}** | *{desc_tubo20}*")
+            st.write(f"- **Tubo M-25:** `{int(global_tubo25_m)} m` (📦 `{rollos_tubo25} rollo(s) de 50m`) | **{prov_tubo25}** | *{desc_tubo25}*")
 
             st.markdown("---")
             st.markdown(f"#### ⚡ 2. Cableado ({tipo_cable_sel})")
-            st.write(f"- Azul 1.5mm²: `{int(global_15_az_m)} m` | `[Fila: #{fila_15_az}]` | 📦 `{rollos_15_az} rollo(s)`")
-            st.write(f"- Negro 1.5mm²: `{int(global_15_ne_m)} m` | `[Fila: #{fila_15_ne}]` | 📦 `{rollos_15_ne} rollo(s)`")
-            st.write(f"- Marrón 1.5mm²: `{int(global_15_ma_m)} m` | `[Fila: #{fila_15_ma}]` | 📦 `{rollos_15_ma} rollo(s)`")
-            st.write(f"- Gris 1.5mm²: `{int(global_15_gr_m)} m` | `[Fila: #{fila_15_gr}]` | 📦 `{rollos_15_gr} rollo(s)`")
-            st.write(f"- Tierra 1.5mm²: `{int(global_15_tt_m)} m` | `[Fila: #{fila_15_tt}]` | 📦 `{rollos_15_tt} rollo(s)`")
-            st.write(f"- Azul 2.5mm²: `{int(global_25_az_m)} m` | `[Fila: #{fila_25_az}]` | 📦 `{rollos_25_az} rollo(s)`")
-            st.write(f"- Negro 2.5mm²: `{int(global_25_ne_m)} m` | `[Fila: #{fila_25_ne}]` | 📦 `{rollos_25_ne} rollo(s)`")
-            st.write(f"- Tierra 2.5mm²: `{int(global_25_tt_m)} m` | `[Fila: #{fila_25_tt}]` | 📦 `{rollos_25_tt} rollo(s)`")
+            st.write(f"- **Azul 1.5mm²:** `{int(global_15_az_m)} m` (📦 `{rollos_15_az} rollo(s)`) | **{prov_15_az}** | *{desc_15_az}*")
+            st.write(f"- **Negro 1.5mm²:** `{int(global_15_ne_m)} m` (📦 `{rollos_15_ne} rollo(s)`) | **{prov_15_ne}** | *{desc_15_ne}*")
+            st.write(f"- **Marrón 1.5mm²:** `{int(global_15_ma_m)} m` (📦 `{rollos_15_ma} rollo(s)`) | **{prov_15_ma}** | *{desc_15_ma}*")
+            st.write(f"- **Gris 1.5mm²:** `{int(global_15_gr_m)} m` (📦 `{rollos_15_gr} rollo(s)`) | **{prov_15_gr}** | *{desc_15_gr}*")
+            st.write(f"- **Tierra 1.5mm²:** `{int(global_15_tt_m)} m` (📦 `{rollos_15_tt} rollo(s)`) | **{prov_15_tt}** | *{desc_15_tt}*")
+            st.write(f"- **Azul 2.5mm²:** `{int(global_25_az_m)} m` (📦 `{rollos_25_az} rollo(s)`) | **{prov_25_az}** | *{desc_25_az}*")
+            st.write(f"- **Negro 2.5mm²:** `{int(global_25_ne_m)} m` (📦 `{rollos_25_ne} rollo(s)`) | **{prov_25_ne}** | *{desc_25_ne}*")
+            st.write(f"- **Tierra 2.5mm²:** `{int(global_25_tt_m)} m` (📦 `{rollos_25_tt} rollo(s)`) | **{prov_25_tt}** | *{desc_25_tt}*")
 
             st.markdown("---")
-            st.markdown(f"#### ⚡ 4. Cuadro Eléctrico y Protecciones (Marca: {marca_protecciones})")
-            st.write(f"- **Caja de Distribución:** 1 ud | `[Fila Excel: #{fila_caja_cuadro}]` | Ref: `{desc_caja_cuadro}` | S/IVA: `{p_caja_cuadro:.2f} €`")
-            st.write(f"- **IGA Oficial ({iga_amperaje}A):** 1 ud | `[Fila Excel: #{fila_iga}]` | Ref: `{desc_iga}` | S/IVA: `{p_iga:.2f} €`")
-            st.write(f"- **Interruptor Diferencial (ID):** `{n_difs} ud(s)` | `[Fila Excel: #{fila_id}]` | Ref: `{desc_id}` | S/IVA c/u: `{p_id:.2f} €`")
-            st.write(f"- **PIAs Automáticos:** `{n_pias} uds` (Incluyendo desdoblamiento de C4) | `[Fila Excel: #{fila_pia}]` | Ref: `{desc_pia}` | S/IVA c/u: `{p_pia:.2f} €`")
+            st.markdown(f"#### ⚡ 3. Cuadro Eléctrico y Protecciones (Marca: {marca_protecciones})")
+            st.write(f"- **Caja Distribución:** 1 ud | **{prov_caja_cuadro}** | *{desc_caja_cuadro}* | S/IVA: `{p_caja_cuadro:.2f} €`")
+            st.write(f"- **IGA Oficial ({iga_amperaje}A):** 1 ud | **{prov_iga}** | *{desc_iga}* | S/IVA: `{p_iga:.2f} €`")
+            st.write(f"- **Interruptor Diferencial (ID):** `{n_difs} ud(s)` | **{prov_id}** | *{desc_id}* | S/IVA: `{p_id:.2f} €`")
+            st.write(f"- **PIAs Automáticos:** `{n_pias} uds` | **{prov_pia}** | *{desc_pia}* | S/IVA c/u: `{p_pia:.2f} €`")
 
             st.markdown(f"""
             <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
@@ -923,6 +1130,118 @@ def app():
             st.write(f"- ⚡ **Cuadro Eléctrico ({marca_protecciones}):** Beneficio: `+{benef_cuadro:.2f} €`")
             st.success(f"🚀 **UTILIDAD / BENEFICIO NETO TOTAL ESTIMADO: +{benef_neto_total:.2f} €** (Sin contar IVA)")
 
+        elif modo_impresion.startswith("🛒"):
+            st.header("🛒 Orden de Compra y Lista de Acopio de Materiales")
+            st.markdown("Listado exhaustivo clasificado por familias con descripciones exactas y tiendas para pedir en almacén.")
+
+            # Summary Box
+            col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+            with col_kpi1:
+                st.metric("💳 Total a Pagar (C/IVA)", f"{total_mat_con_iva:,.2f} €")
+            with col_kpi2:
+                st.metric("📦 Base Imponible (S/IVA)", f"{total_mat_global_neto:,.2f} €")
+            with col_kpi3:
+                st.metric("🧾 IVA Materiales (21%)", f"{cuota_iva_mat:,.2f} €")
+            with col_kpi4:
+                st.metric("🏷️ Total Partidas / Artículos", f"{len(df_orden_compra)} uds")
+
+            st.markdown("---")
+
+            # Filtro por tienda/proveedor
+            tiendas_unicas = sorted(list(df_orden_compra["Tienda / Proveedor"].dropna().unique()))
+            filtro_tienda = st.selectbox("🏬 Filtrar por Tienda / Proveedor:", ["Todos los Proveedores"] + tiendas_unicas)
+
+            # Desglose por categorías organizadas
+            st.subheader("📋 Listado Detallado por Categorías de Acopio")
+            for cat_titulo, articulos in categorias_orden_compra.items():
+                if not articulos:
+                    continue
+
+                arts_filtrados = [a for a in articulos if filtro_tienda == "Todos los Proveedores" or a["proveedor"] == filtro_tienda]
+                if not arts_filtrados:
+                    continue
+
+                st.markdown(f"#### {cat_titulo}")
+                df_cat = pd.DataFrame([
+                    {
+                        "Cant.": a["cantidad"],
+                        "Unidad": a["unidad"],
+                        "Artículo": a["articulo"],
+                        "Descripción Exacta (Tienda)": a["desc_exacta"],
+                        "Tienda": a["proveedor"],
+                        "P. Unit (€)": f"{a['precio_unitario']:.2f} €",
+                        "Subtotal (€)": f"{a['subtotal']:.2f} €"
+                    }
+                    for a in arts_filtrados
+                ])
+                st.dataframe(df_cat, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+            st.subheader("📑 Tabla Completa de la Orden de Compra")
+            if filtro_tienda != "Todos los Proveedores":
+                st.dataframe(df_orden_compra[df_orden_compra["Tienda / Proveedor"] == filtro_tienda], use_container_width=True, hide_index=True)
+            else:
+                st.dataframe(df_orden_compra, use_container_width=True, hide_index=True)
+
+            # Generar Excel y PDF de la Orden de Compra
+            excel_oc_bytes = exportar_excel_orden_compra(
+                df_orden_compra, total_mat_global_neto, cuota_iva_mat, total_mat_con_iva,
+                {
+                    "empresa": empresa_nombre,
+                    "proyectista": instalador_nombre,
+                    "fecha": datetime.date.today().strftime("%d/%m/%Y"),
+                    "potencia_kw": potencia_prevista_kw,
+                    "serie_mecanismos": serie_mecanismos,
+                    "marca_protecciones": marca_protecciones
+                }
+            )
+
+            pdf_oc_bytes = pdf_presupuesto.generar_pdf_orden_compra(
+                proyecto_info={
+                    "empresa": empresa_nombre,
+                    "proyectista": instalador_nombre,
+                    "licencia": n_licencia,
+                    "localidad": localidad,
+                    "telefono": telefono,
+                    "expediente": "OC-2026-01",
+                    "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                },
+                orden_compra_data=orden_compra_data
+            )
+
+            st.markdown("#### 👁️ Vista Previa de la Orden de Compra Oficial en PDF:")
+            with st.container():
+                try:
+                    import pymupdf
+                    doc_oc = pymupdf.open(stream=pdf_oc_bytes, filetype="pdf")
+                    for num_pag, pagina in enumerate(doc_oc, start=1):
+                        pix = pagina.get_pixmap(dpi=150)
+                        if len(doc_oc) > 1:
+                            st.caption(f"📄 **Página {num_pag} de {len(doc_oc)}**")
+                        st.image(pix.tobytes("png"), use_container_width=True)
+                except Exception:
+                    import base64
+                    b64_oc = base64.b64encode(pdf_oc_bytes).decode('utf-8')
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{b64_oc}" width="100%" height="600" type="application/pdf"></iframe>', unsafe_allow_html=True)
+
+            col_oc_exp1, col_oc_exp2 = st.columns(2)
+            with col_oc_exp1:
+                st.download_button(
+                    label="📥 Descargar Orden de Compra en Excel (.xlsx)",
+                    data=excel_oc_bytes,
+                    file_name="Orden_Compra_Materiales_Bolimur.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            with col_oc_exp2:
+                st.download_button(
+                    label="📥 Descargar Orden de Compra en PDF",
+                    data=pdf_oc_bytes,
+                    file_name="Orden_Compra_Materiales_Bolimur.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+
         else:
             st.header("📄 Vista Comercial: Presupuesto para el Cliente")
             st.markdown(f"""
@@ -930,7 +1249,7 @@ def app():
                 <h3 style="color: #0369a1; margin-top: 0;">{empresa_nombre}</h3>
                 <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
                 <hr style="border: 1px solid #bae6fd;">
-                <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> Septiembre 2026</p>
+                <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> {datetime.date.today().strftime("%B %Y")}</p>
                 <p><b>Objeto:</b> Instalación Eléctrica REBT ({potencia_prevista_kw}) con Mecanismos <b>{serie_mecanismos}</b> y Protecciones <b>{marca_protecciones}</b></p>
             </div>
             """, unsafe_allow_html=True)
@@ -938,9 +1257,13 @@ def app():
             df_comercial = pd.DataFrame(comercial_estancias)
             st.dataframe(df_comercial, use_container_width=True)
 
-            excel_bytes = exportar_excel_presupuesto(df_comercial, subtotal_general_neto, iva_sel, cuota_iva, total_cliente, {
-                "empresa": empresa_nombre, "instalador": instalador_nombre, "licencia": n_licencia
-            })
+            excel_bytes = exportar_excel_presupuesto(
+                df_comercial, subtotal_general_neto, iva_sel, cuota_iva, total_cliente,
+                {"empresa": empresa_nombre, "instalador": instalador_nombre, "licencia": n_licencia},
+                df_orden_compra=df_orden_compra,
+                total_compra_neto=total_mat_global_neto,
+                total_compra_con_iva=total_mat_con_iva
+            )
             
             pdf_bytes_pres = pdf_presupuesto.generar_pdf_presupuesto(
                 proyecto_info={
@@ -1007,7 +1330,7 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Resumen de puntos y precio medio por punto sincronizado con éxito!")
+        st.success("✅ ¡Cálculos, Orden de Compra y Presupuesto Comercial sincronizados con éxito!")
 
 def renderizar():
     app()
