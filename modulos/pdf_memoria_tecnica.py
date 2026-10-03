@@ -85,7 +85,7 @@ def _obtener_logo_path():
     return None
 
 
-def _crear_logo_flowable(width=3.6*cm, height=2.0*cm):
+def _crear_logo_flowable(width=4.8*cm, height=2.68*cm):
     path = _obtener_logo_path()
     if path:
         try:
@@ -161,7 +161,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     # =========================================================================
     # PÁGINA 1: ENCABEZADO INSTITUCIONAL OFICIAL DGEAIM MURCIA CON LOGO BOLIMUR
     # =========================================================================
-    logo_img = _crear_logo_flowable(width=3.5*cm, height=1.9*cm)
+    logo_img = _crear_logo_flowable(width=4.6*cm, height=2.57*cm)
     col_logo = logo_img if logo_img else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogo', parent=body_style, alignment=2))
 
     header_table_data = [
@@ -182,7 +182,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
             col_logo
         ]
     ]
-    t_hdr = Table(header_table_data, colWidths=[7.4*cm, 7.2*cm, 3.8*cm])
+    t_hdr = Table(header_table_data, colWidths=[6.9*cm, 6.9*cm, 4.6*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
         ('BOX', (0,0), (-1,-1), 1.0, c_primary),
@@ -468,14 +468,14 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     # =========================================================================
     story.append(PageBreak())
     
-    logo_p2 = _crear_logo_flowable(width=3.2*cm, height=1.7*cm)
+    logo_p2 = _crear_logo_flowable(width=4.6*cm, height=2.57*cm)
     anx_hdr_data = [
         [
             Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO (RD 842/2002)</b><br/><font size='8' color='#0369a1'><b>ANEXO III: ESQUEMA UNIFILAR NORMALIZADO (ITC-BT-25)</b></font><br/><font size='6.5' color='#475569'>Región de Murcia - Dirección General de Industria, Energía y Minas</font>", body_style),
             logo_p2 if logo_p2 else Paragraph("<b>BOLIMUR</b>", ParagraphStyle('HdrB2', parent=body_style, alignment=2))
         ]
     ]
-    t_anx_hdr = Table(anx_hdr_data, colWidths=[14.8*cm, 3.6*cm])
+    t_anx_hdr = Table(anx_hdr_data, colWidths=[13.8*cm, 4.6*cm])
     t_anx_hdr.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (1,0), (1,0), 'RIGHT'),

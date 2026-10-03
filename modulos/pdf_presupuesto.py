@@ -110,7 +110,7 @@ def _obtener_logo_path():
     return None
 
 
-def _crear_logo_flowable(width=3.8*cm, height=2.1*cm):
+def _crear_logo_flowable(width=4.8*cm, height=2.68*cm):
     path = _obtener_logo_path()
     if path:
         try:
@@ -186,9 +186,9 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         Paragraph(f"<b>{proyecto_info.get('empresa', 'BOLIMUR Instalaciones Integrales')}</b> | Instalación Residencial conforme a REBT (RD 842/2002)", subtitle_style)
     ]
 
-    logo_img = _crear_logo_flowable(width=3.8*cm, height=2.1*cm)
+    logo_img = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
     if logo_img:
-        header_table = Table([[text_col, logo_img]], colWidths=[14.2*cm, 3.8*cm])
+        header_table = Table([[text_col, logo_img]], colWidths=[13.2*cm, 4.8*cm])
         header_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (1,0), (1,0), 'RIGHT'),
@@ -629,9 +629,9 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
         Paragraph("Listado clasificado por categorías para aprovisionamiento en tienda / almacén", subtitle_style)
     ]
 
-    logo_img = _crear_logo_flowable(width=3.8*cm, height=2.1*cm)
+    logo_img = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
     if logo_img:
-        header_table = Table([[text_col, logo_img]], colWidths=[14.2*cm, 3.8*cm])
+        header_table = Table([[text_col, logo_img]], colWidths=[13.2*cm, 4.8*cm])
         header_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (1,0), (1,0), 'RIGHT'),
@@ -1017,7 +1017,7 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     story = []
 
     # 1. Official Header (Región de Murcia - DGEAIM) con Logo BOLIMUR
-    logo_uni = _crear_logo_flowable(width=3.5*cm, height=1.9*cm)
+    logo_uni = _crear_logo_flowable(width=4.4*cm, height=2.45*cm)
     col_logo_uni = logo_uni if logo_uni else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogoUni', parent=body_style, alignment=2))
 
     header_data = [
@@ -1027,7 +1027,7 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
             col_logo_uni
         ]
     ]
-    t_hdr = Table(header_data, colWidths=[7.4*cm, 7.0*cm, 3.6*cm])
+    t_hdr = Table(header_data, colWidths=[6.8*cm, 6.8*cm, 4.4*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
         ('BOX', (0,0), (-1,-1), 1.0, c_secondary),

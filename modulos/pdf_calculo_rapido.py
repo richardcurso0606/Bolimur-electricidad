@@ -133,9 +133,9 @@ def generar_pdf_calculo_rapido(proyecto_info, calc_params, calc_results):
         Paragraph("DIMENSIONAMIENTO DE CONDUCTORES Y PROTECCIONES REBT", subtitle_style)
     ]
 
-    logo_img = _crear_logo_flowable(width=3.8*cm, height=2.1*cm)
+    logo_img = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
     if logo_img:
-        header_table = Table([[text_col, logo_img]], colWidths=[13.5*cm, 4.5*cm])
+        header_table = Table([[text_col, logo_img]], colWidths=[13.2*cm, 4.8*cm])
         header_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (1,0), (1,0), 'RIGHT'),
