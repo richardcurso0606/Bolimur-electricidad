@@ -867,7 +867,21 @@ def app():
 
     st.markdown("---")
 
-    if st.button("🚀 Calcular Presupuesto, Distancias y Generar Paneles", type="primary"):
+    if 'presupuesto_calculado' not in st.session_state:
+        st.session_state.presupuesto_calculado = True
+
+    col_btn_c1, col_btn_c2 = st.columns([2.5, 1.5])
+    with col_btn_c1:
+        if st.button("🚀 Recalcular Presupuesto, Distancias y Generar Paneles", type="primary", key="btn_recalcular_principal"):
+            st.session_state.presupuesto_calculado = True
+            st.rerun()
+    with col_btn_c2:
+        st.caption("⚡ Cálculos y vistas sincronizados en tiempo real.")
+
+    if 'msg_exito_actualizacion' in st.session_state:
+        st.success(st.session_state.pop('msg_exito_actualizacion'))
+
+    if st.session_state.get('presupuesto_calculado', True):
         if not estancias_activas:
             st.warning("Selecciona al menos una estancia.")
             return
@@ -1641,7 +1655,8 @@ def app():
                                 df_act = pd.concat([df_act, pd.DataFrame([nuevo_reg])], ignore_index=True)
                             df_act.to_excel('base_datos_precio_oficial.xlsx', index=False)
                             cargar_precios_excel.clear()
-                            st.success("✅ ¡Artículos actualizados automáticamente con referencias y precios oficiales de la web! Recalculando...")
+                            st.session_state['msg_exito_actualizacion'] = "✅ ¡Artículos actualizados automáticamente con referencias y precios oficiales de la web! Recalculado con éxito."
+                            st.session_state.presupuesto_calculado = True
                             st.rerun()
                         except Exception as ex:
                             st.error(f"Error al actualizar automáticamente: {ex}")
@@ -1688,7 +1703,8 @@ def app():
                                     df_act = pd.concat([df_act, pd.DataFrame([nuevo_art])], ignore_index=True)
                                 df_act.to_excel('base_datos_precio_oficial.xlsx', index=False)
                                 cargar_precios_excel.clear()
-                                st.success("✅ ¡Artículos guardados en Excel correctamente! Recalculando...")
+                                st.session_state['msg_exito_actualizacion'] = "✅ ¡Artículos guardados en Excel correctamente! Recalculado con éxito."
+                                st.session_state.presupuesto_calculado = True
                                 st.rerun()
                             except Exception as ex:
                                 st.error(f"Error al guardar en Excel: {ex}")
@@ -1784,7 +1800,8 @@ def app():
                                 df_act = pd.concat([df_act, pd.DataFrame([nuevo_reg])], ignore_index=True)
                                 df_act.to_excel('base_datos_precio_oficial.xlsx', index=False)
                                 cargar_precios_excel.clear()
-                                st.success(f"✅ ¡Artículo '{m_desc}' añadido con ID `{n_id}`!")
+                                st.session_state['msg_exito_actualizacion'] = f"✅ ¡Artículo '{m_desc}' añadido con ID `{n_id}` y guardado en Excel!"
+                                st.session_state.presupuesto_calculado = True
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Error al guardar: {e}")
