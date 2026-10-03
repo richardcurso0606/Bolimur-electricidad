@@ -55,33 +55,33 @@ def renderizar():
         * **Protecciones Obligatorias:** Magnetotérmico (PIA Curva C), Diferencial Tipo A (6mA DC) / Tipo B y Sobretensiones (VSP/VTP).
         """)
 
-    st.markdown("### ⚙️ Parámetros de Diseño del Circuito de Recarga")
-    
-    with st.form("form_irve_parametros"):
-        irve_c1, irve_c2 = st.columns(2)
-        with irve_c1:
-            irve_pot = st.selectbox("Potencia del Cargador (Wallbox)", ["3.680 W (16A - Monofásico Lento)", "7.360 W (32A - Monofásico Estándar)", "11.000 W (16A - Trifásico)", "22.000 W (32A - Trifásico)", "✏️ Personalizada (W)"], index=1, key="irve_pot_sel")
-            if "Personalizada" in irve_pot:
-                p_cargador_val = st.number_input("Introduce Potencia (W)", value=7360.0, step=500.0, key="irve_custom_w")
-            else:
-                p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Parámetros del Circuito de Recarga y Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        with st.form("form_irve_parametros"):
+            irve_c1, irve_c2 = st.columns(2)
+            with irve_c1:
+                irve_pot = st.selectbox("Potencia del Cargador (Wallbox)", ["3.680 W (16A - Monofásico Lento)", "7.360 W (32A - Monofásico Estándar)", "11.000 W (16A - Trifásico)", "22.000 W (32A - Trifásico)", "✏️ Personalizada (W)"], index=1, key="irve_pot_sel")
+                if "Personalizada" in irve_pot:
+                    p_cargador_val = st.number_input("Introduce Potencia (W)", value=7360.0, step=500.0, key="irve_custom_w")
+                else:
+                    p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
+                    
+                irve_long = st.number_input("Longitud real del cable hasta la plaza (m)", value=25.0, step=1.0, key="irve_long")
                 
-            irve_long = st.number_input("Longitud real del cable hasta la plaza (m)", value=25.0, step=1.0, key="irve_long")
-            
-            opciones_esquema_movil = [
-                "Esquema 3a (Centralización contadores)",
-                "Esquema 3b (Cuadro CGMP vivienda)",
-                "Esquema 1 / 2 (Instalación colectiva / exclusiva)"
-            ]
-            esquema_orig = st.selectbox("Origen de la línea (Esquema ITC-BT-52):", opciones_esquema_movil, key="irve_esq")
-            
-        with irve_c2:
-            irve_mat = st.selectbox("Material Conductor", ["cobre"], key="irve_mat")
-            metodo_irve_key = st.selectbox("Instalación:", list(METODOS_INSTALACION_IRVE.keys()), index=0, key="irve_met")
-            irve_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"], key="irve_aisl")
-            tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red")
+                opciones_esquema_movil = [
+                    "Esquema 3a (Centralización contadores)",
+                    "Esquema 3b (Cuadro CGMP vivienda)",
+                    "Esquema 1 / 2 (Instalación colectiva / exclusiva)"
+                ]
+                esquema_orig = st.selectbox("Origen de la línea (Esquema ITC-BT-52):", opciones_esquema_movil, key="irve_esq")
+                
+            with irve_c2:
+                irve_mat = st.selectbox("Material Conductor", ["cobre"], key="irve_mat")
+                metodo_irve_key = st.selectbox("Instalación:", list(METODOS_INSTALACION_IRVE.keys()), index=0, key="irve_met")
+                irve_aisl = st.selectbox("Aislamiento", ["XLPE / EPR (90ºC) - RZ1-K", "PVC (70ºC)"], key="irve_aisl")
+                tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red", horizontal=True)
 
-        submitted_irve = st.form_submit_button("🔄 Recalcular / Actualizar Circuito IRVE")
+            submitted_irve = st.form_submit_button("🔄 Recalcular / Actualizar Circuito IRVE", type="primary")
 
     es_trif_irve = "Trifásico" in tipo_red_irve
     v_t_irve = 400.0 if es_trif_irve else 230.0
@@ -109,120 +109,120 @@ def renderizar():
     dv_real_irve_v = rebt.calcular_caida_tension_v(p_cargador_val, irve_long, gamma_irve, s_final_irve, v_t_irve, es_trif_irve)
     dv_real_irve_pct = rebt.calcular_caida_tension_pct(dv_real_irve_v, v_t_irve)
 
-    st.markdown("---")
-    st.markdown("<h3>📋 Memoria Analítica Específica (Circuito IRVE - ITC-BT-52)</h3>", unsafe_allow_html=True)
+    st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">📋 SECCIÓN 2: Memoria Analítica, Protecciones y Sección Óptima</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        if es_trif_irve:
+            f_ib_irve = r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}"
+            s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
+        else:
+            f_ib_irve = r"I_b = \frac{P}{V \cdot \cos\varphi}"
+            s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
 
-    if es_trif_irve:
-        f_ib_irve = r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}"
-        s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
-    else:
-        f_ib_irve = r"I_b = \frac{P}{V \cdot \cos\varphi}"
-        s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
+        col_irve_res1, col_irve_res2 = st.columns(2)
+        with col_irve_res1:
+            st.info(f"""
+            #### 1. Intensidad de Diseño del Punto de Recarga ($I_b$)
+            
+            **Fórmula Reglamentaria:**
+            $${f_ib_irve}$$
+            
+            **Sustitución y Resultado:**
+            $${s_ib_irve}$$
+            """)
 
-    st.info(f"""
-    #### 1. Intensidad de Diseño del Punto de Recarga ($I_b$)
-    
-    **Fórmula Reglamentaria:**
-    $${f_ib_irve}$$
-    
-    **Sustitución y Resultado:**
-    $${s_ib_irve}$$
-    """)
+        with col_irve_res2:
+            if es_trif_irve:
+                f_s_irve = r"S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}"
+                s_s_irve = f"S = \\frac{{{p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_irve:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
+            else:
+                f_s_irve = r"S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}"
+                s_s_irve = f"S = \\frac{{2 \\cdot {p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_irve:.2f} \\cdot 230}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
 
-    if es_trif_irve:
-        f_s_irve = r"S = \frac{P \cdot L}{\gamma \cdot \Delta V \cdot V}"
-        s_s_irve = f"S = \\frac{{{p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_irve:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
-    else:
-        f_s_irve = r"S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V \cdot V}"
-        s_s_irve = f"S = \\frac{{2 \\cdot {p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_irve:.2f} \\cdot 230}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
+            st.info(f"""
+            #### 2. Sección Teórica por Caída de Tensión (Línea IRVE)
+            
+            **Fórmula Reglamentaria (máx. 1.0% CDT):**
+            $${f_s_irve}$$
+            
+            **Sustitución y Resultado:**
+            $${s_s_irve}$$
+            """)
 
-    st.info(f"""
-    #### 2. Sección Teórica por Caída de Tensión (Línea IRVE)
-    
-    **Fórmula Reglamentaria (máx. 1.0% CDT):**
-    $${f_s_irve}$$
-    
-    **Sustitución y Resultado:**
-    $${s_s_irve}$$
-    """)
+        st.markdown(f"""
+        <div style="background: #f8fafc; border: 2px solid #0284c7; padding: 20px; border-radius: 8px; color: #0f172a; margin-bottom: 20px;">
+            <h4 style="margin-top: 0; color: #0284c7;">🛡️ Esquema de Protecciones Exigido (ITC-BT-52):</h4>
+            <ul>
+                <li><strong>Interruptor Magnetotérmico:</strong> Calibre de <strong>{in_pi_auto} A (Curva C)</strong> adaptado para la protección del circuito de recarga.</li>
+                <li><strong>Protección Diferencial:</strong> Obligatorio <strong>Diferencial Tipo A (6mA DC)</strong> o <strong>Tipo B</strong>.</li>
+                <li><strong>Protección Sobretensiones:</strong> VSP/VTP transitorias y permanentes obligatorias.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("### 🛡️ Protecciones Obligatorias en el Origen y Destino del Circuito (ITC-BT-52)")
-    st.markdown(f"""
-    <div style="background: #f8fafc; border: 2px solid #0284c7; padding: 20px; border-radius: 8px; color: #0f172a; margin-bottom: 20px;">
-        <h4 style="margin-top: 0; color: #0284c7;">Esquema de Protecciones Exigido:</h4>
-        <ul>
-            <li><strong>Interruptor Magnetotérmico:</strong> Calibre de <strong>{in_pi_auto} A (Curva C)</strong> adaptado para la protección del circuito de recarga.</li>
-            <li><strong>Protección Diferencial:</strong> Obligatorio <strong>Diferencial Tipo A (6mA DC)</strong> o <strong>Tipo B</strong>.</li>
-            <li><strong>Protección Sobretensiones:</strong> VSP/VTP transitorias y permanentes obligatorias.</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+        if s_final_irve <= 6:
+            tubo_irve = "Ø 25 mm o Ø 32 mm"
+        elif s_final_irve <= 16:
+            tubo_irve = "Ø 40 mm"
+        else:
+            tubo_irve = "Ø 50 mm"
 
-    if s_final_irve <= 6:
-        tubo_irve = "Ø 25 mm o Ø 32 mm"
-    elif s_final_irve <= 16:
-        tubo_irve = "Ø 40 mm"
-    else:
-        tubo_irve = "Ø 50 mm"
-
-    st.success(f"""
-    ### ✅ SECCIÓN ÓPTIMA LÍNEA IRVE: {s_final_irve} mm² de {irve_mat.upper()}
-    * **Origen seleccionado:** {esquema_orig}
-    * **Caída de tensión estimada:** **{dv_real_irve_pct:.3f}%** (dentro del límite del 1.0%).
-    * **Protección recomendada:** Magnetotérmico **PIA {in_pi_auto} A (Curva C)** + **Diferencial Tipo A / B** bajo tubo **{tubo_irve}**.
-    """)
+        st.success(f"""
+        ### ✅ SECCIÓN ÓPTIMA LÍNEA IRVE: {s_final_irve} mm² de {irve_mat.upper()}
+        * **Origen seleccionado:** {esquema_orig}
+        * **Caída de tensión estimada:** **{dv_real_irve_pct:.3f}%** (dentro del límite del 1.0%).
+        * **Protección recomendada:** Magnetotérmico **PIA {in_pi_auto} A (Curva C)** + **Diferencial Tipo A / B** bajo tubo **{tubo_irve}**.
+        """)
 
     # --- SECCIÓN DE EXPORTACIÓN A PDF IRVE ---
-    st.markdown("---")
-    st.subheader("🖨️ Generar Reporte Técnico e Impresión IRVE en PDF")
-    
-    with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            p_nombre = st.text_input("Nombre de la Obra / Edificio", "Instalación Recarga IRVE Bolimur", key="irve_pdf_nombre")
-            p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Plaza de Garaje nº 18", key="irve_pdf_emp")
-        with col_m2:
-            p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="irve_pdf_proy")
-            p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-IRVE-2026", key="irve_pdf_exp")
+    st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                p_nombre = st.text_input("Nombre de la Obra / Edificio", "Instalación Recarga IRVE Bolimur", key="irve_pdf_nombre")
+                p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Plaza de Garaje nº 18", key="irve_pdf_emp")
+            with col_m2:
+                p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="irve_pdf_proy")
+                p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-IRVE-2026", key="irve_pdf_exp")
 
-        proyecto_info = {
-            "nombre": p_nombre,
-            "emplazamiento": p_emplazamiento,
-            "proyectista": p_proyectista,
-            "expediente": p_expediente,
-            "fecha": datetime.date.today().strftime("%d/%m/%Y")
-        }
+            proyecto_info = {
+                "nombre": p_nombre,
+                "emplazamiento": p_emplazamiento,
+                "proyectista": p_proyectista,
+                "expediente": p_expediente,
+                "fecha": datetime.date.today().strftime("%d/%m/%Y")
+            }
 
-        irve_params = {
-            "pot_wallbox": p_cargador_val,
-            "long": irve_long,
-            "mat": irve_mat,
-            "aisl": irve_aisl,
-            "metodo": metodo_irve_key,
-            "esquema": esquema_orig,
-            "red": tipo_red_irve,
-            "es_trifasico": es_trif_irve
-        }
+            irve_params = {
+                "pot_wallbox": p_cargador_val,
+                "long": irve_long,
+                "mat": irve_mat,
+                "aisl": irve_aisl,
+                "metodo": metodo_irve_key,
+                "esquema": esquema_orig,
+                "red": tipo_red_irve,
+                "es_trifasico": es_trif_irve
+            }
 
-        irve_results = {
-            "ib": ib_irve,
-            "dv_max": dv_max_irve,
-            "s_cdt": s_cdt_irve,
-            "s_final": s_final_irve,
-            "in_pi": in_pi_auto,
-            "dv_real_v": dv_real_irve_v,
-            "dv_real_pct": dv_real_irve_pct,
-            "tubo_irve": tubo_irve,
-            "gamma": gamma_irve
-        }
+            irve_results = {
+                "ib": ib_irve,
+                "dv_max": dv_max_irve,
+                "s_cdt": s_cdt_irve,
+                "s_final": s_final_irve,
+                "in_pi": in_pi_auto,
+                "dv_real_v": dv_real_irve_v,
+                "dv_real_pct": dv_real_irve_pct,
+                "tubo_irve": tubo_irve,
+                "gamma": gamma_irve
+            }
 
-        try:
-            pdf_bytes_irve = pdf_irve.generar_pdf_irve(proyecto_info, irve_params, irve_results)
-            from modulos import visor_pdf
-            visor_pdf.mostrar_visor_pdf(
-                pdf_bytes=pdf_bytes_irve,
-                nombre_archivo=f"Reporte_IRVE_{p_expediente}.pdf",
-                label_boton="📥 Descargar Reporte PDF Oficial IRVE"
-            )
-        except Exception as err:
-            st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de IRVE: {err}")
+            try:
+                pdf_bytes_irve = pdf_irve.generar_pdf_irve(proyecto_info, irve_params, irve_results)
+                from modulos import visor_pdf
+                visor_pdf.mostrar_visor_pdf(
+                    pdf_bytes=pdf_bytes_irve,
+                    nombre_archivo=f"Reporte_IRVE_{p_expediente}.pdf",
+                    label_boton="📥 Descargar Reporte PDF Oficial IRVE"
+                )
+            except Exception as err:
+                st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de IRVE: {err}")

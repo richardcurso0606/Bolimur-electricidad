@@ -684,203 +684,202 @@ def app():
     telefono = st.sidebar.text_input("Teléfono Contacto", value="+34 600 000 000")
 
     # ==========================================
-    # PARÁMETROS DE POTENCIA REBT E IGA OFICIAL
+    # SECCIÓN 1: PARÁMETROS DE POTENCIA REBT E IGA OFICIAL
     # ==========================================
-    st.markdown("---")
-    st.subheader("⚙️ Parámetros de Potencia, Escalones IGA y Configuración de Circuitos")
-
-    col_pot1, col_pot2, col_pot3 = st.columns(3)
-    with col_pot1:
-        potencia_prevista_kw = st.selectbox(
-            "Potencia Prevista / Escalón REBT",
-            [
-                "5.750 W (Básica - IGA 25A)",
-                "7.360 W (Básica Ampliada - IGA 32A)",
-                "9.200 W (Elevada - IGA 40A)",
-                "11.500 W (Elevada - IGA 50A)",
-                "14.490 W (Elevada - IGA 63A)"
-            ]
-        )
-    with col_pot2:
-        tipo_cable_sel = st.selectbox(
-            "⚡ Tecnología de Cable",
-            [
-                "Libre de Halógenos (H07Z1-K)",
-                "PVC Normal / Estándar (H07V-K)"
-            ],
-            help="H07Z1-K: Cable ignífugo sin halógenos (alta seguridad / nueva normativa). H07V-K: Cable tradicional de PVC."
-        )
-    with col_pot3:
-        tipo_tubo_sel = st.selectbox(
-            "📏 Tecnología de Tubo",
-            [
-                "Tubo Corrugado Normal / Estándar (PVC)",
-                "Tubo Corrugado Libre de Halógenos (LH / Ignífugo)"
-            ],
-            help="Tubo PVC estándar: Solución económica para reformas ordinarias. Tubo LH: Tubo ignífugo libre de halógenos."
-        )
-
-    desdoblar_c4 = st.checkbox(
-        "⚙️ Desdoblar circuito C4 (Separar Lavadora/Lavavajillas de la línea del Termo en circuitos independientes)", 
-        value=False,
-        help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente."
-    )
-
-    if "5.750" in potencia_prevista_kw:
-        grado_electr = "Básica"
-        iga_amperaje = 25
-        num_circuitos_base = 5
-    elif "7.360" in potencia_prevista_kw:
-        grado_electr = "Básica"
-        iga_amperaje = 32
-        num_circuitos_base = 6
-    elif "9.200" in potencia_prevista_kw:
-        grado_electr = "Elevada"
-        iga_amperaje = 40
-        num_circuitos_base = 8
-    elif "11.500" in potencia_prevista_kw:
-        grado_electr = "Elevada"
-        iga_amperaje = 50
-        num_circuitos_base = 10
-    else:
-        grado_electr = "Elevada"
-        iga_amperaje = 63
-        num_circuitos_base = 12
-
-    if desdoblar_c4:
-        num_circuitos_base += 1
-
-    st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos: **{num_circuitos_base}**")
-
-    # ==========================================
-    # MEMORIA COMPARATIVA DE OPCIONES MÁS ECONÓMICAS POR SECCIÓN
-    # ==========================================
-    with st.expander("💡 Memoria Técnica y Comparativa Económica por Sección (Racionalidad y Ahorro)", expanded=False):
-        st.markdown("""
-        Esta memoria analiza en tiempo real la base de datos oficial para recomendarte los materiales homologados con **mejor relación calidad/precio** por cada familia:
-        """)
-        col_mem1, col_mem2 = st.columns(2)
-        with col_mem1:
-            st.markdown("""
-            **🔲 1. Mecanismos (Enchufes e Interruptores):**
-            * 🥇 **Más Económica:** `Efapel MEC 21 + Apolo 5000` (~1,18 € / 1,35 €) *(Ahorro ~35%)*
-            * 🥈 **Económica Clásica:** `Simon 10` (~1,30 € / 1,60 €)
-            * 🥉 **Gama Media / Diseño:** `Schneider Asfora` (~2,40 € / 2,80 €)
-            * 💎 **Gama Alta:** `Simon 82 Detail / Niessen Zenit` (~5,50 € - 8,20 €)
-            
-            **⚡ 2. Cables y Conductores:**
-            * 🥇 **Más Económica:** `PVC Estándar (H07V-K)` (1.5mm² a 0,19 €/m | 2.5mm² a 0,33 €/m)
-            * 🛡️ **Máxima Seguridad / Ignífugo:** `Libre de Halógenos (H07Z1-K)` (1.5mm² a 0,24 €/m | 2.5mm² a 0,42 €/m)
-            """)
-        with col_mem2:
-            st.markdown("""
-            **🛡️ 3. Cuadro Eléctrico y Protecciones:**
-            * 🥇 **Más Económica:** `Chint / Solera` (Cuadro 12M a 10,80 € | PIAs a ~2,90 €)
-            * 🥈 **Gama Media Residencial:** `Schneider Resi9` (Cuadro 12M a 16,80 € | PIAs a ~4,50 €)
-            * 🥉 **Gama Profesional:** `Legrand Practibox S` (Cuadro 12M a 19,42 € | PIAs a ~5,80 €)
-            
-            **📏 4. Tubos y Canalizaciones:**
-            * 🥇 **Más Económica:** `Tubo Corrugado PVC 320N` (M20 a 0,28 €/m | M25 a 0,38 €/m)
-            * 🛡️ **Ignífugo Homologado:** `Tubo Libre de Halógenos 750N` (M20 a 0,52 €/m | M25 a 0,65 €/m)
-            
-            **🔌 5. Sistema de Conexión:**
-            * 🥇 **Más Económica:** `Clemas de tornillo tradicionales` (~0,45 €)
-            * ⚡ **Alta Rapidez / Confort:** `Conectores Rápidos Wago 221` (~0,95 €)
-            """)
-        
-        col_btn_ah1, col_btn_ah2 = st.columns([2.5, 1])
-        with col_btn_ah1:
-            st.caption("💡 *Puedes personalizar cualquier marca o proveedor en los selectores inferiores. Esta memoria te sirve de referencia constante para comparar costes.*")
-
-    # Selección de Marcas
-    st.markdown("#### 🔌 Selección de Marcas y Series Comerciales")
-    col_meca1, col_meca2 = st.columns(2)
-    with col_meca1:
-        st.markdown("**1️⃣ Mecanismos (Enchufes e Interruptores)**")
-        modo_seleccion = st.radio("Filtrar mecanismos por:", ["Por Clasificación de Gamas", "Por Marca Directa"], horizontal=True, key="modo_meca")
-        if modo_seleccion == "Por Clasificación de Gamas":
-            serie_mecanismos = st.selectbox(
-                "Selecciona la Gama / Serie:",
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Potencia, Escalones IGA y Configuración de Circuitos</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        col_pot1, col_pot2, col_pot3 = st.columns(3)
+        with col_pot1:
+            potencia_prevista_kw = st.selectbox(
+                "Potencia Prevista / Escalón REBT",
                 [
-                    "💡 Selección Racional Más Económica (Efapel MEC 21 / Apolo 5000 - Máximo Ahorro)",
-                    "Efapel MEC 21 / Apolo 5000 (Gama Económica / Base)",
-                    "Simon 10 (Gama Económica / Básica)",
-                    "Schneider Asfora (Gama Media)",
-                    "Simon 27 Play (Gama Estándar / Residencial)",
-                    "Simon 82 Detail (Gama Alta / Decorativa)",
-                    "Niessen Zenit (Gama Alta / Moderna)"
+                    "5.750 W (Básica - IGA 25A)",
+                    "7.360 W (Básica Ampliada - IGA 32A)",
+                    "9.200 W (Elevada - IGA 40A)",
+                    "11.500 W (Elevada - IGA 50A)",
+                    "14.490 W (Elevada - IGA 63A)"
                 ]
             )
+        with col_pot2:
+            tipo_cable_sel = st.selectbox(
+                "⚡ Tecnología de Cable",
+                [
+                    "Libre de Halógenos (H07Z1-K)",
+                    "PVC Normal / Estándar (H07V-K)"
+                ],
+                help="H07Z1-K: Cable ignífugo sin halógenos (alta seguridad / nueva normativa). H07V-K: Cable tradicional de PVC."
+            )
+        with col_pot3:
+            tipo_tubo_sel = st.selectbox(
+                "📏 Tecnología de Tubo",
+                [
+                    "Tubo Corrugado Normal / Estándar (PVC)",
+                    "Tubo Corrugado Libre de Halógenos (LH / Ignífugo)"
+                ],
+                help="Tubo PVC estándar: Solución económica para reformas ordinarias. Tubo LH: Tubo ignífugo libre de halógenos."
+            )
+
+        desdoblar_c4 = st.checkbox(
+            "⚙️ Desdoblar circuito C4 (Separar Lavadora/Lavavajillas de la línea del Termo en circuitos independientes)", 
+            value=False,
+            help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente."
+        )
+
+        if "5.750" in potencia_prevista_kw:
+            grado_electr = "Básica"
+            iga_amperaje = 25
+            num_circuitos_base = 5
+        elif "7.360" in potencia_prevista_kw:
+            grado_electr = "Básica"
+            iga_amperaje = 32
+            num_circuitos_base = 6
+        elif "9.200" in potencia_prevista_kw:
+            grado_electr = "Elevada"
+            iga_amperaje = 40
+            num_circuitos_base = 8
+        elif "11.500" in potencia_prevista_kw:
+            grado_electr = "Elevada"
+            iga_amperaje = 50
+            num_circuitos_base = 10
         else:
-            marcas_meca = sorted([str(m) for m in df_precios['Marca'].dropna().unique() if m not in ['Obramat', 'Leroy Merlin', 'General']])
-            serie_mecanismos = st.selectbox("Selecciona la Marca de Mecanismos:", marcas_meca if marcas_meca else ["Simon", "Schneider"])
+            grado_electr = "Elevada"
+            iga_amperaje = 63
+            num_circuitos_base = 12
 
-    with col_meca2:
-        st.markdown("**2️⃣ Protecciones y Cuadro Eléctrico**")
-        marcas_prot = sorted([str(m) for m in df_precios[df_precios['Familia / Categoria'].str.contains('Protecciones', case=False, na=False)]['Marca'].dropna().unique()])
-        if not marcas_prot:
-            marcas_prot = ["Schneider", "Chint", "Legrand"]
-        marca_protecciones = st.selectbox("Selecciona la Marca del Cuadro Eléctrico:", marcas_prot)
+        if desdoblar_c4:
+            num_circuitos_base += 1
 
-    tipo_conexion = st.radio(
-        "🔌 Sistema de Conexión en Cajas de Registro y Mecanismos:",
-        ["Fichas de Empalme / Clemas Tradicionales de Tornillo", "Conectores Rápidos Wago 221 (Profesional / Alta Calidad)"],
-        horizontal=True
-    )
+        st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos requeridos: **{num_circuitos_base}**")
 
-    col_m1, col_m2, col_m3 = st.columns(3)
-    with col_m1:
-        margen_comercial = st.number_input(
-            "Margen Comercial General (%)", 
-            min_value=0, max_value=200, value=50, step=5,
-            help="Puedes escribir directamente el número o usar las flechas para subir/bajar de 5 en 5."
+    # ==========================================
+    # SECCIÓN 2: MARCAS, SERIES Y MEMORIA ECONÓMICA
+    # ==========================================
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🔲 SECCIÓN 2: Selección de Marcas, Series de Mecanismos y Protecciones</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        with st.expander("💡 Ver Memoria Técnica y Comparativa Económica por Sección (Racionalidad y Ahorro)", expanded=False):
+            st.markdown("""
+            Esta memoria analiza en tiempo real la base de datos oficial para recomendarte los materiales homologados con **mejor relación calidad/precio** por cada familia:
+            """)
+            col_mem1, col_mem2 = st.columns(2)
+            with col_mem1:
+                st.markdown("""
+                **🔲 1. Mecanismos (Enchufes e Interruptores):**
+                * 🥇 **Más Económica:** `Efapel MEC 21 + Apolo 5000` (~1,18 € / 1,35 €) *(Ahorro ~35%)*
+                * 🥈 **Económica Clásica:** `Simon 10` (~1,30 € / 1,60 €)
+                * 🥉 **Gama Media / Diseño:** `Schneider Asfora` (~2,40 € / 2,80 €)
+                * 💎 **Gama Alta:** `Simon 82 Detail / Niessen Zenit` (~5,50 € - 8,20 €)
+                
+                **⚡ 2. Cables y Conductores:**
+                * 🥇 **Más Económica:** `PVC Estándar (H07V-K)` (1.5mm² a 0,19 €/m | 2.5mm² a 0,33 €/m)
+                * 🛡️ **Máxima Seguridad / Ignífugo:** `Libre de Halógenos (H07Z1-K)` (1.5mm² a 0,24 €/m | 2.5mm² a 0,42 €/m)
+                """)
+            with col_mem2:
+                st.markdown("""
+                **🛡️ 3. Cuadro Eléctrico y Protecciones:**
+                * 🥇 **Más Económica:** `Chint / Solera` (Cuadro 12M a 10,80 € | PIAs a ~2,90 €)
+                * 🥈 **Gama Media Residencial:** `Schneider Resi9` (Cuadro 12M a 16,80 € | PIAs a ~4,50 €)
+                * 🥉 **Gama Profesional:** `Legrand Practibox S` (Cuadro 12M a 19,42 € | PIAs a ~5,80 €)
+                
+                **📏 4. Tubos y Canalizaciones:**
+                * 🥇 **Más Económica:** `Tubo Corrugado PVC 320N` (M20 a 0,28 €/m | M25 a 0,38 €/m)
+                * 🛡️ **Ignífugo Homologado:** `Tubo Libre de Halógenos 750N` (M20 a 0,52 €/m | M25 a 0,65 €/m)
+                
+                **🔌 5. Sistema de Conexión:**
+                * 🥇 **Más Económica:** `Clemas de tornillo tradicionales` (~0,45 €)
+                * ⚡ **Alta Rapidez / Confort:** `Conectores Rápidos Wago 221` (~0,95 €)
+                """)
+
+        col_meca1, col_meca2 = st.columns(2)
+        with col_meca1:
+            st.markdown("**1️⃣ Mecanismos (Enchufes e Interruptores)**")
+            modo_seleccion = st.radio("Filtrar mecanismos por:", ["Por Clasificación de Gamas", "Por Marca Directa"], horizontal=True, key="modo_meca")
+            if modo_seleccion == "Por Clasificación de Gamas":
+                serie_mecanismos = st.selectbox(
+                    "Selecciona la Gama / Serie:",
+                    [
+                        "💡 Selección Racional Más Económica (Efapel MEC 21 / Apolo 5000 - Máximo Ahorro)",
+                        "Efapel MEC 21 / Apolo 5000 (Gama Económica / Base)",
+                        "Simon 10 (Gama Económica / Básica)",
+                        "Schneider Asfora (Gama Media)",
+                        "Simon 27 Play (Gama Estándar / Residencial)",
+                        "Simon 82 Detail (Gama Alta / Decorativa)",
+                        "Niessen Zenit (Gama Alta / Moderna)"
+                    ]
+                )
+            else:
+                marcas_meca = sorted([str(m) for m in df_precios['Marca'].dropna().unique() if m not in ['Obramat', 'Leroy Merlin', 'General']])
+                serie_mecanismos = st.selectbox("Selecciona la Marca de Mecanismos:", marcas_meca if marcas_meca else ["Simon", "Schneider"])
+
+        with col_meca2:
+            st.markdown("**2️⃣ Protecciones y Cuadro Eléctrico**")
+            marcas_prot = sorted([str(m) for m in df_precios[df_precios['Familia / Categoria'].str.contains('Protecciones', case=False, na=False)]['Marca'].dropna().unique()])
+            if not marcas_prot:
+                marcas_prot = ["Schneider", "Chint", "Legrand"]
+            marca_protecciones = st.selectbox("Selecciona la Marca del Cuadro Eléctrico:", marcas_prot)
+
+        tipo_conexion = st.radio(
+            "🔌 Sistema de Conexión en Cajas de Registro y Mecanismos:",
+            ["Fichas de Empalme / Clemas Tradicionales de Tornillo", "Conectores Rápidos Wago 221 (Profesional / Alta Calidad)"],
+            horizontal=True
         )
-    with col_m2:
-        porc_garantia = st.number_input(
-            "Colchón de Garantía en Materiales (%)", 
-            min_value=0, max_value=100, value=10, step=1,
-            help="Colchón adicional para imprevistos en materiales."
-        )
-    with col_m3:
-        iva_sel = st.selectbox("IVA Aplicado al Cliente", [10, 21], index=0)
 
-    st.markdown("#### 🧱 Criterio de Rozas, Techos, Operarios y Jornadas de Trabajo")
-    col_roz1, col_roz2 = st.columns(2)
-    with col_roz1:
-        hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True)
-    with col_roz2:
-        tipo_pared = st.selectbox(
-            "Tipo de Pared / Soporte",
+    # ==========================================
+    # SECCIÓN 3: MANO DE OBRA, TECHOS Y CONDICIONES ECONÓMICAS
+    # ==========================================
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⏱️ SECCIÓN 3: Mano de Obra, Rozas, Techos, Boletín CIE y Márgenes</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            margen_comercial = st.number_input(
+                "Margen Comercial General (%)", 
+                min_value=0, max_value=200, value=50, step=5,
+                help="Margen comercial sobre costes de materiales y mano de obra."
+            )
+        with col_m2:
+            porc_garantia = st.number_input(
+                "Colchón de Garantía en Materiales (%)", 
+                min_value=0, max_value=100, value=10, step=1,
+                help="Colchón adicional para imprevistos y reposición de materiales."
+            )
+        with col_m3:
+            iva_sel = st.selectbox("IVA Aplicado al Cliente", [10, 21], index=0)
+
+        col_roz1, col_roz2 = st.columns(2)
+        with col_roz1:
+            hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True)
+        with col_roz2:
+            tipo_pared = st.selectbox(
+                "Tipo de Pared / Soporte",
+                [
+                    "Ladrillo Hueco / Tabiquería seca (Fácil picado)", 
+                    "Ladrillo Perforado / Termoarcilla (Dureza media)", 
+                    "Hormigón / Estructura (Requiere rozadora y martillo pesado)",
+                    "Pladur / Panel de Yeso Laminado (Obra seca - Sin rozas, corte con sierra de vaso)"
+                ]
+            )
+
+        tipo_techo = st.selectbox(
+            "🏗️ Tipo de Techo / Forjado",
             [
-                "Ladrillo Hueco / Tabiquería seca (Fácil picado)", 
-                "Ladrillo Perforado / Termoarcilla (Dureza media)", 
-                "Hormigón / Estructura (Requiere rozadora y martillo pesado)",
-                "Pladur / Panel de Yeso Laminado (Obra seca - Sin rozas, corte con sierra de vaso)"
+                "Falso Techo de Pladur / Escayola (Cableado superior ágil - Menor rozado vertical de luz)",
+                "Techo Macizo / Hormigón o Viguetas (Exige rozado completo en paredes y techos para alumbrado)"
             ]
         )
 
-    tipo_techo = st.selectbox(
-        "🏗️ Tipo de Techo / Forjado",
-        [
-            "Falso Techo de Pladur / Escayola (Cableado superior ágil - Menor rozado vertical de luz)",
-            "Techo Macizo / Hormigón o Viguetas (Exige rozado completo en paredes y techos para alumbrado)"
-        ]
-    )
-
-    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-    with col_c1:
-        precio_hora = st.number_input("Precio Mano de Obra (€/h neto)", min_value=10.0, max_value=60.0, value=25.0, step=1.0)
-    with col_c2:
-        num_operarios = st.number_input("Nº Operarios", min_value=1, max_value=5, value=1, step=1)
-    with col_c3:
-        horas_jornada = st.number_input("Horas por Jornada / Día", min_value=4.0, max_value=12.0, value=8.0, step=0.5)
-    with col_c4:
-        precio_boletin_cie = st.number_input("Tarifa Ensayos + MTD + Boletín CIE (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, help="Tarifa profesional por verificaciones previas ITC-BT-05 (aislamiento con megóhmetro, disparo diferencial, continuidad y bucle de tierra), elaboración de Memoria Técnica de Diseño (MTD) y tramitación del Certificado CIE ante la DGEAIM Murcia.")
+        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+        with col_c1:
+            precio_hora = st.number_input("Precio Mano de Obra (€/h neto)", min_value=10.0, max_value=60.0, value=25.0, step=1.0)
+        with col_c2:
+            num_operarios = st.number_input("Nº Operarios", min_value=1, max_value=5, value=1, step=1)
+        with col_c3:
+            horas_jornada = st.number_input("Horas por Jornada / Día", min_value=4.0, max_value=12.0, value=8.0, step=0.5)
+        with col_c4:
+            precio_boletin_cie = st.number_input("Tarifa Ensayos + MTD + Boletín CIE (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, help="Tarifa profesional por verificaciones previas ITC-BT-05 (aislamiento con megóhmetro, disparo diferencial, continuidad y bucle de tierra), elaboración de Memoria Técnica de Diseño (MTD) y tramitación del Certificado CIE ante la DGEAIM Murcia.")
 
     st.markdown("---")
 
     # ==========================================
-    # GESTIÓN DINÁMICA DE ESTANCIAS Y MÉTRICA DE m²
+    # SECCIÓN 4: GESTIÓN DINÁMICA DE ESTANCIAS Y MÉTRICA DE m²
     # ==========================================
     if 'estancias_pro' not in st.session_state:
         st.session_state.estancias_pro = [
@@ -892,136 +891,134 @@ def app():
             {"nombre": "Pasillo", "m2": 7.0, "altura": 2.6, "distancia_cuadro": 3.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
         ]
 
-    st.subheader("📋 Estancias, Distancia Real al Cuadro (Pasillo) y Puntos")
-    
-    estancias_activas_temp = [e for e in st.session_state.estancias_pro]
-    sup_total_actual = sum([e["m2"] for e in estancias_activas_temp])
-    
-    col_met1, col_met2, col_met3 = st.columns(3)
-    with col_met1:
-        st.metric(label="📐 Superficie Útil Total", value=f"{sup_total_actual:.1f} m²")
-    with col_met2:
-        st.metric(label="⚖️ Límite ITC-BT-25 Básica", value="160.0 m²")
-    with col_met3:
-        estado_sup = "🟢 Correcto (Básica)" if sup_total_actual <= 160.0 else "🔴 Supera 160 m² (Exige Elevada)"
-        st.metric(label="🔍 Estado Normativo m²", value=estado_sup)
-
-    st.markdown("Configura la distancia lineal desde el Cuadro General hasta la caja de registro de cada estancia.")
-
-    with st.expander("➕ Añadir Nueva Estancia a la Vivienda"):
-        with st.form("form_nueva_estancia"):
-            col_n1, col_n2, col_n3, col_n4 = st.columns([3, 2, 2, 2])
-            with col_n1:
-                nuevo_nombre = st.text_input("Nombre de la Estancia (Ej: Terraza, Despacho)")
-            with col_n2:
-                nuevo_m2 = st.number_input("Superficie (m²)", min_value=1.0, value=10.0, step=0.5)
-            with col_n3:
-                nuevo_alt = st.number_input("Altura (m)", min_value=2.0, max_value=5.0, value=2.6, step=0.1)
-            with col_n4:
-                nueva_dist = st.number_input("Dist. al Cuadro (m)", min_value=1.0, max_value=40.0, value=10.0, step=1.0)
-            
-            if st.form_submit_button("Agregar Estancia"):
-                if nuevo_nombre:
-                    st.session_state.estancias_pro.append({
-                        "nombre": nuevo_nombre, "m2": nuevo_m2, "altura": nuevo_alt, "distancia_cuadro": nueva_dist,
-                        "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0
-                    })
-                    st.success(f"Estancia '{nuevo_nombre}' añadida correctamente.")
-                    st.rerun()
-                else:
-                    st.warning("Introduce un nombre válido para la estancia.")
-
-    estancias_activas = []
-
-    # Encabezados de las columnas de estancias
-    col_hdr = st.columns([3, 1.5, 1.5, 2, 0.8, 0.8])
-    with col_hdr[0]:
-        st.markdown("**🏠 Estancia**")
-    with col_hdr[1]:
-        st.markdown("**📐 Superficie (m²)**")
-    with col_hdr[2]:
-        st.markdown("**📏 Altura (m)**")
-    with col_hdr[3]:
-        st.markdown("**⚡ Distancia al Cuadro (m)**")
-    with col_hdr[4]:
-        st.markdown("**Incluir**")
-    with col_hdr[5]:
-        st.markdown("**Borrar**")
-
-    for i, est in enumerate(st.session_state.estancias_pro):
-        nombre_est = est["nombre"].lower()
-        es_banio = "baño" in nombre_est or "aseo" in nombre_est
-        es_cocina = "cocina" in nombre_est
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏠 SECCIÓN 4: Gestión de Estancias, Superficies (m²) y Distancias al Cuadro</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        estancias_activas_temp = [e for e in st.session_state.estancias_pro]
+        sup_total_actual = sum([e["m2"] for e in estancias_activas_temp])
         
-        circuitos_asociados = "C1 (Luz) + C2 (Enchufes generales 16A)"
-        if es_banio:
-            circuitos_asociados = "C1 (Luz) + C5 (Tomas húmedas baño)"
-        elif es_cocina:
-            c4_txt = " + C4-A & C4-B (Desdoblados)" if desdoblar_c4 else " + C4 (Lavadora/Termo)"
-            circuitos_asociados = f"C1 (Luz) + C3 (Horno/Vitro) {c4_txt} + C5 (Encimera)"
+        col_met1, col_met2, col_met3 = st.columns(3)
+        with col_met1:
+            st.metric(label="📐 Superficie Útil Total", value=f"{sup_total_actual:.1f} m²")
+        with col_met2:
+            st.metric(label="⚖️ Límite ITC-BT-25 Básica", value="160.0 m²")
+        with col_met3:
+            estado_sup = "🟢 Correcto (Básica)" if sup_total_actual <= 160.0 else "🔴 Supera 160 m² (Exige Elevada)"
+            st.metric(label="🔍 Estado Normativo m²", value=estado_sup)
 
-        with st.container():
-            cols = st.columns([3, 1.5, 1.5, 2, 0.8, 0.8])
-            with cols[0]:
-                est["nombre"] = st.text_input(f"Nombre {i}", value=est["nombre"], key=f"est_nom_{i}", label_visibility="collapsed")
-            with cols[1]:
-                est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"est_m2_{i}", label_visibility="collapsed")
-            with cols[2]:
-                est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"est_alt_{i}", label_visibility="collapsed")
-            with cols[3]:
-                est["distancia_cuadro"] = st.number_input(f"Dist {i}", value=est.get("distancia_cuadro", 10.0), min_value=1.0, max_value=40.0, step=1.0, key=f"est_dist_{i}", label_visibility="collapsed")
-            with cols[4]:
-                incluir = st.checkbox(f"Inc {i}", value=True, key=f"est_inc_{i}", label_visibility="collapsed")
-            with cols[5]:
-                if st.button("🗑️", key=f"del_est_{i}"):
-                    st.session_state.estancias_pro.pop(i)
-                    st.rerun()
+        st.caption("Configura la distancia lineal desde el Cuadro General hasta la caja de registro de cada estancia para el cálculo exacto de tubos y cableado.")
 
-            with st.expander(f"⚙️ Circuitos REBT y Puntos Extra en: {est['nombre']}"):
-                st.info(f"⚡ **Circuitos REBT Asignados:** `{circuitos_asociados}` | 📏 **Distancia al Cuadro:** `{est['distancia_cuadro']} m`")
+        with st.expander("➕ Añadir Nueva Estancia a la Vivienda", expanded=False):
+            with st.form("form_nueva_estancia"):
+                col_n1, col_n2, col_n3, col_n4 = st.columns([3, 2, 2, 2])
+                with col_n1:
+                    nuevo_nombre = st.text_input("Nombre de la Estancia (Ej: Terraza, Despacho)")
+                with col_n2:
+                    nuevo_m2 = st.number_input("Superficie (m²)", min_value=1.0, value=10.0, step=0.5)
+                with col_n3:
+                    nuevo_alt = st.number_input("Altura (m)", min_value=2.0, max_value=5.0, value=2.6, step=0.1)
+                with col_n4:
+                    nueva_dist = st.number_input("Dist. al Cuadro (m)", min_value=1.0, max_value=40.0, value=10.0, step=1.0)
                 
-                col_p1, col_p2, col_p3 = st.columns(3)
-                with col_p1:
-                    est["extra_schuko"] = st.number_input(f"Schukos Extra", min_value=-5, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
-                with col_p2:
-                    est["extra_luz"] = st.number_input(f"Puntos Luz Extra", min_value=-3, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
-                with col_p3:
-                    est["extra_rj45"] = st.number_input(f"Tomas Red/TV Extra", min_value=-2, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
+                if st.form_submit_button("Agregar Estancia", type="primary"):
+                    if nuevo_nombre:
+                        st.session_state.estancias_pro.append({
+                            "nombre": nuevo_nombre, "m2": nuevo_m2, "altura": nuevo_alt, "distancia_cuadro": nueva_dist,
+                            "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0
+                        })
+                        st.success(f"Estancia '{nuevo_nombre}' añadida correctamente.")
+                        st.rerun()
+                    else:
+                        st.warning("Introduce un nombre válido para la estancia.")
 
-        if incluir:
-            estancias_activas.append(est)
+        estancias_activas = []
 
-    st.markdown("---")
+        # Encabezados de las columnas de estancias
+        col_hdr = st.columns([3, 1.5, 1.5, 2, 0.8, 0.8])
+        with col_hdr[0]:
+            st.markdown("**🏠 Estancia**")
+        with col_hdr[1]:
+            st.markdown("**📐 Superficie (m²)**")
+        with col_hdr[2]:
+            st.markdown("**📏 Altura (m)**")
+        with col_hdr[3]:
+            st.markdown("**⚡ Dist. Cuadro (m)**")
+        with col_hdr[4]:
+            st.markdown("**Incluir**")
+        with col_hdr[5]:
+            st.markdown("**Borrar**")
+
+        for i, est in enumerate(st.session_state.estancias_pro):
+            nombre_est = est["nombre"].lower()
+            es_banio = "baño" in nombre_est or "aseo" in nombre_est
+            es_cocina = "cocina" in nombre_est
+            
+            circuitos_asociados = "C1 (Luz) + C2 (Enchufes generales 16A)"
+            if es_banio:
+                circuitos_asociados = "C1 (Luz) + C5 (Tomas húmedas baño)"
+            elif es_cocina:
+                c4_txt = " + C4-A & C4-B (Desdoblados)" if desdoblar_c4 else " + C4 (Lavadora/Termo)"
+                circuitos_asociados = f"C1 (Luz) + C3 (Horno/Vitro) {c4_txt} + C5 (Encimera)"
+
+            with st.container():
+                cols = st.columns([3, 1.5, 1.5, 2, 0.8, 0.8])
+                with cols[0]:
+                    est["nombre"] = st.text_input(f"Nombre {i}", value=est["nombre"], key=f"est_nom_{i}", label_visibility="collapsed")
+                with cols[1]:
+                    est["m2"] = st.number_input(f"m2 {i}", value=est["m2"], min_value=1.0, step=0.5, key=f"est_m2_{i}", label_visibility="collapsed")
+                with cols[2]:
+                    est["altura"] = st.number_input(f"Alt {i}", value=est["altura"], min_value=2.0, max_value=5.0, step=0.1, key=f"est_alt_{i}", label_visibility="collapsed")
+                with cols[3]:
+                    est["distancia_cuadro"] = st.number_input(f"Dist {i}", value=est.get("distancia_cuadro", 10.0), min_value=1.0, max_value=40.0, step=1.0, key=f"est_dist_{i}", label_visibility="collapsed")
+                with cols[4]:
+                    incluir = st.checkbox(f"Inc {i}", value=True, key=f"est_inc_{i}", label_visibility="collapsed")
+                with cols[5]:
+                    if st.button("🗑️", key=f"del_est_{i}"):
+                        st.session_state.estancias_pro.pop(i)
+                        st.rerun()
+
+                with st.expander(f"⚙️ Circuitos REBT y Puntos Extra en: {est['nombre']}"):
+                    st.info(f"⚡ **Circuitos REBT Asignados:** `{circuitos_asociados}` | 📏 **Distancia al Cuadro:** `{est['distancia_cuadro']} m`")
+                    
+                    col_p1, col_p2, col_p3 = st.columns(3)
+                    with col_p1:
+                        est["extra_schuko"] = st.number_input(f"Schukos Extra", min_value=-5, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
+                    with col_p2:
+                        est["extra_luz"] = st.number_input(f"Puntos Luz Extra", min_value=-3, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
+                    with col_p3:
+                        est["extra_rj45"] = st.number_input(f"Tomas Red/TV Extra", min_value=-2, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
+
+            if incluir:
+                estancias_activas.append(est)
 
     # ==========================================
-    # FISCALIZADOR TÉCNICO REBT (INSPECTOR IA)
+    # SECCIÓN 5: FISCALIZADOR TÉCNICO REBT (INSPECTOR IA)
     # ==========================================
-    st.subheader("🛡️ Inspector Técnico REBT (Fiscalización en Vivo - ITC-BT-25)")
+    st.markdown('<div class="section-header-amber"><h4 style="margin:0; color:#92400e;">🛡️ SECCIÓN 5: Inspector Técnico REBT (Fiscalización en Vivo ITC-BT-25)</h4></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        sup_total_calculada = sum([e["m2"] for e in estancias_activas])
+        tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
+        tiene_banio = any("baño" in e["nombre"].lower() or "aseo" in e["nombre"].lower() for e in estancias_activas)
 
-    sup_total_calculada = sum([e["m2"] for e in estancias_activas])
-    tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
-    tiene_banio = any("baño" in e["nombre"].lower() or "aseo" in e["nombre"].lower() for e in estancias_activas)
-
-    alertas_inspector = []
-    
-    if sup_total_calculada > 160.0 and grado_electr == "Básica":
-        alertas_inspector.append(f"🔴 **Incumplimiento ITC-BT-25:** La superficie útil total de la vivienda ({sup_total_calculada:.1f} m²) supera los 160 m² estipulados para electrificación básica. El reglamento obliga a utilizar **Electrificación Elevada**.")
-
-    if not tiene_cocina:
-        alertas_inspector.append("🔴 **Incumplimiento ITC-BT-25:** No se ha detectado ninguna estancia catalogada como 'Cocina'. El reglamento exige obligatoriamente los circuitos de fuerza y cocina.")
-
-    if not tiene_banio:
-        alertas_inspector.append("🟠 **Aviso REBT:** No se ha detectado ningún cuarto de baño o aseo. Se recomienda incluir al menos un circuito C5 para zonas húmedas.")
-
-    if alertas_inspector:
-        for alerta in alertas_inspector:
-            st.error(alerta)
+        alertas_inspector = []
         
-        forzar_inspector = st.checkbox("⚠️ Forzar ejecución del presupuesto bajo responsabilidad del instalador autorizado", value=False)
-        if not forzar_inspector:
-            st.stop()
-    else:
-        st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25 y los escalones de potencia IGA.")
+        if sup_total_calculada > 160.0 and grado_electr == "Básica":
+            alertas_inspector.append(f"🔴 **Incumplimiento ITC-BT-25:** La superficie útil total de la vivienda ({sup_total_calculada:.1f} m²) supera los 160 m² estipulados para electrificación básica. El reglamento obliga a utilizar **Electrificación Elevada**.")
+
+        if not tiene_cocina:
+            alertas_inspector.append("🔴 **Incumplimiento ITC-BT-25:** No se ha detectado ninguna estancia catalogada como 'Cocina'. El reglamento exige obligatoriamente los circuitos de fuerza y cocina.")
+
+        if not tiene_banio:
+            alertas_inspector.append("🟠 **Aviso REBT:** No se ha detectado ningún cuarto de baño o aseo. Se recomienda incluir al menos un circuito C5 para zonas húmedas.")
+
+        if alertas_inspector:
+            for alerta in alertas_inspector:
+                st.error(alerta)
+            
+            forzar_inspector = st.checkbox("⚠️ Forzar ejecución del presupuesto bajo responsabilidad del instalador autorizado", value=False)
+            if not forzar_inspector:
+                st.stop()
+        else:
+            st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25 y los escalones de potencia IGA.")
 
     st.markdown("---")
 
@@ -1872,20 +1869,20 @@ def app():
         )
 
         # ==========================================
-        # SELECTOR DE MODO DE VISTA E IMPRESIÓN
+        # SECCIÓN 6: SELECTOR DE MODO DE VISTA E IMPRESIÓN
         # ==========================================
-        st.markdown("---")
-        modo_impresion = st.radio(
-            "🖨️ SELECCIONA EL MODO DE VISTA:",
-            [
-                "🛠️ 1. Panel Interno y Rentabilidad (Exclusivo para ti - Autónomo)",
-                "🛒 2. Orden de Compra y Acopio de Materiales (Almacén / Tienda)",
-                "📄 3. Vista Comercial (Para entregar al Cliente)",
-                "📐 4. Esquema Unifilar Oficial para Industria (Región de Murcia - DGEAIM)"
-            ],
-            horizontal=True
-        )
-        st.markdown("---")
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 6: Selector de Documentos Oficiales y Paneles de Resultados</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            modo_impresion = st.radio(
+                "Selecciona el documento o panel a consultar / exportar:",
+                [
+                    "🛠️ 1. Panel Interno y Rentabilidad (Exclusivo para ti - Autónomo)",
+                    "🛒 2. Orden de Compra y Acopio de Materiales (Almacén / Tienda)",
+                    "📄 3. Vista Comercial (Para entregar al Cliente)",
+                    "📐 4. Esquema Unifilar Oficial para Industria (Región de Murcia - DGEAIM)"
+                ],
+                horizontal=True
+            )
 
         if modo_impresion.startswith("🛠️"):
             st.header("🔒 Panel Interno de Trabajo, Distancias y Rentabilidad")
