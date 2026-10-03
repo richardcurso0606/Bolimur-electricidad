@@ -867,13 +867,15 @@ def app():
         ]
     )
 
-    col_c1, col_c2, col_c3 = st.columns(3)
+    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
     with col_c1:
         precio_hora = st.number_input("Precio Mano de Obra (€/h neto)", min_value=10.0, max_value=60.0, value=25.0, step=1.0)
     with col_c2:
         num_operarios = st.number_input("Nº Operarios", min_value=1, max_value=5, value=1, step=1)
     with col_c3:
         horas_jornada = st.number_input("Horas por Jornada / Día", min_value=4.0, max_value=12.0, value=8.0, step=0.5)
+    with col_c4:
+        precio_boletin_cie = st.number_input("Tarifa Ensayos + MTD + Boletín CIE (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, help="Tarifa profesional por verificaciones previas ITC-BT-05 (aislamiento con megóhmetro, disparo diferencial, continuidad y bucle de tierra), elaboración de Memoria Técnica de Diseño (MTD) y tramitación del Certificado CIE ante la DGEAIM Murcia.")
 
     st.markdown("---")
 
@@ -1253,10 +1255,22 @@ def app():
             precio_venta_estancia = venta_mat_estancia + venta_mo_estancia
             subtotal_neto_comercial += precio_venta_estancia
 
+            # Desglose claro y específico del equipamiento y mecanismos de esta estancia
+            items_est_txt = []
+            for m in mecanismos_est:
+                if m["cant"] > 0:
+                    items_est_txt.append(f"{m['cant']}x {m['nombre']}")
+            if n_marcos > 0:
+                items_est_txt.append(f"{n_marcos}x Marcos")
+
+            detalle_mec_estancia = ", ".join(items_est_txt)
+            if not detalle_mec_estancia:
+                detalle_mec_estancia = f"Instalación interior ({total_mecanismos} puntos)"
+
             comercial_estancias.append({
                 "Estancia": est["nombre"],
                 "Superficie": f"{m2} m²",
-                "Detalle Comercial": f"Instalación REBT ({potencia_prevista_kw}) | Techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}",
+                "Detalle Comercial": detalle_mec_estancia,
                 "Importe Venta (€)": round(precio_venta_estancia, 2)
             })
 
@@ -1287,6 +1301,11 @@ def app():
                 "cable_utp": est_utp
             })
 
+        # Mano de obra especializada para el Cuadro General CGMP
+        # Montaje en envolvente, fijación DIN, peinado de conductores, peines de conexión, rotulación de circuitos y pruebas
+        horas_cuadro = 3.0 if grado_electr == "Elevada" else 2.5
+        coste_mo_cuadro = horas_cuadro * precio_hora
+        horas_totales_obra += horas_cuadro
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
         horas_totales_equipo = horas_totales_obra / num_operarios
         dias_estimados = horas_totales_equipo / horas_jornada
@@ -1294,10 +1313,12 @@ def app():
         n_difs = 2 if grado_electr == "Elevada" else 1
         n_pias = max(num_circuitos_base, len(estancias_activas))
         coste_cuadro_neto = p_iga + (n_difs * p_id) + (n_pias * p_pia) + p_caja_cuadro
-        venta_cuadro_neto = coste_cuadro_neto * mult_comercial * mult_garantia_mat
-        benef_cuadro = venta_cuadro_neto - coste_cuadro_neto
+        venta_cuadro_mat = coste_cuadro_neto * mult_comercial * mult_garantia_mat
+        venta_cuadro_mo = coste_mo_cuadro * mult_comercial
+        venta_cuadro_neto = venta_cuadro_mat + venta_cuadro_mo
+        benef_cuadro = venta_cuadro_neto - (coste_cuadro_neto + coste_mo_cuadro)
 
-        subtotal_general_neto = subtotal_neto_comercial + venta_cuadro_neto
+        subtotal_general_neto = subtotal_neto_comercial + venta_cuadro_neto + float(precio_boletin_cie) + sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', []))
         cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
         total_cliente = subtotal_general_neto + cuota_iva
 
@@ -1614,18 +1635,18 @@ def app():
         coste_cables_tot = (global_15_az_m * p_15_az) + (global_15_ne_m * p_15_ne) + (global_15_ma_m * p_15_ma) + (global_15_gr_m * p_15_gr) + (global_15_tt_m * p_15_tt) + (global_25_az_m * p_25_az) + (global_25_ne_m * p_25_ne) + (global_25_tt_m * p_25_tt) + (global_utp_m * p_utp)
         coste_mecanismos_marcos_tot = sum(m["cant"] * m["precio"] for est_x in materiales_por_estancia for m in est_x["mecanismos"]) + (global_marcos_uds * p_marco)
 
-        venta_cap1_cgmp = coste_cuadro_neto * mult_comercial * mult_garantia_mat
+        venta_cap1_cgmp = venta_cuadro_neto
         venta_cap2_canalizacion = (coste_tubos_cajas_tot * mult_comercial * mult_garantia_mat) + ((sum_h_rozas + sum_h_tubos) * precio_hora * mult_comercial)
         venta_cap3_cableado = (coste_cables_tot * mult_comercial * mult_garantia_mat) + (sum_h_cable * precio_hora * mult_comercial)
         venta_cap4_mecanismos = (coste_mecanismos_marcos_tot * mult_comercial * mult_garantia_mat) + (sum_h_mec * precio_hora * mult_comercial)
-        venta_cap5_boletin = 0.0
+        venta_cap5_boletin = float(precio_boletin_cie)
         venta_cap6_manuales = sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', []))
 
         capitulos_presupuesto = [
             {
                 "cap": "CAP. 01",
                 "titulo": "Cuadro General de Mando y Protección (CGMP)",
-                "desc": f"Suministro e instalación de cuadro general empotrado, IGA {iga_amperaje}A 6kA, protector de sobretensiones permanentes y transitorias (POP+DPS), {n_difs}x diferencial(es) 40A/30mA y {n_pias}x PIAs magnetotérmicos de protección según ITC-BT-25.",
+                "desc": f"Suministro e instalación de cuadro general empotrado, IGA {iga_amperaje}A 6kA, protector de sobretensiones permanentes y transitorias (POP+DPS), {n_difs}x diferencial(es) 40A/30mA y {n_pias}x PIAs magnetotérmicos de protección según ITC-BT-25, incluido montaje, peinado y conexionado integral ({horas_cuadro:.1f} h MO).",
                 "importe": round(venta_cap1_cgmp, 2)
             },
             {
@@ -1649,7 +1670,7 @@ def app():
             {
                 "cap": "CAP. 05",
                 "titulo": "Ensayos Reglamentarios, MTD y Tramitación Boletín Oficial CIE",
-                "desc": "Verificaciones y ensayos ITC-BT-05 (aislamiento, disparo diferenciales, continuidad de tierra), redacción de Memoria Técnica de Diseño (MTD) y tramitación del Certificado de Instalación Eléctrica oficial (CIE) ante la DGEAIM de la Región de Murcia.",
+                "desc": "Verificaciones y ensayos ITC-BT-05 (aislamiento con megóhmetro, disparo de diferenciales, continuidad y bucle de tierra), redacción de Memoria Técnica de Diseño (MTD) y tramitación telemática oficial del Certificado de Instalación Eléctrica (CIE) ante la DGEAIM de la Región de Murcia.",
                 "importe": round(venta_cap5_boletin, 2)
             }
         ]
