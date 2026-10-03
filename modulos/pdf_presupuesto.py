@@ -443,6 +443,12 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
             Paragraph(f"{orden_compra_data.get('serie_mecanismos', 'Estándar')} | {orden_compra_data.get('marca_protecciones', 'Schneider')}", body_style),
             Paragraph("<b>Instalación REBT:</b>", body_style),
             Paragraph(str(orden_compra_data.get("potencia_kw", "5.750 W")), body_style)
+        ],
+        [
+            Paragraph("<b>Tecnología Cable/Tubo:</b>", body_style),
+            Paragraph(f"Cable: {orden_compra_data.get('tipo_cable', 'H07Z1-K')} | Tubo: {orden_compra_data.get('tipo_tubo', 'PVC')}", body_style),
+            Paragraph("<b>Estado Normativa:</b>", body_style),
+            Paragraph("REBT ITC-BT-25 / 19", body_style)
         ]
     ]
 

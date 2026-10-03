@@ -71,6 +71,8 @@ def exportar_excel_orden_compra(df_orden_compra, total_neto, cuota_iva, total_co
             {"Concepto": "Empresa / Instalador", "Valor": f"{proyecto_info.get('empresa', '')} - {proyecto_info.get('proyectista', '')}"},
             {"Concepto": "Fecha de Orden", "Valor": proyecto_info.get('fecha', '')},
             {"Concepto": "Potencia Prevista", "Valor": proyecto_info.get('potencia_kw', '')},
+            {"Concepto": "Tecnología de Cable", "Valor": proyecto_info.get('tipo_cable', '')},
+            {"Concepto": "Tecnología de Tubo", "Valor": proyecto_info.get('tipo_tubo', '')},
             {"Concepto": "Serie Mecanismos", "Valor": proyecto_info.get('serie_mecanismos', '')},
             {"Concepto": "Marca Protecciones", "Valor": proyecto_info.get('marca_protecciones', '')},
             {"Concepto": "Total Materiales S/IVA (€)", "Valor": round(total_neto, 2)},
@@ -184,6 +186,95 @@ def app():
             
         nombre_no_enc = f"{main_kw} {sub_kw or ''}".strip()
         return 0.45, "Por catalogar", f"⚠️ [NO ENCONTRADO EN BD]: {nombre_no_enc} (Tarifa estimada 0.45€)", False, -1
+
+    def buscar_tubo_por_tipo(df, diametro, tipo_tubo):
+        diam_lower = diametro.lower()
+        es_lh = 'libre de halógenos' in tipo_tubo.lower() or 'lh' in tipo_tubo.lower() or 'ignífugo' in tipo_tubo.lower()
+        mejores = []
+
+        for idx, row in df.iterrows():
+            desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+            cat = str(row.get('Familia / Categoria', '')).strip().lower()
+            if 'canalización' in cat or 'tubo' in desc:
+                if 'corrugado' in desc and diam_lower in desc:
+                    desc_is_lh = 'libre' in desc or 'halógeno' in desc or 'lh' in desc
+                    if es_lh and desc_is_lh:
+                        try:
+                            p = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            mejores.append((p, prov, art_desc, idx + 2))
+                        except:
+                            pass
+                    elif not es_lh and not desc_is_lh:
+                        try:
+                            p = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            mejores.append((p, prov, art_desc, idx + 2))
+                        except:
+                            pass
+
+        if mejores:
+            mejores.sort(key=lambda x: x[0])
+            return mejores[0][0], mejores[0][1], mejores[0][2], True, mejores[0][3]
+
+        return (0.45 if es_lh else 0.25), "Obramat", f"Tubo Corrugado {diametro} ({'LH' if es_lh else 'PVC'})", False, -1
+
+    def buscar_cable_por_tipo(df, seccion, color, tipo_cable):
+        sec_lower = seccion.lower()
+        col_lower = color.lower()
+        es_lh = 'libre de halógenos' in tipo_cable.lower() or 'h07z1' in tipo_cable.lower()
+        mejores = []
+
+        for idx, row in df.iterrows():
+            desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+            cat = str(row.get('Familia / Categoria', '')).strip().lower()
+            if 'conductor' in cat or 'cable' in desc:
+                if sec_lower in desc and col_lower in desc:
+                    desc_is_lh = 'h07z1' in desc or 'libre' in desc or 'halógeno' in desc
+                    if es_lh and desc_is_lh:
+                        try:
+                            p = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            mejores.append((p, prov, art_desc, idx + 2))
+                        except:
+                            pass
+                    elif not es_lh and not desc_is_lh:
+                        try:
+                            p = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            mejores.append((p, prov, art_desc, idx + 2))
+                        except:
+                            pass
+
+        if mejores:
+            mejores.sort(key=lambda x: x[0])
+            return mejores[0][0], mejores[0][1], mejores[0][2], True, mejores[0][3]
+
+        # Fallback si falta algún color específico
+        for idx, row in df.iterrows():
+            desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+            cat = str(row.get('Familia / Categoria', '')).strip().lower()
+            if 'conductor' in cat or 'cable' in desc:
+                if sec_lower in desc:
+                    desc_is_lh = 'h07z1' in desc or 'libre' in desc or 'halógeno' in desc
+                    if (es_lh and desc_is_lh) or (not es_lh and not desc_is_lh):
+                        try:
+                            p = float(row['Precio S/IVA (€)'])
+                            prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                            art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                            mejores.append((p, prov, f"{art_desc} ({color.capitalize()})", idx + 2))
+                        except:
+                            pass
+
+        if mejores:
+            mejores.sort(key=lambda x: x[0])
+            return mejores[0][0], mejores[0][1], mejores[0][2], True, mejores[0][3]
+
+        return (0.42 if '2.5' in seccion else 0.24), "Obramat", f"Cable {seccion} {color} ({tipo_cable})", False, -1
 
     def buscar_mecanismo_por_filtro(df, tipo, modo_sel, valor_sel):
         kw_map = {
@@ -410,10 +501,10 @@ def app():
     st.markdown("---")
     st.subheader("⚙️ Parámetros de Potencia, Escalones IGA y Configuración de Circuitos")
 
-    col_pot1, col_pot2 = st.columns(2)
+    col_pot1, col_pot2, col_pot3 = st.columns(3)
     with col_pot1:
         potencia_prevista_kw = st.selectbox(
-            "Selecciona la Potencia Prevista / Escalón REBT",
+            "Potencia Prevista / Escalón REBT",
             [
                 "5.750 W (Básica - IGA 25A)",
                 "7.360 W (Básica Ampliada - IGA 32A)",
@@ -424,8 +515,21 @@ def app():
         )
     with col_pot2:
         tipo_cable_sel = st.selectbox(
-            "Tecnología de Cableado",
-            ["Libre de Halógenos (H07Z1-K)", "PVC Normal / Estándar (H07V-K)"]
+            "⚡ Tecnología de Cable",
+            [
+                "Libre de Halógenos (H07Z1-K)",
+                "PVC Normal / Estándar (H07V-K)"
+            ],
+            help="H07Z1-K: Cable ignífugo sin halógenos (alta seguridad / nueva normativa). H07V-K: Cable tradicional de PVC."
+        )
+    with col_pot3:
+        tipo_tubo_sel = st.selectbox(
+            "📏 Tecnología de Tubo",
+            [
+                "Tubo Corrugado Normal / Estándar (PVC)",
+                "Tubo Corrugado Libre de Halógenos (LH / Ignífugo)"
+            ],
+            help="Tubo PVC estándar: Solución económica para reformas ordinarias. Tubo LH: Tubo ignífugo libre de halógenos."
         )
 
     desdoblar_c4 = st.checkbox(
@@ -696,22 +800,22 @@ def app():
             st.warning("Selecciona al menos una estancia.")
             return
 
-        p_tubo20, prov_tubo20, desc_tubo20, ok_tubo20, fila_tubo20 = buscar_mas_economico(df_precios, 'm20', 'corrugado')
-        p_tubo25, prov_tubo25, desc_tubo25, ok_tubo25, fila_tubo25 = buscar_mas_economico(df_precios, 'm25', 'corrugado')
+        p_tubo20, prov_tubo20, desc_tubo20, ok_tubo20, fila_tubo20 = buscar_tubo_por_tipo(df_precios, 'm20', tipo_tubo_sel)
+        p_tubo25, prov_tubo25, desc_tubo25, ok_tubo25, fila_tubo25 = buscar_tubo_por_tipo(df_precios, 'm25', tipo_tubo_sel)
 
         p_caja_mec, prov_caja_mec, desc_caja_mec, ok_caja_mec, fila_caja_mec = buscar_mas_economico(df_precios, '67mm', 'mecanismos')
         p_caja_reg, prov_caja_reg, desc_caja_reg, ok_caja_reg, fila_caja_reg = buscar_mas_economico(df_precios, '100x100', 'registro')
         
-        p_15_az, prov_15_az, desc_15_az, ok_15_az, fila_15_az = buscar_mas_economico(df_precios, '1.5 mm²', 'azul')
-        p_15_ne, prov_15_ne, desc_15_ne, ok_15_ne, fila_15_ne = buscar_mas_economico(df_precios, '1.5 mm²', 'negro')
-        p_15_ma, prov_15_ma, desc_15_ma, ok_15_ma, fila_15_ma = buscar_mas_economico(df_precios, '1.5 mm²', 'marrón')
-        p_15_gr, prov_15_gr, desc_15_gr, ok_15_gr, fila_15_gr = buscar_mas_economico(df_precios, '1.5 mm²', 'gris')
-        p_15_tt, prov_15_tt, desc_15_tt, ok_15_tt, fila_15_tt = buscar_mas_economico(df_precios, '1.5 mm²', 'amarillo')
+        p_15_az, prov_15_az, desc_15_az, ok_15_az, fila_15_az = buscar_cable_por_tipo(df_precios, '1.5 mm²', 'azul', tipo_cable_sel)
+        p_15_ne, prov_15_ne, desc_15_ne, ok_15_ne, fila_15_ne = buscar_cable_por_tipo(df_precios, '1.5 mm²', 'negro', tipo_cable_sel)
+        p_15_ma, prov_15_ma, desc_15_ma, ok_15_ma, fila_15_ma = buscar_cable_por_tipo(df_precios, '1.5 mm²', 'marrón', tipo_cable_sel)
+        p_15_gr, prov_15_gr, desc_15_gr, ok_15_gr, fila_15_gr = buscar_cable_por_tipo(df_precios, '1.5 mm²', 'gris', tipo_cable_sel)
+        p_15_tt, prov_15_tt, desc_15_tt, ok_15_tt, fila_15_tt = buscar_cable_por_tipo(df_precios, '1.5 mm²', 'amarillo', tipo_cable_sel)
 
-        p_25_az, prov_25_az, desc_25_az, ok_25_az, fila_25_az = buscar_mas_economico(df_precios, '2.5 mm²', 'azul')
-        p_25_ne, prov_25_ne, desc_25_ne, ok_25_ne, fila_25_ne = buscar_mas_economico(df_precios, '2.5 mm²', 'negro')
-        p_25_ma, prov_25_ma, desc_25_ma, ok_25_ma, fila_25_ma = buscar_mas_economico(df_precios, '2.5 mm²', 'marrón')
-        p_25_tt, prov_25_tt, desc_25_tt, ok_25_tt, fila_25_tt = buscar_mas_economico(df_precios, '2.5 mm²', 'amarillo')
+        p_25_az, prov_25_az, desc_25_az, ok_25_az, fila_25_az = buscar_cable_por_tipo(df_precios, '2.5 mm²', 'azul', tipo_cable_sel)
+        p_25_ne, prov_25_ne, desc_25_ne, ok_25_ne, fila_25_ne = buscar_cable_por_tipo(df_precios, '2.5 mm²', 'negro', tipo_cable_sel)
+        p_25_ma, prov_25_ma, desc_25_ma, ok_25_ma, fila_25_ma = buscar_cable_por_tipo(df_precios, '2.5 mm²', 'marrón', tipo_cable_sel)
+        p_25_tt, prov_25_tt, desc_25_tt, ok_25_tt, fila_25_tt = buscar_cable_por_tipo(df_precios, '2.5 mm²', 'amarillo', tipo_cable_sel)
 
         p_utp, prov_utp, desc_utp, ok_utp, fila_utp = buscar_mas_economico(df_precios, 'utp', 'cat.6')
         if not ok_utp:
@@ -1171,6 +1275,8 @@ def app():
             "cuota_iva": cuota_iva_mat,
             "total_con_iva": total_mat_con_iva,
             "potencia_kw": potencia_prevista_kw,
+            "tipo_cable": tipo_cable_sel,
+            "tipo_tubo": tipo_tubo_sel,
             "serie_mecanismos": serie_mecanismos,
             "marca_protecciones": marca_protecciones
         }
@@ -1183,6 +1289,8 @@ def app():
                 "proyectista": instalador_nombre,
                 "fecha": datetime.date.today().strftime("%d/%m/%Y"),
                 "potencia_kw": potencia_prevista_kw,
+                "tipo_cable": tipo_cable_sel,
+                "tipo_tubo": tipo_tubo_sel,
                 "serie_mecanismos": serie_mecanismos,
                 "marca_protecciones": marca_protecciones
             }
@@ -1471,6 +1579,8 @@ def app():
                     "proyectista": instalador_nombre,
                     "fecha": datetime.date.today().strftime("%d/%m/%Y"),
                     "potencia_kw": potencia_prevista_kw,
+                    "tipo_cable": tipo_cable_sel,
+                    "tipo_tubo": tipo_tubo_sel,
                     "serie_mecanismos": serie_mecanismos,
                     "marca_protecciones": marca_protecciones
                 }
