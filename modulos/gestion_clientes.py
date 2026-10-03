@@ -237,8 +237,14 @@ def cargar_proyecto_en_session(modulo: str, datos: dict, cliente: dict):
         if "irve_long" in datos:
             st.session_state["irve_long"] = datos["irve_long"]
 
+    elif "Memoria" in modulo or "MTD" in modulo:
+        for k, v in datos.items():
+            st.session_state[k] = v
+
 def obtener_label_menu_por_modulo(modulo: str) -> str:
-    if "Presupuesto" in modulo:
+    if "Memoria" in modulo or "MTD" in modulo:
+        return "🏛️ Memoria Técnica (MTD 30)"
+    elif "Presupuesto" in modulo:
         return "🏡 Presupuesto Vivienda"
     elif "Previsión" in modulo:
         return "🏢 Previsión de Cargas (Pt)"
@@ -251,3 +257,4 @@ def obtener_label_menu_por_modulo(modulo: str) -> str:
     elif "Cálculo Rápido" in modulo:
         return "🧮 Cálculo Rápido (CDT & Icc)"
     return "🏠 Menú Principal"
+
