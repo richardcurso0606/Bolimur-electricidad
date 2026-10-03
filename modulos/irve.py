@@ -365,48 +365,63 @@ def renderizar():
     # =========================================================================
     # SECCIÓN 1: PARÁMETROS DEL CIRCUITO DE RECARGA Y WALLBOX
     # =========================================================================
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Parámetros del Circuito de Recarga y Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Selección del Origen de la Línea y Parámetros del Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
+        # 1. Selector de Esquema en Origen (100% visible, claro y con Esquema 2 por defecto)
+        st.markdown("##### 🔌 1. Elige el Origen de la Línea (Esquema ITC-BT-52):")
+        
+        opciones_esquemas_map = {
+            "Esquema 2": "⭐ ESQUEMA 2: Contador común de la vivienda (Garaje comunitario en mismo edificio) - RECOMENDADO (90% de los casos)",
+            "Esquema 4a": "🏡 ESQUEMA 4a/4b: Directo desde el Cuadro CGMP (Chalets, adosados y viviendas unifamiliares)",
+            "Esquema 3a": "🏢 ESQUEMA 3a: Contador nuevo exclusivo en centralización (El cliente no vive en este edificio o quiere factura separada)",
+            "Esquema 1": "👥 ESQUEMA 1: Colectivo comunitario con contador principal (Parkings nuevos o empresas con gestor CPO)",
+            "Esquema 3b": "🔌 ESQUEMA 3b: Contador exclusivo en exterior / plaza (Parkings al aire libre sin cuarto de contadores)"
+        }
+        
+        # Limpieza de claves obsoletas y forzar Esquema 2 por defecto
+        val_actual = st.session_state.get("irve_esquema_sel_key")
+        if not val_actual or val_actual not in opciones_esquemas_map:
+            st.session_state["irve_esquema_sel_key"] = "Esquema 2"
+            val_actual = "Esquema 2"
+
+        lista_keys = list(opciones_esquemas_map.keys())
+        idx_actual = lista_keys.index(st.session_state["irve_esquema_sel_key"])
+
+        esq_key_sel = st.radio(
+            "Selecciona la situación real de tu cliente en la obra:",
+            options=lista_keys,
+            format_func=lambda k: opciones_esquemas_map[k],
+            index=idx_actual,
+            key="irve_esquema_sel_key"
+        )
+        
+        info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
+        
+        # Ficha Explicativa Completa y Siempre Visible del Esquema Seleccionado
+        st.markdown(f"""
+        <div style="background: #f0f9ff; border: 2px solid #0284c7; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap;">
+                <b style="color: #0369a1; font-size: 15px;">📋 FICHA TÉCNICA DEL ORIGEN: {info_esq['nombre'].upper()}</b>
+                <span style="background: #0284c7; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11.5px; font-weight: bold;">
+                    Límite Caída Tensión: {info_esq['limite_cdt']}%
+                </span>
+            </div>
+            <div style="font-size: 13px; color: #1e293b; line-height: 1.5;">
+                <p style="margin: 4px 0;"><b>📍 ¿Dónde conectar los cables en la obra?</b><br/>
+                {info_esq['origen']}.</p>
+                <p style="margin: 4px 0;"><b>💡 ¿Por qué debes elegir este esquema?</b><br/>
+                {info_esq['ventajas']}</p>
+                <p style="margin: 4px 0;"><b>🛡️ Protecciones y Requisitos:</b><br/>
+                {info_esq['requisitos']}</p>
+                <p style="margin: 4px 0; color: #047857;"><b>📜 Permiso Comunidad de Propietarios:</b><br/>
+                {'Conforme al <b>Art. 17.5 de la Ley de Propiedad Horizontal</b>, solo requiere <b>comunicación previa por escrito</b> con 30 días de antelación. <b>¡No requiere votación ni aprobación en junta!</b>' if esq_key_sel == 'Esquema 2' else 'Instalación dentro de la propiedad privada sin trámites comunitarios.' if esq_key_sel == 'Esquema 4a' else 'Requiere solicitud de nuevo punto de suministro (CUPS) a la distribuidora eléctrica.'}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("##### ⚡ 2. Parámetros Eléctricos del Circuito:")
         c1_i, c2_i = st.columns([1, 1])
         with c1_i:
-            opciones_esquemas_labels = {
-                "Esquema 2": "⭐ Esquema 2 (Vivienda + Garaje en mismo edificio)",
-                "Esquema 4a": "🏡 Esquema 4a / 4b (Chalet / CGMP de la vivienda)",
-                "Esquema 3a": "🏢 Esquema 3a (Contador nuevo independiente)",
-                "Esquema 1": "👥 Esquema 1 (Colectivo comunitario / CPO)",
-                "Esquema 3b": "🔌 Esquema 3b (Parking exterior / CPM)"
-            }
-            
-            # Asegurar que Esquema 2 sea la selección inicial
-            def_esq_key = st.session_state.get("irve_esquema_sel_key", "Esquema 2")
-            if def_esq_key not in opciones_esquemas_labels:
-                def_esq_key = "Esquema 2"
-            
-            lista_keys = list(opciones_esquemas_labels.keys())
-            idx_actual = lista_keys.index(def_esq_key)
-            
-            esq_key_sel = st.selectbox(
-                "Origen de la línea (Esquema ITC-BT-52):",
-                options=lista_keys,
-                format_func=lambda k: opciones_esquemas_labels[k],
-                index=idx_actual,
-                key="irve_esquema_sel_key"
-            )
-            
-            info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
-            
-            # Tarjeta explicativa interactiva e inmediata del esquema seleccionado
-            st.markdown(f"""
-            <div style="background: #f0f9ff; border-left: 4px solid #0284c7; border-radius: 6px; padding: 10px 12px; margin: 8px 0 12px 0;">
-                <b style="color: #0369a1; font-size: 13.5px;">📍 Punto de Conexión ({esq_key_sel}):</b><br/>
-                <span style="color: #0f172a; font-size: 12.5px; line-height: 1.4;">{info_esq['origen']}</span><br/>
-                <div style="margin-top: 5px; font-size: 12px; color: #475569;">
-                    💡 <b>¿Por qué elegirlo?</b> {info_esq['ventajas']}<br/>
-                    📏 <b>Límite de Caída de Tensión:</b> <b>{info_esq['limite_cdt']}%</b>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
             irve_pot = st.selectbox(
                 "Potencia del Cargador (Wallbox):",
                 [
