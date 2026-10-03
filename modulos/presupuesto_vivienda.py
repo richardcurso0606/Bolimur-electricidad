@@ -1034,6 +1034,32 @@ def app():
             "marca_protecciones": marca_protecciones
         }
 
+        # Pre-generar archivos de Orden de Compra / Reporte de Materiales
+        excel_oc_bytes = exportar_excel_orden_compra(
+            df_orden_compra, total_mat_global_neto, cuota_iva_mat, total_mat_con_iva,
+            {
+                "empresa": empresa_nombre,
+                "proyectista": instalador_nombre,
+                "fecha": datetime.date.today().strftime("%d/%m/%Y"),
+                "potencia_kw": potencia_prevista_kw,
+                "serie_mecanismos": serie_mecanismos,
+                "marca_protecciones": marca_protecciones
+            }
+        )
+
+        pdf_oc_bytes = pdf_presupuesto.generar_pdf_orden_compra(
+            proyecto_info={
+                "empresa": empresa_nombre,
+                "proyectista": instalador_nombre,
+                "licencia": n_licencia,
+                "localidad": localidad,
+                "telefono": telefono,
+                "expediente": "OC-2026-01",
+                "fecha": datetime.date.today().strftime("%d/%m/%Y")
+            },
+            orden_compra_data=orden_compra_data
+        )
+
         # ==========================================
         # SELECTOR DE MODO DE VISTA E IMPRESIÓN
         # ==========================================
@@ -1079,32 +1105,50 @@ def app():
             st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
             st.markdown("---")
 
-            st.subheader("🛒 Resumen de Acopio (Con Descripción Completa y Tienda)")
-            
-            st.markdown("#### 📏 1. Canalización y Tubería")
-            st.write(f"- **Tubo M-20:** `{int(global_tubo20_m)} m` (📦 `{rollos_tubo20} rollo(s) de 50m`) | **{prov_tubo20}** | *{desc_tubo20}*")
-            st.write(f"- **Tubo M-25:** `{int(global_tubo25_m)} m` (📦 `{rollos_tubo25} rollo(s) de 50m`) | **{prov_tubo25}** | *{desc_tubo25}*")
+            st.subheader("🛒 Resumen de Acopio y Reporte de Compras Clasificado")
+            st.markdown("Materiales organizados por tipo y tienda con descarga directa para compras en almacén:")
 
-            st.markdown("---")
-            st.markdown(f"#### ⚡ 2. Cableado ({tipo_cable_sel})")
-            st.write(f"- **Azul 1.5mm²:** `{int(global_15_az_m)} m` (📦 `{rollos_15_az} rollo(s)`) | **{prov_15_az}** | *{desc_15_az}*")
-            st.write(f"- **Negro 1.5mm²:** `{int(global_15_ne_m)} m` (📦 `{rollos_15_ne} rollo(s)`) | **{prov_15_ne}** | *{desc_15_ne}*")
-            st.write(f"- **Marrón 1.5mm²:** `{int(global_15_ma_m)} m` (📦 `{rollos_15_ma} rollo(s)`) | **{prov_15_ma}** | *{desc_15_ma}*")
-            st.write(f"- **Gris 1.5mm²:** `{int(global_15_gr_m)} m` (📦 `{rollos_15_gr} rollo(s)`) | **{prov_15_gr}** | *{desc_15_gr}*")
-            st.write(f"- **Tierra 1.5mm²:** `{int(global_15_tt_m)} m` (📦 `{rollos_15_tt} rollo(s)`) | **{prov_15_tt}** | *{desc_15_tt}*")
-            st.write(f"- **Azul 2.5mm²:** `{int(global_25_az_m)} m` (📦 `{rollos_25_az} rollo(s)`) | **{prov_25_az}** | *{desc_25_az}*")
-            st.write(f"- **Negro 2.5mm²:** `{int(global_25_ne_m)} m` (📦 `{rollos_25_ne} rollo(s)`) | **{prov_25_ne}** | *{desc_25_ne}*")
-            st.write(f"- **Tierra 2.5mm²:** `{int(global_25_tt_m)} m` (📦 `{rollos_25_tt} rollo(s)`) | **{prov_25_tt}** | *{desc_25_tt}*")
+            col_btn_ac1, col_btn_ac2 = st.columns(2)
+            with col_btn_ac1:
+                st.download_button(
+                    label="📄 Descargar Reporte de Compras en PDF",
+                    data=pdf_oc_bytes,
+                    file_name="Reporte_Compras_Acopio_Bolimur.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="btn_pdf_acopio_panel"
+                )
+            with col_btn_ac2:
+                st.download_button(
+                    label="📊 Descargar Reporte de Compras en Excel (.xlsx)",
+                    data=excel_oc_bytes,
+                    file_name="Reporte_Compras_Acopio_Bolimur.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="btn_excel_acopio_panel"
+                )
 
-            st.markdown("---")
-            st.markdown(f"#### ⚡ 3. Cuadro Eléctrico y Protecciones (Marca: {marca_protecciones})")
-            st.write(f"- **Caja Distribución:** 1 ud | **{prov_caja_cuadro}** | *{desc_caja_cuadro}* | S/IVA: `{p_caja_cuadro:.2f} €`")
-            st.write(f"- **IGA Oficial ({iga_amperaje}A):** 1 ud | **{prov_iga}** | *{desc_iga}* | S/IVA: `{p_iga:.2f} €`")
-            st.write(f"- **Interruptor Diferencial (ID):** `{n_difs} ud(s)` | **{prov_id}** | *{desc_id}* | S/IVA: `{p_id:.2f} €`")
-            st.write(f"- **PIAs Automáticos:** `{n_pias} uds` | **{prov_pia}** | *{desc_pia}* | S/IVA c/u: `{p_pia:.2f} €`")
+            with st.expander("📋 Desglose Completo de Materiales por Tipo / Categoría", expanded=True):
+                for cat_titulo, articulos in categorias_orden_compra.items():
+                    if not articulos:
+                        continue
+                    st.markdown(f"##### {cat_titulo}")
+                    df_cat_res = pd.DataFrame([
+                        {
+                            "Cant.": a["cantidad"],
+                            "Unidad": a["unidad"],
+                            "Artículo": a["articulo"],
+                            "Descripción Exacta (Tienda)": a["desc_exacta"],
+                            "Tienda / Prov.": a["proveedor"],
+                            "P. Unit (€)": f"{a['precio_unitario']:.2f} €",
+                            "Subtotal (€)": f"{a['subtotal']:.2f} €"
+                        }
+                        for a in articulos
+                    ])
+                    st.dataframe(df_cat_res, use_container_width=True, hide_index=True)
 
             st.markdown(f"""
-            <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 20px;">
+            <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 15px;">
                 <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO COMPLETO)</h3>
                 <p><b>Coste Materiales Estancias:</b> {total_mat_estancias_neto:.2f} € &nbsp;|&nbsp; <b>Coste Cuadro ({marca_protecciones}):</b> {coste_cuadro_neto:.2f} €</p>
                 <p><b>Coste Total Materiales Neto (Sin IVA):</b> {total_mat_global_neto:.2f} €</p>
