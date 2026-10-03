@@ -179,6 +179,26 @@ def generar_svg_unifilar_irve(esquema_nombre: str, pot_w: float, s_final: float,
 def renderizar():
     st.markdown("""
     <style>
+    /* Ajustes responsivos para selectbox y campos de entrada en pantallas pequeñas */
+    div[data-baseweb="select"] {
+        width: 100% !important;
+    }
+    div[data-baseweb="select"] * {
+        white-space: normal !important;
+        word-break: break-word !important;
+        text-overflow: unset !important;
+    }
+    div[data-baseweb="select"] > div {
+        min-height: 42px !important;
+        height: auto !important;
+        padding: 4px 8px !important;
+    }
+    div[data-testid="stSelectbox"] label {
+        font-weight: 600 !important;
+        font-size: 13.5px !important;
+        color: #1e293b !important;
+    }
+
     @media print {
         [data-testid="stSidebar"], header, footer, .stButton, div.row-widget.stRadio, div.stSelectbox, div.stNumberInput, div.stTextInput, details summary { 
             display: none !important; 
@@ -347,60 +367,80 @@ def renderizar():
     # =========================================================================
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Parámetros del Circuito de Recarga y Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
-        with st.form("form_irve_parametros"):
-            c1_i, c2_i = st.columns(2)
-            with c1_i:
-                # Esquema 2 POR DEFECTO
-                opciones_esquemas_keys = list(ESQUEMAS_IRVE_INFO.keys())
-                idx_def_esq = 0 # Esquema 2 es el primero
-                
-                esq_key_sel = st.selectbox(
-                    "Origen de la línea (Esquema ITC-BT-52):",
-                    options=opciones_esquemas_keys,
-                    format_func=lambda k: f"{k} - {ESQUEMAS_IRVE_INFO[k]['nombre'].split('(')[1].replace(')', '') if '(' in ESQUEMAS_IRVE_INFO[k]['nombre'] else k}",
-                    index=idx_def_esq,
-                    key="irve_esquema_sel_key"
-                )
-                
-                info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
-                st.caption(f"💡 **Criterio {esq_key_sel}:** {info_esq['uso_principal']}")
+        c1_i, c2_i = st.columns([1, 1])
+        with c1_i:
+            opciones_esquemas_labels = {
+                "Esquema 2": "⭐ Esquema 2 (Vivienda + Garaje en mismo edificio)",
+                "Esquema 4a": "🏡 Esquema 4a / 4b (Chalet / CGMP de la vivienda)",
+                "Esquema 3a": "🏢 Esquema 3a (Contador nuevo independiente)",
+                "Esquema 1": "👥 Esquema 1 (Colectivo comunitario / CPO)",
+                "Esquema 3b": "🔌 Esquema 3b (Parking exterior / CPM)"
+            }
+            
+            # Asegurar que Esquema 2 sea la selección inicial
+            def_esq_key = st.session_state.get("irve_esquema_sel_key", "Esquema 2")
+            if def_esq_key not in opciones_esquemas_labels:
+                def_esq_key = "Esquema 2"
+            
+            lista_keys = list(opciones_esquemas_labels.keys())
+            idx_actual = lista_keys.index(def_esq_key)
+            
+            esq_key_sel = st.selectbox(
+                "Origen de la línea (Esquema ITC-BT-52):",
+                options=lista_keys,
+                format_func=lambda k: opciones_esquemas_labels[k],
+                index=idx_actual,
+                key="irve_esquema_sel_key"
+            )
+            
+            info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
+            
+            # Tarjeta explicativa interactiva e inmediata del esquema seleccionado
+            st.markdown(f"""
+            <div style="background: #f0f9ff; border-left: 4px solid #0284c7; border-radius: 6px; padding: 10px 12px; margin: 8px 0 12px 0;">
+                <b style="color: #0369a1; font-size: 13.5px;">📍 Punto de Conexión ({esq_key_sel}):</b><br/>
+                <span style="color: #0f172a; font-size: 12.5px; line-height: 1.4;">{info_esq['origen']}</span><br/>
+                <div style="margin-top: 5px; font-size: 12px; color: #475569;">
+                    💡 <b>¿Por qué elegirlo?</b> {info_esq['ventajas']}<br/>
+                    📏 <b>Límite de Caída de Tensión:</b> <b>{info_esq['limite_cdt']}%</b>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                irve_pot = st.selectbox(
-                    "Potencia del Cargador (Wallbox):",
-                    [
-                        "7.360 W (32A - Monofásico Estándar Wallbox)",
-                        "3.680 W (16A - Monofásico Lento)",
-                        "11.000 W (16A - Trifásico)",
-                        "22.000 W (32A - Trifásico Rápido AC)",
-                        "✏️ Personalizada (W)"
-                    ],
-                    index=0,
-                    key="irve_pot_sel"
-                )
-                
-                if "Personalizada" in irve_pot:
-                    p_cargador_val = st.number_input("Introduce Potencia del Wallbox (W):", value=7360.0, step=250.0, key="irve_custom_w")
-                else:
-                    p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
+            irve_pot = st.selectbox(
+                "Potencia del Cargador (Wallbox):",
+                [
+                    "7.360 W (32A - Monofásico Estándar Wallbox)",
+                    "3.680 W (16A - Monofásico Lento)",
+                    "11.000 W (16A - Trifásico)",
+                    "22.000 W (32A - Trifásico Rápido AC)",
+                    "✏️ Personalizada (W)"
+                ],
+                index=0,
+                key="irve_pot_sel"
+            )
+            
+            if "Personalizada" in irve_pot:
+                p_cargador_val = st.number_input("Introduce Potencia del Wallbox (W):", value=st.session_state.get("irve_custom_w", 7360.0), step=250.0, key="irve_custom_w")
+            else:
+                p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
 
-                irve_long = st.number_input("Longitud del cable hasta la plaza de garaje (m):", value=25.0, min_value=1.0, max_value=500.0, step=1.0, key="irve_long")
+            irve_long = st.number_input("Longitud del cable hasta la plaza de garaje (m):", value=st.session_state.get("irve_long", 25.0), min_value=1.0, max_value=500.0, step=1.0, key="irve_long")
 
-            with c2_i:
-                tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red", horizontal=True)
-                irve_mat = st.selectbox("Material Conductor:", ["cobre"], key="irve_mat")
-                irve_aisl = st.selectbox(
-                    "Aislamiento del Conductor:",
-                    [
-                        "XLPE / EPR (90ºC) - RZ1-K (Cca-s1b,d1,a1 Libre Halógenos)",
-                        "PVC (70ºC)"
-                    ],
-                    key="irve_aisl"
-                )
-                metodo_irve_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION_IRVE.keys()), index=0, key="irve_met")
-                
-                st.info("⚡ **Sistema de Balanceo Inteligente (SPL):** Recomendado siempre para modular la carga en tiempo real con el consumo de la vivienda.")
-
-            submitted_irve = st.form_submit_button("🔄 Recalcular Circuito IRVE y Protecciones", type="primary", use_container_width=True)
+        with c2_i:
+            tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red", horizontal=True)
+            irve_mat = st.selectbox("Material Conductor:", ["cobre"], key="irve_mat")
+            irve_aisl = st.selectbox(
+                "Aislamiento del Conductor:",
+                [
+                    "XLPE / EPR (90ºC) - RZ1-K (Cca-s1b,d1,a1 Libre Halógenos)",
+                    "PVC (70ºC)"
+                ],
+                key="irve_aisl"
+            )
+            metodo_irve_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION_IRVE.keys()), index=0, key="irve_met")
+            
+            st.info("⚡ **Sistema de Balanceo Inteligente (SPL):** Recomendado siempre para modular la carga en tiempo real con el consumo de la vivienda sin tener que subir el término de potencia contratada.")
 
     # =========================================================================
     # MOTOR DE CÁLCULO REGLAMENTARIO ITC-BT-52
@@ -413,7 +453,7 @@ def renderizar():
     ib_irve = rebt.calcular_intensidad_diseno(p_cargador_val, v_t_irve, cos_phi_irve, es_trif_irve)
     
     # Límite de caída de tensión según esquema (1.0% en Esquema 1, 2, 3a, 3b / 1.5% en Esquema 4a/4b)
-    info_esq_actual = ESQUEMAS_IRVE_INFO.get(st.session_state.get("irve_esquema_sel_key", "Esquema 2"), ESQUEMAS_IRVE_INFO["Esquema 2"])
+    info_esq_actual = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
     dv_pct_limite = float(info_esq_actual.get("limite_cdt", 1.0))
     
     gamma_irve = rebt.obtener_gamma(irve_mat, irve_aisl)
