@@ -1041,21 +1041,119 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     d.add(Line(25, 88, 485, 88, strokeColor=colors.HexColor('#0284c7'), strokeWidth=2.2))
     d.add(String(28, 93, 'BARRA COLECTORA DISTRIBUCIÓN L+N 230V', fontSize=5.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0369a1')))
 
+    def _normalizar_circuito_rebt(c):
+        cid = str(c.get("id", "")).upper().strip()
+        den = str(c.get("denominacion", "")).lower()
+        
+        # 1. C1: Iluminación
+        if "C1" == cid or ("C1" in cid and "C10" not in cid and "C13" not in cid and "C11" not in cid and "C12" not in cid) or "iluminaci" in den or "alumbrado" in den:
+            return {
+                "id": c.get("id", "C1"),
+                "denominacion": c.get("denominacion", "Iluminación general de la vivienda"),
+                "pia": 10,
+                "cable_sec": "3x1.5 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x1.5 + TT 1.5 mm² Cu",
+                "tubo_diam": "M20",
+                "pot_w": 2300,
+                "dif": c.get("dif", "ID 1 (30mA)"),
+                "long_m": c.get("long_m", 15.0),
+                "cdt_pct": c.get("cdt_pct", 0.85)
+            }
+        # 2. C3: Cocina y Horno (OBLIGATORIO 6 mm² / 25A / M25)
+        elif "C3" == cid or ("C3" in cid and "C13" not in cid) or "cocina" in den or "horno" in den:
+            return {
+                "id": c.get("id", "C3"),
+                "denominacion": c.get("denominacion", "Cocina eléctrica y horno"),
+                "pia": 25,
+                "cable_sec": "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu",
+                "tubo_diam": "M25",
+                "pot_w": 5400,
+                "dif": c.get("dif", "ID 1 (30mA)"),
+                "long_m": c.get("long_m", 12.0),
+                "cdt_pct": c.get("cdt_pct", 0.82)
+            }
+        # 3. C4: Lavadora/Termo sin desdoblar (OBLIGATORIO 4 mm² / 20A / M20)
+        elif ("C4" == cid or ("C4" in cid and "-A" not in cid and "-B" not in cid and "-C" not in cid)) and ("lavadora" in den or "termo" in den or "lavavajillas" in den or c.get("pia") == 20):
+            return {
+                "id": c.get("id", "C4"),
+                "denominacion": c.get("denominacion", "Lavadora, Lavavajillas y Termo eléctrico"),
+                "pia": 20,
+                "cable_sec": "3x4.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x4 + TT 4 mm² Cu",
+                "tubo_diam": "M20",
+                "pot_w": 4600,
+                "dif": c.get("dif", "ID 1 (30mA)"),
+                "long_m": c.get("long_m", 15.0),
+                "cdt_pct": c.get("cdt_pct", 1.20)
+            }
+        # 4. C9: Aire acondicionado (6 mm² / 25A / M25)
+        elif "C9" in cid or "aire" in den or "clima" in den:
+            return {
+                "id": c.get("id", "C9"),
+                "denominacion": c.get("denominacion", "Instalación de aire acondicionado / climatización"),
+                "pia": 25,
+                "cable_sec": "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu",
+                "tubo_diam": "M25",
+                "pot_w": 5400,
+                "dif": c.get("dif", "ID 2 (30mA)"),
+                "long_m": c.get("long_m", 16.0),
+                "cdt_pct": c.get("cdt_pct", 1.25)
+            }
+        # 5. C13: Recarga IRVE (6 mm² / 32A / M32)
+        elif "C13" in cid or "irve" in den or "recarga" in den:
+            return {
+                "id": c.get("id", "C13"),
+                "denominacion": c.get("denominacion", "Circuito de recarga vehículo eléctrico (IRVE)"),
+                "pia": 32,
+                "cable_sec": "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu",
+                "tubo_diam": "M32",
+                "pot_w": 7360,
+                "dif": c.get("dif", "ID 2 (30mA) Clase A"),
+                "long_m": c.get("long_m", 25.0),
+                "cdt_pct": c.get("cdt_pct", 0.86)
+            }
+        # 6. C2, C5, C4-A, C4-B, C10: Tomas de 16A (2.5 mm² / 16A / M20)
+        else:
+            p_val = c.get("pia", 16)
+            sec_def = "3x2.5 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x2.5 + TT 2.5 mm² Cu"
+            tub_def = "M20"
+            if p_val == 10:
+                sec_def = "3x1.5 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x1.5 + TT 1.5 mm² Cu"
+            elif p_val == 20:
+                sec_def = "3x4.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x4 + TT 4 mm² Cu"
+            elif p_val == 25:
+                sec_def = "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu"
+                tub_def = "M25"
+            elif p_val >= 32:
+                sec_def = "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu"
+                tub_def = "M32"
+            return {
+                "id": c.get("id", "C2"),
+                "denominacion": c.get("denominacion", "Tomas de corriente uso general y frigorífico"),
+                "pia": p_val,
+                "cable_sec": c.get("cable_sec") or sec_def,
+                "tubo_diam": c.get("tubo_diam") or tub_def,
+                "pot_w": c.get("pot_w", p_val * 230),
+                "dif": c.get("dif", "ID 1 (30mA)"),
+                "long_m": c.get("long_m", 15.0),
+                "cdt_pct": c.get("cdt_pct", 1.15)
+            }
+
+    circuitos_normalizados = [_normalizar_circuito_rebt(c) for c in circuitos]
+
     # Branches to each circuit
     spacing = 460.0 / max(num_circs, 1)
-    for i, c in enumerate(circuitos):
+    for i, c in enumerate(circuitos_normalizados):
         cx = 32 + (i * spacing) + (spacing / 2.0)
         # Drop line from busbar
         d.add(Line(cx, 88, cx, 66, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1))
         # PIA Box
         d.add(Rect(cx - 15, 38, 30, 28, fillColor=colors.HexColor('#ffffff'), strokeColor=colors.HexColor('#0f172a'), strokeWidth=0.8, rx=2, ry=2))
-        d.add(String(cx - 12, 57, c.get('id', f'C{i+1}'), fontSize=6.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0f172a')))
-        d.add(String(cx - 12, 48, f"{c.get('pia', 16)}A", fontSize=6.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0284c7')))
+        d.add(String(cx - 12, 57, c['id'], fontSize=6.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0f172a')))
+        d.add(String(cx - 12, 48, f"{c['pia']}A", fontSize=6.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0284c7')))
         d.add(String(cx - 12, 41, '6kA', fontSize=5.0, fontName='Helvetica', fillColor=colors.HexColor('#64748b')))
         # Output line and cable / conduit description
         d.add(Line(cx, 38, cx, 22, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1))
-        c_sec = str(c.get('cable_sec', '2.5 mm²'))
-        c_tubo = str(c.get('tubo_diam', 'M20'))
+        c_sec = str(c['cable_sec']).replace(" Cu", "").replace(" + TT ", "+TT")
+        c_tubo = str(c['tubo_diam']).split(" ")[0]
         d.add(String(cx - 14, 13, c_sec, fontSize=5.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#1e293b')))
         d.add(String(cx - 14, 5, c_tubo, fontSize=4.8, fontName='Helvetica', fillColor=colors.HexColor('#64748b')))
 
@@ -1078,18 +1176,18 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
 
     circ_rows = [[th_circ, th_den, th_pia, th_dif, th_cond, th_tub, th_long, th_cdt, th_pot]]
 
-    for c in circuitos:
-        pia_val = c.get('pia', 16)
-        dif_val = c.get('dif') or c.get('dif_asoc') or 'ID 1 (30mA)'
-        cable_val = c.get('cable_sec') or c.get('cable_str') or '2x2.5+TT2.5 mm²'
-        tubo_val = c.get('tubo_diam') or c.get('tubo_str') or 'M20'
-        long_val = c.get('long_m') or c.get('longitud_m') or 15
-        cdt_val = c.get('cdt_pct', 1.2)
-        pot_val = c.get('pot_w') or c.get('potencia_w') or (pia_val * 230)
+    for c in circuitos_normalizados:
+        pia_val = c['pia']
+        dif_val = c['dif']
+        cable_val = c['cable_sec']
+        tubo_val = str(c['tubo_diam']).split(" ")[0]
+        long_val = c['long_m']
+        cdt_val = c['cdt_pct']
+        pot_val = c['pot_w']
 
         circ_rows.append([
-            Paragraph(f"<b>{c.get('id', '')}</b>", td_bold),
-            Paragraph(str(c.get('denominacion', '')), td_style),
+            Paragraph(f"<b>{c['id']}</b>", td_bold),
+            Paragraph(str(c['denominacion']), td_style),
             Paragraph(f"<b>{pia_val}A</b> (C/6kA)", td_center),
             Paragraph(str(dif_val), td_center),
             Paragraph(str(cable_val), td_style),
@@ -1110,6 +1208,7 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     ]))
     story.append(t_circs)
     story.append(Spacer(1, 6))
+
 
     # 5. Technical Verifications Box (ITC-BT-19 / 24 / 23)
     verif_data = [
