@@ -196,17 +196,44 @@ def app():
         mejores_candidatos = []
         valor_lower = valor_sel.lower()
 
+        # Determinar palabras clave de búsqueda inteligente
+        tokens_busqueda = []
+        if "racional" in valor_lower or "más económica" in valor_lower or "ahorro" in valor_lower:
+            tokens_busqueda = ["efapel", "apolo", "mec 21", "simon 10"]
+        elif "efapel" in valor_lower or "mec 21" in valor_lower or "apolo" in valor_lower:
+            tokens_busqueda = ["efapel", "apolo", "mec 21"]
+        elif "simon 10" in valor_lower:
+            tokens_busqueda = ["simon 10"]
+        elif "simon 27" in valor_lower:
+            tokens_busqueda = ["simon 27"]
+        elif "simon 82" in valor_lower:
+            tokens_busqueda = ["simon 82"]
+        elif "schneider" in valor_lower or "asfora" in valor_lower:
+            tokens_busqueda = ["schneider", "asfora", "miluz", "new unica"]
+        elif "niessen" in valor_lower or "zenit" in valor_lower:
+            tokens_busqueda = ["niessen", "zenit"]
+        else:
+            tokens_busqueda = [valor_lower]
+
         for kw in keywords:
             for idx, row in df.iterrows():
                 desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
                 serie_item = str(row.get('Serie / Gama', '')).strip().lower()
                 marca_item = str(row.get('Marca', '')).strip().lower()
                 gama_item = str(row.get('Nivel de Gama / Aplicación', '')).strip().lower()
-                
+
+                # Evitar seleccionar solo teclas o tapas sueltas cuando se busca el mecanismo o conjunto funcional
+                if tipo in ['interruptor', 'schuko', 'rj45']:
+                    if 'tecla' in desc or 'tapa toma' in desc or 'frontal' in desc or 'placa ciega' in desc:
+                        continue
+
+                if tipo == 'marco' and 'marco' not in desc:
+                    continue
+
                 if kw in desc:
                     match = False
                     if modo_sel == "Por Clasificación de Gamas":
-                        if valor_lower in serie_item or valor_lower in desc or valor_lower in gama_item:
+                        if any(tok in serie_item or tok in desc or tok in gama_item or tok in marca_item for tok in tokens_busqueda):
                             match = True
                     else:
                         if valor_lower in marca_item or valor_lower in serie_item:
@@ -226,6 +253,11 @@ def app():
             for kw in keywords:
                 for idx, row in df.iterrows():
                     desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                    if tipo in ['interruptor', 'schuko', 'rj45']:
+                        if 'tecla' in desc or 'tapa toma' in desc or 'frontal' in desc or 'placa ciega' in desc:
+                            continue
+                    if tipo == 'marco' and 'marco' not in desc:
+                        continue
                     if kw in desc:
                         try:
                             precio = float(row['Precio S/IVA (€)'])
@@ -406,10 +438,12 @@ def app():
             serie_mecanismos = st.selectbox(
                 "Selecciona la Gama / Serie:",
                 [
+                    "💡 Selección Racional Más Económica (Efapel MEC 21 / Apolo 5000 - Máximo Ahorro)",
+                    "Efapel MEC 21 / Apolo 5000 (Gama Económica / Base)",
                     "Simon 10 (Gama Económica / Básica)",
+                    "Schneider Asfora (Gama Media)",
                     "Simon 27 Play (Gama Estándar / Residencial)",
                     "Simon 82 Detail (Gama Alta / Decorativa)",
-                    "Schneider Asfora (Gama Media)",
                     "Niessen Zenit (Gama Alta / Moderna)"
                 ]
             )
@@ -934,7 +968,7 @@ def app():
                     "subtotal": round(cant_m * p_m, 2),
                     "en_bd": ok_m,
                     "categoria_bd": "Mecanismos",
-                    "marca_bd": str(serie_mecanismos).split()[0]
+                    "marca_bd": "Efapel" if ("efapel" in str(serie_mecanismos).lower() or "racional" in str(serie_mecanismos).lower()) else str(serie_mecanismos).split()[0]
                 })
         if global_marcos_uds > 0:
             categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
@@ -947,7 +981,7 @@ def app():
                 "subtotal": round(global_marcos_uds * p_marco, 2),
                 "en_bd": ok_marco,
                 "categoria_bd": "Marcos / Placas",
-                "marca_bd": str(serie_mecanismos).split()[0]
+                "marca_bd": "Efapel" if ("efapel" in str(serie_mecanismos).lower() or "racional" in str(serie_mecanismos).lower()) else str(serie_mecanismos).split()[0]
             })
 
         # 2. Cables y Conductores
