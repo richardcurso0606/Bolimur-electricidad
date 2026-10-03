@@ -914,16 +914,24 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     circ_rows = [[th_circ, th_den, th_pia, th_dif, th_cond, th_tub, th_long, th_cdt, th_pot]]
 
     for c in circuitos:
+        pia_val = c.get('pia', 16)
+        dif_val = c.get('dif') or c.get('dif_asoc') or 'ID 1 (30mA)'
+        cable_val = c.get('cable_sec') or c.get('cable_str') or '2x2.5+TT2.5 mm²'
+        tubo_val = c.get('tubo_diam') or c.get('tubo_str') or 'M20'
+        long_val = c.get('long_m') or c.get('longitud_m') or 15
+        cdt_val = c.get('cdt_pct', 1.2)
+        pot_val = c.get('pot_w') or c.get('potencia_w') or (pia_val * 230)
+
         circ_rows.append([
             Paragraph(f"<b>{c.get('id', '')}</b>", td_bold),
             Paragraph(str(c.get('denominacion', '')), td_style),
-            Paragraph(f"<b>{c.get('pia', 16)}A</b> (C/6kA)", td_center),
-            Paragraph(str(c.get('dif_asoc', 'ID 1 (30mA)')), td_center),
-            Paragraph(str(c.get('cable_str', '3x2.5 mm²')), td_style),
-            Paragraph(str(c.get('tubo_str', 'M20')), td_center),
-            Paragraph(f"{c.get('longitud_m', 15):.0f} m", td_center),
-            Paragraph(f"<b>{c.get('cdt_pct', 1.2):.2f}%</b>", td_center),
-            Paragraph(f"{c.get('potencia_w', 3680):,} W", td_center)
+            Paragraph(f"<b>{pia_val}A</b> (C/6kA)", td_center),
+            Paragraph(str(dif_val), td_center),
+            Paragraph(str(cable_val), td_style),
+            Paragraph(str(tubo_val), td_center),
+            Paragraph(f"{long_val:.0f} m", td_center),
+            Paragraph(f"<b>{cdt_val:.2f}%</b>", td_center),
+            Paragraph(f"{pot_val:,} W", td_center)
         ])
 
     t_circs = Table(circ_rows, colWidths=[1.3*cm, 4.3*cm, 2.0*cm, 2.2*cm, 2.6*cm, 1.3*cm, 1.2*cm, 1.5*cm, 1.6*cm])
