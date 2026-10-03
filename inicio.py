@@ -63,6 +63,12 @@ except Exception as e:
     rebt = None
     errores_import["rebt_tablas"] = traceback.format_exc()
 
+try:
+    from modulos import memoria_tecnica_industria
+except Exception as e:
+    memoria_tecnica_industria = None
+    errores_import["memoria_tecnica_industria"] = traceback.format_exc()
+
 # =========================================================================
 # ESTILOS CSS GLOBALES
 # =========================================================================
@@ -208,6 +214,7 @@ with st.sidebar:
 
     opciones = [
         ("🏠  Menú Principal", "🏠 Menú Principal"),
+        ("🏛️  Memoria Técnica (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
         ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
         ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
         ("🧮  Cálculo Rápido (CDT & Icc)", "🧮 Cálculo Rápido (CDT & Icc)"),
@@ -234,7 +241,19 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
     st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
     st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
     
-    st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, gestionar clientes o elaborar presupuestos:")
+    st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, gestionar clientes, redactar memorias para Industria o elaborar presupuestos:")
+
+    with st.container(border=True):
+        col_mtd_txt, col_mtd_btn = st.columns([3, 1])
+        with col_mtd_txt:
+            st.markdown("### 🏛️ Generador Oficial de Memoria Técnica de Diseño (MTD 30 - Murcia)")
+            st.write("Módulo especializado para la tramitación telemática ante la **Dirección General de Energía y Actividad Industrial y Minera (DGEAIM - Región de Murcia)**. Incluye auto-rellenado automático desde cálculos (Vivienda ITC-BT-25, IRVE ITC-BT-52, Locales), protocolo de pruebas ITC-BT-05, esquema unifilar y exportación en PDF oficial.")
+        with col_mtd_btn:
+            st.write("")
+            st.write("")
+            if st.button("🚀 Tramitar MTD Murcia", key="btn_home_mtd_featured", type="primary", use_container_width=True):
+                st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                st.rerun()
 
     c1, c2 = st.columns(2)
     with c1:
@@ -284,7 +303,7 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
         with st.container(border=True):
             st.subheader("🚗 Línea Recarga Vehículo Eléctrico (IRVE)")
             st.write("Circuitos terminales según ITC-BT-52. Esquemas 1, 2, 3a, 3b y 4, cálculo al 1% de caída de tensión y protecciones diferenciales Tipo A/B.")
-            if st.button("Abrir Módulo IRVE", key="btn_home_irve", type="primary", use_container_width=True):
+            if st.button("Abrir Módulo IRVE", key="btn_home_irve", use_container_width=True):
                 st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
                 st.rerun()
 
@@ -294,6 +313,14 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             if st.button("Abrir Perfil del Instalador", key="btn_home_prof", use_container_width=True):
                 st.session_state.menu_activo = "👤 Perfil del Instalador"
                 st.rerun()
+
+elif "Memoria" in seleccion_modulo or "MTD" in seleccion_modulo or "🏛️" in seleccion_modulo or "Industria" in seleccion_modulo:
+    if memoria_tecnica_industria:
+        memoria_tecnica_industria.renderizar()
+    else:
+        st.error("Módulo de Memoria Técnica Oficial (Industria DGEAIM) no disponible.")
+        if "memoria_tecnica_industria" in errores_import:
+            st.code(errores_import["memoria_tecnica_industria"])
 
 elif "IRVE" in seleccion_modulo or "Recarga" in seleccion_modulo or "🚗" in seleccion_modulo:
     if irve:
