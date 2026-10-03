@@ -341,25 +341,57 @@ def app():
 
         return 15.00, "Por catalogar", f"⚠️ [NO ENCONTRADO EN BD]: Protección {tipo_prot} ({marca_sel}) - Tarifa estimada 15.00€", False, -1
 
-    def buscar_caja_cuadro(df, marca_sel):
+    def buscar_caja_cuadro(df, marca_sel, grado_electr='Básica'):
+        mod_str = '24' if grado_electr == 'Elevada' else '12'
+        marca_lower = marca_sel.lower()
         mejores_candidatos = []
+
         for idx, row in df.iterrows():
             desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
             cat = str(row.get('Familia / Categoria', '')).strip().lower()
-            if 'cuadros' in cat or 'envolventes' in cat or 'caja' in desc:
-                if '12' in desc or 'empotrar' in desc or 'resi9' in desc or 'practibox' in desc:
+            marca_item = str(row.get('Marca', '')).strip().lower()
+
+            # Filtro estricto: debe ser cuadro/envolvente y NO accesorios como peines ni cajas de mecanismos/registro
+            if ('cuadro' in cat or 'envolvente' in cat or 'caja automatismo' in desc or 'caja de distribución' in desc) and \
+               ('caja' in desc or 'cuadro' in desc) and \
+               ('peine' not in desc and 'repartidor' not in desc and 'accesorio' not in cat and \
+                '67mm' not in desc and 'enlazable' not in desc and 'registro' not in desc and 'estanca' not in desc):
+                if mod_str in desc:
                     try:
                         precio = float(row['Precio S/IVA (€)'])
                         prov = str(row.get('Proveedor / Tienda', 'Obramat'))
                         art_desc = str(row.get('Descripción Exacta del Artículo', ''))
                         fila = idx + 2
-                        mejores_candidatos.append((precio, prov, art_desc, fila))
+                        if marca_lower in marca_item:
+                            mejores_candidatos.append((precio, prov, art_desc, fila, 0))
+                        else:
+                            mejores_candidatos.append((precio, prov, art_desc, fila, 1))
                     except:
                         continue
+
         if mejores_candidatos:
-            mejores_candidatos.sort(key=lambda x: x[0])
-            return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
-        return buscar_mas_economico(df, 'caja de distribución')
+            mejores_candidatos.sort(key=lambda x: (x[4], x[0]))
+            p, prov, d, f, _ = mejores_candidatos[0]
+            return p, prov, d, True, f
+
+        # Fallback genérico a cualquier cuadro de distribución empotrar
+        for idx, row in df.iterrows():
+            desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+            cat = str(row.get('Familia / Categoria', '')).strip().lower()
+            if ('cuadro' in cat or 'envolvente' in cat or 'caja automatismo' in desc or 'caja de distribución' in desc) and \
+               ('caja' in desc or 'cuadro' in desc) and \
+               ('peine' not in desc and 'repartidor' not in desc and 'accesorio' not in cat and \
+                '67mm' not in desc and 'enlazable' not in desc and 'registro' not in desc and 'estanca' not in desc):
+                try:
+                    precio = float(row['Precio S/IVA (€)'])
+                    prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                    art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                    fila = idx + 2
+                    return p, prov, d, True, f
+                except:
+                    continue
+
+        return 16.80, "Obramat", f"Caja Automatismos Empotrar {mod_str} Módulos DIN", False, -1
 
 
     # ==========================================
@@ -701,7 +733,7 @@ def app():
         p_id, prov_id, desc_id, ok_id, fila_id = buscar_proteccion_por_marca(df_precios, 'diferencial', marca_protecciones)
         p_pia, prov_pia, desc_pia, ok_pia, fila_pia = buscar_proteccion_por_marca(df_precios, 'pia', marca_protecciones)
         
-        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, ok_caja_cuadro, fila_caja_cuadro = buscar_caja_cuadro(df_precios, marca_protecciones)
+        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, ok_caja_cuadro, fila_caja_cuadro = buscar_caja_cuadro(df_precios, marca_protecciones, grado_electr)
 
         global_tubo20_m = 0.0
         global_tubo25_m = 0.0
