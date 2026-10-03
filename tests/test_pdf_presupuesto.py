@@ -101,4 +101,58 @@ def test_generar_pdf_unifilar_industria_bytes():
     assert len(pdf_bytes) > 5000
     assert pdf_bytes.startswith(b"%PDF")
 
+def test_generar_pdf_presupuesto_completo_capitulos_y_manuales():
+    proyecto_info = {
+        "empresa": "BOLIMUR Instalaciones Eléctricas",
+        "proyectista": "Richard Choque",
+        "licencia": "REBT-30/15892",
+        "localidad": "Murcia",
+        "telefono": "600000000",
+        "expediente": "PRES-2026-0901",
+        "fecha": "03/10/2026"
+    }
+    capitulos = [
+        {"cap": "CAP. 01", "titulo": "Cuadro General CGMP", "desc": "Cuadro 24 elementos con IGA y protecciones", "importe": 380.0},
+        {"cap": "CAP. 02", "titulo": "Canalizaciones y Rozas", "desc": "Tubo corrugado y cajas", "importe": 420.0},
+        {"cap": "CAP. 03", "titulo": "Cableado Libre de Halógenos", "desc": "Conductores H07Z1-K", "importe": 350.0},
+        {"cap": "CAP. 04", "titulo": "Mecanismos por Estancias", "desc": "Serie Efapel MEC 21", "importe": 510.0},
+        {"cap": "CAP. 05", "titulo": "Ensayos Reglamentarios y Boletín CIE", "desc": "Ensayos ITC-BT-05 y CIE Murcia", "importe": 150.0},
+        {"cap": "CAP. 06", "titulo": "Trabajos Adicionales", "desc": "Línea IRVE para vehículo eléctrico", "importe": 450.0}
+    ]
+    df_comercial = pd.DataFrame([
+        {"Estancia": "Cocina", "Detalle Comercial": "Instalación REBT", "Importe Venta (€)": 450.0},
+        {"Estancia": "Salón", "Detalle Comercial": "Instalación REBT", "Importe Venta (€)": 380.0}
+    ])
+    partidas_manuales = [
+        {"concepto": "Línea IRVE Vehículo Eléctrico", "descripcion": "Línea 3x6mm² con diferencial clase A", "cantidad": 1, "unidad": "partida", "precio_unitario": 450.0, "subtotal": 450.0}
+    ]
+    materiales_pvp = [
+        {"categoria": "Mecanismos", "articulo": "Interruptor 10AX", "desc_exacta": "Efapel MEC 21 Blanco", "cantidad": 8, "unidad": "ud", "pvp_unitario": 4.50, "subtotal_pvp": 36.0}
+    ]
+    presupuesto_data = {
+        "capitulos": capitulos,
+        "df_comercial": df_comercial,
+        "partidas_manuales": partidas_manuales,
+        "materiales_pvp": materiales_pvp,
+        "incluir_catalogo_pvp": True,
+        "subtotal_neto": 2260.0,
+        "iva_pct": 21.0,
+        "cuota_iva": 474.6,
+        "total_cliente": 2734.6,
+        "total_puntos": 32,
+        "precio_medio_punto": 85.45,
+        "serie_mecanismos": "Efapel MEC 21",
+        "marca_protecciones": "Schneider",
+        "potencia_kw": "5.75 kW (25A)",
+        "grado_electr": "Básica",
+        "plazo_dias": 4.5,
+        "num_operarios": 2
+    }
+
+    pdf_bytes = pdf_presupuesto.generar_pdf_presupuesto(proyecto_info, presupuesto_data)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 8000
+    assert pdf_bytes.startswith(b"%PDF")
+
+
 

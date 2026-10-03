@@ -94,7 +94,9 @@ class NumberedCanvasPresupuesto(canvas.Canvas):
 
 def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     """
-    Genera una oferta comercial y presupuesto técnico en PDF profesional con ReportLab.
+    Genera una oferta comercial y presupuesto técnico oficial en PDF profesional con ReportLab.
+    Incluye estructura por Capítulos REBT, desglose por estancias, partidas a medida, catálogo PVP opcional,
+    plazos de ejecución, garantías legales (3 años) y cuadro de aceptación formal.
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -112,40 +114,42 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     c_bg_box = colors.HexColor("#f0f9ff")
     c_border = colors.HexColor("#cbd5e1")
     c_text_dark = colors.HexColor("#1e293b")
+    c_green = colors.HexColor("#16a34a")
 
     title_style = ParagraphStyle(
-        'DocTitle', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=17, leading=21,
-        textColor=c_primary, spaceAfter=3
+        'DocTitle_P', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=15, leading=19,
+        textColor=c_primary, spaceAfter=2
     )
     subtitle_style = ParagraphStyle(
-        'DocSubtitle', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=9.5, leading=12,
-        textColor=c_secondary, spaceAfter=10
+        'DocSubtitle_P', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=8.5, leading=11,
+        textColor=c_secondary, spaceAfter=8
     )
     h1_style = ParagraphStyle(
         'Heading1_Custom', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=11, leading=14,
-        textColor=c_primary, spaceBefore=12, spaceAfter=5, keepWithNext=True
+        fontName='Helvetica-Bold', fontSize=10, leading=13,
+        textColor=c_primary, spaceBefore=9, spaceAfter=4, keepWithNext=True
     )
     body_style = ParagraphStyle(
         'Body_Custom', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=8.5, leading=11.5,
+        fontName='Helvetica', fontSize=8, leading=11,
         textColor=c_text_dark
     )
+    body_bold = ParagraphStyle('BodyBold_P', parent=body_style, fontName='Helvetica-Bold')
     th_style = ParagraphStyle(
-        'TableHeader', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=8, leading=10,
+        'TableHeader_P', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7.5, leading=9.5,
         textColor=colors.white, alignment=1
     )
     td_style = ParagraphStyle(
-        'TableCell', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=8, leading=10,
+        'TableCell_P', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7.5, leading=9.5,
         textColor=c_text_dark, alignment=0
     )
-    td_center = ParagraphStyle('TableCellCenter', parent=td_style, alignment=1)
-    td_right = ParagraphStyle('TableCellRight', parent=td_style, alignment=2)
-    td_right_bold = ParagraphStyle('TableCellRightBold', parent=td_style, fontName='Helvetica-Bold', alignment=2)
+    td_center = ParagraphStyle('TableCellCenter_P', parent=td_style, alignment=1)
+    td_right = ParagraphStyle('TableCellRight_P', parent=td_style, alignment=2)
+    td_right_bold = ParagraphStyle('TableCellRightBold_P', parent=td_style, fontName='Helvetica-Bold', alignment=2)
 
     story = []
 
@@ -154,16 +158,16 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         logo_path = "icono_bolimur.png"
     
     text_col = [
-        Paragraph("PRESUPUESTO DE INSTALACIÓN ELÉCTRICA VIVIENDAS", title_style),
-        Paragraph(str(proyecto_info.get("empresa", "BOLIMUR Instalaciones Integrales")), subtitle_style)
+        Paragraph("PRESUPUESTO OFICIAL DE INSTALACIÓN ELÉCTRICA", title_style),
+        Paragraph(f"<b>{proyecto_info.get('empresa', 'BOLIMUR Instalaciones Integrales')}</b> | Instalación Residencial conforme a REBT (RD 842/2002)", subtitle_style)
     ]
 
     if os.path.exists(logo_path):
         try:
-            img = Image(logo_path, width=4.0*cm, height=2.67*cm)
-            header_table = Table([[text_col, img]], colWidths=[13.5*cm, 4.5*cm])
+            img = Image(logo_path, width=3.8*cm, height=2.4*cm)
+            header_table = Table([[text_col, img]], colWidths=[14.2*cm, 3.8*cm])
             header_table.setStyle(TableStyle([
-                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
                 ('ALIGN', (1,0), (1,0), 'RIGHT'),
                 ('TOPPADDING', (0,0), (-1,-1), 0),
                 ('BOTTOMPADDING', (0,0), (-1,-1), 0),
@@ -174,14 +178,18 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     else:
         story.extend(text_col)
 
-    story.append(HRFlowable(width="100%", thickness=1.5, color=c_secondary, spaceBefore=2, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=c_secondary, spaceBefore=2, spaceAfter=6))
 
     fecha_str = proyecto_info.get("fecha", datetime.date.today().strftime("%d/%m/%Y"))
+    potencia_kw_val = presupuesto_data.get("potencia_kw", "5.75 kW")
+    serie_mec_val = presupuesto_data.get("serie_mecanismos", "Estándar")
+    marca_prot_val = presupuesto_data.get("marca_protecciones", "Schneider / Hager")
+
     meta_table_data = [
         [
-            Paragraph("<b>Empresa:</b>", body_style),
+            Paragraph("<b>Empresa Instaladora:</b>", body_style),
             Paragraph(str(proyecto_info.get("empresa", "BOLIMUR")), body_style),
-            Paragraph("<b>Fecha Oferta:</b>", body_style),
+            Paragraph("<b>Fecha de Oferta:</b>", body_style),
             Paragraph(fecha_str, body_style)
         ],
         [
@@ -192,141 +200,298 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         ],
         [
             Paragraph("<b>Teléfono / Localidad:</b>", body_style),
-            Paragraph(f"{proyecto_info.get('telefono', '600000000')} | {proyecto_info.get('localidad', 'Comunidad')}", body_style),
-            Paragraph("<b>Gama Mecanismos:</b>", body_style),
-            Paragraph(str(presupuesto_data.get("serie_mecanismos", "Estándar")), body_style)
+            Paragraph(f"{proyecto_info.get('telefono', '600000000')} | {proyecto_info.get('localidad', 'Región de Murcia')}", body_style),
+            Paragraph("<b>Potencia Prevista / IGA:</b>", body_style),
+            Paragraph(f"{potencia_kw_val} ({presupuesto_data.get('grado_electr', 'Básica')})", body_style)
+        ],
+        [
+            Paragraph("<b>Gama de Mecanismos:</b>", body_style),
+            Paragraph(str(serie_mec_val), body_style),
+            Paragraph("<b>Protecciones CGMP:</b>", body_style),
+            Paragraph(str(marca_prot_val), body_style)
         ]
     ]
 
-    meta_table = Table(meta_table_data, colWidths=[3.5*cm, 6.5*cm, 3.5*cm, 4.5*cm])
+    meta_table = Table(meta_table_data, colWidths=[3.5*cm, 6.5*cm, 3.8*cm, 4.2*cm])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_light),
         ('BOX', (0,0), (-1,-1), 0.5, c_border),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     subtotal_neto = float(presupuesto_data.get("subtotal_neto", 0.0))
     iva_pct = float(presupuesto_data.get("iva_pct", 21.0))
     cuota_iva = float(presupuesto_data.get("cuota_iva", 0.0))
     total_cliente = float(presupuesto_data.get("total_cliente", 0.0))
+    total_puntos = presupuesto_data.get("total_puntos", 0)
+    precio_medio_punto = float(presupuesto_data.get("precio_medio_punto", 0.0))
+    plazo_dias = presupuesto_data.get("plazo_dias", 0.0)
 
-    resumen_title = Paragraph("<b>TOTAL PRESUPUESTO OFERTA (CON IVA):</b>", ParagraphStyle('ResTitle', parent=body_style, fontSize=11, textColor=c_primary, fontName='Helvetica-Bold'))
-    resumen_val = Paragraph(f"<b>{total_cliente:,.2f} €</b>", ParagraphStyle('ResVal', parent=body_style, fontSize=14, textColor=c_accent, fontName='Helvetica-Bold', alignment=2))
+    resumen_title = Paragraph("<b>TOTAL PRESUPUESTO OFERTA (CON IVA):</b>", ParagraphStyle('ResTitle', parent=body_style, fontSize=10.5, textColor=c_primary, fontName='Helvetica-Bold'))
+    resumen_val = Paragraph(f"<b>{total_cliente:,.2f} €</b>", ParagraphStyle('ResVal', parent=body_style, fontSize=13.5, textColor=c_accent, fontName='Helvetica-Bold', alignment=2))
 
     desglose_resumen = Paragraph(
-        f"<b>Resumen Económico:</b><br/>"
-        f"• Subtotal Neto Comercial (Sin IVA): <b>{subtotal_neto:,.2f} €</b><br/>"
+        f"<b>Resumen Económico de la Propuesta:</b><br/>"
+        f"• Base Imponible Neta (Sin IVA): <b>{subtotal_neto:,.2f} €</b> &nbsp;|&nbsp; "
         f"• Impuesto sobre el Valor Añadido (IVA {iva_pct:.0f}%): <b>{cuota_iva:,.2f} €</b><br/>"
-        f"• Puntos / Mecanismos Totales Instalados: <b>{presupuesto_data.get('total_puntos', 0)} uds</b> | "
-        f"Precio medio por punto: <b>{presupuesto_data.get('precio_medio_punto', 0.0):.2f} €/punto</b>",
+        f"• Puntos de Mecanismos Totales: <b>{total_puntos} uds</b> &nbsp;|&nbsp; "
+        f"• Ratio medio por punto: <b>{precio_medio_punto:.2f} €/punto</b> (instalación completa)<br/>"
+        f"• Plazo Estimado de Ejecución: <b>{plazo_dias:.1f} días laborables</b> &nbsp;|&nbsp; "
+        f"• Garantía Oficial: <b>3 Años</b> en mano de obra y materiales",
         body_style
     )
 
-    resumen_box_data = [
-        [resumen_title, resumen_val],
-        [desglose_resumen, ""]
-    ]
-
-    resumen_box = Table(resumen_box_data, colWidths=[11.5*cm, 6.5*cm])
+    resumen_box = Table([[resumen_title, resumen_val], [desglose_resumen, ""]], colWidths=[11.8*cm, 6.2*cm])
     resumen_box.setStyle(TableStyle([
         ('SPAN', (0,1), (1,1)),
         ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
-        ('BOX', (0,0), (-1,-1), 1.5, c_secondary),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ('BOX', (0,0), (-1,-1), 1.2, c_secondary),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LEFTPADDING', (0,0), (-1,-1), 7),
+        ('RIGHTPADDING', (0,0), (-1,-1), 7),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(resumen_box)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
-    story.append(Paragraph("1. Cuadro de Desglose por Estancias y Partidas de Obra", h1_style))
-    story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=5))
+    # =========================================================================
+    # SECCIÓN 1: RESUMEN POR CAPÍTULOS DE OBRA REBT
+    # =========================================================================
+    capitulos = presupuesto_data.get("capitulos", [])
+    if capitulos:
+        story.append(Paragraph("1. Cuadro Resumen de Capítulos REBT (Memoria Valorada)", h1_style))
+        story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
 
-    table_p_header = [
-        Paragraph("Concepto / Estancia", th_style),
-        Paragraph("Detalle de Mecanismos y Cuadro", th_style),
-        Paragraph("Importe Comercial (€)", th_style)
-    ]
-    table_p_rows = [table_p_header]
+        cap_header = [
+            Paragraph("Capítulo", th_style),
+            Paragraph("Denominación y Alcance Técnico de los Trabajos", th_style),
+            Paragraph("Importe PVP (€)", th_style)
+        ]
+        cap_rows = [cap_header]
 
-    df_comercial = presupuesto_data.get("df_comercial", [])
-    if hasattr(df_comercial, 'to_dict'):
-        records = df_comercial.to_dict('records')
-    else:
-        records = df_comercial
+        for cap in capitulos:
+            c_num = str(cap.get("cap", cap.get("capitulo", "")))
+            c_tit = str(cap.get("titulo", ""))
+            c_desc = str(cap.get("desc", cap.get("descripcion", "")))
+            c_imp = float(cap.get("importe", 0.0))
 
-    for row in records:
-        estancia = str(row.get('Estancia / Partida', row.get('Estancia', '')))
-        detalle = str(row.get('Detalle de Mecanismos / Equipamiento', row.get('Detalle', '')))
-        importe = str(row.get('Importe (€)', '0.00'))
+            desc_block = f"<b>{c_tit}</b><br/>{c_desc}" if c_desc else f"<b>{c_tit}</b>"
+            cap_rows.append([
+                Paragraph(c_num, td_center),
+                Paragraph(desc_block, td_style),
+                Paragraph(f"{c_imp:,.2f} €", td_right)
+            ])
 
-        table_p_rows.append([
-            Paragraph(estancia, td_style),
-            Paragraph(detalle, td_style),
-            Paragraph(importe, td_right)
+        cap_rows.append([
+            Paragraph("<b>SUBTOTAL COMERCIAL NETO (Sin IVA)</b>", ParagraphStyle('CapSub', parent=td_style, fontName='Helvetica-Bold')),
+            "", Paragraph(f"<b>{subtotal_neto:,.2f} €</b>", td_right_bold)
+        ])
+        cap_rows.append([
+            Paragraph(f"<b>IVA APLICABLE ({iva_pct:.0f}%)</b>", ParagraphStyle('CapIva', parent=td_style, fontName='Helvetica-Bold')),
+            "", Paragraph(f"<b>{cuota_iva:,.2f} €</b>", td_right_bold)
+        ])
+        cap_rows.append([
+            Paragraph("<b>TOTAL PRESUPUESTO OFICIAL (CON IVA)</b>", ParagraphStyle('CapTot', parent=td_style, fontName='Helvetica-Bold', textColor=c_accent)),
+            "", Paragraph(f"<b>{total_cliente:,.2f} €</b>", ParagraphStyle('CapTotV', parent=td_right_bold, textColor=c_accent, fontSize=8.5))
         ])
 
-    table_p_rows.append([
-        Paragraph("<b>SUBTOTAL NETO (Sin IVA)</b>", ParagraphStyle('SubPres', parent=td_style, fontName='Helvetica-Bold')),
-        "", Paragraph(f"<b>{subtotal_neto:,.2f} €</b>", td_right_bold)
-    ])
-    table_p_rows.append([
-        Paragraph(f"<b>IVA ({iva_pct:.0f}%)</b>", ParagraphStyle('SubIva', parent=td_style, fontName='Helvetica-Bold')),
-        "", Paragraph(f"<b>{cuota_iva:,.2f} €</b>", td_right_bold)
-    ])
-    table_p_rows.append([
-        Paragraph("<b>TOTAL PRESUPUESTO</b>", ParagraphStyle('TotPres', parent=td_style, fontName='Helvetica-Bold', textColor=c_accent)),
-        "", Paragraph(f"<b>{total_cliente:,.2f} €</b>", ParagraphStyle('TotVal', parent=td_right_bold, textColor=c_accent, fontSize=9))
-    ])
+        t_cap = Table(cap_rows, colWidths=[2.5*cm, 12.0*cm, 3.5*cm])
+        t_cap.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), c_primary),
+            ('SPAN', (0, -3), (1, -3)),
+            ('SPAN', (0, -2), (1, -2)),
+            ('SPAN', (0, -1), (1, -1)),
+            ('BACKGROUND', (0,-3), (-1,-1), colors.HexColor("#e2e8f0")),
+            ('GRID', (0,0), (-1,-1), 0.5, c_border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-4), [colors.white, c_bg_light]),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(t_cap)
+        story.append(Spacer(1, 6))
 
-    t_pres = Table(table_p_rows, colWidths=[6.0*cm, 8.5*cm, 3.5*cm])
-    t_pres.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), c_primary),
-        ('SPAN', (0, -3), (1, -3)),
-        ('SPAN', (0, -2), (1, -2)),
-        ('SPAN', (0, -1), (1, -1)),
-        ('BACKGROUND', (0,-3), (-1,-1), colors.HexColor("#e2e8f0")),
-        ('GRID', (0,0), (-1,-1), 0.5, c_border),
-        ('ROWBACKGROUNDS', (0,1), (-1,-4), [colors.white, c_bg_light]),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-    ]))
-    story.append(t_pres)
-    story.append(Spacer(1, 10))
+    # =========================================================================
+    # SECCIÓN 2: DESGLOSE DETALLADO POR ESTANCIAS
+    # =========================================================================
+    df_comercial = presupuesto_data.get("df_comercial", [])
+    if hasattr(df_comercial, 'to_dict'):
+        records_est = df_comercial.to_dict('records')
+    else:
+        records_est = df_comercial
 
+    if records_est:
+        sec_num = "2" if capitulos else "1"
+        story.append(Paragraph(f"{sec_num}. Desglose de Instalación por Estancias de la Vivienda", h1_style))
+        story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
+
+        table_p_header = [
+            Paragraph("Estancia / Zona", th_style),
+            Paragraph("Equipamiento y Mecanismos Incluidos", th_style),
+            Paragraph("Importe Venta (€)", th_style)
+        ]
+        table_p_rows = [table_p_header]
+
+        for row in records_est:
+            estancia = str(row.get('Estancia / Partida', row.get('Estancia', '')))
+            detalle = str(row.get('Detalle Comercial', row.get('Detalle de Mecanismos / Equipamiento', row.get('Detalle', ''))))
+            importe = row.get('Importe Venta (€)', row.get('Importe (€)', '0.00'))
+            if isinstance(importe, (int, float)):
+                importe_str = f"{float(importe):,.2f} €"
+            else:
+                importe_str = str(importe)
+
+            table_p_rows.append([
+                Paragraph(f"<b>{estancia}</b>", td_style),
+                Paragraph(detalle, td_style),
+                Paragraph(importe_str, td_right)
+            ])
+
+        t_est = Table(table_p_rows, colWidths=[4.2*cm, 10.3*cm, 3.5*cm])
+        t_est.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), c_primary),
+            ('GRID', (0,0), (-1,-1), 0.5, c_border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_bg_light]),
+            ('TOPPADDING', (0,0), (-1,-1), 2.5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(t_est)
+        story.append(Spacer(1, 6))
+
+    # =========================================================================
+    # SECCIÓN 3: PARTIDAS MANUALES / TRABAJOS ADICIONALES
+    # =========================================================================
+    partidas_man = presupuesto_data.get("partidas_manuales", [])
+    if partidas_man:
+        story.append(Paragraph("3. Partidas y Trabajos Adicionales Personalizados", h1_style))
+        story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
+
+        pman_header = [
+            Paragraph("Concepto", th_style),
+            Paragraph("Descripción Técnica", th_style),
+            Paragraph("Cant.", th_style),
+            Paragraph("PVP Unit (€)", th_style),
+            Paragraph("Subtotal (€)", th_style)
+        ]
+        pman_rows = [pman_header]
+
+        for p in partidas_man:
+            c_nom = str(p.get("concepto", ""))
+            c_desc = str(p.get("descripcion", ""))
+            c_cant = f"{p.get('cantidad', 1)} {p.get('unidad', 'ud')}"
+            c_pu = f"{float(p.get('precio_unitario', 0.0)):,.2f} €"
+            c_sub = f"{float(p.get('subtotal', 0.0)):,.2f} €"
+
+            pman_rows.append([
+                Paragraph(f"<b>{c_nom}</b>", td_style),
+                Paragraph(c_desc, td_style),
+                Paragraph(c_cant, td_center),
+                Paragraph(c_pu, td_right),
+                Paragraph(c_sub, td_right)
+            ])
+
+        t_pman = Table(pman_rows, colWidths=[4.5*cm, 7.0*cm, 1.8*cm, 2.3*cm, 2.4*cm])
+        t_pman.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), c_primary),
+            ('GRID', (0,0), (-1,-1), 0.5, c_border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_bg_light]),
+            ('TOPPADDING', (0,0), (-1,-1), 2.5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(t_pman)
+        story.append(Spacer(1, 6))
+
+    # =========================================================================
+    # SECCIÓN 4: CATÁLOGO DE MATERIALES VALORADOS A PVP (OPCIONAL)
+    # =========================================================================
+    materiales_pvp = presupuesto_data.get("materiales_pvp", [])
+    if materiales_pvp and presupuesto_data.get("incluir_catalogo_pvp", True):
+        story.append(Paragraph("4. Especificación y Catálogo de Materiales Principales Valorados a PVP", h1_style))
+        story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
+
+        mat_header = [
+            Paragraph("Elemento / Categoría", th_style),
+            Paragraph("Descripción y Gama Homologada", th_style),
+            Paragraph("Cant.", th_style),
+            Paragraph("PVP Unit (€)", th_style),
+            Paragraph("Subtotal PVP (€)", th_style)
+        ]
+        mat_rows = [mat_header]
+
+        for m in materiales_pvp:
+            m_art = str(m.get("articulo", ""))
+            m_desc = str(m.get("desc_exacta", m.get("descripcion", "")))
+            m_cant = f"{m.get('cantidad', 1)} {m.get('unidad', 'ud')}"
+            m_pvp_u = f"{float(m.get('pvp_unitario', 0.0)):,.2f} €"
+            m_pvp_tot = f"{float(m.get('subtotal_pvp', 0.0)):,.2f} €"
+
+            mat_rows.append([
+                Paragraph(f"<b>{m_art}</b>", td_style),
+                Paragraph(m_desc, td_style),
+                Paragraph(m_cant, td_center),
+                Paragraph(m_pvp_u, td_right),
+                Paragraph(m_pvp_tot, td_right)
+            ])
+
+        t_mat = Table(mat_rows, colWidths=[4.2*cm, 7.3*cm, 1.8*cm, 2.3*cm, 2.4*cm])
+        t_mat.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), c_primary),
+            ('GRID', (0,0), (-1,-1), 0.5, c_border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_bg_light]),
+            ('TOPPADDING', (0,0), (-1,-1), 2.5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(t_mat)
+        story.append(Paragraph("<i>* Precios de venta al público (PVP) calculados con margen comercial oficial, marcado CE y garantía legal de reposición incluidos.</i>", ParagraphStyle('MatNote', parent=body_style, fontSize=7, textColor=colors.HexColor("#64748b"))))
+        story.append(Spacer(1, 6))
+
+    # =========================================================================
+    # SECCIÓN 5: CONDICIONES, GARANTÍAS Y NORMATIVA
+    # =========================================================================
     condiciones_text = (
-        "<b>Condiciones Generales de la Oferta:</b><br/>"
-        "1. <b>Validez de la oferta:</b> 30 días naturales desde la fecha de emisión.<br/>"
-        "2. <b>Garantía:</b> 3 años en materiales e instalación conforme al REBT.<br/>"
-        "3. <b>Forma de pago:</b> 40% al acopio de materiales, 40% durante la obra y 20% a la entrega del Certificado de Instalación Eléctrica (CIE)."
+        "<b>Condiciones Generales, Garantías Legales y Tramitación Reglamentaria:</b><br/>"
+        "1. <b>Validez de la oferta:</b> 30 días naturales a partir de la fecha de emisión del presente documento.<br/>"
+        "2. <b>Garantía Oficial:</b> 3 años de garantía en la instalación y materiales conforme al RD Ley 7/2021 y REBT.<br/>"
+        "3. <b>Ensayos Reglamentarios y Boletín Oficial:</b> Incluye verificaciones previas según ITC-BT-05 (resistencia de aislamiento, continuidad de conductores de protección, disparo de diferenciales, impedancia de bucle), elaboración de Memoria Técnica de Diseño (MTD) y tramitación telemática oficial del Certificado de Instalación Eléctrica (CIE / Boletín) ante la Dirección General de Energía y Actividad Industrial y Minera de la Región de Murcia (DGEAIM).<br/>"
+        "4. <b>Forma de Pago:</b> 40% a la firma del presupuesto y acopio de materiales, 40% durante la ejecución de las fases de obra y 20% a la entrega del Certificado de Instalación Eléctrica (CIE) debidamente tramitado."
     )
-    cond_box = Table([[Paragraph(condiciones_text, ParagraphStyle('Cond', parent=body_style, fontSize=8, leading=10.5))]], colWidths=[18.0*cm])
+    cond_box = Table([[Paragraph(condiciones_text, ParagraphStyle('Cond', parent=body_style, fontSize=7.5, leading=10))]], colWidths=[18.0*cm])
     cond_box.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
         ('BOX', (0,0), (-1,-1), 0.5, c_secondary),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ('LEFTPADDING', (0,0), (-1,-1), 7),
+        ('RIGHTPADDING', (0,0), (-1,-1), 7),
         ('TOPPADDING', (0,0), (-1,-1), 4),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(cond_box)
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 8))
+
+    # =========================================================================
+    # SECCIÓN 6: ACEPTACIÓN Y CONFORMIDAD DEL CLIENTE
+    # =========================================================================
+    empresa_str = str(proyecto_info.get("empresa", "BOLIMUR Instalaciones"))
+    proy_str = str(proyecto_info.get("proyectista", "Instalador Autorizado"))
+    lic_str = str(proyecto_info.get("licencia", "REBT-001"))
 
     firma_block = [
-        Paragraph("<b>ACEPTACIÓN Y CONFORMIDAD DEL CLIENTE</b>", ParagraphStyle('FirmaTit', parent=body_style, fontName='Helvetica-Bold', fontSize=9.5, textColor=c_primary)),
-        Spacer(1, 16),
+        Paragraph("<b>ACEPTACIÓN Y CONFORMIDAD DEL PRESUPUESTO</b>", ParagraphStyle('FirmaTit', parent=body_style, fontName='Helvetica-Bold', fontSize=9, textColor=c_primary)),
+        Spacer(1, 4),
+        Paragraph("La firma del presente documento supone la aceptación íntegra de los conceptos, partidas y condiciones expresadas:", ParagraphStyle('FirmaSub', parent=body_style, fontSize=7.5, textColor=colors.HexColor("#64748b"))),
+        Spacer(1, 12),
         Table([
             [
-                Paragraph("<b>Por la Empresa Instaladora:</b><br/><br/><br/>________________________________________<br/>" + str(proyecto_info.get("empresa", "BOLIMUR")), body_style),
-                Paragraph("<b>Aceptado por el Cliente:</b><br/><br/><br/>________________________________________<br/>Fecha y Firma", body_style)
+                Paragraph(f"<b>Por la Empresa Instaladora:</b><br/><br/><br/>____________________________________________<br/><b>{empresa_str}</b><br/>{proy_str} (Lic. REBT Nº {lic_str})", body_style),
+                Paragraph("<b>Conformidad y Aceptación del Cliente:</b><br/><br/><br/>____________________________________________<br/><b>Nombre / Razón Social:</b><br/><b>DNI / CIF:</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Fecha:</b> ___/___/2026", body_style)
             ]
         ], colWidths=[9.0*cm, 9.0*cm], style=[
             ('VALIGN', (0,0), (-1,-1), 'TOP'),

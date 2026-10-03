@@ -43,16 +43,62 @@ def cargar_precios_excel():
                 continue
     return None, None
 
-def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total, instalador_info, df_orden_compra=None, total_compra_neto=0.0, total_compra_con_iva=0.0):
+def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total, instalador_info, df_orden_compra=None, total_compra_neto=0.0, total_compra_con_iva=0.0, capitulos=None, partidas_manuales=None, materiales_pvp=None):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_comercial.to_excel(writer, sheet_name='Presupuesto Comercial', index=False)
+        if capitulos:
+            df_cap = pd.DataFrame([
+                {
+                    "Capítulo": c.get("cap", c.get("capitulo", "")),
+                    "Denominación": c.get("titulo", ""),
+                    "Alcance Técnico": c.get("desc", c.get("descripcion", "")),
+                    "Importe PVP (€)": round(float(c.get("importe", 0.0)), 2)
+                }
+                for c in capitulos
+            ])
+            df_cap.to_excel(writer, sheet_name='Capítulos REBT Presupuesto', index=False)
+
+        df_comercial.to_excel(writer, sheet_name='Desglose por Estancias', index=False)
+
+        if partidas_manuales:
+            df_pman = pd.DataFrame([
+                {
+                    "Concepto": p.get("concepto", ""),
+                    "Descripción Técnica": p.get("descripcion", ""),
+                    "Cantidad": p.get("cantidad", 1),
+                    "Unidad": p.get("unidad", "ud"),
+                    "PVP Unitario (€)": round(float(p.get("precio_unitario", 0.0)), 2),
+                    "Subtotal PVP (€)": round(float(p.get("subtotal", 0.0)), 2)
+                }
+                for p in partidas_manuales
+            ])
+            df_pman.to_excel(writer, sheet_name='Partidas Adicionales', index=False)
+
+        if materiales_pvp:
+            df_mat_pvp = pd.DataFrame([
+                {
+                    "Categoría": m.get("categoria", ""),
+                    "Elemento": m.get("articulo", ""),
+                    "Descripción / Modelo": m.get("desc_exacta", m.get("descripcion", "")),
+                    "Cantidad": m.get("cantidad", 1),
+                    "Unidad": m.get("unidad", "ud"),
+                    "PVP Unitario (€)": round(float(m.get("pvp_unitario", 0.0)), 2),
+                    "Subtotal PVP (€)": round(float(m.get("subtotal_pvp", 0.0)), 2)
+                }
+                for m in materiales_pvp
+            ])
+            df_mat_pvp.to_excel(writer, sheet_name='Materiales Principales PVP', index=False)
+
         df_resumen = pd.DataFrame([
-            {"Concepto": "Subtotal Comercial Neto", "Importe (€)": round(subtotal, 2)},
-            {"Concepto": f"IVA ({iva_pct}%)", "Importe (€)": round(cuota_iva, 2)},
-            {"Concepto": "TOTAL PRESUPUESTO", "Importe (€)": round(total, 2)}
+            {"Concepto": "Empresa Instaladora", "Importe / Valor": str(instalador_info.get("empresa", "BOLIMUR"))},
+            {"Concepto": "Instalador Autorizado", "Importe / Valor": f"{instalador_info.get('instalador', '')} (Lic: {instalador_info.get('licencia', '')})"},
+            {"Concepto": "Fecha Presupuesto", "Importe / Valor": str(instalador_info.get("fecha", datetime.date.today().strftime("%d/%m/%Y")))},
+            {"Concepto": "Base Imponible Neta (Sin IVA)", "Importe / Valor": f"{round(subtotal, 2)} €"},
+            {"Concepto": f"Cuota IVA ({iva_pct}%)", "Importe / Valor": f"{round(cuota_iva, 2)} €"},
+            {"Concepto": "TOTAL PRESUPUESTO OFERTA (CON IVA)", "Importe / Valor": f"{round(total, 2)} €"}
         ])
         df_resumen.to_excel(writer, sheet_name='Resumen Económico', index=False)
+
         if df_orden_compra is not None and not df_orden_compra.empty:
             df_orden_compra.to_excel(writer, sheet_name='Orden de Compra y Acopio', index=False)
             df_res_compra = pd.DataFrame([
@@ -191,6 +237,9 @@ def exportar_excel_orden_compra(df_orden_compra, total_neto, cuota_iva, total_co
 
 
 def app():
+    if "partidas_manuales" not in st.session_state:
+        st.session_state["partidas_manuales"] = []
+
     st.markdown("""
         <style>
             @media print {
@@ -1543,6 +1592,81 @@ def app():
             "materiales_por_estancia": materiales_por_estancia
         }
 
+        # Construcción del catálogo de materiales principales valorados a PVP para el cliente
+        materiales_pvp = []
+        for cat_nombre, items_cat in categorias_orden_compra.items():
+            for item in items_cat:
+                pvp_u = round(item["precio_unitario"] * mult_comercial * mult_garantia_mat, 2)
+                sub_pvp = round(item["subtotal"] * mult_comercial * mult_garantia_mat, 2)
+                materiales_pvp.append({
+                    "categoria": cat_nombre,
+                    "articulo": item["articulo"],
+                    "desc_exacta": item["desc_exacta"],
+                    "proveedor": item["proveedor"],
+                    "cantidad": item["cantidad"],
+                    "unidad": item["unidad"],
+                    "pvp_unitario": pvp_u,
+                    "subtotal_pvp": sub_pvp
+                })
+
+        # Construcción de los Capítulos REBT de la Oferta Comercial Oficial (Memoria Valorada)
+        coste_tubos_cajas_tot = (global_tubo20_m * p_tubo20) + (global_tubo25_m * p_tubo25) + (global_caja_mec_uds * p_caja_mec) + (global_caja_reg_uds * p_caja_reg)
+        coste_cables_tot = (global_15_az_m * p_15_az) + (global_15_ne_m * p_15_ne) + (global_15_ma_m * p_15_ma) + (global_15_gr_m * p_15_gr) + (global_15_tt_m * p_15_tt) + (global_25_az_m * p_25_az) + (global_25_ne_m * p_25_ne) + (global_25_tt_m * p_25_tt) + (global_utp_m * p_utp)
+        coste_mecanismos_marcos_tot = sum(m["cant"] * m["precio"] for est_x in materiales_por_estancia for m in est_x["mecanismos"]) + (global_marcos_uds * p_marco)
+
+        venta_cap1_cgmp = coste_cuadro_neto * mult_comercial * mult_garantia_mat
+        venta_cap2_canalizacion = (coste_tubos_cajas_tot * mult_comercial * mult_garantia_mat) + ((sum_h_rozas + sum_h_tubos) * precio_hora * mult_comercial)
+        venta_cap3_cableado = (coste_cables_tot * mult_comercial * mult_garantia_mat) + (sum_h_cable * precio_hora * mult_comercial)
+        venta_cap4_mecanismos = (coste_mecanismos_marcos_tot * mult_comercial * mult_garantia_mat) + (sum_h_mec * precio_hora * mult_comercial)
+        venta_cap5_boletin = 0.0
+        venta_cap6_manuales = sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', []))
+
+        capitulos_presupuesto = [
+            {
+                "cap": "CAP. 01",
+                "titulo": "Cuadro General de Mando y Protección (CGMP)",
+                "desc": f"Suministro e instalación de cuadro general empotrado, IGA {iga_amperaje}A 6kA, protector de sobretensiones permanentes y transitorias (POP+DPS), {n_difs}x diferencial(es) 40A/30mA y {n_pias}x PIAs magnetotérmicos de protección según ITC-BT-25.",
+                "importe": round(venta_cap1_cgmp, 2)
+            },
+            {
+                "cap": "CAP. 02",
+                "titulo": "Canalizaciones, Rozas y Cajas de Registro",
+                "desc": f"Rozas en {tipo_pared} (techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}), tendido de {global_tubo20_m + global_tubo25_m:.0f} m de tubo corrugado {tipo_tubo_sel} M20/M25, colocación de {global_caja_mec_uds} cajas universales y {global_caja_reg_uds} cajas de derivación protegidas.",
+                "importe": round(venta_cap2_canalizacion, 2)
+            },
+            {
+                "cap": "CAP. 03",
+                "titulo": "Cableado y Líneas de Distribución Interior",
+                "desc": f"Suministro y tendido de {global_15_az_m + global_15_ne_m + global_15_ma_m + global_15_gr_m + global_15_tt_m + global_25_az_m + global_25_ne_m + global_25_tt_m + global_utp_m:.0f} m de conductores de cobre {tipo_cable_sel} (1.5, 2.5, 4, 6, 10 mm²) con código de colores REBT y puesta a tierra equipotencial.",
+                "importe": round(venta_cap3_cableado, 2)
+            },
+            {
+                "cap": "CAP. 04",
+                "titulo": "Mecanismos y Aparamenta por Estancias",
+                "desc": f"Suministro y montaje de {total_puntos_mecanismos} mecanismos serie {serie_mecanismos} (interruptores, conmutadores, bases Schuko 16A, toma 25A y tomas datos RJ45) con {global_marcos_uds} marcos embellecedores por estancias.",
+                "importe": round(venta_cap4_mecanismos, 2)
+            },
+            {
+                "cap": "CAP. 05",
+                "titulo": "Ensayos Reglamentarios, MTD y Tramitación Boletín Oficial CIE",
+                "desc": "Verificaciones y ensayos ITC-BT-05 (aislamiento, disparo diferenciales, continuidad de tierra), redacción de Memoria Técnica de Diseño (MTD) y tramitación del Certificado de Instalación Eléctrica oficial (CIE) ante la DGEAIM de la Región de Murcia.",
+                "importe": round(venta_cap5_boletin, 2)
+            }
+        ]
+
+        if st.session_state.get('partidas_manuales', []):
+            capitulos_presupuesto.append({
+                "cap": "CAP. 06",
+                "titulo": "Trabajos Adicionales y Partidas a Medida",
+                "desc": f"Partidas personalizadas y mejoras adicionales ({len(st.session_state.partidas_manuales)} partidas añadidas por el usuario).",
+                "importe": round(venta_cap6_manuales, 2)
+            })
+
+        subtotal_general_neto = sum(c["importe"] for c in capitulos_presupuesto)
+        cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
+        total_cliente = subtotal_general_neto + cuota_iva
+        precio_medio_por_punto = (total_cliente / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+
         # Pre-generar archivos de Orden de Compra / Reporte de Materiales
         excel_oc_bytes = exportar_excel_orden_compra(
             df_orden_compra, total_mat_global_neto, cuota_iva_mat, total_mat_con_iva,
@@ -2221,28 +2345,233 @@ def app():
                 )
 
         elif modo_impresion.startswith("📄"):
-            st.header("📄 Vista Comercial: Presupuesto para el Cliente")
+            st.header("📄 Vista Comercial: Presupuesto Oficial para el Cliente")
             st.markdown(f"""
-            <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
-                <h3 style="color: #0369a1; margin-top: 0;">{empresa_nombre}</h3>
-                <p><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
-                <hr style="border: 1px solid #bae6fd;">
-                <p><b>Presupuesto N°:</b> 2026-0901 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Fecha:</b> {datetime.date.today().strftime("%B %Y")}</p>
-                <p><b>Objeto:</b> Instalación Eléctrica REBT ({potencia_prevista_kw}) con Mecanismos <b>{serie_mecanismos}</b> y Protecciones <b>{marca_protecciones}</b></p>
+            <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: #0369a1; margin: 0;">{empresa_nombre}</h3>
+                        <p style="margin: 3px 0;"><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="background-color: #0284c7; color: white; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 13px;">OFERTA COMERCIAL</span>
+                        <p style="margin: 4px 0 0 0; font-size: 13px;"><b>Fecha:</b> {datetime.date.today().strftime("%d/%m/%Y")}</p>
+                    </div>
+                </div>
+                <hr style="border: 1px solid #bae6fd; margin: 12px 0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                    <div>• <b>Objeto:</b> Instalación Eléctrica Integral en Vivienda ({grado_electr})</div>
+                    <div>• <b>Potencia Prevista / IGA:</b> {potencia_prevista_kw} ({pot_w_val} W)</div>
+                    <div>• <b>Gama de Mecanismos:</b> {serie_mecanismos}</div>
+                    <div>• <b>Aparamenta y Protecciones:</b> {marca_protecciones} (Curva C | 6 kA)</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-            df_comercial = pd.DataFrame(comercial_estancias)
-            st.dataframe(df_comercial, use_container_width=True)
+            # Resumen Económico KPI
+            col_kpic1, col_kpic2, col_kpic3, col_kpic4 = st.columns(4)
+            with col_kpic1:
+                st.metric("💶 Total Presupuesto (C/IVA)", f"{total_cliente:,.2f} €")
+            with col_kpic2:
+                st.metric("📦 Base Imponible (S/IVA)", f"{subtotal_general_neto:,.2f} €")
+            with col_kpic3:
+                st.metric(f"🧾 IVA ({iva_sel}%)", f"{cuota_iva:,.2f} €")
+            with col_kpic4:
+                st.metric("🔌 Total Puntos / Ratio", f"{total_puntos_mecanismos} uds ({precio_medio_por_punto:.2f} €/pto)")
 
+            st.markdown("---")
+
+            # =========================================================================
+            # GESTOR INTERACTIVO DE TRABAJOS ADICIONALES Y PARTIDAS MANUALES
+            # =========================================================================
+            with st.expander("➕ Añadir / Gestionar Trabajos Adicionales y Partidas Manuales", expanded=bool(st.session_state.get('partidas_manuales', []))):
+                st.markdown("""
+                **Personaliza la oferta para el cliente:**  
+                Añade partidas a medida (ej. downlights LED, punto de recarga de coche eléctrico IRVE, tomas exteriores IP65, timbres, etc.) con recálculo automático del total comercial:
+                """)
+
+                preset_opciones = [
+                    "Personalizada (Escribir concepto a medida)",
+                    "Línea de Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
+                    "Instalación Downlights LED Extraplanos 18W",
+                    "Toma de Corriente Estanca IP65 en Terraza / Exterior",
+                    "Instalación de Timbre / Zumbador Modular en Cuadro",
+                    "Canaleta embellecedora y acometida auxiliar",
+                    "Detector de Movimiento / Presencia 360° Techo"
+                ]
+                preset_sel = st.selectbox("📌 Seleccionar Plantilla o Crear Partida Personalizada:", preset_opciones, key="sel_preset_partida")
+
+                def_conc = ""
+                def_desc = ""
+                def_cant = 1.0
+                def_unid = "ud"
+                def_pvp = 50.0
+
+                if "IRVE" in preset_sel:
+                    def_conc = "Línea de Alimentación IRVE para Vehículo Eléctrico (ITC-BT-52)"
+                    def_desc = "Tendido de línea dedicada desde CGMP con cable libre de halógenos 3x6mm², tubo M25, IGA 32A y diferencial superinmunizado clase A."
+                    def_cant = 1.0
+                    def_unid = "partida"
+                    def_pvp = 450.0
+                elif "Downlight" in preset_sel:
+                    def_conc = "Suministro e Instalación de Downlights LED Extraplanos 18W"
+                    def_desc = "Apertura de huecos en falso techo, conexionado y montaje de downlights LED redondos 18W 4000K alta luminosidad."
+                    def_cant = 6.0
+                    def_unid = "ud"
+                    def_pvp = 38.0
+                elif "IP65" in preset_sel:
+                    def_conc = "Toma de Corriente de Superficie Estanca IP65"
+                    def_desc = "Suministro e instalación de base de enchufe estanca 16A 2P+T IP65 con tapa para zonas exteriores/terraza."
+                    def_cant = 2.0
+                    def_unid = "ud"
+                    def_pvp = 45.0
+                elif "Timbre" in preset_sel:
+                    def_conc = "Instalación de Timbre / Zumbador Modular"
+                    def_desc = "Suministro y cableado de pulsador en puerta de entrada y zumbador modular 230V integrado en cuadro eléctrico."
+                    def_cant = 1.0
+                    def_unid = "ud"
+                    def_pvp = 55.0
+                elif "Canaleta" in preset_sel:
+                    def_conc = "Canaleta Embellecedora Decorativa y Derivación"
+                    def_desc = "Instalación de canaleta blanca sin halógenos para distribución vista sin obra."
+                    def_cant = 5.0
+                    def_unid = "m"
+                    def_pvp = 18.0
+                elif "Detector" in preset_sel:
+                    def_conc = "Detector de Presencia PIR 360° Techo"
+                    def_desc = "Instalación de sensor crepuscular y de movimiento para encendido automático en pasillos/zonas comunes."
+                    def_cant = 1.0
+                    def_unid = "ud"
+                    def_pvp = 68.0
+
+                with st.form("form_nueva_partida_manual"):
+                    col_pm1, col_pm2 = st.columns([3, 4])
+                    with col_pm1:
+                        p_nom = st.text_input("Concepto / Título de la Partida:", value=def_conc, placeholder="Ej: Instalación Downlight LED")
+                    with col_pm2:
+                        p_desc = st.text_input("Descripción y Alcance Técnico:", value=def_desc, placeholder="Ej: Suministro y montaje con conexionado")
+
+                    col_pm3, col_pm4, col_pm5 = st.columns(3)
+                    with col_pm3:
+                        p_cant = st.number_input("Cantidad:", min_value=0.1, value=float(def_cant), step=1.0, format="%.1f")
+                    with col_pm4:
+                        unidades_lista = ["ud", "m", "partida", "punto", "h", "pack"]
+                        idx_unid = unidades_lista.index(def_unid) if def_unid in unidades_lista else 0
+                        p_unid = st.selectbox("Unidad de Medida:", unidades_lista, index=idx_unid)
+                    with col_pm5:
+                        p_pvp_u = st.number_input("PVP Unitario S/IVA (€):", min_value=0.0, value=float(def_pvp), step=5.0, format="%.2f")
+
+                    btn_add_partida = st.form_submit_button("➕ Añadir Partida al Presupuesto", type="primary")
+                    if btn_add_partida:
+                        if p_nom:
+                            sub_pm = round(float(p_cant) * float(p_pvp_u), 2)
+                            st.session_state.partidas_manuales.append({
+                                "id": f"PM-{len(st.session_state.partidas_manuales) + 1:02d}",
+                                "concepto": p_nom,
+                                "descripcion": p_desc,
+                                "cantidad": float(p_cant),
+                                "unidad": p_unid,
+                                "precio_unitario": float(p_pvp_u),
+                                "subtotal": sub_pm
+                            })
+                            st.session_state.presupuesto_calculado = True
+                            st.success(f"✅ Partida '{p_nom}' añadida con éxito (+{sub_pm:.2f} €)")
+                            st.rerun()
+                        else:
+                            st.warning("Introduce un concepto válido para la partida.")
+
+                if st.session_state.get('partidas_manuales', []):
+                    st.markdown("##### 📋 Partidas Adicionales Actuales en el Presupuesto:")
+                    for idx_p, item_p in enumerate(st.session_state.partidas_manuales):
+                        col_lp1, col_lp2, col_lp3, col_lp4 = st.columns([4, 2, 2, 1])
+                        with col_lp1:
+                            st.markdown(f"**{item_p['concepto']}**  \n<small>{item_p['descripcion']}</small>", unsafe_allow_html=True)
+                        with col_lp2:
+                            st.caption(f"Cant: `{item_p['cantidad']} {item_p['unidad']}` × `{item_p['precio_unitario']:.2f} €`")
+                        with col_lp3:
+                            st.markdown(f"**`{item_p['subtotal']:.2f} €`**")
+                        with col_lp4:
+                            if st.button("🗑️", key=f"btn_del_pm_{idx_p}", help="Eliminar esta partida"):
+                                st.session_state.partidas_manuales.pop(idx_p)
+                                st.session_state.presupuesto_calculado = True
+                                st.rerun()
+
+                    if st.button("🧹 Vaciar Todas las Partidas Adicionales", key="btn_clear_all_pm"):
+                        st.session_state.partidas_manuales = []
+                        st.session_state.presupuesto_calculado = True
+                        st.rerun()
+
+            st.markdown("---")
+
+            # =========================================================================
+            # SECCIÓN 1: RESUMEN POR CAPÍTULOS REBT
+            # =========================================================================
+            st.subheader("1. 🏛️ Estructura por Capítulos REBT (Memoria Valorada Oficial)")
+            df_cap_vista = pd.DataFrame([
+                {
+                    "Capítulo": c["cap"],
+                    "Denominación de la Partida": c["titulo"],
+                    "Alcance Técnico de los Trabajos": c["desc"],
+                    "Importe PVP (€)": f"{c['importe']:,.2f} €"
+                }
+                for c in capitulos_presupuesto
+            ])
+            st.dataframe(df_cap_vista, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # =========================================================================
+            # SECCIÓN 2: DESGLOSE POR ESTANCIAS
+            # =========================================================================
+            st.subheader("2. 🚪 Desglose de Instalación por Estancias de la Vivienda")
+            df_comercial = pd.DataFrame(comercial_estancias)
+            st.dataframe(df_comercial, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # =========================================================================
+            # SECCIÓN 3: CATÁLOGO DE MATERIALES VALORADOS A PVP
+            # =========================================================================
+            incluir_catalogo_pvp = st.checkbox(
+                "📋 Incluir catálogo y especificación de materiales principales valorados a PVP en la propuesta",
+                value=True,
+                key="chk_inc_mat_pvp"
+            )
+
+            if incluir_catalogo_pvp:
+                with st.expander("🔍 Ver Catálogo de Materiales Principales Valorados a PVP", expanded=False):
+                    df_mat_pvp_vista = pd.DataFrame([
+                        {
+                            "Categoría": m["categoria"],
+                            "Elemento": m["articulo"],
+                            "Descripción y Gama": m["desc_exacta"],
+                            "Cantidad": f"{m['cantidad']} {m['unidad']}",
+                            "PVP Unitario": f"{m['pvp_unitario']:.2f} €",
+                            "Subtotal PVP": f"{m['subtotal_pvp']:.2f} €"
+                        }
+                        for m in materiales_pvp
+                    ])
+                    st.dataframe(df_mat_pvp_vista, use_container_width=True, hide_index=True)
+                    st.caption("🔒 *Nota de transparencia comercial:* Todos los importes unitarios mostrados corresponden al Precio de Venta al Público (PVP) con margen comercial de suministro y garantía oficial de reposición de 3 años incluidos.")
+
+            # Generación de archivos Excel y PDF
             excel_bytes = exportar_excel_presupuesto(
                 df_comercial, subtotal_general_neto, iva_sel, cuota_iva, total_cliente,
-                {"empresa": empresa_nombre, "instalador": instalador_nombre, "licencia": n_licencia},
+                {
+                    "empresa": empresa_nombre,
+                    "instalador": instalador_nombre,
+                    "licencia": n_licencia,
+                    "localidad": localidad,
+                    "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                },
                 df_orden_compra=df_orden_compra,
                 total_compra_neto=total_mat_global_neto,
-                total_compra_con_iva=total_mat_con_iva
+                total_compra_con_iva=total_mat_con_iva,
+                capitulos=capitulos_presupuesto,
+                partidas_manuales=st.session_state.get('partidas_manuales', []),
+                materiales_pvp=materiales_pvp if incluir_catalogo_pvp else None
             )
-            
+
             pdf_bytes_pres = pdf_presupuesto.generar_pdf_presupuesto(
                 proyecto_info={
                     "empresa": empresa_nombre,
@@ -2254,7 +2583,11 @@ def app():
                     "fecha": datetime.date.today().strftime("%d/%m/%Y")
                 },
                 presupuesto_data={
+                    "capitulos": capitulos_presupuesto,
                     "df_comercial": df_comercial,
+                    "partidas_manuales": st.session_state.get('partidas_manuales', []),
+                    "materiales_pvp": materiales_pvp,
+                    "incluir_catalogo_pvp": incluir_catalogo_pvp,
                     "subtotal_neto": subtotal_general_neto,
                     "iva_pct": iva_sel,
                     "cuota_iva": cuota_iva,
@@ -2263,11 +2596,17 @@ def app():
                     "precio_medio_punto": precio_medio_por_punto,
                     "serie_mecanismos": serie_mecanismos,
                     "marca_protecciones": marca_protecciones,
-                    "potencia_kw": potencia_prevista_kw
+                    "potencia_kw": potencia_prevista_kw,
+                    "grado_electr": grado_electr,
+                    "plazo_dias": dias_estimados,
+                    "num_operarios": num_operarios
                 }
             )
 
-            st.markdown("#### 👁️ Vista Previa en Pantalla del Presupuesto Oficial PDF:")
+            st.markdown("---")
+            st.markdown("#### 👁️ Vista Previa en Pantalla del Presupuesto Oficial en PDF:")
+            st.info("💡 **Revisa el documento antes de imprimir o descargar.** El presupuesto incluye todos los capítulos reglamentarios, desglose por estancias, partidas a medida, condiciones y firmas:")
+
             with st.container():
                 try:
                     import pymupdf
@@ -2280,12 +2619,12 @@ def app():
                 except Exception:
                     import base64
                     b64 = base64.b64encode(pdf_bytes_pres).decode('utf-8')
-                    st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="600" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="650" type="application/pdf"></iframe>', unsafe_allow_html=True)
 
             col_exp1, col_exp2, col_exp3 = st.columns(3)
             with col_exp1:
                 st.download_button(
-                    label="📥 Descargar Presupuesto en Excel (.xlsx)",
+                    label="📊 Descargar Presupuesto en Excel (.xlsx)",
                     data=excel_bytes,
                     file_name="Presupuesto_Electrico_Bolimur.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -2293,11 +2632,12 @@ def app():
                 )
             with col_exp2:
                 st.download_button(
-                    label="📥 Descargar Presupuesto Oficial en PDF",
+                    label="📄 🖨️ Descargar / Imprimir Presupuesto Oficial (PDF)",
                     data=pdf_bytes_pres,
                     file_name="Presupuesto_Oficial_Bolimur.pdf",
                     mime="application/pdf",
-                    use_container_width=True
+                    use_container_width=True,
+                    type="primary"
                 )
             with col_exp3:
                 st.download_button(
@@ -2309,10 +2649,10 @@ def app():
                 )
 
             st.markdown(f"""
-            <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
-                <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
-                <p><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
-                <h2 style="color: #16a34a; margin: 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:.2f} €</h2>
+            <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 18px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
+                <p style="margin: 3px 0;"><b>Subtotal Comercial Neto (Base Imponible):</b> {subtotal_general_neto:,.2f} €</p>
+                <p style="margin: 3px 0;"><b>IVA ({iva_sel}%):</b> {cuota_iva:,.2f} €</p>
+                <h2 style="color: #16a34a; margin: 8px 0 0 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:,.2f} €</h2>
             </div>
             """, unsafe_allow_html=True)
 
