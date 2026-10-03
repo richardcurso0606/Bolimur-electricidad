@@ -5,7 +5,7 @@ import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, HRFlowable
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, HRFlowable, PageBreak
 )
 from reportlab.graphics.shapes import Drawing, Rect, Line, String, Circle, Group
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
