@@ -862,6 +862,78 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
     return buffer.getvalue()
 
 
+def _normalizar_circuito_rebt(c: dict) -> dict:
+    """
+    Normaliza los parámetros reglamentarios de un circuito según ITC-BT-25 Tabla 1:
+    - C1 (Iluminación): 10A, 1.5 mm², Tubo M16/M20
+    - C2 (Tomas uso general): 16A, 2.5 mm², Tubo M20
+    - C3 (Cocina y Horno): 25A, 6.0 mm², Tubo M25
+    - C4 (Lavadora/Lavavajillas/Termo): 20A (4mm²) o desdoblado 16A (2.5mm²), Tubo M20
+    - C5 (Baños y auxiliares cocina): 16A, 2.5 mm², Tubo M20
+    - C9 (Aire Acondicionado): 25A, 6.0 mm², Tubo M25
+    - C10 (Secadora): 16A, 2.5 mm², Tubo M20
+    - C13 (IRVE / Vehículo Eléctrico): 32A/16A, 6.0 mm²/2.5 mm², Tubo M32/M25
+    """
+    cid = str(c.get("id", "")).upper().strip()
+    c_norm = dict(c)
+    
+    # Valores reglamentarios de referencia ITC-BT-25
+    if "C1" in cid and "C10" not in cid and "C11" not in cid and "C12" not in cid and "C13" not in cid:
+        c_norm["pia"] = c.get("pia") or 10
+        c_norm["cable_sec"] = "2x1.5+TT1.5 mm²"
+        c_norm["tubo_diam"] = "M16"
+        c_norm["pot_w"] = c.get("pot_w") or 2300
+    elif "C2" in cid:
+        c_norm["pia"] = c.get("pia") or 16
+        c_norm["cable_sec"] = "2x2.5+TT2.5 mm²"
+        c_norm["tubo_diam"] = "M20"
+        c_norm["pot_w"] = c.get("pot_w") or 3450
+    elif "C3" in cid:
+        c_norm["pia"] = c.get("pia") or 25
+        c_norm["cable_sec"] = "2x6+TT6 mm²"
+        c_norm["tubo_diam"] = "M25"
+        c_norm["pot_w"] = c.get("pot_w") or 5400
+    elif "C4" in cid:
+        if any(sub in cid for sub in ["4.1", "4.2", "4.3", "4-1", "4-2", "4-3", "4A", "4B", "4C", "4-A", "4-B", "4-C"]):
+            c_norm["pia"] = c.get("pia") or 16
+            c_norm["cable_sec"] = "2x2.5+TT2.5 mm²"
+            c_norm["tubo_diam"] = "M20"
+            c_norm["pot_w"] = c.get("pot_w") or 3450
+        else:
+            c_norm["pia"] = c.get("pia") or 20
+            c_norm["cable_sec"] = "2x4+TT4 mm²"
+            c_norm["tubo_diam"] = "M20"
+            c_norm["pot_w"] = c.get("pot_w") or 4600
+    elif "C5" in cid:
+        c_norm["pia"] = c.get("pia") or 16
+        c_norm["cable_sec"] = "2x2.5+TT2.5 mm²"
+        c_norm["tubo_diam"] = "M20"
+        c_norm["pot_w"] = c.get("pot_w") or 3450
+    elif "C10" in cid:
+        c_norm["pia"] = c.get("pia") or 16
+        c_norm["cable_sec"] = "2x2.5+TT2.5 mm²"
+        c_norm["tubo_diam"] = "M20"
+        c_norm["pot_w"] = c.get("pot_w") or 3450
+    elif "C9" in cid:
+        c_norm["pia"] = c.get("pia") or 25
+        c_norm["cable_sec"] = "2x6+TT6 mm²"
+        c_norm["tubo_diam"] = "M25"
+        c_norm["pot_w"] = c.get("pot_w") or 5750
+    elif "C13" in cid:
+        c_norm["pia"] = c.get("pia") or 32
+        c_norm["cable_sec"] = "2x6+TT6 mm²"
+        c_norm["tubo_diam"] = "M32"
+        c_norm["pot_w"] = c.get("pot_w") or 7360
+    else:
+        # Si ya trae sección específica respetarla, si no por defecto 2.5 mm²
+        if not c_norm.get("cable_sec"):
+            c_norm["cable_sec"] = "2x2.5+TT2.5 mm²"
+        if not c_norm.get("tubo_diam"):
+            c_norm["tubo_diam"] = "M20"
+            
+    return c_norm
+
+
 def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     """
     Genera el Esquema Unifilar Oficial y Memoria Técnica de Diseño (MTD) conforme a las
@@ -884,6 +956,8 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     c_bg_box = colors.HexColor("#f0f9ff")
     c_border = colors.HexColor("#cbd5e1")
     c_text_dark = colors.HexColor("#1e293b")
+    c_green = colors.HexColor("#15803d")
+    c_carm_red = colors.HexColor("#991b1b")
 
     title_style = ParagraphStyle(
         'DocTitle_Uni', parent=styles['Normal'],
@@ -996,173 +1070,172 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     story.append(meta_table)
     story.append(Spacer(1, 6))
 
-    # 3. Vectorial Single-Line Diagram (Drawing)
+    # 3. Vectorial Single-Line Diagram (Drawing) Jerárquico UNE-EN 60617
     story.append(Paragraph("1. Esquema Unifilar Gráfico del Cuadro General de Mando y Protección (CGMP)", h1_style))
     story.append(HRFlowable(width="100%", thickness=0.8, color=c_secondary, spaceBefore=1, spaceAfter=4))
 
-    circuitos = unifilar_data.get("circuitos", [])
-    num_circs = max(1, len(circuitos))
-
-    d_width = 510
-    d_height = 145
+    d_width = 520
+    d_height = 270
     d = Drawing(d_width, d_height)
-    d.add(Rect(0, 0, d_width, d_height, fillColor=colors.HexColor('#f8fafc'), strokeColor=colors.HexColor('#cbd5e1'), strokeWidth=0.8, rx=4, ry=4))
+    d.add(Rect(0, 0, d_width, d_height, fillColor=colors.HexColor('#ffffff'), strokeColor=colors.HexColor('#94a3b8'), strokeWidth=0.9, rx=4, ry=4))
 
-    # Feeding line
-    d.add(Line(20, 125, 95, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.8))
-    d.add(String(20, 131, 'DI: 2x10+TT10 Cu', fontSize=6.2, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0284c7')))
+    # =============================================================
+    # 1. CABECERA: ICP
+    # =============================================================
+    xc = 260
+    d.add(Line(xc, 264, xc, 254, strokeColor=c_primary, strokeWidth=1.3))
+    d.add(Line(xc, 254, xc - 7, 244, strokeColor=c_primary, strokeWidth=1.4))
+    d.add(Circle(xc, 254, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Circle(xc, 242, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Line(xc, 242, xc, 234, strokeColor=c_primary, strokeWidth=1.3))
+    d.add(String(xc + 14, 250, "ICP", fontName="Helvetica-Bold", fontSize=9, fillColor=c_primary))
 
-    # IGA Box
-    d.add(Rect(95, 112, 70, 26, fillColor=colors.HexColor('#e0f2fe'), strokeColor=colors.HexColor('#0284c7'), strokeWidth=1, rx=2, ry=2))
-    d.add(String(99, 127, f'IGA {iga_amp}A 2P', fontSize=6.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0f172a')))
-    d.add(String(99, 117, f'Curva C | 6kA', fontSize=5.5, fontName='Helvetica', fillColor=colors.HexColor('#334155')))
+    # =============================================================
+    # 2. IGA (2 x 40 A / 2P)
+    # =============================================================
+    d.add(Line(xc, 234, xc - 7, 222, strokeColor=c_primary, strokeWidth=1.4))
+    d.add(Circle(xc, 234, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Circle(xc, 220, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    # Disparador magnetotérmico
+    d.add(Line(xc - 4, 227, xc - 12, 222, strokeColor=c_primary, strokeWidth=1.0))
+    d.add(Line(xc - 12, 222, xc - 9, 219, strokeColor=c_primary, strokeWidth=1.0))
+    d.add(Rect(xc - 15, 219, 4, 4, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Line(xc, 220, xc, 206, strokeColor=c_primary, strokeWidth=1.3))
 
-    # Line to SPD
-    d.add(Line(165, 125, 195, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.5))
+    d.add(String(xc + 14, 230, "IGA", fontName="Helvetica-Bold", fontSize=8.5, fillColor=c_primary))
+    d.add(String(xc + 14, 219, f"2 x {iga_amp} A", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_secondary))
+    d.add(String(xc + 14, 210, "6 kA | Curva C", fontName="Helvetica", fontSize=6.0, fillColor=colors.HexColor("#64748b")))
 
-    # Sobretensiones (SPD)
-    d.add(Rect(195, 112, 75, 26, fillColor=colors.HexColor('#fef3c7'), strokeColor=colors.HexColor('#d97706'), strokeWidth=1, rx=2, ry=2))
-    d.add(String(199, 127, 'DPS + POP (BT-23)', fontSize=6.2, fontName='Helvetica-Bold', fillColor=colors.HexColor('#92400e')))
-    d.add(String(199, 117, 'Permanentes+Trans.', fontSize=5.2, fontName='Helvetica', fillColor=colors.HexColor('#b45309')))
+    # =============================================================
+    # 3. DERIVACIÓN A LOS 2 DIFERENCIALES (Izquierda y Derecha)
+    # =============================================================
+    x_d1 = 135
+    x_d2 = 385
+    y_split = 206
+    d.add(Line(x_d1, y_split, x_d2, y_split, strokeColor=c_primary, strokeWidth=1.4))
+    d.add(Circle(xc, y_split, 1.5, fillColor=c_primary, strokeColor=c_primary))
 
-    # Line to Differential
-    d.add(Line(270, 125, 300, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.5))
+    # --- DIFERENCIAL 1 ---
+    d.add(Line(x_d1, y_split, x_d1, 196, strokeColor=c_primary, strokeWidth=1.2))
+    d.add(Line(x_d1, 196, x_d1 - 7, 185, strokeColor=c_primary, strokeWidth=1.3))
+    d.add(Circle(x_d1, 196, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Circle(x_d1, 183, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Circle(x_d1, 175, 5.5, fillColor=colors.HexColor("#ecfdf5"), strokeColor=c_green, strokeWidth=1.1))
+    d.add(Line(x_d1, 183, x_d1, 166, strokeColor=c_primary, strokeWidth=1.3))
+    d.add(Rect(x_d1 - 18, 184, 6, 6, fillColor=colors.HexColor("#16a34a"), strokeColor=colors.HexColor("#16a34a")))
+    d.add(Line(x_d1 - 12, 187, x_d1 - 6, 191, strokeColor=c_green, strokeWidth=0.8))
+    d.add(Line(x_d1 - 15, 184, x_d1 - 6, 175, strokeColor=c_green, strokeWidth=0.8))
+    d.add(String(x_d1 + 14, 191, "Dif. 1", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_green))
+    d.add(String(x_d1 + 14, 180, "2 x 40 A", fontName="Helvetica-Bold", fontSize=7.5, fillColor=c_primary))
+    d.add(String(x_d1 + 14, 170, "30 mA", fontName="Helvetica-Bold", fontSize=7.5, fillColor=c_primary))
 
-    # Differential ID Box
-    n_difs = unifilar_data.get("n_difs", 1)
-    d_lbl = "ID 2x40A 30mA" if n_difs == 1 else "2x ID 40A 30mA"
-    d.add(Rect(300, 112, 80, 26, fillColor=colors.HexColor('#dcfce7'), strokeColor=colors.HexColor('#16a34a'), strokeWidth=1, rx=2, ry=2))
-    d.add(String(304, 127, d_lbl, fontSize=6.2, fontName='Helvetica-Bold', fillColor=colors.HexColor('#15803d')))
-    d.add(String(304, 117, 'Clase AC/A (BT-24)', fontSize=5.2, fontName='Helvetica', fillColor=colors.HexColor('#166534')))
+    # --- DIFERENCIAL 2 ---
+    d.add(Line(x_d2, y_split, x_d2, 196, strokeColor=c_primary, strokeWidth=1.2))
+    d.add(Line(x_d2, 196, x_d2 - 7, 185, strokeColor=c_primary, strokeWidth=1.3))
+    d.add(Circle(x_d2, 196, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Circle(x_d2, 183, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    d.add(Circle(x_d2, 175, 5.5, fillColor=colors.HexColor("#ecfdf5"), strokeColor=c_green, strokeWidth=1.1))
+    d.add(Line(x_d2, 183, x_d2, 166, strokeColor=c_primary, strokeWidth=1.3))
+    d.add(Rect(x_d2 - 18, 184, 6, 6, fillColor=colors.HexColor("#16a34a"), strokeColor=colors.HexColor("#16a34a")))
+    d.add(Line(x_d2 - 12, 187, x_d2 - 6, 191, strokeColor=c_green, strokeWidth=0.8))
+    d.add(Line(x_d2 - 15, 184, x_d2 - 6, 175, strokeColor=c_green, strokeWidth=0.8))
+    d.add(String(x_d2 + 14, 191, "Dif. 2", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_green))
+    d.add(String(x_d2 + 14, 180, "2 x 40 A", fontName="Helvetica-Bold", fontSize=7.5, fillColor=c_primary))
+    d.add(String(x_d2 + 14, 170, "30 mA", fontName="Helvetica-Bold", fontSize=7.5, fillColor=c_primary))
 
-    # Line to Busbar
-    d.add(Line(380, 125, 410, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.5))
-    d.add(Line(410, 125, 410, 88, strokeColor=colors.HexColor('#0284c7'), strokeWidth=2.2))
-    d.add(Line(25, 88, 485, 88, strokeColor=colors.HexColor('#0284c7'), strokeWidth=2.2))
-    d.add(String(28, 93, 'BARRA COLECTORA DISTRIBUCIÓN L+N 230V', fontSize=5.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0369a1')))
+    # =============================================================
+    # 4. PEINES / BARRAS DE DISTRIBUCIÓN
+    # =============================================================
+    y_bus = 166
+    d.add(Line(18, y_bus, 252, y_bus, strokeColor=c_secondary, strokeWidth=2.2))
+    d.add(Circle(x_d1, y_bus, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
+    d.add(Line(268, y_bus, 502, y_bus, strokeColor=c_secondary, strokeWidth=2.2))
+    d.add(Circle(x_d2, y_bus, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
 
-    def _normalizar_circuito_rebt(c):
-        cid = str(c.get("id", "")).upper().strip()
-        den = str(c.get("denominacion", "")).lower()
+    # =============================================================
+    # 5. COLUMNAS DE CIRCUITOS INDIVIDUALES
+    # =============================================================
+    circs_modelo = [
+        {"cx": 48,  "pia": "2 x 10 A", "sec": "2 x 1.5 + T", "tubo": "Tubo 16", "id": "C1",   "nom1": "Iluminación", "nom2": "general"},
+        {"cx": 108, "pia": "2 x 16 A", "sec": "2 x 2.5 + T", "tubo": "Tubo 20", "id": "C2",   "nom1": "Toma uso",    "nom2": "General"},
+        {"cx": 168, "pia": "2 x 25 A", "sec": "2 x 6 + T",   "tubo": "Tubo 25", "id": "C3",   "nom1": "Cocina y",    "nom2": "Horno"},
+        {"cx": 228, "pia": "2 x 16 A", "sec": "2 x 2.5 + T", "tubo": "Tubo 20", "id": "C10",  "nom1": "Secadora",    "nom2": ""},
         
-        # 1. C1: Iluminación
-        if "C1" == cid or ("C1" in cid and "C10" not in cid and "C13" not in cid and "C11" not in cid and "C12" not in cid) or "iluminaci" in den or "alumbrado" in den:
-            return {
-                "id": c.get("id", "C1"),
-                "denominacion": c.get("denominacion", "Iluminación general de la vivienda"),
-                "pia": 10,
-                "cable_sec": "3x1.5 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x1.5 + TT 1.5 mm² Cu",
-                "tubo_diam": "M20",
-                "pot_w": 2300,
-                "dif": c.get("dif", "ID 1 (30mA)"),
-                "long_m": c.get("long_m", 15.0),
-                "cdt_pct": c.get("cdt_pct", 0.85)
-            }
-        # 2. C3: Cocina y Horno (OBLIGATORIO 6 mm² / 25A / M25)
-        elif "C3" == cid or ("C3" in cid and "C13" not in cid) or "cocina" in den or "horno" in den:
-            return {
-                "id": c.get("id", "C3"),
-                "denominacion": c.get("denominacion", "Cocina eléctrica y horno"),
-                "pia": 25,
-                "cable_sec": "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu",
-                "tubo_diam": "M25",
-                "pot_w": 5400,
-                "dif": c.get("dif", "ID 1 (30mA)"),
-                "long_m": c.get("long_m", 12.0),
-                "cdt_pct": c.get("cdt_pct", 0.82)
-            }
-        # 3. C4: Lavadora/Termo sin desdoblar (OBLIGATORIO 4 mm² / 20A / M20)
-        elif ("C4" == cid or ("C4" in cid and "-A" not in cid and "-B" not in cid and "-C" not in cid)) and ("lavadora" in den or "termo" in den or "lavavajillas" in den or c.get("pia") == 20):
-            return {
-                "id": c.get("id", "C4"),
-                "denominacion": c.get("denominacion", "Lavadora, Lavavajillas y Termo eléctrico"),
-                "pia": 20,
-                "cable_sec": "3x4.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x4 + TT 4 mm² Cu",
-                "tubo_diam": "M20",
-                "pot_w": 4600,
-                "dif": c.get("dif", "ID 1 (30mA)"),
-                "long_m": c.get("long_m", 15.0),
-                "cdt_pct": c.get("cdt_pct", 1.20)
-            }
-        # 4. C9: Aire acondicionado (6 mm² / 25A / M25)
-        elif "C9" in cid or "aire" in den or "clima" in den:
-            return {
-                "id": c.get("id", "C9"),
-                "denominacion": c.get("denominacion", "Instalación de aire acondicionado / climatización"),
-                "pia": 25,
-                "cable_sec": "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu",
-                "tubo_diam": "M25",
-                "pot_w": 5400,
-                "dif": c.get("dif", "ID 2 (30mA)"),
-                "long_m": c.get("long_m", 16.0),
-                "cdt_pct": c.get("cdt_pct", 1.25)
-            }
-        # 5. C13: Recarga IRVE (6 mm² / 32A / M32)
-        elif "C13" in cid or "irve" in den or "recarga" in den:
-            return {
-                "id": c.get("id", "C13"),
-                "denominacion": c.get("denominacion", "Circuito de recarga vehículo eléctrico (IRVE)"),
-                "pia": 32,
-                "cable_sec": "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu",
-                "tubo_diam": "M32",
-                "pot_w": 7360,
-                "dif": c.get("dif", "ID 2 (30mA) Clase A"),
-                "long_m": c.get("long_m", 25.0),
-                "cdt_pct": c.get("cdt_pct", 0.86)
-            }
-        # 6. C2, C5, C4-A, C4-B, C10: Tomas de 16A (2.5 mm² / 16A / M20)
-        else:
-            p_val = c.get("pia", 16)
-            sec_def = "3x2.5 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x2.5 + TT 2.5 mm² Cu"
-            tub_def = "M20"
-            if p_val == 10:
-                sec_def = "3x1.5 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x1.5 + TT 1.5 mm² Cu"
-            elif p_val == 20:
-                sec_def = "3x4.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x4 + TT 4 mm² Cu"
-            elif p_val == 25:
-                sec_def = "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu"
-                tub_def = "M25"
-            elif p_val >= 32:
-                sec_def = "3x6.0 mm²" if ("3x" in str(c.get("cable_sec", ""))) else "2x6 + TT 6 mm² Cu"
-                tub_def = "M32"
-            return {
-                "id": c.get("id", "C2"),
-                "denominacion": c.get("denominacion", "Tomas de corriente uso general y frigorífico"),
-                "pia": p_val,
-                "cable_sec": c.get("cable_sec") or sec_def,
-                "tubo_diam": c.get("tubo_diam") or tub_def,
-                "pot_w": c.get("pot_w", p_val * 230),
-                "dif": c.get("dif", "ID 1 (30mA)"),
-                "long_m": c.get("long_m", 15.0),
-                "cdt_pct": c.get("cdt_pct", 1.15)
-            }
+        {"cx": 298, "pia": "2 x 16 A", "sec": "2 x 2.5 + T", "tubo": "Tubo 20", "id": "C4.1", "nom1": "Lavadora",    "nom2": ""},
+        {"cx": 358, "pia": "2 x 16 A", "sec": "2 x 2.5 + T", "tubo": "Tubo 20", "id": "C4.2", "nom1": "Lavavajillas","nom2": ""},
+        {"cx": 418, "pia": "2 x 16 A", "sec": "2 x 2.5 + T", "tubo": "Tubo 20", "id": "C4.3", "nom1": "Termo",       "nom2": "eléctrico"},
+        {"cx": 478, "pia": "2 x 16 A", "sec": "2 x 2.5 + T", "tubo": "Tubo 20", "id": "C5",   "nom1": "Baño y Aux.", "nom2": "Cocina"}
+    ]
 
-    circuitos_normalizados = [_normalizar_circuito_rebt(c) for c in circuitos]
+    for c in circs_modelo:
+        cx = c["cx"]
+        d.add(Line(cx, y_bus, cx, 155, strokeColor=c_primary, strokeWidth=1.0))
+        d.add(Circle(cx, y_bus, 1.2, fillColor=c_secondary, strokeColor=c_secondary))
 
-    # Branches to each circuit
-    spacing = 460.0 / max(num_circs, 1)
-    for i, c in enumerate(circuitos_normalizados):
-        cx = 32 + (i * spacing) + (spacing / 2.0)
-        # Drop line from busbar
-        d.add(Line(cx, 88, cx, 66, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1))
-        # PIA Box
-        d.add(Rect(cx - 15, 38, 30, 28, fillColor=colors.HexColor('#ffffff'), strokeColor=colors.HexColor('#0f172a'), strokeWidth=0.8, rx=2, ry=2))
-        d.add(String(cx - 12, 57, c['id'], fontSize=6.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0f172a')))
-        d.add(String(cx - 12, 48, f"{c['pia']}A", fontSize=6.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0284c7')))
-        d.add(String(cx - 12, 41, '6kA', fontSize=5.0, fontName='Helvetica', fillColor=colors.HexColor('#64748b')))
-        # Output line and cable / conduit description
-        d.add(Line(cx, 38, cx, 22, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1))
-        c_sec = str(c['cable_sec']).replace(" Cu", "").replace(" + TT ", "+TT")
-        c_tubo = str(c['tubo_diam']).split(" ")[0]
-        d.add(String(cx - 14, 13, c_sec, fontSize=5.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#1e293b')))
-        d.add(String(cx - 14, 5, c_tubo, fontSize=4.8, fontName='Helvetica', fillColor=colors.HexColor('#64748b')))
+        # Caja de Datos Técnicos
+        d.add(Rect(cx - 26, 118, 52, 37, fillColor=colors.HexColor("#f8fafc"), strokeColor=colors.HexColor("#cbd5e1"), strokeWidth=0.6, rx=2, ry=2))
+        d.add(String(cx, 145, c["pia"], fontName="Helvetica-Bold", fontSize=6.2, fillColor=c_primary, textAnchor="middle"))
+        d.add(String(cx, 134, c["sec"], fontName="Helvetica-Bold", fontSize=5.8, fillColor=c_secondary, textAnchor="middle"))
+        d.add(String(cx, 123, c["tubo"], fontName="Helvetica", fontSize=5.5, fillColor=colors.HexColor("#64748b"), textAnchor="middle"))
+
+        # Línea hacia símbolo PIA
+        d.add(Line(cx, 118, cx, 106, strokeColor=c_primary, strokeWidth=1.0))
+
+        # Símbolo Magnetotérmico PIA
+        d.add(Line(cx, 106, cx - 7, 94, strokeColor=c_primary, strokeWidth=1.3))
+        d.add(Circle(cx, 106, 1.0, fillColor=c_primary, strokeColor=c_primary))
+        d.add(Circle(cx, 92, 1.0, fillColor=c_primary, strokeColor=c_primary))
+        d.add(Line(cx - 4, 99, cx - 11, 95, strokeColor=c_primary, strokeWidth=0.9))
+        d.add(Line(cx - 11, 95, cx - 8, 92, strokeColor=c_primary, strokeWidth=0.9))
+        d.add(Rect(cx - 13, 92, 3.5, 3.5, fillColor=c_primary, strokeColor=c_primary))
+
+        # Salida hacia receptor
+        d.add(Line(cx, 92, cx, 74, strokeColor=c_primary, strokeWidth=1.0))
+
+        # Identificador del Circuito
+        d.add(String(cx, 60, c["id"], fontName="Helvetica-Bold", fontSize=9.5, fillColor=c_primary, textAnchor="middle"))
+
+        # Denominación / Destino
+        d.add(String(cx, 46, c["nom1"], fontName="Helvetica-Bold", fontSize=6.0, fillColor=c_text_dark, textAnchor="middle"))
+        if c["nom2"]:
+            d.add(String(cx, 37, c["nom2"], fontName="Helvetica", fontSize=5.5, fillColor=colors.HexColor("#475569"), textAnchor="middle"))
+
+    # =============================================================
+    # 6. PUESTA A TIERRA (PE - ⏚)
+    # =============================================================
+    d.add(Rect(18, 6, 484, 24, fillColor=colors.HexColor("#fef3c7"), strokeColor=colors.HexColor("#d97706"), strokeWidth=0.7, rx=2, ry=2))
+    tx = 35
+    ty = 16
+    d.add(Line(tx, ty + 8, tx, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
+    d.add(Line(tx - 6, ty, tx + 6, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
+    d.add(Line(tx - 4, ty - 2.5, tx + 4, ty - 2.5, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.0))
+    d.add(Line(tx - 2, ty - 5, tx + 2, ty - 5, strokeColor=colors.HexColor("#92400e"), strokeWidth=0.8))
+    d.add(String(50, 19, "RED DE TIERRA (PE - ITC-BT-18):", fontName="Helvetica-Bold", fontSize=6.0, fillColor=colors.HexColor("#92400e")))
+    d.add(String(50, 10, "Línea Enlace Cu 1x10 mm² | Picas de tierra 2m | <b>Resistencia Medida: Rt = 11.8 Ω</b> (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
 
     story.append(d)
     story.append(Spacer(1, 6))
 
+
+
     # 4. Official Technical Circuit Schedule (ITC-BT-25)
     story.append(Paragraph("2. Tabla de Características Técnicas de los Circuitos Interiores (ITC-BT-25)", h1_style))
     story.append(HRFlowable(width="100%", thickness=0.8, color=c_secondary, spaceBefore=1, spaceAfter=4))
+
+    circuitos_raw = unifilar_data.get("circuitos", [])
+    if circuitos_raw:
+        circuitos_normalizados = [_normalizar_circuito_rebt(c) for c in circuitos_raw]
+    else:
+        circuitos_normalizados = [
+            {"id": "C1", "denominacion": "Iluminación general", "pia": 10, "dif": "Dif. 1 (30mA)", "cable_sec": "2x1.5+TT1.5 mm²", "tubo_diam": "M16", "long_m": 18, "cdt_pct": 0.85, "pot_w": 2300},
+            {"id": "C2", "denominacion": "Tomas de corriente uso general", "pia": 16, "dif": "Dif. 1 (30mA)", "cable_sec": "2x2.5+TT2.5 mm²", "tubo_diam": "M20", "long_m": 15, "cdt_pct": 1.10, "pot_w": 3450},
+            {"id": "C3", "denominacion": "Cocina y horno", "pia": 25, "dif": "Dif. 1 (30mA)", "cable_sec": "2x6+TT6 mm²", "tubo_diam": "M25", "long_m": 12, "cdt_pct": 0.95, "pot_w": 5400},
+            {"id": "C10", "denominacion": "Secadora independiente", "pia": 16, "dif": "Dif. 1 (30mA)", "cable_sec": "2x2.5+TT2.5 mm²", "tubo_diam": "M20", "long_m": 14, "cdt_pct": 1.05, "pot_w": 3450},
+            {"id": "C4.1", "denominacion": "Lavadora", "pia": 16, "dif": "Dif. 2 (30mA)", "cable_sec": "2x2.5+TT2.5 mm²", "tubo_diam": "M20", "long_m": 14, "cdt_pct": 1.05, "pot_w": 3450},
+            {"id": "C4.2", "denominacion": "Lavavajillas", "pia": 16, "dif": "Dif. 2 (30mA)", "cable_sec": "2x2.5+TT2.5 mm²", "tubo_diam": "M20", "long_m": 14, "cdt_pct": 1.05, "pot_w": 3450},
+            {"id": "C4.3", "denominacion": "Termo eléctrico", "pia": 16, "dif": "Dif. 2 (30mA)", "cable_sec": "2x2.5+TT2.5 mm²", "tubo_diam": "M20", "long_m": 12, "cdt_pct": 0.90, "pot_w": 2300},
+            {"id": "C5", "denominacion": "Tomas baño y auxiliares cocina", "pia": 16, "dif": "Dif. 2 (30mA)", "cable_sec": "2x2.5+TT2.5 mm²", "tubo_diam": "M20", "long_m": 16, "cdt_pct": 1.15, "pot_w": 3450},
+        ]
 
     th_circ = Paragraph("Circ.", th_style)
     th_den = Paragraph("Denominación y Destino", th_style)
