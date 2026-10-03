@@ -674,14 +674,32 @@ def app():
 
 
     # ==========================================
-    # DATOS DE LA EMPRESA / INSTALADOR
+    # DATOS DE LA EMPRESA / INSTALADOR AUTENTICADO
     # ==========================================
+    try:
+        from modulos import auth_manager, selector_cliente_proyecto
+        usuario_ses = auth_manager.obtener_usuario_actual()
+    except Exception:
+        usuario_ses = {}
+
     st.sidebar.header("🏢 Datos del Instalador")
-    empresa_nombre = st.sidebar.text_input("Nombre Empresa", value="BOLIMUR INSTALACIONES Y REFORMAS")
-    instalador_nombre = st.sidebar.text_input("Instalador", value="Richard Orlando Choque Tejerina")
-    n_licencia = st.sidebar.text_input("Nº Licencia / REBT", value="REBT-30/15892")
-    localidad = st.sidebar.text_input("Localidad", value="Rincón de Seca, Murcia")
-    telefono = st.sidebar.text_input("Teléfono Contacto", value="+34 600 000 000")
+    empresa_nombre = st.sidebar.text_input("Nombre Empresa", value=usuario_ses.get("nombre_empresa", "BOLIMUR INSTALACIONES Y REFORMAS") if usuario_ses else "BOLIMUR INSTALACIONES Y REFORMAS")
+    instalador_nombre = st.sidebar.text_input("Instalador", value=usuario_ses.get("nombre_instalador", "Richard Orlando Choque Tejerina") if usuario_ses else "Richard Orlando Choque Tejerina")
+    n_licencia = st.sidebar.text_input("Nº Licencia / REBT", value=usuario_ses.get("num_licencia_rebt", "REBT-30/15892") if usuario_ses else "REBT-30/15892")
+    localidad = st.sidebar.text_input("Localidad", value=usuario_ses.get("localidad", "Rincón de Seca, Murcia") if usuario_ses else "Rincón de Seca, Murcia")
+    telefono = st.sidebar.text_input("Teléfono Contacto", value=usuario_ses.get("telefono", "+34 600 000 000") if usuario_ses else "+34 600 000 000")
+
+    # Barra Superior de Asignación y Guardado de Proyecto en Cliente
+    try:
+        from modulos import selector_cliente_proyecto
+        datos_para_guardar = {
+            "estancias_pro": st.session_state.get("estancias_pro", []),
+            "partidas_manuales": st.session_state.get("partidas_manuales", [])
+        }
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 Cliente y Expediente del Proyecto</h4></div>', unsafe_allow_html=True)
+        selector_cliente_proyecto.renderizar_barra_cliente_proyecto("Presupuesto Vivienda", datos_para_guardar, "Presupuesto Integral Vivienda REBT")
+    except Exception:
+        pass
 
     # ==========================================
     # SECCIÓN 1: PARÁMETROS DE POTENCIA REBT E IGA OFICIAL

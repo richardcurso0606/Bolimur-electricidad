@@ -37,6 +37,17 @@ def renderizar():
 
     st.title("🏠 Derivación Individual - DI (ITC-BT-15)")
 
+    try:
+        from modulos import selector_cliente_proyecto
+        datos_di = {
+            "di_pot": st.session_state.get("di_pot", 5750.0),
+            "di_long": st.session_state.get("di_long", 15.0)
+        }
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 Cliente y Expediente del Proyecto</h4></div>', unsafe_allow_html=True)
+        selector_cliente_proyecto.renderizar_barra_cliente_proyecto("DI", datos_di, "Cálculo de Derivación Individual (DI)")
+    except Exception:
+        pass
+
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Diseño de la Derivación Individual (ITC-BT-15)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
         with st.form("form_di_parametros"):

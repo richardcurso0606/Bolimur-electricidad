@@ -95,6 +95,17 @@ def renderizar():
         </div>
         """, unsafe_allow_html=True)
     
+    try:
+        from modulos import selector_cliente_proyecto
+        datos_lga = {
+            "lga_long": st.session_state.get("lga_long", 0.0),
+            "lga_pot_man": st.session_state.get("lga_pot_man", 0.0)
+        }
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 Cliente y Expediente del Proyecto</h4></div>', unsafe_allow_html=True)
+        selector_cliente_proyecto.renderizar_barra_cliente_proyecto("LGA", datos_lga, "Cálculo de Línea General de Alimentación (LGA)")
+    except Exception:
+        pass
+
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Diseño y Potencia Prevista (Pt - ITC-BT-14)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
         viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.get('grupos_viviendas', []) if not v.get("nocturna", False))

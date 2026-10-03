@@ -2,6 +2,8 @@
 import streamlit as st
 import traceback
 import pandas as pd
+import base64
+import os
 
 st.set_page_config(page_title="Bolimur - Cálculos Eléctricos REBT", page_icon="⚡", layout="wide")
 
@@ -9,6 +11,15 @@ st.set_page_config(page_title="Bolimur - Cálculos Eléctricos REBT", page_icon=
 # IMPORTACIÓN SEGURA DE MÓDULOS
 # =========================================================================
 errores_import = {}
+
+try:
+    from modulos import auth_manager
+    from modulos import db_manager
+    from modulos import perfil_instalador
+    from modulos import gestion_clientes
+except Exception as e:
+    auth_manager = None
+    errores_import["auth_manager"] = traceback.format_exc()
 
 try:
     from modulos import calculo_rapido
@@ -155,15 +166,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================================
+# CONTROL DE ACCESO Y AUTENTICACIÓN
+# =========================================================================
+if auth_manager:
+    auth_manager.inicializar_sesion_auth()
+    usuario_actual = st.session_state.get("usuario_autenticado")
+    if not usuario_actual:
+        auth_manager.renderizar_pantalla_login()
+        st.stop()
+else:
+    usuario_actual = {
+        "id": 1,
+        "nombre_instalador": "Richard Orlando Choque Tejerina",
+        "nombre_empresa": "BOLIMUR INSTALACIONES Y REFORMAS",
+        "num_licencia_rebt": "REBT-30/15892",
+        "localidad": "Murcia, España",
+        "telefono": "+34 600 000 000"
+    }
+
+# =========================================================================
 # MENÚ LATERAL
 # =========================================================================
 with st.sidebar:
-    st.markdown("""
-        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <h3 style="color: #38bdf8; margin: 0; font-size: 18px;">⚡ BOLIMUR REBT</h3>
-            <p style="color: #94a3b8; font-size: 12px; margin: 5px 0 0 0;">Panel Técnico de Ingeniería Eléctrica</p>
+    st.markdown(f"""
+        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; text-align: center;">
+            <h3 style="color: #38bdf8; margin: 0; font-size: 17px;">⚡ BOLIMUR REBT</h3>
+            <p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0 0;">{usuario_actual.get('nombre_empresa', 'Bolimur')}</p>
         </div>
     """, unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown(f"👤 **Instalador:**  \n<small>{usuario_actual.get('nombre_instalador', 'Usuario')}</small>", unsafe_allow_html=True)
+        st.markdown(f"📜 **Licencia:**  \n<small>`{usuario_actual.get('num_licencia_rebt', 'REBT')}`</small>", unsafe_allow_html=True)
+        if st.button("🚪 Cerrar Sesión", key="btn_logout_side", use_container_width=True):
+            auth_manager.cerrar_sesion()
 
     st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
 
@@ -172,12 +208,14 @@ with st.sidebar:
 
     opciones = [
         ("🏠  Menú Principal", "🏠 Menú Principal"),
+        ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
+        ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
         ("🧮  Cálculo Rápido (CDT & Icc)", "🧮 Cálculo Rápido (CDT & Icc)"),
         ("🏢  Previsión de Cargas (Pt)", "🏢 Previsión de Cargas (Pt)"),
         ("⚡  Línea General (LGA)", "⚡ Línea General (LGA)"),
         ("🔌  Derivación Individual (DI)", "🔌 Derivación Individual (DI)"),
         ("🚗  Línea Recarga (IRVE)", "🚗 Línea Recarga (IRVE)"),
-        ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
+        ("👤  Perfil del Instalador", "👤 Perfil del Instalador"),
         ("📚  Tablas REBT", "📚 Tablas REBT")
     ]
 
@@ -193,34 +231,48 @@ with st.sidebar:
 # =========================================================================
 if seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
-    st.markdown("**Panel Técnico Oficial REBT (Real Decreto 842/2002)**")
+    st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
     
-    st.write("Bienvenido al software integral de ingeniería eléctrica. Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores:")
+    st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, gestionar clientes o elaborar presupuestos:")
 
     c1, c2 = st.columns(2)
     with c1:
         with st.container(border=True):
+            st.subheader("👥 Gestión de Clientes (CRM) y Proyectos")
+            st.write("Administra las fichas de tus clientes, datos del suministro, CUPS y asocia proyectos para recuperarlos en 1 clic.")
+            if st.button("Abrir Gestión de Clientes", key="btn_home_crm"):
+                st.session_state.menu_activo = "👥 Gestión de Clientes (CRM)"
+                st.rerun()
+
+        with st.container(border=True):
+            st.subheader("🏡 Presupuesto de Vivienda y Materiales")
+            st.write("Inspector REBT ITC-BT-25, metraje de rozas, canalizaciones, cableado y mecanismos. Exportación de presupuestos y acopio.")
+            if st.button("Abrir Presupuestos", key="btn_home_pres"):
+                st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
+                st.rerun()
+
+        with st.container(border=True):
             st.subheader("🧮 Cálculo Rápido (CDT & Icc)")
-            st.write("Dimensionamiento de circuitos por caída de tensión y comprobación térmica ($I_z$). Comprobación de cortocircuito instantáneo y disparo magnético en 0.1s.")
+            st.write("Dimensionamiento de circuitos por caída de tensión y comprobación térmica ($I_z$). Comprobación de cortocircuito y disparo magnético.")
             if st.button("Abrir Cálculo Rápido", key="btn_home_cr"):
                 st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("🏢 Previsión de Cargas (Pt)")
-            st.write("Cálculo analítico de la potencia total del edificio conforme a ITC-BT-10. Viviendas, locales, servicios generales y garajes con o sin SPL.")
+            st.write("Cálculo analítico de la potencia total del edificio conforme a ITC-BT-10. Viviendas, locales, servicios generales y garajes.")
             if st.button("Abrir Previsión de Cargas", key="btn_home_pc"):
                 st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
                 st.rerun()
 
+    with c2:
         with st.container(border=True):
             st.subheader("⚡ Línea General de Alimentación (LGA)")
-            st.write("Cálculo reglamentario de la LGA según ITC-BT-14. Soporta Cobre y Aluminio, contadores concentrados (0.5%) o parciales (1.0%), y tubos según Tabla 1.")
+            st.write("Cálculo reglamentario de la LGA según ITC-BT-14. Soporta Cobre y Aluminio, contadores concentrados o parciales y tubos normalizados.")
             if st.button("Abrir LGA", key="btn_home_lga"):
                 st.session_state.menu_activo = "⚡ Línea General (LGA)"
                 st.rerun()
 
-    with c2:
         with st.container(border=True):
             st.subheader("🔌 Derivación Individual (DI)")
             st.write("Dimensionamiento según ITC-BT-15 para enlaces a vivienda. Verificación de IGA Curva C y tubos normalizados (mínimo Ø 32 mm).")
@@ -236,11 +288,23 @@ if seleccion_modulo.startswith("🏠"):
                 st.rerun()
 
         with st.container(border=True):
-            st.subheader("🏡 Presupuesto de Vivienda y Materiales")
-            st.write("Inspector REBT ITC-BT-25, metraje de rozas, canalizaciones, cableado y mecanismos. Exportación a Excel (.xlsx) de oferta y acopio.")
-            if st.button("Abrir Presupuestos", key="btn_home_pres"):
-                st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
+            st.subheader("👤 Perfil del Instalador y Logotipo")
+            st.write("Configura tus datos fiscales, número de carnet REBT, logotipo corporativo y copias de seguridad en la nube.")
+            if st.button("Abrir Perfil del Instalador", key="btn_home_prof"):
+                st.session_state.menu_activo = "👤 Perfil del Instalador"
                 st.rerun()
+
+elif "Clientes" in seleccion_modulo or seleccion_modulo.startswith("👥"):
+    if gestion_clientes:
+        gestion_clientes.renderizar()
+    else:
+        st.error("Módulo de Gestión de Clientes no disponible.")
+
+elif "Perfil" in seleccion_modulo or seleccion_modulo.startswith("👤"):
+    if perfil_instalador:
+        perfil_instalador.renderizar()
+    else:
+        st.error("Módulo de Perfil del Instalador no disponible.")
 
 elif seleccion_modulo.startswith("🧮"):
     if calculo_rapido:

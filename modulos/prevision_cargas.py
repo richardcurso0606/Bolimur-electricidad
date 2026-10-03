@@ -89,6 +89,19 @@ def renderizar():
             }
             st.rerun()
 
+    try:
+        from modulos import selector_cliente_proyecto
+        datos_prevision = {
+            "grupos_viviendas": st.session_state.get("grupos_viviendas", []),
+            "locales": st.session_state.get("locales", []),
+            "servicios_generales": st.session_state.get("servicios_generales", []),
+            "garajes": st.session_state.get("garajes", {})
+        }
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 Cliente y Expediente del Proyecto</h4></div>', unsafe_allow_html=True)
+        selector_cliente_proyecto.renderizar_barra_cliente_proyecto("Previsión de Cargas", datos_prevision, "Cálculo de Previsión de Cargas (Pt) ITC-BT-10")
+    except Exception:
+        pass
+
     # --- 1. VIVIENDAS ---
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏠 SECCIÓN 1: Previsión de Cargas en Viviendas (P₁ - ITC-BT-10)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):

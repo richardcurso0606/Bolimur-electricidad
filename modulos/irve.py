@@ -55,6 +55,17 @@ def renderizar():
         * **Protecciones Obligatorias:** Magnetotérmico (PIA Curva C), Diferencial Tipo A (6mA DC) / Tipo B y Sobretensiones (VSP/VTP).
         """)
 
+    try:
+        from modulos import selector_cliente_proyecto
+        datos_irve = {
+            "irve_custom_w": st.session_state.get("irve_custom_w", 7360.0),
+            "irve_long": st.session_state.get("irve_long", 25.0)
+        }
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 Cliente y Expediente del Proyecto</h4></div>', unsafe_allow_html=True)
+        selector_cliente_proyecto.renderizar_barra_cliente_proyecto("IRVE", datos_irve, "Cálculo de Línea de Recarga IRVE (ITC-BT-52)")
+    except Exception:
+        pass
+
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Parámetros del Circuito de Recarga y Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
         with st.form("form_irve_parametros"):
