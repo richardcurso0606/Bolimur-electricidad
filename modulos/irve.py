@@ -204,76 +204,127 @@ def renderizar():
     # =========================================================================
     # MEMORIA TÉCNICA Y GUÍA DE ESQUEMAS EN ORIGEN (ITC-BT-52)
     # =========================================================================
-    with st.expander("📖 GUÍA TÉCNICA: ¿Cuál Esquema de Instalación en Origen debo Elegir?", expanded=False):
+    with st.expander("📖 GUÍA TÉCNICA Y MEMORIA: ¿Cuál Esquema de Instalación en Origen debo Elegir?", expanded=True):
         st.markdown("""
-        La instrucción **ITC-BT-52 (RD 1053/2014)** define 5 esquemas topológicos oficiales para la conexión de puntos de recarga.
-        A continuación, te mostramos cuándo y por qué elegir cada uno en la práctica de la calle:
+        ### ❓ ¿Qué significa el "Origen de la Línea"?
+        El **origen** es simplemente **el punto físico exacto donde vas a conectar tus cables** para alimentar el cargador del coche.
+        En una instalación real no se puede "empalmar de cualquier sitio o caja de luz del garaje". La normativa **ITC-BT-52 (RD 1053/2014)** define **5 esquemas oficiales**.
+        
+        Aquí tienes la explicación detallada y práctica para saber **cuál elegir en cada obra**:
         """)
 
+        # Árbol de decisión rápido
+        st.markdown("""
+        <div style="background: #f1f5f9; border: 2px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; color: #0369a1;">⚡ GUÍA RÁPIDA DE DECISIÓN (En 5 Segundos):</h4>
+            <ul style="margin: 0; padding-left: 20px; font-size: 13.5px; color: #1e293b; line-height: 1.6;">
+                <li>🏡 <b>¿Es un chalet, adosado o casa unifamiliar?</b> &rarr; Elige <b>ESQUEMA 4a</b> (directo desde el cuadro general de la casa).</li>
+                <li>⭐ <b>¿Es un garaje comunitario y el cliente vive en el mismo bloque?</b> &rarr; Elige <b>ESQUEMA 2</b> (salida de su contador en centralización). <i>¡Es el más rentable y el 90% de los casos!</i></li>
+                <li>🏢 <b>¿Es un garaje comunitario pero el cliente vive en otro edificio?</b> &rarr; Elige <b>ESQUEMA 3a</b> (solicitar contador nuevo independiente).</li>
+                <li>👥 <b>¿Es un garaje comunitario nuevo con infraestructura colectiva?</b> &rarr; Elige <b>ESQUEMA 1</b> (contador colectivo troncal con gestor CPO).</li>
+                <li>🔌 <b>¿Es un parking exterior o en vía pública sin portal?</b> &rarr; Elige <b>ESQUEMA 3b</b> (caja exterior CPM junto a la plaza).</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
         tab_e2, tab_e4, tab_e3a, tab_e1, tab_e3b, tab_resumen = st.tabs([
-            "⭐ Esquema 2 (Más Utilizado)",
-            "🏡 Esquema 4a/4b (Unifamiliar)",
+            "⭐ Esquema 2 (El más habitual)",
+            "🏡 Esquema 4a/4b (Chalets y Unifamiliares)",
             "🏢 Esquema 3a (Contador Exclusivo)",
-            "👥 Esquema 1 (Colectivo)",
-            "🔌 Esquema 3b (Exterior)",
-            "📊 Comparativa y Criterios"
+            "👥 Esquema 1 (Colectivo Comunitario)",
+            "🔌 Esquema 3b (Exteriores)",
+            "📊 Tabla Resumen Comparativa"
         ])
 
         with tab_e2:
             st.markdown(f"""
-            ### ⭐ Esquema 2: Contador Principal Común para Vivienda y Recarga
-            **¿Por qué es la opción recomendada y por defecto?**
-            * **Ámbito de aplicación:** Edificios de viviendas en régimen de propiedad horizontal donde el usuario tiene la plaza de garaje en el mismo edificio que su vivienda.
-            * **Punto de conexión física:** En los bornes de salida del contador de la vivienda situado en la **centralización de contadores del edificio**.
-            * **Ahorro para el cliente:** **¡No paga un segundo término fijo de potencia!** Se utiliza la misma potencia contratada de la vivienda.
-            * **Balanceo Dinámico (SPL):** Permite instalar una pinza amperimétrica en el cuadro de contadores o en la vivienda para modular automáticamente la recarga según el consumo doméstico.
-            * **Caída de tensión máxima admisible:** **1.0%** en la línea desde centralización hasta la plaza.
-            * **Permiso Comunitario:** Conforme al **Art. 17.5 de la Ley de Propiedad Horizontal**, **NO requiere votación ni aprobación en junta**, solo comunicación previa por escrito al presidente o administrador.
+            ### ⭐ ESQUEMA 2: Contador Principal Común para Vivienda y Recarga
+            > **El que vas a realizar en más del 90% de las instalaciones en garajes comunitarios.**
+
+            * **📍 ¿Dónde te conectas físicamente?**  
+              Bajas al **cuarto de centralización de contadores del edificio**. Localizas el contador correspondiente al piso de tu cliente (por ejemplo, el *3º B*). Te conectas **justo en los bornes de salida de su contador**, antes de que su cable suba hacia la vivienda. Desde allí tiras el tubo libre de halógenos y cable *RZ1-K* por las zonas comunes (bandejas o techo del garaje) hasta su plaza.
+            
+            * **💡 ¿Por qué es el mejor y el más recomendado?**
+              1. **Ahorro total para el cliente:** **NO paga un segundo recibo de luz**. Toda la recarga del coche entra en la misma factura mensual de su vivienda.
+              2. **Ahorro brutal en término de potencia:** No necesita contratar 7,4 kW adicionales. Le instalas un **balanceador dinámico de potencia (pinza amperimétrica CT)** en la centralización o en el cuadro de su casa. Si durante el día la casa está consumiendo energía (horno, aire acondicionado), el cargador modula y baja la potencia para que nunca salte el limitador (ICP). De noche, cuando la casa duerme, el coche carga a máxima potencia.
+              3. **Permiso legal garantizado (Art. 17.5 Ley de Propiedad Horizontal):** El propietario solo tiene que entregar una **comunicación previa por escrito** al Presidente de la Comunidad o Administrador de Fincas con 30 días de antelación. **¡NO requiere votación ni aprobación en junta de vecinos!**
+            
+            * **🛡️ Protecciones requeridas:**
+              * En el cuarto de contadores: Fusible o IGA de protección de la derivación.
+              * En la plaza de garaje: Cuadro estanco modular con cerradura, **PIA Curva C**, **Diferencial Clase A (con 6mA DC) o Clase B** y **Protector contra sobretensiones permanentes y transitorias (VTP+VSP)**.
+            * **📏 Caída de tensión máxima permitida:** **1,0%** (desde el cuarto de contadores hasta el cargador).
             """)
 
         with tab_e4:
             st.markdown("""
-            ### 🏡 Esquema 4a / 4b: Circuito Adicional desde el CGMP de la Vivienda
-            * **Ámbito de aplicación:** Viviendas unifamiliares (chalets, adosados), locales comerciales o viviendas con garaje propio físicamente anexo.
-            * **Punto de conexión:** Directamente en el **Cuadro General de Mando y Protección (CGMP)** de la vivienda como circuito dedicado C13 / C_IRVE.
-            * **Ventaja:** Instalación ultra rápida, económica y sin salir de la propiedad privada.
-            * **Caída de tensión máxima admisible:** **1.5%** desde el CGMP.
+            ### 🏡 ESQUEMA 4a / 4b: Circuito Adicional Directo desde el Cuadro (CGMP)
+            > **El esquema ideal para chalets, adosados y viviendas unifamiliares con garaje propio.**
+
+            * **📍 ¿Dónde te conectas físicamente?**  
+              Directamente en el **Cuadro General de Mando y Protección (CGMP)** de la propia casa. Colocas un magnetotérmico y diferencial nuevos en el carril DIN (circuito terminal dedicado C13 / IRVE) y llevas el cable hasta la pared donde va el Wallbox.
+            
+            * **💡 ¿Cuándo se utiliza?**  
+              En cualquier vivienda donde el garaje esté dentro de la propiedad privada o anexo directamente a la vivienda.
+            
+            * **👍 Ventajas para el instalador y cliente:**
+              * Es la instalación **más rápida, económica y limpia**, ya que no requiere pasar por zonas comunes de vecinos ni cuartos de contadores.
+              * El balanceo de carga se conecta directamente en el mismo cuadro de la casa.
+            * **📏 Caída de tensión máxima permitida:** **1,5%** (desde el cuadro de la vivienda).
             """)
 
         with tab_e3a:
             st.markdown("""
-            ### 🏢 Esquema 3a: Contador Individual Exclusivo en Centralización
-            * **Ámbito de aplicación:** Propietarios que tienen una plaza de garaje en un edificio pero **no tienen vivienda en esa misma finca**, o desean una factura 100% independiente.
-            * **Punto de conexión:** Nuevo contador exclusivo ubicado en la centralización de contadores del edificio.
-            * **Requisitos:** Requiere solicitar un nuevo CUPS a la compañía distribuidora y pagar el término de potencia independiente.
-            * **Caída de tensión máxima:** **1.0%**.
+            ### 🏢 ESQUEMA 3a: Contador Individual Exclusivo en Centralización
+            > **Para el cliente que tiene plaza en el garaje pero vive en otro edificio o quiere factura 100% separada.**
+
+            * **📍 ¿Dónde te conectas físicamente?**  
+              En la centralización de contadores del garaje, pero instalando un **contador nuevo e independiente** tramitado y contratado con la distribuidora eléctrica (Iberdrola, Endesa, etc.).
+            
+            * **💡 ¿Cuándo se utiliza?**
+              1. El cliente compró o alquiló la plaza en ese garaje, pero **vive en otra calle o en otro edificio** (no tiene piso en esa finca de donde derivar la corriente).
+              2. Es una empresa, autónomo o vehículo de renting que necesita que la factura del coche vaya a nombre societario separada de la vivienda particular.
+            
+            * **👎 Desventaja para el cliente:**
+              * Tiene que pagar el **término fijo de potencia de un segundo contrato de luz** todos los meses (unos 15 € a 25 € fijos al mes solo por tener el contrato dado de alta, cargue o no cargue el vehículo).
+            * **📏 Caída de tensión máxima permitida:** **1,0%**.
             """)
 
         with tab_e1:
             st.markdown("""
-            ### 👥 Esquema 1: Colectivo Troncal con Contador Principal
-            * **Ámbito de aplicación:** Parkings comunitarios de nueva construcción, parkings públicos de rotación, empresas y flotas con Gestor de Carga (CPO).
-            * **Topología:** Una línea general troncal con canalizaciones preinstaladas y cuadros secundarios por plaza con contadores MID.
-            * **Control:** Obligatorio Sistema de Protección de Línea (SPL) para gestión dinámica inteligente de toda la potencia del garaje.
+            ### 👥 ESQUEMA 1: Colectivo Troncal con Contador Principal
+            > **Un único contador principal en cabecera para todos los coches del garaje comunitario.**
+
+            * **📍 ¿Dónde te conectas físicamente?**  
+              La comunidad de propietarios o una empresa gestora de carga (CPO) contrata un suministro general de gran potencia. Se instala una bandeja metálica troncal por todo el garaje. Cada vecino que quiera recargar se deriva de esa bandeja y se le monta un contador secundario homologado MID en su plaza para refacturar lo que consume.
+            
+            * **💡 ¿Cuándo se utiliza?**  
+              En **edificios de nueva construcción**, parkings públicos de rotación, centros comerciales o flotas de empresa.
+            * **⚙️ Requisito indispensable:** Sistema de Protección de Línea (SPL) centralizado para repartir dinámicamente la potencia entre todos los coches conectados.
             """)
 
         with tab_e3b:
             st.markdown("""
-            ### 🔌 Esquema 3b: Contador Individual en Plaza de Aparcamiento o Exterior
-            * **Ámbito de aplicación:** Aparcamientos exteriores o en superficie donde no existe centralización de contadores comunitaria.
-            * **Punto de conexión:** Caja de protección y medida (CPM) instalada junto a la plaza o en fachada.
+            ### 🔌 ESQUEMA 3b: Contador en Plaza de Aparcamiento o Exterior
+            > **Contador exclusivo situado en la propia plaza o en fachada exterior.**
+
+            * **📍 ¿Dónde te conectas físicamente?**  
+              En una Caja de Protección y Medida (CPM) instalada en la pared exterior del parking o en un monolito al aire libre.
+            
+            * **💡 ¿Cuándo se utiliza?**  
+              En aparcamientos en superficie o descubiertos donde no hay ningún portal ni cuarto de contadores centralizado cerca.
             """)
 
         with tab_resumen:
             st.markdown("""
-            | Esquema | Origen de la Línea | ¿Requiere Nuevo CUPS? | Límite Caída Tensión | Uso Recomendado en la Calle |
+            | Esquema | Origen Físico de la Conexión | ¿Segundo Contrato / CUPS? | Límite Caída Tensión (ΔV) | ¿Cuándo debes elegirlo en la calle? |
             | :--- | :--- | :---: | :---: | :--- |
-            | **Esquema 2 (Por Defecto)** | Centralización (Bornes salida contador vivienda) | ❌ NO (Comparte contrato) | **1.0%** | **Garajes comunitarios en el mismo edificio que la vivienda** |
-            | **Esquema 4a / 4b** | CGMP interior de la vivienda | ❌ NO (Comparte contrato) | **1.5%** | **Chalets, adosados y viviendas unifamiliares** |
-            | **Esquema 3a** | Centralización (Contador exclusivo) |  SÍ (Contrato nuevo) | **1.0%** | **Vecino de otro edificio / Factura separada** |
-            | **Esquema 1** | Cuadro general exclusivo de recarga |  SÍ (Contador colectivo) | **1.0%** | **Parkings públicos, empresas, nuevas promociones** |
-            | **Esquema 3b** | Caja exterior / plaza |  SÍ (Acometida exterior) | **1.0%** | **Parkings abiertos / vía pública** |
+            | **⭐ Esquema 2 (Por Defecto)** | Salida del contador del piso en centralización | ❌ NO (Misma factura del piso) | **1,0%** | **Garaje comunitario en el mismo edificio que la vivienda (El 90% de los casos)** |
+            | **🏡 Esquema 4a / 4b** | Cuadro General CGMP de la vivienda | ❌ NO (Misma factura del piso) | **1,5%** | **Chalets, adosados y viviendas unifamiliares con garaje privado** |
+            | **🏢 Esquema 3a** | Centralización (Módulo de contador nuevo) |  SÍ (Contrato y término fijo nuevo) | **1,0%** | **Cliente que vive en otro edificio / Factura de empresa separada** |
+            | **👥 Esquema 1** | Cuadro general exclusivo de recarga colectiva |  SÍ (Contador comunitario CPO) | **1,0%** | **Edificios nuevos, parkings públicos y flotas de empresa** |
+            | **🔌 Esquema 3b** | Caja exterior CPM junto a la plaza |  SÍ (Acometida exterior nueva) | **1,0%** | **Parkings al aire libre / Suministros en vía pública** |
             """)
+
 
     # =========================================================================
     # SELECTOR DE CLIENTE Y PROYECTO (CRM)
