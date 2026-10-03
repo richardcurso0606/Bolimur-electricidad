@@ -512,6 +512,9 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
             cant_txt = f"{cant_val:.2f}" if isinstance(cant_val, float) and not cant_val.is_integer() else f"{int(cant_val)}"
             unidad_txt = str(art.get("unidad", "ud"))
             desc_txt = str(art.get("desc_exacta", art.get("articulo", "")))
+            if not art.get("en_bd", True) or "NO ENCONTRADO" in desc_txt or "⚠️" in desc_txt:
+                clean_desc = desc_txt.replace("⚠️", "").strip()
+                desc_txt = f"<font color='#b45309'><b>[⚠️ No en BD / Estimado]</b></font> {clean_desc}"
             tienda_txt = str(art.get("proveedor", "Obramat"))
             p_unit = float(art.get("precio_unitario", 0.0))
             subt = float(art.get("subtotal", p_unit * float(cant_val)))

@@ -630,46 +630,44 @@ def app():
             st.warning("Selecciona al menos una estancia.")
             return
 
-        p_tubo20, prov_tubo20, desc_tubo20, _, fila_tubo20 = buscar_mas_economico(df_precios, 'm20', 'corrugado')
-        p_tubo25, prov_tubo25, desc_tubo25, _, fila_tubo25 = buscar_mas_economico(df_precios, 'm25', 'corrugado')
+        p_tubo20, prov_tubo20, desc_tubo20, ok_tubo20, fila_tubo20 = buscar_mas_economico(df_precios, 'm20', 'corrugado')
+        p_tubo25, prov_tubo25, desc_tubo25, ok_tubo25, fila_tubo25 = buscar_mas_economico(df_precios, 'm25', 'corrugado')
 
-        p_caja_mec, prov_caja_mec, desc_caja_mec, _, fila_caja_mec = buscar_mas_economico(df_precios, '67mm', 'mecanismos')
-        p_caja_reg, prov_caja_reg, desc_caja_reg, _, fila_caja_reg = buscar_mas_economico(df_precios, '100x100', 'registro')
+        p_caja_mec, prov_caja_mec, desc_caja_mec, ok_caja_mec, fila_caja_mec = buscar_mas_economico(df_precios, '67mm', 'mecanismos')
+        p_caja_reg, prov_caja_reg, desc_caja_reg, ok_caja_reg, fila_caja_reg = buscar_mas_economico(df_precios, '100x100', 'registro')
         
-        p_15_az, prov_15_az, desc_15_az, _, fila_15_az = buscar_mas_economico(df_precios, '1.5 mm²', 'azul')
-        p_15_ne, prov_15_ne, desc_15_ne, _, fila_15_ne = buscar_mas_economico(df_precios, '1.5 mm²', 'negro')
-        p_15_ma, prov_15_ma, desc_15_ma, _, fila_15_ma = buscar_mas_economico(df_precios, '1.5 mm²', 'marrón')
-        p_15_gr, prov_15_gr, desc_15_gr, _, fila_15_gr = buscar_mas_economico(df_precios, '1.5 mm²', 'gris')
-        p_15_tt, prov_15_tt, desc_15_tt, _, fila_15_tt = buscar_mas_economico(df_precios, '1.5 mm²', 'amarillo')
+        p_15_az, prov_15_az, desc_15_az, ok_15_az, fila_15_az = buscar_mas_economico(df_precios, '1.5 mm²', 'azul')
+        p_15_ne, prov_15_ne, desc_15_ne, ok_15_ne, fila_15_ne = buscar_mas_economico(df_precios, '1.5 mm²', 'negro')
+        p_15_ma, prov_15_ma, desc_15_ma, ok_15_ma, fila_15_ma = buscar_mas_economico(df_precios, '1.5 mm²', 'marrón')
+        p_15_gr, prov_15_gr, desc_15_gr, ok_15_gr, fila_15_gr = buscar_mas_economico(df_precios, '1.5 mm²', 'gris')
+        p_15_tt, prov_15_tt, desc_15_tt, ok_15_tt, fila_15_tt = buscar_mas_economico(df_precios, '1.5 mm²', 'amarillo')
 
-        p_25_az, prov_25_az, desc_25_az, _, fila_25_az = buscar_mas_economico(df_precios, '2.5 mm²', 'azul')
-        p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = buscar_mas_economico(df_precios, '2.5 mm²', 'negro')
-        p_25_ma, prov_25_ma, desc_25_ma, _, fila_25_ma = buscar_mas_economico(df_precios, '2.5 mm²', 'marrón')
-        if not fila_25_ne or p_25_ne == 0.45:
-            p_25_ne, prov_25_ne, desc_25_ne, _, fila_25_ne = p_25_ma, prov_25_ma, desc_25_ma, _, fila_25_ma
-        p_25_tt, prov_25_tt, desc_25_tt, _, fila_25_tt = buscar_mas_economico(df_precios, '2.5 mm²', 'amarillo')
+        p_25_az, prov_25_az, desc_25_az, ok_25_az, fila_25_az = buscar_mas_economico(df_precios, '2.5 mm²', 'azul')
+        p_25_ne, prov_25_ne, desc_25_ne, ok_25_ne, fila_25_ne = buscar_mas_economico(df_precios, '2.5 mm²', 'negro')
+        p_25_ma, prov_25_ma, desc_25_ma, ok_25_ma, fila_25_ma = buscar_mas_economico(df_precios, '2.5 mm²', 'marrón')
+        p_25_tt, prov_25_tt, desc_25_tt, ok_25_tt, fila_25_tt = buscar_mas_economico(df_precios, '2.5 mm²', 'amarillo')
 
-        p_utp, prov_utp, desc_utp, _, fila_utp = buscar_mas_economico(df_precios, 'utp', 'cat.6')
-        if not prov_utp or p_utp == 0.45:
-            p_utp, prov_utp, desc_utp, _, fila_utp = buscar_mas_economico(df_precios, 'cable de red', 'cat.6')
+        p_utp, prov_utp, desc_utp, ok_utp, fila_utp = buscar_mas_economico(df_precios, 'utp', 'cat.6')
+        if not ok_utp:
+            p_utp, prov_utp, desc_utp, ok_utp, fila_utp = buscar_mas_economico(df_precios, 'cable de red', 'cat.6')
 
         if "Wago" in tipo_conexion:
-            p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'wago 221', '3 conductores')
+            p_con, prov_con, desc_con, ok_con, fila_con = buscar_mas_economico(df_precios, 'wago 221', '3 conductores')
             nombre_conexion_txt = "Conectores Rápidos Wago 221 (Caja 50ud)"
         else:
-            p_con, prov_con, desc_con, _, fila_con = buscar_mas_economico(df_precios, 'clema', '10mm')
+            p_con, prov_con, desc_con, ok_con, fila_con = buscar_mas_economico(df_precios, 'clema', '10mm')
             nombre_conexion_txt = "Regleta / Clema de Conexión 12 Polos"
 
-        p_int, prov_int, desc_int, _, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
-        p_schuko, prov_schuko, desc_schuko, _, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
-        p_rj45, prov_rj45, desc_rj45, _, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
-        p_marco, prov_marco, desc_marco, _, fila_marco = buscar_mecanismo_por_filtro(df_precios, 'marco', modo_seleccion, serie_mecanismos)
+        p_int, prov_int, desc_int, ok_int, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
+        p_schuko, prov_schuko, desc_schuko, ok_schuko, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
+        p_rj45, prov_rj45, desc_rj45, ok_rj45, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
+        p_marco, prov_marco, desc_marco, ok_marco, fila_marco = buscar_mecanismo_por_filtro(df_precios, 'marco', modo_seleccion, serie_mecanismos)
 
-        p_iga, prov_iga, desc_iga, _, fila_iga = buscar_proteccion_por_marca(df_precios, 'iga', marca_protecciones, amperaje=iga_amperaje)
-        p_id, prov_id, desc_id, _, fila_id = buscar_proteccion_por_marca(df_precios, 'diferencial', marca_protecciones)
-        p_pia, prov_pia, desc_pia, _, fila_pia = buscar_proteccion_por_marca(df_precios, 'pia', marca_protecciones)
+        p_iga, prov_iga, desc_iga, ok_iga, fila_iga = buscar_proteccion_por_marca(df_precios, 'iga', marca_protecciones, amperaje=iga_amperaje)
+        p_id, prov_id, desc_id, ok_id, fila_id = buscar_proteccion_por_marca(df_precios, 'diferencial', marca_protecciones)
+        p_pia, prov_pia, desc_pia, ok_pia, fila_pia = buscar_proteccion_por_marca(df_precios, 'pia', marca_protecciones)
         
-        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, _, fila_caja_cuadro = buscar_caja_cuadro(df_precios, marca_protecciones)
+        p_caja_cuadro, prov_caja_cuadro, desc_caja_cuadro, ok_caja_cuadro, fila_caja_cuadro = buscar_caja_cuadro(df_precios, marca_protecciones)
 
         global_tubo20_m = 0.0
         global_tubo25_m = 0.0
@@ -747,33 +745,33 @@ def app():
                 cant_int = 1 + max(0, ex_luz)
                 cant_sch = (5 if desdoblar_c4 else 4) + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Interruptor simple", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Base Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
-                    {"nombre": "Base fuerza 25A Horno/Vitro", "desc_real": desc_schuko, "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko},
-                    {"nombre": "Bases Schuko lavavajillas/lavadora/termo", "desc_real": desc_schuko, "cant": (3 if desdoblar_c4 else 2), "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
+                    {"nombre": "Interruptor simple", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
+                    {"nombre": "Base Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Base fuerza 25A Horno/Vitro", "desc_real": desc_schuko, "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Bases Schuko lavavajillas/lavadora/termo", "desc_real": desc_schuko, "cant": (3 if desdoblar_c4 else 2), "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko}
                 ]
             elif "baño" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
                 cant_sch = 2 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Interruptor luz espejo", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Base Schuko tapa estanca IP44", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko * 1.2, "prov": prov_schuko, "fila": fila_schuko}
+                    {"nombre": "Interruptor luz espejo", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
+                    {"nombre": "Base Schuko tapa estanca IP44", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko * 1.2, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko}
                 ]
             elif "salón" in nombre_est or "comedor" in nombre_est:
                 cant_int = 2 + max(0, ex_luz)
                 cant_sch = 6 + max(0, ex_sch)
                 cant_rj = 2 + max(0, ex_rj45)
                 mecanismos_est = [
-                    {"nombre": "Conmutador / Cruzamiento", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Bases Schuko zona TV/Sofá", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko},
-                    {"nombre": "Toma de datos RJ45", "desc_real": desc_rj45, "cant": cant_rj, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45}
+                    {"nombre": "Conmutador / Cruzamiento", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
+                    {"nombre": "Bases Schuko zona TV/Sofá", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Toma de datos RJ45", "desc_real": desc_rj45, "cant": cant_rj, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45}
                 ]
             else:
                 cant_int = 2 + max(0, ex_luz)
                 cant_sch = 3 + max(0, ex_sch)
                 mecanismos_est = [
-                    {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int},
-                    {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko}
+                    {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
+                    {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko}
                 ]
 
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
@@ -798,7 +796,7 @@ def app():
             global_marcos_uds += n_marcos
 
             for mec in mecanismos_est:
-                key_m = (mec["nombre"], mec["desc_real"], mec["precio"], mec["prov"], mec["fila"])
+                key_m = (mec["nombre"], mec["desc_real"], mec["precio"], mec["prov"], mec["fila"], mec.get("en_bd", True))
                 global_mecanismos_dict[key_m] = global_mecanismos_dict.get(key_m, 0) + mec["cant"]
 
             coste_mecanismos_est = sum([m["cant"] * m["precio"] for m in mecanismos_est])
@@ -924,7 +922,7 @@ def app():
         }
 
         # 1. Mecanismos
-        for (nom_m, desc_m, p_m, prov_m, fila_m), cant_m in global_mecanismos_dict.items():
+        for (nom_m, desc_m, p_m, prov_m, fila_m, ok_m), cant_m in global_mecanismos_dict.items():
             if cant_m > 0:
                 categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
                     "articulo": nom_m,
@@ -933,7 +931,10 @@ def app():
                     "cantidad": cant_m,
                     "unidad": "ud",
                     "precio_unitario": p_m,
-                    "subtotal": round(cant_m * p_m, 2)
+                    "subtotal": round(cant_m * p_m, 2),
+                    "en_bd": ok_m,
+                    "categoria_bd": "Mecanismos",
+                    "marca_bd": str(serie_mecanismos).split()[0]
                 })
         if global_marcos_uds > 0:
             categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
@@ -943,24 +944,27 @@ def app():
                 "cantidad": global_marcos_uds,
                 "unidad": "ud",
                 "precio_unitario": p_marco,
-                "subtotal": round(global_marcos_uds * p_marco, 2)
+                "subtotal": round(global_marcos_uds * p_marco, 2),
+                "en_bd": ok_marco,
+                "categoria_bd": "Marcos / Placas",
+                "marca_bd": str(serie_mecanismos).split()[0]
             })
 
         # 2. Cables y Conductores
         cables_items = [
-            ("Cable 1.5 mm² Azul", desc_15_az, prov_15_az, global_15_az_m, p_15_az, rollos_15_az),
-            ("Cable 1.5 mm² Negro", desc_15_ne, prov_15_ne, global_15_ne_m, p_15_ne, rollos_15_ne),
-            ("Cable 1.5 mm² Marrón", desc_15_ma, prov_15_ma, global_15_ma_m, p_15_ma, rollos_15_ma),
-            ("Cable 1.5 mm² Gris", desc_15_gr, prov_15_gr, global_15_gr_m, p_15_gr, rollos_15_gr),
-            ("Cable 1.5 mm² Tierra (Amarillo/Verde)", desc_15_tt, prov_15_tt, global_15_tt_m, p_15_tt, rollos_15_tt),
-            ("Cable 2.5 mm² Azul", desc_25_az, prov_25_az, global_25_az_m, p_25_az, rollos_25_az),
-            ("Cable 2.5 mm² Negro / Marrón", desc_25_ne, prov_25_ne, global_25_ne_m, p_25_ne, rollos_25_ne),
-            ("Cable 2.5 mm² Tierra (Amarillo/Verde)", desc_25_tt, prov_25_tt, global_25_tt_m, p_25_tt, rollos_25_tt),
+            ("Cable 1.5 mm² Azul", desc_15_az, prov_15_az, global_15_az_m, p_15_az, rollos_15_az, ok_15_az),
+            ("Cable 1.5 mm² Negro", desc_15_ne, prov_15_ne, global_15_ne_m, p_15_ne, rollos_15_ne, ok_15_ne),
+            ("Cable 1.5 mm² Marrón", desc_15_ma, prov_15_ma, global_15_ma_m, p_15_ma, rollos_15_ma, ok_15_ma),
+            ("Cable 1.5 mm² Gris", desc_15_gr, prov_15_gr, global_15_gr_m, p_15_gr, rollos_15_gr, ok_15_gr),
+            ("Cable 1.5 mm² Tierra (Amarillo/Verde)", desc_15_tt, prov_15_tt, global_15_tt_m, p_15_tt, rollos_15_tt, ok_15_tt),
+            ("Cable 2.5 mm² Azul", desc_25_az, prov_25_az, global_25_az_m, p_25_az, rollos_25_az, ok_25_az),
+            ("Cable 2.5 mm² Negro / Marrón", desc_25_ne, prov_25_ne, global_25_ne_m, p_25_ne, rollos_25_ne, ok_25_ne),
+            ("Cable 2.5 mm² Tierra (Amarillo/Verde)", desc_25_tt, prov_25_tt, global_25_tt_m, p_25_tt, rollos_25_tt, ok_25_tt),
         ]
         if global_utp_m > 0:
-            cables_items.append(("Cable Red UTP Cat.6", desc_utp, prov_utp, global_utp_m, p_utp, max(1, int((global_utp_m + 99)/100))))
+            cables_items.append(("Cable Red UTP Cat.6", desc_utp, prov_utp, global_utp_m, p_utp, max(1, int((global_utp_m + 99)/100)), ok_utp))
 
-        for nom_c, desc_c, prov_c, m_c, p_c, rollos_c in cables_items:
+        for nom_c, desc_c, prov_c, m_c, p_c, rollos_c, ok_c in cables_items:
             if m_c > 0:
                 categorias_orden_compra["⚡ 2. Cables y Conductores"].append({
                     "articulo": nom_c,
@@ -969,7 +973,10 @@ def app():
                     "cantidad": int(round(m_c)),
                     "unidad": "m",
                     "precio_unitario": p_c,
-                    "subtotal": round(m_c * p_c, 2)
+                    "subtotal": round(m_c * p_c, 2),
+                    "en_bd": ok_c,
+                    "categoria_bd": "Conductores",
+                    "marca_bd": "General Cable / Top Cable"
                 })
 
         # 3. Cuadro Eléctrico y Protecciones
@@ -981,7 +988,10 @@ def app():
                 "cantidad": 1,
                 "unidad": "ud",
                 "precio_unitario": p_caja_cuadro,
-                "subtotal": round(p_caja_cuadro, 2)
+                "subtotal": round(p_caja_cuadro, 2),
+                "en_bd": ok_caja_cuadro,
+                "categoria_bd": "Cuadros y Envolventes",
+                "marca_bd": marca_protecciones
             },
             {
                 "articulo": f"IGA Oficial ({iga_amperaje}A 2P)",
@@ -990,7 +1000,10 @@ def app():
                 "cantidad": 1,
                 "unidad": "ud",
                 "precio_unitario": p_iga,
-                "subtotal": round(p_iga, 2)
+                "subtotal": round(p_iga, 2),
+                "en_bd": ok_iga,
+                "categoria_bd": "Protecciones",
+                "marca_bd": marca_protecciones
             },
             {
                 "articulo": "Interruptor Diferencial 40A 30mA",
@@ -999,7 +1012,10 @@ def app():
                 "cantidad": n_difs,
                 "unidad": "ud",
                 "precio_unitario": p_id,
-                "subtotal": round(n_difs * p_id, 2)
+                "subtotal": round(n_difs * p_id, 2),
+                "en_bd": ok_id,
+                "categoria_bd": "Protecciones",
+                "marca_bd": marca_protecciones
             },
             {
                 "articulo": "PIAs Magnetotérmicos Circuitos REBT",
@@ -1008,16 +1024,19 @@ def app():
                 "cantidad": n_pias,
                 "unidad": "ud",
                 "precio_unitario": p_pia,
-                "subtotal": round(n_pias * p_pia, 2)
+                "subtotal": round(n_pias * p_pia, 2),
+                "en_bd": ok_pia,
+                "categoria_bd": "Protecciones",
+                "marca_bd": marca_protecciones
             }
         ])
 
         # 4. Tubos y Canalizaciones
         tubos_items = [
-            ("Tubo Corrugado M-20", desc_tubo20, prov_tubo20, global_tubo20_m, p_tubo20, rollos_tubo20),
-            ("Tubo Corrugado M-25", desc_tubo25, prov_tubo25, global_tubo25_m, p_tubo25, rollos_tubo25),
+            ("Tubo Corrugado M-20", desc_tubo20, prov_tubo20, global_tubo20_m, p_tubo20, rollos_tubo20, ok_tubo20),
+            ("Tubo Corrugado M-25", desc_tubo25, prov_tubo25, global_tubo25_m, p_tubo25, rollos_tubo25, ok_tubo25),
         ]
-        for nom_t, desc_t, prov_t, m_t, p_t, rollos_t in tubos_items:
+        for nom_t, desc_t, prov_t, m_t, p_t, rollos_t, ok_t in tubos_items:
             if m_t > 0:
                 categorias_orden_compra["📏 4. Tubos y Canalizaciones"].append({
                     "articulo": nom_t,
@@ -1026,16 +1045,19 @@ def app():
                     "cantidad": int(round(m_t)),
                     "unidad": "m",
                     "precio_unitario": p_t,
-                    "subtotal": round(m_t * p_t, 2)
+                    "subtotal": round(m_t * p_t, 2),
+                    "en_bd": ok_t,
+                    "categoria_bd": "Canalización Tubos",
+                    "marca_bd": "General"
                 })
 
         # 5. Cajas y Conexiones
         cajas_items = [
-            ("Cajas Universales Mecanismo 67mm", desc_caja_mec, prov_caja_mec, global_caja_mec_uds, "ud", p_caja_mec),
-            ("Cajas de Registro Empotrar 100x100mm", desc_caja_reg, prov_caja_reg, global_caja_reg_uds, "ud", p_caja_reg),
-            ("Conexión en Cajas (" + ("Wago 221" if "Wago" in tipo_conexion else "Clemas") + ")", desc_con, prov_con, max(1, global_caja_reg_uds * 2), "ud/pack", p_con),
+            ("Cajas Universales Mecanismo 67mm", desc_caja_mec, prov_caja_mec, global_caja_mec_uds, "ud", p_caja_mec, ok_caja_mec, "Cajas de Mecanismos"),
+            ("Cajas de Registro Empotrar 100x100mm", desc_caja_reg, prov_caja_reg, global_caja_reg_uds, "ud", p_caja_reg, ok_caja_reg, "Cajas de Registro"),
+            ("Conexión en Cajas (" + ("Wago 221" if "Wago" in tipo_conexion else "Clemas") + ")", desc_con, prov_con, max(1, global_caja_reg_uds * 2), "ud/pack", p_con, ok_con, "Conexión"),
         ]
-        for nom_cj, desc_cj, prov_cj, cant_cj, unid_cj, p_cj in cajas_items:
+        for nom_cj, desc_cj, prov_cj, cant_cj, unid_cj, p_cj, ok_cj, cat_cj in cajas_items:
             if cant_cj > 0:
                 categorias_orden_compra["📦 5. Cajas y Conexiones"].append({
                     "articulo": nom_cj,
@@ -1044,13 +1066,24 @@ def app():
                     "cantidad": cant_cj,
                     "unidad": unid_cj,
                     "precio_unitario": p_cj,
-                    "subtotal": round(cant_cj * p_cj, 2)
+                    "subtotal": round(cant_cj * p_cj, 2),
+                    "en_bd": ok_cj,
+                    "categoria_bd": cat_cj,
+                    "marca_bd": "Wago" if "Wago" in str(nom_cj) else "General"
                 })
+
+        # Listado de no catalogados para el actualizador interactivo
+        items_no_catalogados = []
+        for cat_k, items_k in categorias_orden_compra.items():
+            for it in items_k:
+                if not it.get("en_bd", True) or "NO ENCONTRADO" in it.get("desc_exacta", ""):
+                    items_no_catalogados.append(it)
 
         # Flatten into DataFrame for export and display
         filas_df_oc = []
         for cat_nombre, items_cat in categorias_orden_compra.items():
             for item in items_cat:
+                estado_bd_txt = "🟢 En Catálogo" if item.get("en_bd", True) else "⚠️ No en BD (Estimado)"
                 filas_df_oc.append({
                     "Categoría": cat_nombre,
                     "Artículo": item["articulo"],
@@ -1060,7 +1093,8 @@ def app():
                     "Unidad": item["unidad"],
                     "Precio S/IVA (€)": round(item["precio_unitario"], 2),
                     "Subtotal S/IVA (€)": round(item["subtotal"], 2),
-                    "Total C/IVA 21% (€)": round(item["subtotal"] * 1.21, 2)
+                    "Total C/IVA 21% (€)": round(item["subtotal"] * 1.21, 2),
+                    "Estado Catálogo": estado_bd_txt
                 })
         df_orden_compra = pd.DataFrame(filas_df_oc)
 
@@ -1149,6 +1183,54 @@ def app():
             st.subheader("🛒 Resumen de Acopio y Reporte de Compras Clasificado")
             st.markdown("Materiales organizados por tipo y tienda con descarga directa para compras en almacén:")
 
+            if items_no_catalogados:
+                st.warning(f"⚠️ **Atención:** Hay **{len(items_no_catalogados)} artículo(s)** calculados con tarifa estimada por no estar registrados en el catálogo.")
+                with st.expander("⚡ Actualizar y Guardar Artículos No Catalogados en la Base de Datos Excel", expanded=True):
+                    st.markdown("Ingresa los datos reales de compra para incorporarlos permanentemente a `base_datos_precio_oficial.xlsx`:")
+                    with st.form("form_actualizar_no_catalogados_panel"):
+                        articulos_a_guardar = []
+                        for idx_no, art_no in enumerate(items_no_catalogados):
+                            st.markdown(f"**Artículo:** `{art_no['articulo']}`")
+                            col_u1, col_u2, col_u3, col_u4 = st.columns([3, 2, 2, 2])
+                            with col_u1:
+                                desc_edit = st.text_input("Descripción Real / Nombre Comercial", value=art_no['articulo'], key=f"desc_nc_{idx_no}")
+                            with col_u2:
+                                prov_edit = st.selectbox("Tienda / Proveedor", ["Obramat", "Leroy Merlin", "Sonepar", "Electro Material", "General"], key=f"prov_nc_{idx_no}")
+                            with col_u3:
+                                precio_edit = st.number_input("Precio S/IVA (€)", value=float(art_no['precio_unitario']), min_value=0.01, step=0.05, format="%.2f", key=f"p_nc_{idx_no}")
+                            with col_u4:
+                                sku_edit = st.text_input("Ref / SKU", value=f"REF-{art_no['articulo'][:4].upper()}", key=f"sku_nc_{idx_no}")
+                            
+                            articulos_a_guardar.append({
+                                "Nivel de Gama / Aplicación": "Estándar",
+                                "Familia / Categoria": art_no.get("categoria_bd", "General"),
+                                "Marca": art_no.get("marca_bd", prov_edit),
+                                "Serie / Gama": "Estándar",
+                                "Proveedor / Tienda": prov_edit,
+                                "Código SKU / Ref": sku_edit,
+                                "Descripción Exacta del Artículo": desc_edit,
+                                "Unidad": art_no.get("unidad", "ud"),
+                                "Precio S/IVA (€)": precio_edit,
+                                "IVA (%)": 21,
+                                "Precio C/IVA (€)": round(precio_edit * 1.21, 2),
+                                "Observaciones / Aplicación Técnica": "Registrado desde actualizador de acopio"
+                            })
+                            st.markdown("---")
+                        
+                        btn_guardar_bd = st.form_submit_button("💾 Guardar Todos en Excel y Recalcular Presupuesto", type="primary")
+                        if btn_guardar_bd:
+                            try:
+                                df_act = pd.read_excel('base_datos_precio_oficial.xlsx')
+                                for nuevo_art in articulos_a_guardar:
+                                    nuevo_art["ID"] = f"ART-{len(df_act)+1:04d}"
+                                    df_act = pd.concat([df_act, pd.DataFrame([nuevo_art])], ignore_index=True)
+                                df_act.to_excel('base_datos_precio_oficial.xlsx', index=False)
+                                cargar_precios_excel.clear()
+                                st.success("✅ ¡Artículos guardados en Excel correctamente! Recalculando...")
+                                st.rerun()
+                            except Exception as ex:
+                                st.error(f"Error al guardar en Excel: {ex}")
+
             col_btn_ac1, col_btn_ac2 = st.columns(2)
             with col_btn_ac1:
                 st.download_button(
@@ -1182,11 +1264,54 @@ def app():
                             "Descripción Exacta (Tienda)": a["desc_exacta"],
                             "Tienda / Prov.": a["proveedor"],
                             "P. Unit (€)": f"{a['precio_unitario']:.2f} €",
-                            "Subtotal (€)": f"{a['subtotal']:.2f} €"
+                            "Subtotal (€)": f"{a['subtotal']:.2f} €",
+                            "Estado": "🟢 En Catálogo" if a.get("en_bd", True) else "⚠️ No en BD"
                         }
                         for a in articulos
                     ])
                     st.dataframe(df_cat_res, use_container_width=True, hide_index=True)
+
+            with st.expander("➕ Añadir Manualmente un Nuevo Artículo al Excel de Precios"):
+                with st.form("form_nuevo_art_manual"):
+                    col_m1, col_m2 = st.columns(2)
+                    with col_m1:
+                        m_desc = st.text_input("Descripción Exacta del Artículo", placeholder="Ej: Tubo corrugado M32 reforzado")
+                        m_cat = st.selectbox("Categoría / Familia", ["Conductores", "Canalización Tubos", "Mecanismos", "Protecciones", "Cuadros y Envolventes", "Cajas de Registro", "Conexión", "General"])
+                        m_marca = st.text_input("Marca", value="Obramat / General")
+                    with col_m2:
+                        m_prov = st.selectbox("Tienda / Proveedor", ["Obramat", "Leroy Merlin", "Sonepar", "Electro Material", "General"])
+                        m_precio = st.number_input("Precio S/IVA (€)", min_value=0.01, value=1.00, step=0.10)
+                        m_unid = st.selectbox("Unidad", ["m", "ud", "rollo 50m", "rollo 100m", "caja"])
+                    
+                    if st.form_submit_button("💾 Guardar Artículo en Excel"):
+                        if m_desc:
+                            try:
+                                df_act = pd.read_excel('base_datos_precio_oficial.xlsx')
+                                n_id = f"ART-{len(df_act)+1:04d}"
+                                nuevo_reg = {
+                                    "ID": n_id,
+                                    "Nivel de Gama / Aplicación": "Estándar",
+                                    "Familia / Categoria": m_cat,
+                                    "Marca": m_marca,
+                                    "Serie / Gama": "Estándar",
+                                    "Proveedor / Tienda": m_prov,
+                                    "Código SKU / Ref": f"MAN-{n_id}",
+                                    "Descripción Exacta del Artículo": m_desc,
+                                    "Unidad": m_unid,
+                                    "Precio S/IVA (€)": m_precio,
+                                    "IVA (%)": 21,
+                                    "Precio C/IVA (€)": round(m_precio * 1.21, 2),
+                                    "Observaciones / Aplicación Técnica": "Registrado manualmente"
+                                }
+                                df_act = pd.concat([df_act, pd.DataFrame([nuevo_reg])], ignore_index=True)
+                                df_act.to_excel('base_datos_precio_oficial.xlsx', index=False)
+                                cargar_precios_excel.clear()
+                                st.success(f"✅ ¡Artículo '{m_desc}' añadido con ID `{n_id}`!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error al guardar: {e}")
+                        else:
+                            st.warning("Introduce una descripción válida.")
 
             st.markdown(f"""
             <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 15px;">
@@ -1238,6 +1363,9 @@ def app():
 
             # Desglose por categorías organizadas
             st.subheader("📋 Listado Detallado por Categorías de Acopio")
+            if items_no_catalogados:
+                st.warning(f"⚠️ **Aviso:** Hay **{len(items_no_catalogados)} artículo(s)** sin catalogar en el Excel. Puedes usar el actualizador de la sección de acopio para registrarlos permanentemente.")
+
             for cat_titulo, articulos in categorias_orden_compra.items():
                 if not articulos:
                     continue
@@ -1255,7 +1383,8 @@ def app():
                         "Descripción Exacta (Tienda)": a["desc_exacta"],
                         "Tienda": a["proveedor"],
                         "P. Unit (€)": f"{a['precio_unitario']:.2f} €",
-                        "Subtotal (€)": f"{a['subtotal']:.2f} €"
+                        "Subtotal (€)": f"{a['subtotal']:.2f} €",
+                        "Estado Catálogo": "🟢 En Catálogo" if a.get("en_bd", True) else "⚠️ No en BD (Estimado)"
                     }
                     for a in arts_filtrados
                 ])
