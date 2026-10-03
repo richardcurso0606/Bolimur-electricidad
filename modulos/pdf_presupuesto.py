@@ -92,6 +92,34 @@ class NumberedCanvasPresupuesto(canvas.Canvas):
         self.restoreState()
 
 
+def _obtener_logo_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    posibles = [
+        os.path.join(base_dir, "logo_bolimur.PNG"),
+        os.path.join(base_dir, "logo_bolimur.png"),
+        os.path.join(base_dir, "icono_bolimur.png"),
+        os.path.join(os.getcwd(), "logo_bolimur.PNG"),
+        os.path.join(os.getcwd(), "logo_bolimur.png"),
+        os.path.join(os.getcwd(), "icono_bolimur.png"),
+        "logo_bolimur.PNG",
+        "icono_bolimur.png",
+    ]
+    for p in posibles:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def _crear_logo_flowable(width=3.8*cm, height=2.1*cm):
+    path = _obtener_logo_path()
+    if path:
+        try:
+            return Image(path, width=width, height=height)
+        except Exception:
+            pass
+    return None
+
+
 def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     """
     Genera una oferta comercial y presupuesto técnico oficial en PDF profesional con ReportLab.
@@ -153,28 +181,21 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
 
     story = []
 
-    logo_path = "logo_bolimur.PNG"
-    if not os.path.exists(logo_path):
-        logo_path = "icono_bolimur.png"
-    
     text_col = [
         Paragraph("PRESUPUESTO OFICIAL DE INSTALACIÓN ELÉCTRICA", title_style),
         Paragraph(f"<b>{proyecto_info.get('empresa', 'BOLIMUR Instalaciones Integrales')}</b> | Instalación Residencial conforme a REBT (RD 842/2002)", subtitle_style)
     ]
 
-    if os.path.exists(logo_path):
-        try:
-            img = Image(logo_path, width=3.8*cm, height=2.4*cm)
-            header_table = Table([[text_col, img]], colWidths=[14.2*cm, 3.8*cm])
-            header_table.setStyle(TableStyle([
-                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                ('ALIGN', (1,0), (1,0), 'RIGHT'),
-                ('TOPPADDING', (0,0), (-1,-1), 0),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ]))
-            story.append(header_table)
-        except Exception:
-            story.extend(text_col)
+    logo_img = _crear_logo_flowable(width=3.8*cm, height=2.1*cm)
+    if logo_img:
+        header_table = Table([[text_col, logo_img]], colWidths=[14.2*cm, 3.8*cm])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ]))
+        story.append(header_table)
     else:
         story.extend(text_col)
 
@@ -603,28 +624,21 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
 
     story = []
 
-    logo_path = "logo_bolimur.PNG"
-    if not os.path.exists(logo_path):
-        logo_path = "icono_bolimur.png"
-    
     text_col = [
         Paragraph("ORDEN DE COMPRA Y LISTA DE ACOPIO DE MATERIALES", title_style),
         Paragraph("Listado clasificado por categorías para aprovisionamiento en tienda / almacén", subtitle_style)
     ]
 
-    if os.path.exists(logo_path):
-        try:
-            img = Image(logo_path, width=3.8*cm, height=2.53*cm)
-            header_table = Table([[text_col, img]], colWidths=[14.0*cm, 4.0*cm])
-            header_table.setStyle(TableStyle([
-                ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                ('ALIGN', (1,0), (1,0), 'RIGHT'),
-                ('TOPPADDING', (0,0), (-1,-1), 0),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ]))
-            story.append(header_table)
-        except Exception:
-            story.extend(text_col)
+    logo_img = _crear_logo_flowable(width=3.8*cm, height=2.1*cm)
+    if logo_img:
+        header_table = Table([[text_col, logo_img]], colWidths=[14.2*cm, 3.8*cm])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ]))
+        story.append(header_table)
     else:
         story.extend(text_col)
 
@@ -1002,22 +1016,27 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
 
     story = []
 
-    # 1. Official Header (Región de Murcia - DGEAIM)
+    # 1. Official Header (Región de Murcia - DGEAIM) con Logo BOLIMUR
+    logo_uni = _crear_logo_flowable(width=3.5*cm, height=1.9*cm)
+    col_logo_uni = logo_uni if logo_uni else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogoUni', parent=body_style, alignment=2))
+
     header_data = [
         [
             Paragraph("<b>REGIÓN DE MURCIA</b><br/><font size='6.5' color='#475569'>Consejería de Empresa, Empleo y Economía Social<br/>Dirección General de Energía y Actividad Industrial y Minera</font>", body_style),
-            Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO (MTD)</b><br/><font size='7' color='#0284c7'>ESQUEMA UNIFILAR REBT OFICIAL - RD 842/2002</font><br/><font size='6.5' color='#64748b'>ITC-BT-25 / ITC-BT-17 / ITC-BT-23 / ITC-BT-24</font>", ParagraphStyle('HdrRight', parent=body_style, alignment=2))
+            Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO (MTD)</b><br/><font size='7' color='#0284c7'>ESQUEMA UNIFILAR REBT OFICIAL - RD 842/2002</font><br/><font size='6.5' color='#64748b'>ITC-BT-25 / ITC-BT-17 / ITC-BT-23 / ITC-BT-24</font>", ParagraphStyle('HdrRight', parent=body_style, alignment=1)),
+            col_logo_uni
         ]
     ]
-    t_hdr = Table(header_data, colWidths=[9.0*cm, 9.0*cm])
+    t_hdr = Table(header_data, colWidths=[7.4*cm, 7.0*cm, 3.6*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
         ('BOX', (0,0), (-1,-1), 1.0, c_secondary),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (2,0), (2,0), 'RIGHT'),
     ]))
     story.append(t_hdr)
     story.append(Spacer(1, 4))

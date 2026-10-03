@@ -51,6 +51,34 @@ class NumberedCanvasDI(canvas.Canvas):
         self.restoreState()
 
 
+def _obtener_logo_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    posibles = [
+        os.path.join(base_dir, "logo_bolimur.PNG"),
+        os.path.join(base_dir, "logo_bolimur.png"),
+        os.path.join(base_dir, "icono_bolimur.png"),
+        os.path.join(os.getcwd(), "logo_bolimur.PNG"),
+        os.path.join(os.getcwd(), "logo_bolimur.png"),
+        os.path.join(os.getcwd(), "icono_bolimur.png"),
+        "logo_bolimur.PNG",
+        "icono_bolimur.png",
+    ]
+    for p in posibles:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def _crear_logo_flowable(width=3.8*cm, height=2.1*cm):
+    path = _obtener_logo_path()
+    if path:
+        try:
+            return Image(path, width=width, height=height)
+        except Exception:
+            pass
+    return None
+
+
 def generar_pdf_di(proyecto_info, di_params, di_results):
     """
     Genera un informe técnico PDF profesional para el módulo Derivación Individual (ITC-BT-15).
@@ -114,29 +142,22 @@ def generar_pdf_di(proyecto_info, di_params, di_results):
 
     story = []
 
-    # Cabecera con Logo
-    logo_path = "logo_bolimur.PNG"
-    if not os.path.exists(logo_path):
-        logo_path = "icono_bolimur.png"
-    
+    # Cabecera con Logo BOLIMUR
     text_col = [
         Paragraph("MEMORIA DE CÁLCULO: DERIVACIÓN INDIVIDUAL (DI)", title_style),
         Paragraph("CÁLCULO Y VERIFICACIÓN SEGÚN ITC-BT-15 E ITC-BT-22 DEL REBT", subtitle_style)
     ]
 
-    if os.path.exists(logo_path):
-        try:
-            img = Image(logo_path, width=4.0*cm, height=2.67*cm)
-            header_table = Table([[text_col, img]], colWidths=[13.5*cm, 4.5*cm])
-            header_table.setStyle(TableStyle([
-                ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                ('ALIGN', (1,0), (1,0), 'RIGHT'),
-                ('TOPPADDING', (0,0), (-1,-1), 0),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ]))
-            story.append(header_table)
-        except Exception:
-            story.extend(text_col)
+    logo_img = _crear_logo_flowable(width=3.8*cm, height=2.1*cm)
+    if logo_img:
+        header_table = Table([[text_col, logo_img]], colWidths=[13.5*cm, 4.5*cm])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ]))
+        story.append(header_table)
     else:
         story.extend(text_col)
 

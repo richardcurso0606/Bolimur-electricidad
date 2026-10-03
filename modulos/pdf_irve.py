@@ -152,6 +152,34 @@ def crear_dibujo_unifilar_reportlab(esquema_cod: str, pot_w: float, s_final: flo
     return d
 
 
+def _obtener_logo_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    posibles = [
+        os.path.join(base_dir, "logo_bolimur.PNG"),
+        os.path.join(base_dir, "logo_bolimur.png"),
+        os.path.join(base_dir, "icono_bolimur.png"),
+        os.path.join(os.getcwd(), "logo_bolimur.PNG"),
+        os.path.join(os.getcwd(), "logo_bolimur.png"),
+        os.path.join(os.getcwd(), "icono_bolimur.png"),
+        "logo_bolimur.PNG",
+        "icono_bolimur.png",
+    ]
+    for p in posibles:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def _crear_logo_flowable(width=3.6*cm, height=2.0*cm):
+    path = _obtener_logo_path()
+    if path:
+        try:
+            return Image(path, width=width, height=height)
+        except Exception:
+            pass
+    return None
+
+
 def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict, presupuesto_materiales: list = None) -> bytes:
     """
     Genera el Documento Oficial Oficial de Memoria Técnica de Diseño (MTD) e Informe Técnico IRVE
@@ -211,8 +239,11 @@ def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict,
     story = []
 
     # =========================================================================
-    # 1. ENCABEZADO OFICIAL DE LA REGIÓN DE MURCIA (DGEAIM)
+    # 1. ENCABEZADO OFICIAL DE LA REGIÓN DE MURCIA (DGEAIM) CON LOGO BOLIMUR
     # =========================================================================
+    logo_irve = _crear_logo_flowable(width=3.5*cm, height=1.9*cm)
+    col_logo_irve = logo_irve if logo_irve else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogoIRVE', parent=body_style, alignment=2))
+
     header_dgeaim_data = [
         [
             Paragraph(
@@ -224,20 +255,22 @@ def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict,
             Paragraph(
                 "<b>MEMORIA TÉCNICA DE DISEÑO (MTD) - IRVE</b><br/>"
                 "<font size='7' color='#0284c7'>INSTALACIÓN DE RECARGA DE VEHÍCULOS ELÉCTRICOS</font><br/>"
-                "<font size='6' color='#64748b'>Reglamento Electrotécnico para Baja Tensión | RD 842/2002 - ITC-BT-52 (RD 1053/2014)</font>",
-                ParagraphStyle('HdrRightM', parent=body_style, alignment=2)
-            )
+                "<font size='6' color='#64748b'>Reglamento Electrotécnico para Baja Tensión | ITC-BT-52</font>",
+                ParagraphStyle('HdrRightM', parent=body_style, alignment=1)
+            ),
+            col_logo_irve
         ]
     ]
-    t_hdr = Table(header_dgeaim_data, colWidths=[9.0*cm, 9.0*cm])
+    t_hdr = Table(header_dgeaim_data, colWidths=[7.4*cm, 7.0*cm, 3.6*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
         ('BOX', (0,0), (-1,-1), 1.0, c_secondary),
         ('TOPPADDING', (0,0), (-1,-1), 3),
         ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (2,0), (2,0), 'RIGHT'),
     ]))
     story.append(t_hdr)
     story.append(Spacer(1, 4))

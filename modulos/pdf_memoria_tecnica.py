@@ -67,6 +67,34 @@ class NumberedCanvasMTDMurciaOficial(canvas.Canvas):
         self.restoreState()
 
 
+def _obtener_logo_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    posibles = [
+        os.path.join(base_dir, "logo_bolimur.PNG"),
+        os.path.join(base_dir, "logo_bolimur.png"),
+        os.path.join(base_dir, "icono_bolimur.png"),
+        os.path.join(os.getcwd(), "logo_bolimur.PNG"),
+        os.path.join(os.getcwd(), "logo_bolimur.png"),
+        os.path.join(os.getcwd(), "icono_bolimur.png"),
+        "logo_bolimur.PNG",
+        "icono_bolimur.png",
+    ]
+    for p in posibles:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def _crear_logo_flowable(width=3.6*cm, height=2.0*cm):
+    path = _obtener_logo_path()
+    if path:
+        try:
+            return Image(path, width=width, height=height)
+        except Exception:
+            pass
+    return None
+
+
 def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     """
     Genera el Documento Oficial Completo de Memoria Técnica de Diseño (MTD)
@@ -131,35 +159,40 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     expediente = datos_mtd.get("expediente", "EXP-MTD-MURCIA-2026")
 
     # =========================================================================
-    # PÁGINA 1: ENCABEZADO INSTITUCIONAL OFICIAL DGEAIM MURCIA
+    # PÁGINA 1: ENCABEZADO INSTITUCIONAL OFICIAL DGEAIM MURCIA CON LOGO BOLIMUR
     # =========================================================================
+    logo_img = _crear_logo_flowable(width=3.5*cm, height=1.9*cm)
+    col_logo = logo_img if logo_img else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogo', parent=body_style, alignment=2))
+
     header_table_data = [
         [
             Paragraph(
                 "<b>Región de Murcia</b><br/>"
                 "<font size='6.5'>Consejería de Ciencia, Tecnologías, Industria y Comercio<br/>"
                 "<b>Dirección General de Industria, Energía y Minas</b><br/>"
-                "Nuevas Tecnologías s/n., 30005 Murcia | Tel. (968) 362002 - Fax. 362003</font>",
+                "Nuevas Tecnologías s/n., 30005 Murcia | Tel. (968) 362002</font>",
                 body_style
             ),
             Paragraph(
                 "<b>MEMORIA TÉCNICA DE DISEÑO</b><br/>"
                 "<font size='7.5' color='#0369a1'><b>DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b></font><br/>"
                 f"<font size='6.5' color='#991b1b'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> | Ref: {expediente}</font>",
-                ParagraphStyle('HdrR', parent=body_style, alignment=2)
-            )
+                ParagraphStyle('HdrR', parent=body_style, alignment=1)
+            ),
+            col_logo
         ]
     ]
-    t_hdr = Table(header_table_data, colWidths=[9.5*cm, 8.9*cm])
+    t_hdr = Table(header_table_data, colWidths=[7.4*cm, 7.2*cm, 3.8*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
         ('BOX', (0,0), (-1,-1), 1.0, c_primary),
         ('INNERGRID', (0,0), (-1,-1), 0.5, c_border),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (2,0), (2,0), 'RIGHT'),
     ]))
     story.append(t_hdr)
     story.append(Spacer(1, 3))
@@ -435,9 +468,24 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     # =========================================================================
     story.append(PageBreak())
     
-    story.append(Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b>", title_main))
-    story.append(Paragraph("<b>ANEXO III: ESQUEMA UNIFILAR NORMALIZADO</b>", ParagraphStyle('Anx3', parent=title_main, textColor=c_dark_blue)))
-    story.append(HRFlowable(width="100%", thickness=1.0, color=c_primary, spaceBefore=2, spaceAfter=6))
+    logo_p2 = _crear_logo_flowable(width=3.2*cm, height=1.7*cm)
+    anx_hdr_data = [
+        [
+            Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO (RD 842/2002)</b><br/><font size='8' color='#0369a1'><b>ANEXO III: ESQUEMA UNIFILAR NORMALIZADO (ITC-BT-25)</b></font><br/><font size='6.5' color='#475569'>Región de Murcia - Dirección General de Industria, Energía y Minas</font>", body_style),
+            logo_p2 if logo_p2 else Paragraph("<b>BOLIMUR</b>", ParagraphStyle('HdrB2', parent=body_style, alignment=2))
+        ]
+    ]
+    t_anx_hdr = Table(anx_hdr_data, colWidths=[14.8*cm, 3.6*cm])
+    t_anx_hdr.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(t_anx_hdr)
+    story.append(HRFlowable(width="100%", thickness=1.0, color=c_primary, spaceBefore=2, spaceAfter=5))
 
     # Dibujo vectorial del Esquema Unifilar Oficial Jerárquico (Exacto al modelo de curso REBT / DGEAIM Murcia)
     dwg_w = 520
