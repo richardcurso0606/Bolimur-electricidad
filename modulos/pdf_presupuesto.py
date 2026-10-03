@@ -7,9 +7,50 @@ from reportlab.lib import colors
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, HRFlowable
 )
+from reportlab.graphics.shapes import Drawing, Rect, Line, String, Circle, Group
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
+
+class NumberedCanvasUnifilar(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations(num_pages)
+            super().showPage()
+        super().save()
+
+    def draw_page_decorations(self, page_count):
+        self.saveState()
+        self.setFont("Helvetica-Bold", 8)
+        self.setFillColor(colors.HexColor("#475569"))
+        
+        if self._pageNumber > 1:
+            self.drawString(1.5*cm, 28.3*cm, "REGIÓN DE MURCIA - DGEAIM | Esquema Unifilar Oficial REBT (ITC-BT-25)")
+            self.drawRightString(19.5*cm, 28.3*cm, "RD 842/2002")
+            self.setStrokeColor(colors.HexColor("#cbd5e1"))
+            self.setLineWidth(0.5)
+            self.line(1.5*cm, 28.1*cm, 19.5*cm, 28.1*cm)
+
+        self.setFont("Helvetica", 7.5)
+        self.setStrokeColor(colors.HexColor("#cbd5e1"))
+        self.setLineWidth(0.5)
+        self.line(1.5*cm, 1.4*cm, 19.5*cm, 1.4*cm)
+        
+        page_text = f"Página {self._pageNumber} de {page_count}"
+        self.drawRightString(19.5*cm, 0.9*cm, page_text)
+        self.drawString(1.5*cm, 0.9*cm, "Bolimur Software ElectroTécnico - Esquema Unifilar Oficial para la DGEAIM Región de Murcia")
+        self.restoreState()
+
 
 class NumberedCanvasPresupuesto(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -584,4 +625,299 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
 
     doc.build(story, canvasmaker=NumberedCanvasOrdenCompra)
     return buffer.getvalue()
+
+
+def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
+    """
+    Genera el Esquema Unifilar Oficial y Memoria Técnica de Diseño (MTD) conforme a las
+    prescripciones de la Dirección General de Energía y Actividad Industrial y Minera
+    de la Región de Murcia (DGEAIM) y el REBT (RD 842/2002 - ITC-BT-25 / 17 / 23 / 24).
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=1.8*cm, bottomMargin=1.8*cm
+    )
+
+    styles = getSampleStyleSheet()
+
+    c_primary = colors.HexColor("#0f172a")
+    c_secondary = colors.HexColor("#0284c7")
+    c_accent = colors.HexColor("#0369a1")
+    c_bg_light = colors.HexColor("#f8fafc")
+    c_bg_box = colors.HexColor("#f0f9ff")
+    c_border = colors.HexColor("#cbd5e1")
+    c_text_dark = colors.HexColor("#1e293b")
+
+    title_style = ParagraphStyle(
+        'DocTitle_Uni', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=14, leading=17,
+        textColor=c_primary, spaceAfter=2
+    )
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle_Uni', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=8.5, leading=11,
+        textColor=c_secondary, spaceAfter=6
+    )
+    h1_style = ParagraphStyle(
+        'Heading1_Uni', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=10, leading=13,
+        textColor=c_primary, spaceBefore=8, spaceAfter=4, keepWithNext=True
+    )
+    body_style = ParagraphStyle(
+        'Body_Uni', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=8, leading=11,
+        textColor=c_text_dark
+    )
+    th_style = ParagraphStyle(
+        'TH_Uni', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7.5, leading=10,
+        textColor=colors.white, alignment=1
+    )
+    td_style = ParagraphStyle(
+        'TD_Uni', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7.5, leading=10,
+        textColor=c_text_dark
+    )
+    td_center = ParagraphStyle(
+        'TDCenter_Uni', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7.5, leading=10,
+        textColor=c_text_dark, alignment=1
+    )
+    td_bold = ParagraphStyle(
+        'TDBold_Uni', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7.5, leading=10,
+        textColor=c_primary, alignment=1
+    )
+
+    story = []
+
+    # 1. Official Header (Región de Murcia - DGEAIM)
+    header_data = [
+        [
+            Paragraph("<b>REGIÓN DE MURCIA</b><br/><font size='6.5' color='#475569'>Consejería de Empresa, Empleo y Economía Social<br/>Dirección General de Energía y Actividad Industrial y Minera</font>", body_style),
+            Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO (MTD)</b><br/><font size='7' color='#0284c7'>ESQUEMA UNIFILAR REBT OFICIAL - RD 842/2002</font><br/><font size='6.5' color='#64748b'>ITC-BT-25 / ITC-BT-17 / ITC-BT-23 / ITC-BT-24</font>", ParagraphStyle('HdrRight', parent=body_style, alignment=2))
+        ]
+    ]
+    t_hdr = Table(header_data, colWidths=[9.0*cm, 9.0*cm])
+    t_hdr.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
+        ('BOX', (0,0), (-1,-1), 1.0, c_secondary),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_hdr)
+    story.append(Spacer(1, 4))
+
+    # 2. Administrative and Installation Metadata
+    potencia_w = unifilar_data.get("potencia_w", 5750)
+    iga_amp = unifilar_data.get("iga_amperaje", 25)
+    grado_electr = unifilar_data.get("grado_electr", "Básica")
+    tipo_cable = unifilar_data.get("tipo_cable", "H07Z1-K")
+    tipo_tubo = unifilar_data.get("tipo_tubo", "PVC Normal")
+    marca_prot = unifilar_data.get("marca_protecciones", "Schneider / Chint")
+    fecha_str = proyecto_info.get("fecha", datetime.date.today().strftime("%d/%m/%Y"))
+
+    meta_table_data = [
+        [
+            Paragraph("<b>Titular / Emplazamiento:</b>", body_style),
+            Paragraph(f"Vivienda Residencial | {proyecto_info.get('localidad', 'Rincón de Seca, Murcia (Región de Murcia)')}", body_style),
+            Paragraph("<b>Fecha Registro:</b>", body_style),
+            Paragraph(fecha_str, body_style)
+        ],
+        [
+            Paragraph("<b>Instalador Autorizado:</b>", body_style),
+            Paragraph(f"{proyecto_info.get('proyectista', 'Richard Orlando Choque Tejerina')} ({proyecto_info.get('licencia', 'REBT-30/15892')})", body_style),
+            Paragraph("<b>Empresa:</b>", body_style),
+            Paragraph(str(proyecto_info.get("empresa", "BOLIMUR")), body_style)
+        ],
+        [
+            Paragraph("<b>Suministro Eléctrico:</b>", body_style),
+            Paragraph(f"Monofásico 230 V - 50 Hz | Potencia: <b>{potencia_w:,} W</b> ({grado_electr})", body_style),
+            Paragraph("<b>IGA General:</b>", body_style),
+            Paragraph(f"<b>{iga_amp} A</b> (2P Curva C | Icn: 6 kA)", body_style)
+        ],
+        [
+            Paragraph("<b>Derivación Individual:</b>", body_style),
+            Paragraph(f"2x10 mm² Cu + TT 1x10 mm² ({tipo_cable}) bajo tubo M32", body_style),
+            Paragraph("<b>Sobretensiones:</b>", body_style),
+            Paragraph("POP + DPS Tipo 2 (ITC-BT-23)", body_style)
+        ]
+    ]
+
+    meta_table = Table(meta_table_data, colWidths=[3.6*cm, 7.4*cm, 3.2*cm, 3.8*cm])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_light),
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.2),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 6))
+
+    # 3. Vectorial Single-Line Diagram (Drawing)
+    story.append(Paragraph("1. Esquema Unifilar Gráfico del Cuadro General de Mando y Protección (CGMP)", h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.8, color=c_secondary, spaceBefore=1, spaceAfter=4))
+
+    circuitos = unifilar_data.get("circuitos", [])
+    num_circs = max(1, len(circuitos))
+
+    d_width = 510
+    d_height = 145
+    d = Drawing(d_width, d_height)
+    d.add(Rect(0, 0, d_width, d_height, fillColor=colors.HexColor('#f8fafc'), strokeColor=colors.HexColor('#cbd5e1'), strokeWidth=0.8, rx=4, ry=4))
+
+    # Feeding line
+    d.add(Line(20, 125, 95, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.8))
+    d.add(String(20, 131, 'DI: 2x10+TT10 Cu', fontSize=6.2, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0284c7')))
+
+    # IGA Box
+    d.add(Rect(95, 112, 70, 26, fillColor=colors.HexColor('#e0f2fe'), strokeColor=colors.HexColor('#0284c7'), strokeWidth=1, rx=2, ry=2))
+    d.add(String(99, 127, f'IGA {iga_amp}A 2P', fontSize=6.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0f172a')))
+    d.add(String(99, 117, f'Curva C | 6kA', fontSize=5.5, fontName='Helvetica', fillColor=colors.HexColor('#334155')))
+
+    # Line to SPD
+    d.add(Line(165, 125, 195, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.5))
+
+    # Sobretensiones (SPD)
+    d.add(Rect(195, 112, 75, 26, fillColor=colors.HexColor('#fef3c7'), strokeColor=colors.HexColor('#d97706'), strokeWidth=1, rx=2, ry=2))
+    d.add(String(199, 127, 'DPS + POP (BT-23)', fontSize=6.2, fontName='Helvetica-Bold', fillColor=colors.HexColor('#92400e')))
+    d.add(String(199, 117, 'Permanentes+Trans.', fontSize=5.2, fontName='Helvetica', fillColor=colors.HexColor('#b45309')))
+
+    # Line to Differential
+    d.add(Line(270, 125, 300, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.5))
+
+    # Differential ID Box
+    n_difs = unifilar_data.get("n_difs", 1)
+    d_lbl = "ID 2x40A 30mA" if n_difs == 1 else "2x ID 40A 30mA"
+    d.add(Rect(300, 112, 80, 26, fillColor=colors.HexColor('#dcfce7'), strokeColor=colors.HexColor('#16a34a'), strokeWidth=1, rx=2, ry=2))
+    d.add(String(304, 127, d_lbl, fontSize=6.2, fontName='Helvetica-Bold', fillColor=colors.HexColor('#15803d')))
+    d.add(String(304, 117, 'Clase AC/A (BT-24)', fontSize=5.2, fontName='Helvetica', fillColor=colors.HexColor('#166534')))
+
+    # Line to Busbar
+    d.add(Line(380, 125, 410, 125, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1.5))
+    d.add(Line(410, 125, 410, 88, strokeColor=colors.HexColor('#0284c7'), strokeWidth=2.2))
+    d.add(Line(25, 88, 485, 88, strokeColor=colors.HexColor('#0284c7'), strokeWidth=2.2))
+    d.add(String(28, 93, 'BARRA COLECTORA DISTRIBUCIÓN L+N 230V', fontSize=5.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0369a1')))
+
+    # Branches to each circuit
+    spacing = 460.0 / max(num_circs, 1)
+    for i, c in enumerate(circuitos):
+        cx = 32 + (i * spacing) + (spacing / 2.0)
+        # Drop line from busbar
+        d.add(Line(cx, 88, cx, 66, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1))
+        # PIA Box
+        d.add(Rect(cx - 15, 38, 30, 28, fillColor=colors.HexColor('#ffffff'), strokeColor=colors.HexColor('#0f172a'), strokeWidth=0.8, rx=2, ry=2))
+        d.add(String(cx - 12, 57, c.get('id', f'C{i+1}'), fontSize=6.5, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0f172a')))
+        d.add(String(cx - 12, 48, f"{c.get('pia', 16)}A", fontSize=6.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#0284c7')))
+        d.add(String(cx - 12, 41, '6kA', fontSize=5.0, fontName='Helvetica', fillColor=colors.HexColor('#64748b')))
+        # Output line and cable / conduit description
+        d.add(Line(cx, 38, cx, 22, strokeColor=colors.HexColor('#0f172a'), strokeWidth=1))
+        c_sec = str(c.get('cable_sec', '2.5 mm²'))
+        c_tubo = str(c.get('tubo_diam', 'M20'))
+        d.add(String(cx - 14, 13, c_sec, fontSize=5.0, fontName='Helvetica-Bold', fillColor=colors.HexColor('#1e293b')))
+        d.add(String(cx - 14, 5, c_tubo, fontSize=4.8, fontName='Helvetica', fillColor=colors.HexColor('#64748b')))
+
+    story.append(d)
+    story.append(Spacer(1, 6))
+
+    # 4. Official Technical Circuit Schedule (ITC-BT-25)
+    story.append(Paragraph("2. Tabla de Características Técnicas de los Circuitos Interiores (ITC-BT-25)", h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.8, color=c_secondary, spaceBefore=1, spaceAfter=4))
+
+    th_circ = Paragraph("Circ.", th_style)
+    th_den = Paragraph("Denominación y Destino", th_style)
+    th_pia = Paragraph("PIA (In/PdC)", th_style)
+    th_dif = Paragraph("Diferencial", th_style)
+    th_cond = Paragraph("Conductor (Cu)", th_style)
+    th_tub = Paragraph("Tubo", th_style)
+    th_long = Paragraph("L. máx", th_style)
+    th_cdt = Paragraph("CdT (e%)", th_style)
+    th_pot = Paragraph("P. Asig (W)", th_style)
+
+    circ_rows = [[th_circ, th_den, th_pia, th_dif, th_cond, th_tub, th_long, th_cdt, th_pot]]
+
+    for c in circuitos:
+        circ_rows.append([
+            Paragraph(f"<b>{c.get('id', '')}</b>", td_bold),
+            Paragraph(str(c.get('denominacion', '')), td_style),
+            Paragraph(f"<b>{c.get('pia', 16)}A</b> (C/6kA)", td_center),
+            Paragraph(str(c.get('dif_asoc', 'ID 1 (30mA)')), td_center),
+            Paragraph(str(c.get('cable_str', '3x2.5 mm²')), td_style),
+            Paragraph(str(c.get('tubo_str', 'M20')), td_center),
+            Paragraph(f"{c.get('longitud_m', 15):.0f} m", td_center),
+            Paragraph(f"<b>{c.get('cdt_pct', 1.2):.2f}%</b>", td_center),
+            Paragraph(f"{c.get('potencia_w', 3680):,} W", td_center)
+        ])
+
+    t_circs = Table(circ_rows, colWidths=[1.3*cm, 4.3*cm, 2.0*cm, 2.2*cm, 2.6*cm, 1.3*cm, 1.2*cm, 1.5*cm, 1.6*cm])
+    t_circs.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), c_primary),
+        ('GRID', (0,0), (-1,-1), 0.4, c_border),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_bg_light]),
+        ('TOPPADDING', (0,0), (-1,-1), 2.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.2),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_circs)
+    story.append(Spacer(1, 6))
+
+    # 5. Technical Verifications Box (ITC-BT-19 / 24 / 23)
+    verif_data = [
+        [
+            Paragraph("<b>COMPROBACIONES TÉCNICAS Y REGLAMENTARIAS (REBT - RD 842/2002):</b>", ParagraphStyle('VTitle', parent=body_style, fontName='Helvetica-Bold', textColor=c_primary)),
+            ""
+        ],
+        [
+            Paragraph("• <b>Caída de tensión máxima:</b> e < 3,0% en circuitos terminales (🟢 Conforme ITC-BT-19).<br/>• <b>Protección contra contactos indirectos:</b> Diferencial de alta sensibilidad 30 mA (🟢 Conforme ITC-BT-24).", body_style),
+            Paragraph(f"• <b>Poder de corte mínimo:</b> Icn = 6.000 A en todos los PIAs (🟢 Conforme Icc presunta).<br/>• <b>Sobretensiones:</b> Limitador Tipo 2 + Permanente POP instalado (🟢 Conforme ITC-BT-23).", body_style)
+        ]
+    ]
+    t_verif = Table(verif_data, colWidths=[9.0*cm, 9.0*cm])
+    t_verif.setStyle(TableStyle([
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f0fdf4")),
+        ('BOX', (0,0), (-1,-1), 1.0, colors.HexColor("#16a34a")),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_verif)
+    story.append(Spacer(1, 6))
+
+    # 6. Official Declaration & Signature Diligence Box
+    sig_data = [
+        [
+            Paragraph("<b>DECLARACIÓN RESPONSABLE DEL INSTALADOR AUTORIZADO REBT:</b><br/><font size='6.5' color='#475569'>El instalador autorizado declara bajo su responsabilidad que la presente instalación eléctrica ha sido ejecutada de acuerdo con el Reglamento Electrotécnico para Baja Tensión (RD 842/2002), sus Instrucciones Técnicas Complementarias y las directrices técnicas de la Dirección General de Energía y Actividad Industrial y Minera de la Región de Murcia.</font>", body_style),
+            Paragraph("<b>DILIGENCIA DE REGISTRO / VISADO:</b><br/><font size='6.5' color='#64748b'>Dirección General de Energía y Actividad Industrial y Minera<br/>Comunidad Autónoma de la Región de Murcia (CARM)</font>", body_style)
+        ],
+        [
+            Paragraph(f"<br/><br/><b>Firma y Sello de la Empresa Instaladora:</b><br/>{proyecto_info.get('empresa', 'BOLIMUR')}<br/>{proyecto_info.get('proyectista', 'Richard Orlando Choque Tejerina')} (Carnet: {proyecto_info.get('licencia', 'REBT-30/15892')})", body_style),
+            Paragraph("<br/><br/><b>Espacio reservado para Registro Telemático:</b><br/><font size='6.5' color='#94a3b8'>[ Registro Oficial MTD / CIE Industria Murcia ]</font>", body_style)
+        ]
+    ]
+    t_sig = Table(sig_data, colWidths=[10.5*cm, 7.5*cm])
+    t_sig.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.white),
+        ('BOX', (0,0), (-1,-1), 1.0, c_primary),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, c_border),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+    ]))
+    story.append(KeepTogether([t_sig]))
+
+    doc.build(story, canvasmaker=NumberedCanvasUnifilar)
+    return buffer.getvalue()
+
 

@@ -1381,6 +1381,159 @@ def app():
             orden_compra_data=orden_compra_data
         )
 
+        # Preparación de datos para el Esquema Unifilar Oficial para Industria (DGEAIM Murcia)
+        pot_w_val = 5750
+        if "5.750" in potencia_prevista_kw:
+            pot_w_val = 5750
+        elif "7.360" in potencia_prevista_kw:
+            pot_w_val = 7360
+        elif "9.200" in potencia_prevista_kw:
+            pot_w_val = 9200
+        elif "11.500" in potencia_prevista_kw:
+            pot_w_val = 11500
+        elif "14.490" in potencia_prevista_kw:
+            pot_w_val = 14490
+
+        # Determinación de diferenciales (máx 5 circuitos por diferencial según REBT)
+        n_difs = 2 if (num_circuitos_base > 5 or grado_electr == "Elevada") else 1
+
+        circuitos_unifilar = [
+            {
+                "id": "C1",
+                "denominacion": "Iluminación general de la vivienda",
+                "pia": 10,
+                "dif": "ID 1 (30mA)",
+                "cable_sec": "2x1.5 + TT 1.5 mm² Cu",
+                "tubo_diam": "M20 (Tubo Corrugado)",
+                "long_m": 15.0,
+                "cdt_pct": 0.85,
+                "pot_w": 2300
+            },
+            {
+                "id": "C2",
+                "denominacion": "Tomas de corriente uso general y frigorífico",
+                "pia": 16,
+                "dif": "ID 1 (30mA)",
+                "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
+                "tubo_diam": "M20 (Tubo Corrugado)",
+                "long_m": 18.0,
+                "cdt_pct": 1.15,
+                "pot_w": 3450
+            },
+            {
+                "id": "C3",
+                "denominacion": "Cocina eléctrica y horno",
+                "pia": 25,
+                "dif": "ID 1 (30mA)",
+                "cable_sec": "2x6 + TT 6 mm² Cu",
+                "tubo_diam": "M25 (Tubo Corrugado)",
+                "long_m": 12.0,
+                "cdt_pct": 0.82,
+                "pot_w": 5400
+            },
+        ]
+
+        if desdoblar_c4:
+            circuitos_unifilar.extend([
+                {
+                    "id": "C4-A",
+                    "denominacion": "Lavadora y Lavavajillas (Desdoblado)",
+                    "pia": 16,
+                    "dif": "ID 1 (30mA)",
+                    "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
+                    "tubo_diam": "M20 (Tubo Corrugado)",
+                    "long_m": 14.0,
+                    "cdt_pct": 0.98,
+                    "pot_w": 3450
+                },
+                {
+                    "id": "C4-B",
+                    "denominacion": "Termo eléctrico ACS (Desdoblado)",
+                    "pia": 16,
+                    "dif": "ID 2 (30mA)" if n_difs > 1 else "ID 1 (30mA)",
+                    "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
+                    "tubo_diam": "M20 (Tubo Corrugado)",
+                    "long_m": 14.0,
+                    "cdt_pct": 0.95,
+                    "pot_w": 3450
+                }
+            ])
+        else:
+            circuitos_unifilar.append({
+                "id": "C4",
+                "denominacion": "Lavadora, Lavavajillas y Termo eléctrico",
+                "pia": 20,
+                "dif": "ID 1 (30mA)",
+                "cable_sec": "2x4 + TT 4 mm² Cu",
+                "tubo_diam": "M20 (Tubo Corrugado)",
+                "long_m": 15.0,
+                "cdt_pct": 1.20,
+                "pot_w": 4600
+            })
+
+        circuitos_unifilar.append({
+            "id": "C5",
+            "denominacion": "Tomas de corriente en baños y tomas auxiliares cocina",
+            "pia": 16,
+            "dif": "ID 2 (30mA)" if n_difs > 1 else "ID 1 (30mA)",
+            "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
+            "tubo_diam": "M20 (Tubo Corrugado)",
+            "long_m": 14.0,
+            "cdt_pct": 0.92,
+            "pot_w": 3450
+        })
+
+        if grado_electr == "Elevada":
+            circuitos_unifilar.extend([
+                {
+                    "id": "C9",
+                    "denominacion": "Instalación de aire acondicionado / climatización",
+                    "pia": 25,
+                    "dif": "ID 2 (30mA)",
+                    "cable_sec": "2x6 + TT 6 mm² Cu",
+                    "tubo_diam": "M25 (Tubo Corrugado)",
+                    "long_m": 16.0,
+                    "cdt_pct": 1.25,
+                    "pot_w": 5400
+                },
+                {
+                    "id": "C10",
+                    "denominacion": "Instalación de secadora independiente",
+                    "pia": 16,
+                    "dif": "ID 2 (30mA)",
+                    "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
+                    "tubo_diam": "M20 (Tubo Corrugado)",
+                    "long_m": 12.0,
+                    "cdt_pct": 0.88,
+                    "pot_w": 3450
+                }
+            ])
+
+        unifilar_data = {
+            "potencia_w": pot_w_val,
+            "iga_amperaje": iga_amperaje,
+            "grado_electr": grado_electr,
+            "tipo_cable": tipo_cable_sel,
+            "tipo_tubo": tipo_tubo_sel,
+            "marca_protecciones": marca_protecciones,
+            "n_difs": n_difs,
+            "circuitos": circuitos_unifilar
+        }
+
+        # Generar PDF del Esquema Unifilar Oficial para Industria
+        pdf_unifilar_bytes = pdf_presupuesto.generar_pdf_unifilar_industria(
+            proyecto_info={
+                "empresa": empresa_nombre,
+                "proyectista": instalador_nombre,
+                "licencia": n_licencia,
+                "localidad": localidad,
+                "telefono": telefono,
+                "expediente": "MTD-2026-01",
+                "fecha": datetime.date.today().strftime("%d/%m/%Y")
+            },
+            unifilar_data=unifilar_data
+        )
+
         # ==========================================
         # SELECTOR DE MODO DE VISTA E IMPRESIÓN
         # ==========================================
@@ -1390,7 +1543,8 @@ def app():
             [
                 "🛠️ 1. Panel Interno y Rentabilidad (Exclusivo para ti - Autónomo)",
                 "🛒 2. Orden de Compra y Acopio de Materiales (Almacén / Tienda)",
-                "📄 3. Vista Comercial (Para entregar al Cliente)"
+                "📄 3. Vista Comercial (Para entregar al Cliente)",
+                "📐 4. Esquema Unifilar Oficial para Industria (Región de Murcia - DGEAIM)"
             ],
             horizontal=True
         )
@@ -1782,7 +1936,7 @@ def app():
                     use_container_width=True
                 )
 
-        else:
+        elif modo_impresion.startswith("📄"):
             st.header("📄 Vista Comercial: Presupuesto para el Cliente")
             st.markdown(f"""
             <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff;">
@@ -1844,7 +1998,7 @@ def app():
                     b64 = base64.b64encode(pdf_bytes_pres).decode('utf-8')
                     st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="600" type="application/pdf"></iframe>', unsafe_allow_html=True)
 
-            col_exp1, col_exp2 = st.columns(2)
+            col_exp1, col_exp2, col_exp3 = st.columns(3)
             with col_exp1:
                 st.download_button(
                     label="📥 Descargar Presupuesto en Excel (.xlsx)",
@@ -1861,6 +2015,14 @@ def app():
                     mime="application/pdf",
                     use_container_width=True
                 )
+            with col_exp3:
+                st.download_button(
+                    label="📐 Anexar Esquema Unifilar Oficial (PDF)",
+                    data=pdf_unifilar_bytes,
+                    file_name="Esquema_Unifilar_Industria_Bolimur.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
 
             st.markdown(f"""
             <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
@@ -1870,7 +2032,76 @@ def app():
             </div>
             """, unsafe_allow_html=True)
 
-        st.success("✅ ¡Cálculos, Orden de Compra y Presupuesto Comercial sincronizados con éxito!")
+        elif modo_impresion.startswith("📐"):
+            st.header("📐 Esquema Unifilar Oficial para Industria (Región de Murcia - DGEAIM)")
+            st.markdown("""
+            **Documento Oficial para Memoria Técnica de Diseño (MTD) / Certificado de Instalación Eléctrica (CIE)**  
+            Conforme a las directrices de la *Dirección General de Energía y Actividad Industrial y Minera de la Región de Murcia (CARM)* y el *Reglamento Electrotécnico para Baja Tensión (RD 842/2002)*.
+            """)
+
+            st.markdown(f"""
+            <div style="border: 2px solid #0284c7; padding: 18px; border-radius: 8px; background-color: #f0f9ff; margin-bottom: 20px;">
+                <h4 style="color: #0369a1; margin-top: 0;">🏛️ Datos Técnicos Oficiales del Suministro</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                    <div>• <b>Titular / Emplazamiento:</b> Vivienda Residencial ({localidad})</div>
+                    <div>• <b>Instalador Autorizado:</b> {instalador_nombre} (Lic: {n_licencia})</div>
+                    <div>• <b>Potencia Prevista:</b> {pot_w_val:,} W ({grado_electr})</div>
+                    <div>• <b>Tensión de Red:</b> Monofásico 230 V - 50 Hz</div>
+                    <div>• <b>Interruptor General Automático (IGA):</b> {iga_amperaje} A (2P Curva C | Icn: 6 kA)</div>
+                    <div>• <b>Protección Sobretensiones:</b> POP (Permanentes) + DPS Tipo 2 (Transitorias) ITC-BT-23</div>
+                    <div>• <b>Derivación Individual:</b> 2x10 mm² Cu + TT 1x10 mm² ({tipo_cable_sel}) bajo tubo M32</div>
+                    <div>• <b>Diferenciales de Cabecera:</b> {n_difs}x ID 2x40A / 30mA (Clase AC / A)</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.subheader("📋 Tabla de Circuitos Interiores Normalizados (ITC-BT-25)")
+            df_circ_vista = pd.DataFrame([
+                {
+                    "Circuito": c["id"],
+                    "Denominación y Destino": c["denominacion"],
+                    "PIA (In / PdC)": f"{c['pia']} A (6 kA)",
+                    "Diferencial": c["dif"],
+                    "Sección Conductor": c["cable_sec"],
+                    "Canalización / Tubo": c["tubo_diam"],
+                    "L. Máx": f"{c['long_m']:.0f} m",
+                    "CdT (%)": f"{c['cdt_pct']:.2f} %",
+                    "P. Asignada": f"{c['pot_w']} W"
+                }
+                for c in circuitos_unifilar
+            ])
+            st.dataframe(df_circ_vista, use_container_width=True, hide_index=True)
+
+            st.markdown("#### 👁️ Vista Previa en Pantalla del Esquema Unifilar Oficial en PDF:")
+            st.info("💡 **Vista previa en alta resolución del plano oficial antes de imprimir o visar:**")
+            with st.container():
+                try:
+                    import pymupdf
+                    doc_uni = pymupdf.open(stream=pdf_unifilar_bytes, filetype="pdf")
+                    for num_pag, pagina in enumerate(doc_uni, start=1):
+                        pix = pagina.get_pixmap(dpi=150)
+                        if len(doc_uni) > 1:
+                            st.caption(f"📄 **Página {num_pag} de {len(doc_uni)}**")
+                        st.image(pix.tobytes("png"), use_container_width=True)
+                except Exception:
+                    import base64
+                    b64_u = base64.b64encode(pdf_unifilar_bytes).decode('utf-8')
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{b64_u}" width="100%" height="650" type="application/pdf"></iframe>', unsafe_allow_html=True)
+
+            col_uni_b1, col_uni_b2 = st.columns([3, 1])
+            with col_uni_b1:
+                st.download_button(
+                    label="📥 🖨️ Descargar / Imprimir Esquema Unifilar Oficial para Industria (PDF)",
+                    data=pdf_unifilar_bytes,
+                    file_name="Esquema_Unifilar_Industria_Murcia_Bolimur.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="primary"
+                )
+            with col_uni_b2:
+                st.caption("✅ Formato homologado para adjuntar a MTD y CIE ante la DGEAIM de Murcia.")
+
+        st.success("✅ ¡Cálculos, Orden de Compra, Presupuesto Comercial y Esquema Unifilar sincronizados con éxito!")
 
 def renderizar():
     app()

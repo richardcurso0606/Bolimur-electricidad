@@ -68,3 +68,37 @@ def test_generar_pdf_orden_compra_bytes():
     assert len(pdf_bytes) > 3000
     assert pdf_bytes.startswith(b"%PDF")
 
+def test_generar_pdf_unifilar_industria_bytes():
+    proyecto_info = {
+        "empresa": "BOLIMUR Instalaciones",
+        "proyectista": "Richard Choque",
+        "licencia": "REBT-30/15892",
+        "localidad": "Rincón de Seca, Murcia",
+        "telefono": "600000000",
+        "expediente": "MTD-TEST-01",
+        "fecha": "03/10/2026"
+    }
+    unifilar_data = {
+        "potencia_w": 5750,
+        "iga_amperaje": 25,
+        "grado_electr": "Básica",
+        "tipo_cable": "H07Z1-K Libre de Halógenos",
+        "tipo_tubo": "Tubo Corrugado PVC",
+        "marca_protecciones": "Schneider",
+        "n_difs": 1,
+        "circuitos": [
+            {"id": "C1", "denominacion": "Iluminación", "pia": 10, "dif": "ID 1", "cable_sec": "2x1.5+TT1.5", "tubo_diam": "M20", "long_m": 15.0, "cdt_pct": 0.85, "pot_w": 2300},
+            {"id": "C2", "denominacion": "Tomas de uso general", "pia": 16, "dif": "ID 1", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 18.0, "cdt_pct": 1.15, "pot_w": 3450},
+            {"id": "C3", "denominacion": "Cocina y horno", "pia": 25, "dif": "ID 1", "cable_sec": "2x6+TT6", "tubo_diam": "M25", "long_m": 12.0, "cdt_pct": 0.82, "pot_w": 5400},
+            {"id": "C4-A", "denominacion": "Lavado", "pia": 16, "dif": "ID 1", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 14.0, "cdt_pct": 0.98, "pot_w": 3450},
+            {"id": "C4-B", "denominacion": "Termo ACS", "pia": 16, "dif": "ID 1", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 14.0, "cdt_pct": 0.95, "pot_w": 3450},
+            {"id": "C5", "denominacion": "Tomas baños/cocina", "pia": 16, "dif": "ID 1", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 14.0, "cdt_pct": 0.92, "pot_w": 3450}
+        ]
+    }
+
+    pdf_bytes = pdf_presupuesto.generar_pdf_unifilar_industria(proyecto_info, unifilar_data)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 5000
+    assert pdf_bytes.startswith(b"%PDF")
+
+
