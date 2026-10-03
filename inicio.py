@@ -170,7 +170,7 @@ st.markdown("""
 # =========================================================================
 if auth_manager:
     auth_manager.inicializar_sesion_auth()
-    usuario_actual = st.session_state.get("usuario_autenticado")
+    usuario_actual = st.session_state.get("usuario_autenticado") or {}
     if not usuario_actual:
         auth_manager.renderizar_pantalla_login()
         st.stop()
@@ -227,9 +227,10 @@ with st.sidebar:
     seleccion_modulo = st.session_state.menu_activo
 
 # =========================================================================
-# EL ENRUTADOR
 # =========================================================================
-if seleccion_modulo.startswith("🏠"):
+# EL ENRUTADOR PRINCIPAL
+# =========================================================================
+if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("🏠"):
     st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
     st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
     
@@ -240,28 +241,28 @@ if seleccion_modulo.startswith("🏠"):
         with st.container(border=True):
             st.subheader("👥 Gestión de Clientes (CRM) y Proyectos")
             st.write("Administra las fichas de tus clientes, datos del suministro, CUPS y asocia proyectos para recuperarlos en 1 clic.")
-            if st.button("Abrir Gestión de Clientes", key="btn_home_crm"):
+            if st.button("Abrir Gestión de Clientes", key="btn_home_crm", use_container_width=True):
                 st.session_state.menu_activo = "👥 Gestión de Clientes (CRM)"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("🏡 Presupuesto de Vivienda y Materiales")
             st.write("Inspector REBT ITC-BT-25, metraje de rozas, canalizaciones, cableado y mecanismos. Exportación de presupuestos y acopio.")
-            if st.button("Abrir Presupuestos", key="btn_home_pres"):
+            if st.button("Abrir Presupuestos", key="btn_home_pres", use_container_width=True):
                 st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("🧮 Cálculo Rápido (CDT & Icc)")
             st.write("Dimensionamiento de circuitos por caída de tensión y comprobación térmica ($I_z$). Comprobación de cortocircuito y disparo magnético.")
-            if st.button("Abrir Cálculo Rápido", key="btn_home_cr"):
+            if st.button("Abrir Cálculo Rápido", key="btn_home_cr", use_container_width=True):
                 st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("🏢 Previsión de Cargas (Pt)")
             st.write("Cálculo analítico de la potencia total del edificio conforme a ITC-BT-10. Viviendas, locales, servicios generales y garajes.")
-            if st.button("Abrir Previsión de Cargas", key="btn_home_pc"):
+            if st.button("Abrir Previsión de Cargas", key="btn_home_pc", use_container_width=True):
                 st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
                 st.rerun()
 
@@ -269,76 +270,32 @@ if seleccion_modulo.startswith("🏠"):
         with st.container(border=True):
             st.subheader("⚡ Línea General de Alimentación (LGA)")
             st.write("Cálculo reglamentario de la LGA según ITC-BT-14. Soporta Cobre y Aluminio, contadores concentrados o parciales y tubos normalizados.")
-            if st.button("Abrir LGA", key="btn_home_lga"):
+            if st.button("Abrir LGA", key="btn_home_lga", use_container_width=True):
                 st.session_state.menu_activo = "⚡ Línea General (LGA)"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("🔌 Derivación Individual (DI)")
             st.write("Dimensionamiento según ITC-BT-15 para enlaces a vivienda. Verificación de IGA Curva C y tubos normalizados (mínimo Ø 32 mm).")
-            if st.button("Abrir Derivación Individual", key="btn_home_di"):
+            if st.button("Abrir Derivación Individual", key="btn_home_di", use_container_width=True):
                 st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("🚗 Línea Recarga Vehículo Eléctrico (IRVE)")
             st.write("Circuitos terminales según ITC-BT-52. Esquemas 1, 2, 3a, 3b y 4, cálculo al 1% de caída de tensión y protecciones diferenciales Tipo A/B.")
-            if st.button("Abrir IRVE", key="btn_home_irve"):
+            if st.button("Abrir Módulo IRVE", key="btn_home_irve", type="primary", use_container_width=True):
                 st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
                 st.rerun()
 
         with st.container(border=True):
             st.subheader("👤 Perfil del Instalador y Logotipo")
             st.write("Configura tus datos fiscales, número de carnet REBT, logotipo corporativo y copias de seguridad en la nube.")
-            if st.button("Abrir Perfil del Instalador", key="btn_home_prof"):
+            if st.button("Abrir Perfil del Instalador", key="btn_home_prof", use_container_width=True):
                 st.session_state.menu_activo = "👤 Perfil del Instalador"
                 st.rerun()
 
-elif "Clientes" in seleccion_modulo or seleccion_modulo.startswith("👥"):
-    if gestion_clientes:
-        gestion_clientes.renderizar()
-    else:
-        st.error("Módulo de Gestión de Clientes no disponible.")
-
-elif "Perfil" in seleccion_modulo or seleccion_modulo.startswith("👤"):
-    if perfil_instalador:
-        perfil_instalador.renderizar()
-    else:
-        st.error("Módulo de Perfil del Instalador no disponible.")
-
-elif seleccion_modulo.startswith("🧮"):
-    if calculo_rapido:
-        calculo_rapido.renderizar()
-    else:
-        st.error("Módulo Cálculo Rápido no disponible.")
-        if "calculo_rapido" in errores_import:
-            st.code(errores_import["calculo_rapido"])
-
-elif "Previsión" in seleccion_modulo or seleccion_modulo.startswith("🏢"):
-    if prevision_cargas:
-        prevision_cargas.renderizar()
-    else:
-        st.error("Módulo Previsión de Cargas no disponible.")
-        if "prevision_cargas" in errores_import:
-            st.code(errores_import["prevision_cargas"])
-
-elif seleccion_modulo.startswith("⚡"):
-    if lga:
-        lga.renderizar()
-    else:
-        st.error("Módulo LGA no disponible.")
-        if "lga" in errores_import:
-            st.code(errores_import["lga"])
-
-elif seleccion_modulo.startswith("🔌"):
-    if di:
-        di.renderizar()
-    else:
-        st.error("Módulo DI no disponible.")
-        if "di" in errores_import:
-            st.code(errores_import["di"])
-
-elif seleccion_modulo.startswith("🚗"):
+elif "IRVE" in seleccion_modulo or "Recarga" in seleccion_modulo or "🚗" in seleccion_modulo:
     if irve:
         irve.renderizar()
     else:
@@ -346,7 +303,51 @@ elif seleccion_modulo.startswith("🚗"):
         if "irve" in errores_import:
             st.code(errores_import["irve"])
 
-elif seleccion_modulo.startswith("🏡"):
+elif "Clientes" in seleccion_modulo or "CRM" in seleccion_modulo or "👥" in seleccion_modulo:
+    if gestion_clientes:
+        gestion_clientes.renderizar()
+    else:
+        st.error("Módulo de Gestión de Clientes no disponible.")
+
+elif "Perfil" in seleccion_modulo or "👤" in seleccion_modulo:
+    if perfil_instalador:
+        perfil_instalador.renderizar()
+    else:
+        st.error("Módulo de Perfil del Instalador no disponible.")
+
+elif "Cálculo Rápido" in seleccion_modulo or "🧮" in seleccion_modulo or "CDT" in seleccion_modulo:
+    if calculo_rapido:
+        calculo_rapido.renderizar()
+    else:
+        st.error("Módulo Cálculo Rápido no disponible.")
+        if "calculo_rapido" in errores_import:
+            st.code(errores_import["calculo_rapido"])
+
+elif "Previsión" in seleccion_modulo or "🏢" in seleccion_modulo or "(Pt)" in seleccion_modulo:
+    if prevision_cargas:
+        prevision_cargas.renderizar()
+    else:
+        st.error("Módulo Previsión de Cargas no disponible.")
+        if "prevision_cargas" in errores_import:
+            st.code(errores_import["prevision_cargas"])
+
+elif "LGA" in seleccion_modulo or "Línea General" in seleccion_modulo or "⚡" in seleccion_modulo:
+    if lga:
+        lga.renderizar()
+    else:
+        st.error("Módulo LGA no disponible.")
+        if "lga" in errores_import:
+            st.code(errores_import["lga"])
+
+elif "DI" in seleccion_modulo or "Derivación" in seleccion_modulo or "🔌" in seleccion_modulo:
+    if di:
+        di.renderizar()
+    else:
+        st.error("Módulo DI no disponible.")
+        if "di" in errores_import:
+            st.code(errores_import["di"])
+
+elif "Presupuesto" in seleccion_modulo or "🏡" in seleccion_modulo or "Vivienda" in seleccion_modulo:
     if presupuesto_vivienda:
         presupuesto_vivienda.renderizar()
     else:
@@ -354,7 +355,7 @@ elif seleccion_modulo.startswith("🏡"):
         if "presupuesto_vivienda" in errores_import:
             st.code(errores_import["presupuesto_vivienda"])
 
-elif seleccion_modulo.startswith("📚"):
+elif "Tablas" in seleccion_modulo or "📚" in seleccion_modulo:
     st.title("📚 Tablas y Fórmulas Oficiales del REBT")
     st.markdown("Consulta rápida de parámetros normalizados según el Real Decreto 842/2002 y normas UNE asociadas.")
 
