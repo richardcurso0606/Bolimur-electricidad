@@ -42,9 +42,25 @@ def inicializar_bd():
         email_contacto TEXT,
         logo_base64 TEXT,
         iban TEXT,
+        google_id TEXT,
+        avatar_url TEXT,
         fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+    
+    # Comprobar columnas adicionales si la tabla ya existía
+    cursor.execute("PRAGMA table_info(usuarios)")
+    cols_existentes = [row[1] for row in cursor.fetchall()]
+    if "google_id" not in cols_existentes:
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN google_id TEXT")
+        except Exception:
+            pass
+    if "avatar_url" not in cols_existentes:
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN avatar_url TEXT")
+        except Exception:
+            pass
     
     # Tabla de Clientes
     cursor.execute("""
@@ -139,6 +155,52 @@ def autenticar_usuario_windows(username_win: str) -> Optional[Dict[str, Any]]:
     if row:
         return dict(row)
     return None
+
+def autenticar_o_crear_usuario_google(email: str, nombre: str = "", google_id: str = "", avatar_url: str = "") -> Optional[Dict[str, Any]]:
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    email_clean = email.strip().lower()
+    cursor.execute("SELECT * FROM usuarios WHERE LOWER(email) = ?", (email_clean,))
+    row = cursor.fetchone()
+    if row:
+        user_dict = dict(row)
+        # Actualizar google_id o avatar_url si están disponibles
+        if google_id or avatar_url:
+            cursor.execute("""
+            UPDATE usuarios SET 
+                google_id = COALESCE(NULLIF(?, ''), google_id),
+                avatar_url = COALESCE(NULLIF(?, ''), avatar_url)
+            WHERE id = ?
+            """, (google_id, avatar_url, user_dict["id"]))
+            conn.commit()
+            cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_dict["id"],))
+            user_dict = dict(cursor.fetchone())
+        conn.close()
+        return user_dict
+    else:
+        # Registrar nuevo usuario desde Google
+        try:
+            p_hash = hashear_password(f"google_oauth_{google_id or email_clean}")
+            nom_instalador = nombre.strip() if nombre and nombre.strip() else email_clean.split('@')[0].capitalize()
+            cursor.execute("""
+            INSERT INTO usuarios (
+                email, password_hash, nombre_instalador, nombre_empresa, username_windows, 
+                num_licencia_rebt, localidad, telefono, google_id, avatar_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                email_clean, p_hash, nom_instalador, 
+                "BOLIMUR INSTALACIONES", email_clean.split('@')[0],
+                "REBT-30/00000", "España", "+34 600 000 000", google_id, avatar_url
+            ))
+            conn.commit()
+            new_id = cursor.lastrowid
+            cursor.execute("SELECT * FROM usuarios WHERE id = ?", (new_id,))
+            new_row = cursor.fetchone()
+            conn.close()
+            return dict(new_row) if new_row else None
+        except Exception:
+            conn.close()
+            return None
 
 def registrar_nuevo_usuario(email: str, password: str, nombre_instalador: str, nombre_empresa: str, username_win: str = "") -> tuple[bool, str]:
     conn = obtener_conexion()
