@@ -577,9 +577,9 @@ def renderizar():
         """)
 
     # =========================================================================
-    # SECCIÓN 3: ESQUEMA UNIFILAR GRÁFICO VECTORIAL INTERACTIVO
+    # SECCIÓN 3: ESQUEMA UNIFILAR GRÁFICO OFICIAL DGEAIM / ITC-BT-52
     # =========================================================================
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📐 SECCIÓN 3: Esquema Unifilar Gráfico de la Instalación IRVE</h4></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📐 SECCIÓN 3: Esquema Unifilar Gráfico Oficial (ITC-BT-52 / DGEAIM)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
         svg_unifilar = generar_svg_unifilar_irve(
             esquema_nombre=info_esq_actual['nombre'],
@@ -590,8 +590,34 @@ def renderizar():
             tubo_dim=tubo_dim_str,
             es_trif=es_trif_irve
         )
-        st.markdown(svg_unifilar, unsafe_allow_html=True)
-        st.caption("Diagrama vectorial generado en tiempo real según los parámetros calculados y la topología ITC-BT-52.")
+        
+        # Renderizado 100% fiable con HTML component para evitar bloqueos del navegador
+        import streamlit.components.v1 as components_html
+        components_html.html(f"""
+        <div style="width: 100%; display: flex; justify-content: center; align-items: center; overflow-x: auto; background: transparent; padding: 4px;">
+            {svg_unifilar}
+        </div>
+        """, height=270, scrolling=True)
+
+        st.markdown(f"""
+        <div style="margin-top: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
+            <b style="color: #0369a1; font-size: 13px;">📋 Componentes Normalizados del Esquema Unifilar Oficial:</b>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 12px; color: #334155;">
+                <div>
+                    • <b>Origen de Alimentación:</b> {info_esq_actual['origen']}<br/>
+                    • <b>Sensor de Medida / Balanceo:</b> Pinza toroidal CT conectada al Wallbox (SPL)<br/>
+                    • <b>Línea Derivación:</b> Cable <b>{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu (RZ1-K CPR Cca)</b><br/>
+                    • <b>Canalización Protectora:</b> Tubo <b>{tubo_dim_str}</b> libre de halógenos (IK08)
+                </div>
+                <div>
+                    • <b>Protector Sobretensiones:</b> VSP Transitorias Tipo 2 + VTP Permanentes con bobina<br/>
+                    • <b>Interruptor Automático:</b> Magnetotérmico PIA <b>{in_pi_auto} A (Curva C - Icn ≥ 6 kA)</b><br/>
+                    • <b>Interruptor Diferencial:</b> <b>Clase A (con detección DC 6mA según IEC 62955) o Clase B (30 mA)</b><br/>
+                    • <b>Estación de Recarga:</b> Wallbox <b>{p_cargador_val/1000:.2f} kW (Modo 3 con conector Tipo 2 Mennekes)</b>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # =========================================================================
     # SECCIÓN 4: PRESUPUESTADOR Y ACOPIO DE MATERIALES PARA EL INSTALADOR
@@ -688,42 +714,67 @@ def renderizar():
     ia_asistente_irve.renderizar_asistente_irve()
 
     # =========================================================================
-    # SECCIÓN 6: GENERACIÓN DE REPORTE TÉCNICO OFICIAL EN PDF
+    # SECCIÓN 6: GENERACIÓN DE MEMORIA TÉCNICA OFICIAL PARA DGEAIM REGIÓN DE MURCIA
     # =========================================================================
-    st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 6: Generación de Memoria Técnica Oficial en PDF (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🏛️ SECCIÓN 6: Memoria Técnica de Diseño (MTD) Oficial para la DGEAIM Región de Murcia</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
-        with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Oficial", expanded=True):
-            # Cargar datos del usuario autenticado si existen
+        st.markdown("""
+        <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
+            Este documento genera la <b>Memoria Técnica de Diseño (MTD) Oficial</b> y el <b>Esquema Unifilar Reglamentario</b> conforme al modelo exigido por la <b>Dirección General de Energía y Actividad Industrial y Minera de la Región de Murcia (DGEAIM)</b> para su presentación telemática oficial.
+        </p>
+        """, unsafe_allow_html=True)
+
+        with st.expander("📄 Datos del Emplazamiento en la Región de Murcia y Validación Oficial", expanded=True):
             user_auth = st.session_state.get("usuario_autenticado", {})
             nom_inst_def = user_auth.get("nombre_instalador", "Richard Orlando Choque Tejerina")
             emp_def = user_auth.get("nombre_empresa", "BOLIMUR INSTALACIONES Y REFORMAS")
             lic_def = user_auth.get("num_licencia_rebt", "REBT-30/15892")
 
             cli_activo = st.session_state.get("cliente_activo_proyecto", {})
-            cli_nom_def = cli_activo.get("nombre_completo", "Propietario / Cliente IRVE")
+            cli_nom_def = cli_activo.get("nombre_completo", "Propietario / Titular IRVE")
             cli_nif_def = cli_activo.get("nif_cif", "-")
-            cli_dir_def = cli_activo.get("direccion", "Plaza de Garaje nº 18")
+            cli_dir_def = cli_activo.get("direccion", "Plaza de Garaje nº 18, C/ Mayor")
+            cli_loc_def = cli_activo.get("localidad", "Murcia (Región de Murcia)")
 
             col_m1, col_m2 = st.columns(2)
             with col_m1:
-                p_nombre = st.text_input("Nombre de la Obra / Edificio:", "Instalación Punto de Recarga IRVE", key="irve_pdf_nombre")
-                p_emplazamiento = st.text_input("Emplazamiento / Dirección:", cli_dir_def, key="irve_pdf_emp")
-                p_cliente_nom = st.text_input("Nombre del Cliente / Titular:", cli_nom_def, key="irve_pdf_cli_nom")
-                p_cliente_nif = st.text_input("NIF / CIF del Cliente:", cli_nif_def, key="irve_pdf_cli_nif")
+                p_nombre = st.text_input("Nombre de la Instalación / Proyecto:", "Instalación de Punto de Recarga IRVE", key="irve_pdf_nombre")
+                p_emplazamiento = st.text_input("Dirección del Garaje / Plaza:", cli_dir_def, key="irve_pdf_emp")
+                p_municipio = st.selectbox(
+                    "Municipio de la Región de Murcia:",
+                    [
+                        "Murcia (Capital / Pedanías)", "Cartagena", "Lorca", "Molina de Segura", 
+                        "Alcantarilla", "Torre Pacheco", "Águilas", "Cieza", "Yecla", 
+                        "San Javier", "Mazarrón", "Totana", "Caravaca de la Cruz", "Jumilla",
+                        "San Pedro del Pinatar", "Las Torres de Cotillas", "Alhama de Murcia",
+                        "Archena", "Fuente Álamo", "Santomera", "Puerto Lumbreras", "Abarán",
+                        "Cehegín", "Bullas", "Beniel", "Calasparra", "Fortuna", "Alguazas",
+                        "Moratalla", "Lorquí", "Abanilla", "Blanca", "Librilla", "Pliego",
+                        "Villanueva del Río Segura", "Campos del Río", "Ricote", "Ulea", "Ojós"
+                    ],
+                    index=0,
+                    key="irve_pdf_muni"
+                )
+                p_cliente_nom = st.text_input("Titular / Promotor de la Instalación:", cli_nom_def, key="irve_pdf_cli_nom")
+                p_cliente_nif = st.text_input("NIF / CIF del Titular:", cli_nif_def, key="irve_pdf_cli_nif")
             with col_m2:
-                p_proyectista = st.text_input("Técnico / Instalador Autorizado:", nom_inst_def, key="irve_pdf_proy")
-                p_licencia = st.text_input("Nº Carnet / Registro REBT:", lic_def, key="irve_pdf_lic")
-                p_empresa = st.text_input("Empresa Instaladora:", emp_def, key="irve_pdf_empresa")
-                p_expediente = st.text_input("Nº Expediente / Referencia:", "EXP-IRVE-2026-01", key="irve_pdf_exp")
+                p_proyectista = st.text_input("Instalador Autorizado Habilitado:", nom_inst_def, key="irve_pdf_proy")
+                p_licencia = st.text_input("Nº Certificado Cualificación REBT:", lic_def, key="irve_pdf_lic")
+                p_empresa = st.text_input("Empresa Instaladora (RII Murcia):", emp_def, key="irve_pdf_empresa")
+                p_cups = st.text_input("Código CUPS / Ref. Catastral Suministro:", "ES0021000000000000XX", key="irve_pdf_cups")
+                p_expediente = st.text_input("Nº Expediente / Referencia Interna:", "EXP-IRVE-MURCIA-2026", key="irve_pdf_exp")
 
             proyecto_info = {
                 "nombre": p_nombre,
                 "emplazamiento": p_emplazamiento,
+                "municipio": p_municipio,
                 "cliente_nombre": p_cliente_nom,
                 "cliente_nif": p_cliente_nif,
+                "cups": p_cups,
                 "proyectista": p_proyectista,
                 "licencia": p_licencia,
                 "empresa": p_empresa,
+                "localidad": f"{p_municipio} (Región de Murcia)",
                 "expediente": p_expediente,
                 "fecha": datetime.date.today().strftime("%d/%m/%Y")
             }
@@ -758,8 +809,9 @@ def renderizar():
                 from modulos import visor_pdf
                 visor_pdf.mostrar_visor_pdf(
                     pdf_bytes=pdf_bytes_irve,
-                    nombre_archivo=f"Memoria_Tecnica_IRVE_{p_expediente}.pdf",
-                    label_boton="📥 Descargar Memoria Técnica Oficial IRVE (PDF)"
+                    nombre_archivo=f"MTD_IRVE_DGEAIM_Murcia_{p_expediente}.pdf",
+                    label_boton="📥 Descargar Documento Oficial MTD para DGEAIM Murcia (PDF)"
                 )
             except Exception as err:
-                st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de IRVE: {err}")
+                st.error(f"⚠️ Ocurrió un error al generar la Memoria Técnica Oficial: {err}")
+
