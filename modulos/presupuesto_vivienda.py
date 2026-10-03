@@ -430,7 +430,7 @@ def app():
 
     desdoblar_c4 = st.checkbox(
         "⚙️ Desdoblar circuito C4 (Separar Lavadora/Lavavajillas de la línea del Termo en circuitos independientes)", 
-        value=True,
+        value=False,
         help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente."
     )
 
@@ -492,7 +492,7 @@ def app():
 
     tipo_conexion = st.radio(
         "🔌 Sistema de Conexión en Cajas de Registro y Mecanismos:",
-        ["Conectores Rápidos Wago 221 (Profesional / Alta Calidad)", "Fichas de Empalme / Clemas Tradicionales de Tornillo"],
+        ["Fichas de Empalme / Clemas Tradicionales de Tornillo", "Conectores Rápidos Wago 221 (Profesional / Alta Calidad)"],
         horizontal=True
     )
 
