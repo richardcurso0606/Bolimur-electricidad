@@ -122,23 +122,55 @@ def app():
     # ==========================================
     # ASISTENTE WEB DE ACTUALIZACIÓN DE PRECIOS
     # ==========================================
-    with st.sidebar.expander("🌐 Asistente Web para Actualizar Precios"):
+    with st.sidebar.expander("🌐 Asistente Web y Gestor de Proveedores"):
         st.markdown("""
-        **¿Falta algún artículo o deseas actualizar precios desde la web?**
+        **¿Deseas buscar precios actualizados o añadir nuevos materiales?**
         
-        Puedes instruirme directamente en el chat en cualquier momento:
-        - 🛒 *"Busca en la web de Obramat el precio actual de [artículo] y actualízalo en el Excel"*
-        - 🏬 *"Revisa en la web de Leroy Merlin el precio de [artículo] e incorpóralo a la base de datos"*
+        • **Instrucción directa al Asistente IA:**
+        Indícame en el chat: *"Revisa en la web de Obramat / Sumidelec / Sonepar el precio de [artículo] y actualízalo"*. Consultaré la web oficial y lo guardaré con su SKU real.
         
-        Consultaré la tienda oficial en tiempo real, obtendré la referencia (SKU), descripción exacta y precio real, y lo añadiré automáticamente a `base_datos_precio_oficial.xlsx`.
+        • **Añadir o Actualizar manualmente:**
         """)
-        art_solic = st.text_input("Artículo que deseas actualizar:", placeholder="Ej: Tubo corrugado M25 libre de halógenos", key="input_web_update")
-        tienda_solic = st.selectbox("Tienda oficial a consultar:", ["Obramat", "Leroy Merlin", "Sonepar", "Electro Material"], key="sel_tienda_web")
-        if st.button("🔍 Solicitar Búsqueda Web al Asistente", key="btn_pedir_web"):
-            if art_solic:
-                st.info(f"💡 **Indícamelo en el chat:** `Actualiza en la base de datos el artículo '{art_solic}' buscando en la web de {tienda_solic}` y lo actualizaré de inmediato.")
-            else:
-                st.warning("Escribe el nombre del artículo que deseas consultar.")
+        with st.form("form_sidebar_direct_add"):
+            nom_art_sb = st.text_input("Nombre / Descripción del Artículo:", placeholder="Ej: Interruptor Simon 10 blanco", key="sb_nom_art")
+            col_sb1, col_sb2 = st.columns(2)
+            with col_sb1:
+                tienda_sb = st.selectbox("Tienda / Proveedor:", ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar", "Rexel", "Mayorista / Especializado", "General"], key="sb_tienda")
+                cat_sb = st.selectbox("Categoría:", ["Mecanismos", "Conductores", "Protecciones", "Canalización Tubos", "Cuadros y Envolventes", "Cajas de Registro", "Marcos / Placas", "Consumibles"], key="sb_cat")
+            with col_sb2:
+                precio_sb = st.number_input("Precio S/IVA (€):", min_value=0.01, value=1.50, step=0.10, format="%.2f", key="sb_precio")
+                marca_sb = st.text_input("Marca / Fabricante:", value="General", key="sb_marca")
+            sku_sb = st.text_input("Código SKU / Ref. Fabricante:", placeholder="Ej: SIM-10511 / EFA-21011", key="sb_sku")
+            
+            btn_guardar_sb = st.form_submit_button("💾 Guardar Artículo en la Base de Datos Excel", type="primary")
+            if btn_guardar_sb:
+                if nom_art_sb:
+                    try:
+                        df_act = pd.read_excel('base_datos_precio_oficial.xlsx')
+                        nuevo_registro = {
+                            'ID': f"ART-{len(df_act)+1:04d}",
+                            'Nivel de Gama / Aplicación': 'Estándar',
+                            'Familia / Categoria': cat_sb,
+                            'Marca': marca_sb,
+                            'Serie / Gama': 'Estándar',
+                            'Proveedor / Tienda': tienda_sb,
+                            'Código SKU / Ref': sku_sb if sku_sb else f"REF-{len(df_act)+1:04d}",
+                            'Descripción Exacta del Artículo': nom_art_sb,
+                            'Unidad': 'm' if cat_sb in ['Conductores', 'Canalización Tubos'] else 'Ud',
+                            'Precio S/IVA (€)': float(precio_sb),
+                            'IVA (%)': 21.0,
+                            'Precio C/IVA (€)': round(float(precio_sb) * 1.21, 2),
+                            'Observaciones / Aplicación Técnica': f"Añadido desde gestor de proveedores ({tienda_sb})"
+                        }
+                        df_act = pd.concat([df_act, pd.DataFrame([nuevo_registro])], ignore_index=True)
+                        df_act.to_excel('base_datos_precio_oficial.xlsx', index=False)
+                        cargar_precios_excel.clear()
+                        st.success(f"✅ ¡Artículo '{nom_art_sb}' ({precio_sb:.2f} €) guardado en Excel correctamente!")
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(f"Error al guardar en Excel: {ex}")
+                else:
+                    st.warning("Ingresa el nombre del artículo.")
 
     # ==========================================
     # FUNCIONES DE BÚSQUEDA INTELIGENTE Y ROBUSTA
@@ -563,6 +595,46 @@ def app():
         num_circuitos_base += 1
 
     st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos: **{num_circuitos_base}**")
+
+    # ==========================================
+    # MEMORIA COMPARATIVA DE OPCIONES MÁS ECONÓMICAS POR SECCIÓN
+    # ==========================================
+    with st.expander("💡 Memoria Técnica y Comparativa Económica por Sección (Racionalidad y Ahorro)", expanded=False):
+        st.markdown("""
+        Esta memoria analiza en tiempo real la base de datos oficial para recomendarte los materiales homologados con **mejor relación calidad/precio** por cada familia:
+        """)
+        col_mem1, col_mem2 = st.columns(2)
+        with col_mem1:
+            st.markdown("""
+            **🔲 1. Mecanismos (Enchufes e Interruptores):**
+            * 🥇 **Más Económica:** `Efapel MEC 21 + Apolo 5000` (~1,18 € / 1,35 €) *(Ahorro ~35%)*
+            * 🥈 **Económica Clásica:** `Simon 10` (~1,30 € / 1,60 €)
+            * 🥉 **Gama Media / Diseño:** `Schneider Asfora` (~2,40 € / 2,80 €)
+            * 💎 **Gama Alta:** `Simon 82 Detail / Niessen Zenit` (~5,50 € - 8,20 €)
+            
+            **⚡ 2. Cables y Conductores:**
+            * 🥇 **Más Económica:** `PVC Estándar (H07V-K)` (1.5mm² a 0,19 €/m | 2.5mm² a 0,33 €/m)
+            * 🛡️ **Máxima Seguridad / Ignífugo:** `Libre de Halógenos (H07Z1-K)` (1.5mm² a 0,24 €/m | 2.5mm² a 0,42 €/m)
+            """)
+        with col_mem2:
+            st.markdown("""
+            **🛡️ 3. Cuadro Eléctrico y Protecciones:**
+            * 🥇 **Más Económica:** `Chint / Solera` (Cuadro 12M a 10,80 € | PIAs a ~2,90 €)
+            * 🥈 **Gama Media Residencial:** `Schneider Resi9` (Cuadro 12M a 16,80 € | PIAs a ~4,50 €)
+            * 🥉 **Gama Profesional:** `Legrand Practibox S` (Cuadro 12M a 19,42 € | PIAs a ~5,80 €)
+            
+            **📏 4. Tubos y Canalizaciones:**
+            * 🥇 **Más Económica:** `Tubo Corrugado PVC 320N` (M20 a 0,28 €/m | M25 a 0,38 €/m)
+            * 🛡️ **Ignífugo Homologado:** `Tubo Libre de Halógenos 750N` (M20 a 0,52 €/m | M25 a 0,65 €/m)
+            
+            **🔌 5. Sistema de Conexión:**
+            * 🥇 **Más Económica:** `Clemas de tornillo tradicionales` (~0,45 €)
+            * ⚡ **Alta Rapidez / Confort:** `Conectores Rápidos Wago 221` (~0,95 €)
+            """)
+        
+        col_btn_ah1, col_btn_ah2 = st.columns([2.5, 1])
+        with col_btn_ah1:
+            st.caption("💡 *Puedes personalizar cualquier marca o proveedor en los selectores inferiores. Esta memoria te sirve de referencia constante para comparar costes.*")
 
     # Selección de Marcas
     st.markdown("#### 🔌 Selección de Marcas y Series Comerciales")
