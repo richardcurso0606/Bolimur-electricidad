@@ -118,6 +118,27 @@ def app():
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}` ({len(df_precios)} artículos)")
 
     # ==========================================
+    # ASISTENTE WEB DE ACTUALIZACIÓN DE PRECIOS
+    # ==========================================
+    with st.sidebar.expander("🌐 Asistente Web para Actualizar Precios"):
+        st.markdown("""
+        **¿Falta algún artículo o deseas actualizar precios desde la web?**
+        
+        Puedes instruirme directamente en el chat en cualquier momento:
+        - 🛒 *"Busca en la web de Obramat el precio actual de [artículo] y actualízalo en el Excel"*
+        - 🏬 *"Revisa en la web de Leroy Merlin el precio de [artículo] e incorpóralo a la base de datos"*
+        
+        Consultaré la tienda oficial en tiempo real, obtendré la referencia (SKU), descripción exacta y precio real, y lo añadiré automáticamente a `base_datos_precio_oficial.xlsx`.
+        """)
+        art_solic = st.text_input("Artículo que deseas actualizar:", placeholder="Ej: Tubo corrugado M25 libre de halógenos", key="input_web_update")
+        tienda_solic = st.selectbox("Tienda oficial a consultar:", ["Obramat", "Leroy Merlin", "Sonepar", "Electro Material"], key="sel_tienda_web")
+        if st.button("🔍 Solicitar Búsqueda Web al Asistente", key="btn_pedir_web"):
+            if art_solic:
+                st.info(f"💡 **Indícamelo en el chat:** `Actualiza en la base de datos el artículo '{art_solic}' buscando en la web de {tienda_solic}` y lo actualizaré de inmediato.")
+            else:
+                st.warning("Escribe el nombre del artículo que deseas consultar.")
+
+    # ==========================================
     # FUNCIONES DE BÚSQUEDA INTELIGENTE Y ROBUSTA
     # ==========================================
     def buscar_mas_economico(df, main_kw, sub_kw=None):
@@ -142,8 +163,27 @@ def app():
             mejores_candidatos.sort(key=lambda x: x[0])
             p, prov, desc, fila = mejores_candidatos[0]
             return p, prov, desc, True, fila
+        
+        # Fallback inteligente: si no se encontró con sub_kw (ej: color específico), buscar por la familia principal
+        if sub_kw_lower:
+            for idx, row in df.iterrows():
+                desc = str(row.get('Descripción Exacta del Artículo', '')).strip().lower()
+                if main_kw_lower in desc:
+                    try:
+                        precio = float(row['Precio S/IVA (€)'])
+                        prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                        art_desc = str(row.get('Descripción Exacta del Artículo', ''))
+                        fila = idx + 2
+                        mejores_candidatos.append((precio, prov, f"{art_desc} (Equivalente {sub_kw})", fila))
+                    except:
+                        continue
+            if mejores_candidatos:
+                mejores_candidatos.sort(key=lambda x: x[0])
+                p, prov, desc, fila = mejores_candidatos[0]
+                return p, prov, desc, True, fila
             
-        return 0.45, "Obramat", "Artículo estándar", False, -1
+        nombre_no_enc = f"{main_kw} {sub_kw or ''}".strip()
+        return 0.45, "Por catalogar", f"⚠️ [NO ENCONTRADO EN BD]: {nombre_no_enc} (Tarifa estimada 0.45€)", False, -1
 
     def buscar_mecanismo_por_filtro(df, tipo, modo_sel, valor_sel):
         kw_map = {
@@ -192,7 +232,7 @@ def app():
                             prov = str(row.get('Proveedor / Tienda', 'Obramat'))
                             art_desc = str(row.get('Descripción Exacta del Artículo', ''))
                             fila = idx + 2
-                            mejores_candidatos.append((precio, prov, art_desc, fila))
+                            mejores_candidatos.append((precio, prov, f"{art_desc} (Gama equivalente)", fila))
                         except:
                             continue
 
@@ -200,7 +240,7 @@ def app():
             mejores_candidatos.sort(key=lambda x: x[0])
             return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
 
-        return 3.50, "Obramat", "Artículo estándar", False, -1
+        return 3.50, "Por catalogar", f"⚠️ [NO ENCONTRADO EN BD]: Mecanismo {tipo} ({valor_sel}) - Tarifa estimada 3.50€", False, -1
 
     def buscar_proteccion_por_marca(df, tipo_prot, marca_sel, amperaje=25):
         marca_lower = marca_sel.lower()
@@ -267,7 +307,7 @@ def app():
             mejores_candidatos.sort(key=lambda x: x[0])
             return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
 
-        return 15.00, "Obramat", "Protección estándar", False, -1
+        return 15.00, "Por catalogar", f"⚠️ [NO ENCONTRADO EN BD]: Protección {tipo_prot} ({marca_sel}) - Tarifa estimada 15.00€", False, -1
 
     def buscar_caja_cuadro(df, marca_sel):
         mejores_candidatos = []
@@ -288,6 +328,7 @@ def app():
             mejores_candidatos.sort(key=lambda x: x[0])
             return mejores_candidatos[0][0], mejores_candidatos[0][1], mejores_candidatos[0][2], True, mejores_candidatos[0][3]
         return buscar_mas_economico(df, 'caja de distribución')
+
 
     # ==========================================
     # DATOS DE LA EMPRESA / INSTALADOR
