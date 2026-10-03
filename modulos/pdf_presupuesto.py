@@ -623,6 +623,76 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
     story.append(Spacer(1, 6))
     story.append(KeepTogether([t_tot]))
 
+    # Materiales asignados por estancia
+    mat_estancias = orden_compra_data.get("materiales_por_estancia", [])
+    if mat_estancias:
+        story.append(PageBreak())
+        story.append(Paragraph("<b>📦 Desglose y Asignación de Materiales por Estancia</b>", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.0, color=c_secondary, spaceBefore=2, spaceAfter=6))
+        story.append(Paragraph("<font size='7.5' color='#475569'>Distribución de acopio en obra para organizar el trabajo estancia por estancia (mecanismos, cables y tubos asignados):</font>", body_style))
+        story.append(Spacer(1, 4))
+
+        th_est_nom = Paragraph("Estancia", th_style)
+        th_est_mec = Paragraph("Mecanismos y Marcos", th_style)
+        th_est_tub = Paragraph("Canalización (Tubos)", th_style)
+        th_est_cab = Paragraph("Conductores (Cables)", th_style)
+        th_est_caj = Paragraph("Cajas", th_style)
+        th_est_cost = Paragraph("Coste S/IVA", th_style)
+
+        est_table_rows = [[th_est_nom, th_est_mec, th_est_tub, th_est_cab, th_est_caj, th_est_cost]]
+
+        for est in mat_estancias:
+            nom_txt = f"<b>{est['nombre']}</b><br/><font size='6.5' color='#64748b'>{est['m2']} m² | Dist: {est['distancia_cuadro']}m</font>"
+            
+            # Mecanismos resumen
+            mecs_lines = []
+            for m in est.get("mecanismos", []):
+                mecs_lines.append(f"• {m['cant']}x {m['nombre']}")
+            if est.get("marcos", 0) > 0:
+                mecs_lines.append(f"• {est['marcos']}x Marcos embellecedores")
+            mec_res_txt = "<br/>".join(mecs_lines) if mecs_lines else "—"
+
+            # Tubos resumen
+            tub_lines = []
+            if est.get("tubo_m20", 0) > 0:
+                tub_lines.append(f"• M20: {est['tubo_m20']:.1f} m")
+            if est.get("tubo_m25", 0) > 0:
+                tub_lines.append(f"• M25: {est['tubo_m25']:.1f} m")
+            tub_res_txt = "<br/>".join(tub_lines) if tub_lines else "—"
+
+            # Cables resumen
+            cab_lines = []
+            for c in est.get("cables", []):
+                if c.get("metros", 0) > 0:
+                    cab_lines.append(f"• {c['item']}: {c['metros']:.1f}m")
+            cab_res_txt = "<br/>".join(cab_lines) if cab_lines else "—"
+
+            # Cajas
+            caj_txt = f"• {est.get('cajas_mecanismo', 0)}x Mecanismo<br/>• {est.get('cajas_registro', 0)}x Registro"
+
+            # Coste
+            coste_val = est.get("coste_materiales_neto", 0.0)
+
+            est_table_rows.append([
+                Paragraph(nom_txt, td_style),
+                Paragraph(mec_res_txt, td_style),
+                Paragraph(tub_res_txt, td_style),
+                Paragraph(cab_res_txt, td_style),
+                Paragraph(caj_txt, td_style),
+                Paragraph(f"<b>{coste_val:,.2f} €</b>", td_right)
+            ])
+
+        t_est = Table(est_table_rows, colWidths=[3.2*cm, 4.3*cm, 2.5*cm, 4.5*cm, 2.0*cm, 1.5*cm])
+        t_est.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), c_primary),
+            ('GRID', (0,0), (-1,-1), 0.4, c_border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_bg_light]),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        story.append(t_est)
+
     doc.build(story, canvasmaker=NumberedCanvasOrdenCompra)
     return buffer.getvalue()
 

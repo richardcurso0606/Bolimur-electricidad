@@ -63,10 +63,117 @@ def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total
             df_res_compra.to_excel(writer, sheet_name='Resumen Compra Materiales', index=False)
     return output.getvalue()
 
-def exportar_excel_orden_compra(df_orden_compra, total_neto, cuota_iva, total_con_iva, proyecto_info):
+def exportar_excel_orden_compra(df_orden_compra, total_neto, cuota_iva, total_con_iva, proyecto_info, mat_estancias=None):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_orden_compra.to_excel(writer, sheet_name='Orden de Compra Acopio', index=False)
+        df_orden_compra.to_excel(writer, sheet_name='Orden Compra Consolidada', index=False)
+        
+        if mat_estancias:
+            filas_estancias = []
+            for est in mat_estancias:
+                r_nom = est['nombre']
+                r_m2 = est['m2']
+                r_dist = est['distancia_cuadro']
+                
+                # Mecanismos
+                for m in est.get('mecanismos', []):
+                    filas_estancias.append({
+                        "Estancia": r_nom,
+                        "Superficie (m²)": r_m2,
+                        "Distancia Cuadro (m)": r_dist,
+                        "Categoría": "Mecanismos",
+                        "Material / Elemento": m['nombre'],
+                        "Descripción Técnica": m.get('desc_real', ''),
+                        "Cantidad": m['cant'],
+                        "Unidad": "ud",
+                        "P. Unit (€)": round(m['precio'], 2),
+                        "Subtotal (€)": round(m['cant'] * m['precio'], 2)
+                    })
+                # Marcos
+                if est.get('marcos', 0) > 0:
+                    filas_estancias.append({
+                        "Estancia": r_nom,
+                        "Superficie (m²)": r_m2,
+                        "Distancia Cuadro (m)": r_dist,
+                        "Categoría": "Marcos",
+                        "Material / Elemento": "Marcos Embellecedores",
+                        "Descripción Técnica": "Marco 1 Elemento",
+                        "Cantidad": est['marcos'],
+                        "Unidad": "ud",
+                        "P. Unit (€)": round(proyecto_info.get('p_marco', 0.40), 2),
+                        "Subtotal (€)": round(est['marcos'] * proyecto_info.get('p_marco', 0.40), 2)
+                    })
+                # Tubos
+                if est.get('tubo_m20', 0) > 0:
+                    filas_estancias.append({
+                        "Estancia": r_nom,
+                        "Superficie (m²)": r_m2,
+                        "Distancia Cuadro (m)": r_dist,
+                        "Categoría": "Canalización",
+                        "Material / Elemento": "Tubo Corrugado M20",
+                        "Descripción Técnica": "Tubo M20 asignado a estancia",
+                        "Cantidad": round(est['tubo_m20'], 1),
+                        "Unidad": "m",
+                        "P. Unit (€)": "",
+                        "Subtotal (€)": ""
+                    })
+                if est.get('tubo_m25', 0) > 0:
+                    filas_estancias.append({
+                        "Estancia": r_nom,
+                        "Superficie (m²)": r_m2,
+                        "Distancia Cuadro (m)": r_dist,
+                        "Categoría": "Canalización",
+                        "Material / Elemento": "Tubo Corrugado M25",
+                        "Descripción Técnica": "Tubo M25 asignado a estancia",
+                        "Cantidad": round(est['tubo_m25'], 1),
+                        "Unidad": "m",
+                        "P. Unit (€)": "",
+                        "Subtotal (€)": ""
+                    })
+                # Cables
+                for c in est.get('cables', []):
+                    if c.get('metros', 0) > 0:
+                        filas_estancias.append({
+                            "Estancia": r_nom,
+                            "Superficie (m²)": r_m2,
+                            "Distancia Cuadro (m)": r_dist,
+                            "Categoría": "Conductores",
+                            "Material / Elemento": c['item'],
+                            "Descripción Técnica": "Conductor unipolar Cu",
+                            "Cantidad": round(c['metros'], 1),
+                            "Unidad": "m",
+                            "P. Unit (€)": "",
+                            "Subtotal (€)": ""
+                        })
+                # Cajas
+                filas_estancias.append({
+                    "Estancia": r_nom,
+                    "Superficie (m²)": r_m2,
+                    "Distancia Cuadro (m)": r_dist,
+                    "Categoría": "Cajas",
+                    "Material / Elemento": "Cajas Mecanismo 67mm",
+                    "Descripción Técnica": "Caja universal empotrar",
+                    "Cantidad": est.get('cajas_mecanismo', 0),
+                    "Unidad": "ud",
+                    "P. Unit (€)": "",
+                    "Subtotal (€)": ""
+                })
+                if est.get('cajas_registro', 0) > 0:
+                    filas_estancias.append({
+                        "Estancia": r_nom,
+                        "Superficie (m²)": r_m2,
+                        "Distancia Cuadro (m)": r_dist,
+                        "Categoría": "Cajas",
+                        "Material / Elemento": "Cajas Registro 100x100mm",
+                        "Descripción Técnica": "Caja cuadrada registro",
+                        "Cantidad": est.get('cajas_registro', 0),
+                        "Unidad": "ud",
+                        "P. Unit (€)": "",
+                        "Subtotal (€)": ""
+                    })
+            df_mat_est = pd.DataFrame(filas_estancias)
+            df_mat_est.to_excel(writer, sheet_name='Materiales por Estancia', index=False)
+
         df_resumen = pd.DataFrame([
             {"Concepto": "Empresa / Instalador", "Valor": f"{proyecto_info.get('empresa', '')} - {proyecto_info.get('proyectista', '')}"},
             {"Concepto": "Fecha de Orden", "Valor": proyecto_info.get('fecha', '')},
@@ -1177,27 +1284,95 @@ def app():
             "📦 5. Cajas y Conexiones": []
         }
 
-        # 1. Mecanismos
+        # 0. Construcción del Desglose de Materiales Asignados por Estancia
+        materiales_por_estancia = []
+        for est_info in desgloses_internos_estancias:
+            r_nom = est_info["nombre"]
+            r_m2 = est_info["m2"]
+            r_dist = est_info["dist_cuadro"]
+            r_mecs = est_info["mecanismos_detalle"]
+            r_tubo20 = est_info["m_tubo_20"]
+            r_tubo25 = est_info["m_tubo_25"]
+            r_cajas_reg = est_info["n_cajas_reg"]
+            r_tot_mec = sum([m["cant"] for m in r_mecs])
+            r_marcos = max(r_tot_mec, int(r_tot_mec * 0.8))
+            
+            r_cables_list = [
+                {"item": "Cable 1.5 mm² Azul", "metros": est_info["cable_15_az"]},
+                {"item": "Cable 1.5 mm² Fase (Negro/Marrón/Gris)", "metros": est_info["cable_15_ne"] + est_info["cable_15_ma"] + est_info["cable_15_gr"]},
+                {"item": "Cable 1.5 mm² Tierra TT", "metros": est_info["cable_15_tt"]},
+                {"item": "Cable 2.5 mm² Azul", "metros": est_info["cable_25_az"]},
+                {"item": "Cable 2.5 mm² Fase (Negro/Marrón)", "metros": est_info["cable_25_ne"]},
+                {"item": "Cable 2.5 mm² Tierra TT", "metros": est_info["cable_25_tt"]},
+            ]
+            if est_info["cable_utp"] > 0:
+                r_cables_list.append({"item": "Cable Red UTP Cat.6", "metros": est_info["cable_utp"]})
+            
+            materiales_por_estancia.append({
+                "nombre": r_nom,
+                "m2": r_m2,
+                "distancia_cuadro": r_dist,
+                "mecanismos": r_mecs,
+                "marcos": r_marcos,
+                "cajas_mecanismo": r_tot_mec,
+                "cajas_registro": r_cajas_reg,
+                "tubo_m20": r_tubo20,
+                "tubo_m25": r_tubo25,
+                "cables": r_cables_list,
+                "coste_materiales_neto": est_info["neto_mat"],
+                "coste_materiales_con_iva": est_info["iva_mat"]
+            })
+
+        # 1. Mecanismos y Marcos (Agrupados y Consolidados por Referencia Única)
+        mecanismos_agrupados = {}
         for (nom_m, desc_m, p_m, prov_m, fila_m, ok_m), cant_m in global_mecanismos_dict.items():
-            if cant_m > 0:
-                categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
-                    "articulo": nom_m,
-                    "desc_exacta": desc_m,
-                    "proveedor": prov_m,
-                    "cantidad": cant_m,
-                    "unidad": "ud",
-                    "precio_unitario": p_m,
-                    "subtotal": round(cant_m * p_m, 2),
-                    "en_bd": ok_m,
-                    "categoria_bd": "Mecanismos",
-                    "marca_bd": "Efapel" if ("efapel" in str(serie_mecanismos).lower() or "racional" in str(serie_mecanismos).lower()) else str(serie_mecanismos).split()[0]
-                })
+            if cant_m <= 0:
+                continue
+            nom_m_l = nom_m.lower()
+            if "interruptor" in nom_m_l or "conmutador" in nom_m_l:
+                nom_std = "Interruptor / Conmutador 10AX"
+                tipo_orden = 1
+            elif "25a" in nom_m_l or "horno" in nom_m_l or "fuerza" in nom_m_l:
+                nom_std = "Base Enchufe Fuerza 25A (Horno / Vitro)"
+                tipo_orden = 3
+            elif "schuko" in nom_m_l or "enchufe" in nom_m_l:
+                nom_std = "Base de Enchufe Schuko 16A 2P+T con Obturador"
+                tipo_orden = 2
+            elif "rj45" in nom_m_l or "datos" in nom_m_l or "red" in nom_m_l:
+                nom_std = "Toma de Datos RJ45 Cat.6 UTP"
+                tipo_orden = 4
+            else:
+                nom_std = nom_m
+                tipo_orden = 5
+
+            clave_agrup = (nom_std, desc_m, p_m, prov_m, ok_m, tipo_orden)
+            if clave_agrup not in mecanismos_agrupados:
+                mecanismos_agrupados[clave_agrup] = 0
+            mecanismos_agrupados[clave_agrup] += cant_m
+
+        # Ordenar mecanismos lógicamente: Interruptores -> Schukos 16A -> Base 25A -> RJ45 -> Otros
+        lista_mecanismos_ordenados = sorted(mecanismos_agrupados.items(), key=lambda x: (x[0][5], x[0][0]))
+
+        for (nom_std, desc_m, p_m, prov_m, ok_m, _), cant_tot in lista_mecanismos_ordenados:
+            categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
+                "articulo": nom_std,
+                "desc_exacta": desc_m,
+                "proveedor": prov_m,
+                "cantidad": int(cant_tot),
+                "unidad": "ud",
+                "precio_unitario": p_m,
+                "subtotal": round(cant_tot * p_m, 2),
+                "en_bd": ok_m,
+                "categoria_bd": "Mecanismos",
+                "marca_bd": "Efapel" if ("efapel" in str(serie_mecanismos).lower() or "racional" in str(serie_mecanismos).lower()) else str(serie_mecanismos).split()[0]
+            })
+
         if global_marcos_uds > 0:
             categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
-                "articulo": "Marcos Embellecedores",
+                "articulo": "Marcos Embellecedores 1 Elemento",
                 "desc_exacta": desc_marco,
                 "proveedor": prov_marco,
-                "cantidad": global_marcos_uds,
+                "cantidad": int(global_marcos_uds),
                 "unidad": "ud",
                 "precio_unitario": p_marco,
                 "subtotal": round(global_marcos_uds * p_marco, 2),
@@ -1364,7 +1539,8 @@ def app():
             "tipo_cable": tipo_cable_sel,
             "tipo_tubo": tipo_tubo_sel,
             "serie_mecanismos": serie_mecanismos,
-            "marca_protecciones": marca_protecciones
+            "marca_protecciones": marca_protecciones,
+            "materiales_por_estancia": materiales_por_estancia
         }
 
         # Pre-generar archivos de Orden de Compra / Reporte de Materiales
@@ -1378,8 +1554,10 @@ def app():
                 "tipo_cable": tipo_cable_sel,
                 "tipo_tubo": tipo_tubo_sel,
                 "serie_mecanismos": serie_mecanismos,
-                "marca_protecciones": marca_protecciones
-            }
+                "marca_protecciones": marca_protecciones,
+                "p_marco": p_marco
+            },
+            mat_estancias=materiales_por_estancia
         )
 
         pdf_oc_bytes = pdf_presupuesto.generar_pdf_orden_compra(
@@ -1765,6 +1943,21 @@ def app():
                     ])
                     st.dataframe(df_cat_res, use_container_width=True, hide_index=True)
 
+            with st.expander("🚪 Ver Desglose de Materiales Asignados por Cada Estancia (Cocina, Baño, Salón...)", expanded=False):
+                st.markdown("Consulta los materiales exactos asignados a cada estancia para organizar el acopio y montaje en obra:")
+                for est_m in materiales_por_estancia:
+                    st.markdown(f"##### 📍 {est_m['nombre']} ({est_m['m2']} m² | Distancia: {est_m['distancia_cuadro']}m | Coste Materiales: {est_m['coste_materiales_neto']:.2f} € S/IVA)")
+                    col_pe1, col_pe2 = st.columns(2)
+                    with col_pe1:
+                        df_mec_pe = pd.DataFrame([{"Elemento": m["nombre"], "Descripción": m["desc_real"], "Cantidad": f"{m['cant']} ud", "Subtotal": f"{m['cant'] * m['precio']:.2f} €"} for m in est_m["mecanismos"]])
+                        st.dataframe(df_mec_pe, use_container_width=True, hide_index=True)
+                        st.caption(f"Cajas Mecanismo: {est_m['cajas_mecanismo']} ud | Cajas Registro: {est_m['cajas_registro']} ud | Marcos: {est_m['marcos']} ud")
+                    with col_pe2:
+                        df_cab_pe = pd.DataFrame([{"Conductor": c["item"], "Metros": f"{c['metros']:.1f} m"} for c in est_m["cables"] if c["metros"] > 0])
+                        st.dataframe(df_cab_pe, use_container_width=True, hide_index=True)
+                        st.caption(f"Tubo M20: {est_m['tubo_m20']:.1f} m | Tubo M25: {est_m['tubo_m25']:.1f} m")
+                    st.markdown("---")
+
             with st.expander("➕ Añadir Manualmente un Nuevo Artículo al Excel de Precios"):
                 with st.form("form_nuevo_art_manual"):
                     col_m1, col_m2 = st.columns(2)
@@ -1852,45 +2045,119 @@ def app():
 
             st.markdown("---")
 
-            # Filtro por tienda/proveedor
-            tiendas_unicas = sorted(list(df_orden_compra["Tienda / Proveedor"].dropna().unique()))
-            filtro_tienda = st.selectbox("🏬 Filtrar por Tienda / Proveedor:", ["Todos los Proveedores"] + tiendas_unicas)
+            tab_oc_glob, tab_oc_est = st.tabs([
+                "🏢 1. Lista Global Consolidada para Tienda / Almacén (1 Línea por Referencia Sumada)",
+                "🚪 2. Desglose Detallado de Materiales Asignados por Estancia (Cocina, Baño, Salón...)"
+            ])
 
-            # Desglose por categorías organizadas
-            st.subheader("📋 Listado Detallado por Categorías de Acopio")
-            if items_no_catalogados:
-                st.warning(f"⚠️ **Aviso:** Hay **{len(items_no_catalogados)} artículo(s)** sin catalogar en el Excel. Puedes usar el actualizador de la sección de acopio para registrarlos permanentemente.")
+            with tab_oc_glob:
+                # Filtro por tienda/proveedor
+                tiendas_unicas = sorted(list(df_orden_compra["Tienda / Proveedor"].dropna().unique()))
+                filtro_tienda = st.selectbox("🏬 Filtrar por Tienda / Proveedor:", ["Todos los Proveedores"] + tiendas_unicas, key="sel_tienda_glob")
 
-            for cat_titulo, articulos in categorias_orden_compra.items():
-                if not articulos:
-                    continue
+                # Desglose por categorías organizadas
+                st.subheader("📋 Listado Detallado por Categorías de Acopio")
+                if items_no_catalogados:
+                    st.warning(f"⚠️ **Aviso:** Hay **{len(items_no_catalogados)} artículo(s)** sin catalogar en el Excel. Puedes usar el actualizador de la sección de acopio para registrarlos permanentemente.")
 
-                arts_filtrados = [a for a in articulos if filtro_tienda == "Todos los Proveedores" or a["proveedor"] == filtro_tienda]
-                if not arts_filtrados:
-                    continue
+                for cat_titulo, articulos in categorias_orden_compra.items():
+                    if not articulos:
+                        continue
 
-                st.markdown(f"#### {cat_titulo}")
-                df_cat = pd.DataFrame([
-                    {
-                        "Cant.": a["cantidad"],
-                        "Unidad": a["unidad"],
-                        "Artículo": a["articulo"],
-                        "Descripción Exacta (Tienda)": a["desc_exacta"],
-                        "Tienda": a["proveedor"],
-                        "P. Unit (€)": f"{a['precio_unitario']:.2f} €",
-                        "Subtotal (€)": f"{a['subtotal']:.2f} €",
-                        "Estado Catálogo": "🟢 En Catálogo" if a.get("en_bd", True) else "⚠️ No en BD (Estimado)"
-                    }
-                    for a in arts_filtrados
-                ])
-                st.dataframe(df_cat, use_container_width=True, hide_index=True)
+                    arts_filtrados = [a for a in articulos if filtro_tienda == "Todos los Proveedores" or a["proveedor"] == filtro_tienda]
+                    if not arts_filtrados:
+                        continue
 
-            st.markdown("---")
-            st.subheader("📑 Tabla Completa de la Orden de Compra")
-            if filtro_tienda != "Todos los Proveedores":
-                st.dataframe(df_orden_compra[df_orden_compra["Tienda / Proveedor"] == filtro_tienda], use_container_width=True, hide_index=True)
-            else:
-                st.dataframe(df_orden_compra, use_container_width=True, hide_index=True)
+                    st.markdown(f"#### {cat_titulo}")
+                    df_cat = pd.DataFrame([
+                        {
+                            "Cant.": a["cantidad"],
+                            "Unidad": a["unidad"],
+                            "Artículo": a["articulo"],
+                            "Descripción Exacta (Tienda)": a["desc_exacta"],
+                            "Tienda": a["proveedor"],
+                            "P. Unit (€)": f"{a['precio_unitario']:.2f} €",
+                            "Subtotal (€)": f"{a['subtotal']:.2f} €",
+                            "Estado Catálogo": "🟢 En Catálogo" if a.get("en_bd", True) else "⚠️ No en BD (Estimado)"
+                        }
+                        for a in arts_filtrados
+                    ])
+                    st.dataframe(df_cat, use_container_width=True, hide_index=True)
+
+                st.markdown("---")
+                st.subheader("📑 Tabla Completa de la Orden de Compra")
+                if filtro_tienda != "Todos los Proveedores":
+                    st.dataframe(df_orden_compra[df_orden_compra["Tienda / Proveedor"] == filtro_tienda], use_container_width=True, hide_index=True)
+                else:
+                    st.dataframe(df_orden_compra, use_container_width=True, hide_index=True)
+
+            with tab_oc_est:
+                st.subheader("🚪 Materiales y Acopio Asignados por Cada Estancia")
+                st.markdown("Consulta exactamente qué materiales corresponden a cada habitación para organizar las cajas y el montaje en obra:")
+                
+                est_nombres = [e["nombre"] for e in materiales_por_estancia]
+                est_sel = st.selectbox("Selecciona una estancia para ver su detalle:", ["Todas las Estancias"] + est_nombres, key="sel_est_acopio_tab")
+                
+                for est_m in materiales_por_estancia:
+                    if est_sel != "Todas las Estancias" and est_m["nombre"] != est_sel:
+                        continue
+                    
+                    with st.expander(f"📍 {est_m['nombre']} ({est_m['m2']} m² | Distancia al Cuadro: {est_m['distancia_cuadro']} m | Coste Materiales: {est_m['coste_materiales_neto']:.2f} € S/IVA)", expanded=True):
+                        col_e1, col_e2 = st.columns(2)
+                        with col_e1:
+                            st.markdown("**🔲 Mecanismos y Marcos:**")
+                            df_mec_e = pd.DataFrame([
+                                {
+                                    "Elemento": m["nombre"],
+                                    "Descripción Real": m["desc_real"],
+                                    "Cantidad": f"{m['cant']} ud",
+                                    "P. Unit": f"{m['precio']:.2f} €",
+                                    "Subtotal": f"{m['cant'] * m['precio']:.2f} €"
+                                }
+                                for m in est_m["mecanismos"]
+                            ])
+                            if est_m["marcos"] > 0:
+                                df_mec_e = pd.concat([df_mec_e, pd.DataFrame([{
+                                    "Elemento": "Marcos Embellecedores",
+                                    "Descripción Real": desc_marco,
+                                    "Cantidad": f"{est_m['marcos']} ud",
+                                    "P. Unit": f"{p_marco:.2f} €",
+                                    "Subtotal": f"{est_m['marcos'] * p_marco:.2f} €"
+                                }])], ignore_index=True)
+                            st.dataframe(df_mec_e, use_container_width=True, hide_index=True)
+
+                            st.markdown(f"**📦 Cajas en esta estancia:** `{est_m['cajas_mecanismo']}x` Cajas de Mecanismo 67mm | `{est_m['cajas_registro']}x` Cajas de Registro 100x100")
+
+                        with col_e2:
+                            st.markdown("**⚡ Canalización y Cables Asignados:**")
+                            df_cab_e = pd.DataFrame([
+                                {
+                                    "Conductor / Línea": c["item"],
+                                    "Metros Calculados": f"{c['metros']:.1f} m"
+                                }
+                                for c in est_m["cables"] if c["metros"] > 0
+                            ])
+                            st.dataframe(df_cab_e, use_container_width=True, hide_index=True)
+                            
+                            st.markdown(f"**📏 Tubo Corrugado Asignado:** M20: `{est_m['tubo_m20']:.1f} m` | M25: `{est_m['tubo_m25']:.1f} m`")
+
+                st.markdown("---")
+                st.subheader("📊 Tabla Resumen Comparativa de Materiales por Estancia")
+                filas_resumen_est = []
+                for e in materiales_por_estancia:
+                    tot_m = sum([m["cant"] for m in e["mecanismos"]])
+                    filas_resumen_est.append({
+                        "Estancia": e["nombre"],
+                        "Superficie": f"{e['m2']} m²",
+                        "Distancia al Cuadro": f"{e['distancia_cuadro']} m",
+                        "Mecanismos": f"{tot_m} uds",
+                        "Marcos": f"{e['marcos']} uds",
+                        "Tubo M20": f"{e['tubo_m20']:.1f} m",
+                        "Tubo M25": f"{e['tubo_m25']:.1f} m",
+                        "Coste Neto Materiales": f"{e['coste_materiales_neto']:.2f} €",
+                        "Total C/IVA": f"{e['coste_materiales_con_iva']:.2f} €"
+                    })
+                st.dataframe(pd.DataFrame(filas_resumen_est), use_container_width=True, hide_index=True)
 
             # Generar Excel y PDF de la Orden de Compra
             excel_oc_bytes = exportar_excel_orden_compra(
