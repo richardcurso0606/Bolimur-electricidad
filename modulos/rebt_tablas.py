@@ -234,3 +234,21 @@ def dimensionar_tubo_interior(seccion: float) -> tuple[str, str]:
         return "Ø 50 mm", "Para acometidas secundarias y factores de llenado de 30-40%."
     else:
         return "Ø 63 mm o superior", "Para alimentaciones principales de gran potencia."
+
+def dimensionar_tubo_irve(seccion: float, es_trifasico: bool = False) -> tuple[str, str]:
+    """
+    ITC-BT-52 apartado 5 y Guía Técnica de Aplicación:
+    Tubos para canalizaciones de recarga IRVE (con protección IK08 y libre de halógenos).
+    Se recomienda prever espacio para el cable de comunicaciones del balanceo dinámico de carga.
+    """
+    if seccion <= 4.0:
+        return "Ø 25 mm o Ø 32 mm", "Reglamentario para 2.5 y 4 mm² (Ø 32 mm recomendado si incluye manguera de datos/balanceo)."
+    elif seccion <= 6.0:
+        return "Ø 32 mm", "Estándar reglamentario para 6 mm² (7.36 kW / 32A monofásico) con protección mecánica IK08."
+    elif seccion <= 16.0:
+        return "Ø 40 mm", "Exigido para 10 y 16 mm² (11 kW / 22 kW trifásicos) garantizando disipación térmica y tirada."
+    elif seccion <= 35.0:
+        return "Ø 50 mm", "Para conductores de 25 y 35 mm² en derivaciones colectivas o largas distancias."
+    else:
+        return "Ø 63 mm o Bandeja metálica/PVC libre de halógenos", "Para grandes acometidas o canalizaciones troncales multitubo."
+
