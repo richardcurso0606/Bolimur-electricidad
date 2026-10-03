@@ -505,11 +505,18 @@ def generar_pdf_prevision(
     story.append(Paragraph("4. Previsión para Garajes e Infraestructura IRVE (P<sub>4</sub> - ITC-BT-10 e ITC-BT-52)", h1_style))
     story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=6))
 
-    esquema_irve_str = str(garajes.get("esquema_irve", "Esquema 3a"))
-    spl_activo = bool(garajes.get("spl", False))
-    factor_irve_pct = "5% (Con Control Dinámico SPL)" if spl_activo else "10% (Sin SPL)"
-    sup_g = float(garajes.get("sup", 0.0))
-    plazas_g = int(garajes.get("plazas_irve", 0))
+    if isinstance(garajes, dict):
+        esquema_irve_str = str(garajes.get("esquema_irve", "Esquema 3a"))
+        spl_activo = bool(garajes.get("spl", False))
+        factor_irve_pct = "5% (Con Control Dinámico SPL)" if spl_activo else "10% (Sin SPL)"
+        sup_g = float(garajes.get("sup", 0.0))
+        plazas_g = int(garajes.get("plazas_irve", 0))
+    else:
+        esquema_irve_str = "Esquema 3a"
+        spl_activo = False
+        factor_irve_pct = "10% (Sin SPL)"
+        sup_g = 0.0
+        plazas_g = 0
 
     table_gar_data = [
         [

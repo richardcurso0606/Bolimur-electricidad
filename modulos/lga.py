@@ -331,20 +331,11 @@ def renderizar():
 
         try:
             pdf_bytes_lga = pdf_lga.generar_pdf_lga(proyecto_info, lga_params, lga_results)
-            
-            import base64
-            base64_pdf_lga = base64.b64encode(pdf_bytes_lga).decode('utf-8')
-            
-            st.markdown("#### 👁️ Vista Previa en Pantalla del Documento PDF Oficial:")
-            pdf_display_lga = f'<iframe src="data:application/pdf;base64,{base64_pdf_lga}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
-            st.markdown(pdf_display_lga, unsafe_allow_html=True)
-
-            st.download_button(
-                label="📥 Descargar Reporte PDF Oficial LGA",
-                data=pdf_bytes_lga,
-                file_name=f"Reporte_LGA_{p_expediente}.pdf",
-                mime="application/pdf",
-                use_container_width=True
+            from modulos import visor_pdf
+            visor_pdf.mostrar_visor_pdf(
+                pdf_bytes=pdf_bytes_lga,
+                nombre_archivo=f"Reporte_LGA_{p_expediente}.pdf",
+                label_boton="📥 Descargar Reporte PDF Oficial LGA"
             )
         except Exception as err:
             st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de LGA: {err}")

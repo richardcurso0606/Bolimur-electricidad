@@ -480,20 +480,11 @@ def renderizar():
                 pt_total=pt_total
             )
             
-            import base64
-            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-            
-            st.markdown("#### 👁️ Vista Previa en Pantalla del Documento PDF Oficial:")
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
-            st.markdown(pdf_display, unsafe_allow_html=True)
-
-            st.download_button(
-                label="📥 Descargar Reporte PDF Oficial (Técnico)",
-                data=pdf_bytes,
-                file_name=f"Reporte_Prevision_Cargas_{p_expediente}.pdf",
-                mime="application/pdf",
-                use_container_width=True
+            from modulos import visor_pdf
+            visor_pdf.mostrar_visor_pdf(
+                pdf_bytes=pdf_bytes,
+                nombre_archivo=f"Reporte_Prevision_Cargas_{p_expediente}.pdf",
+                label_boton="📥 Descargar Reporte PDF Oficial (Técnico)"
             )
-
         except Exception as err:
             st.error(f"⚠️ Ocurrió un error al generar el archivo PDF: {err}")

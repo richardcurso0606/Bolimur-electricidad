@@ -218,19 +218,11 @@ def renderizar():
 
         try:
             pdf_bytes_irve = pdf_irve.generar_pdf_irve(proyecto_info, irve_params, irve_results)
-            import base64
-            base64_pdf_irve = base64.b64encode(pdf_bytes_irve).decode('utf-8')
-            
-            st.markdown("#### 👁️ Vista Previa en Pantalla del Documento PDF Oficial:")
-            pdf_display_irve = f'<iframe src="data:application/pdf;base64,{base64_pdf_irve}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
-            st.markdown(pdf_display_irve, unsafe_allow_html=True)
-
-            st.download_button(
-                label="📥 Descargar Reporte PDF Oficial IRVE",
-                data=pdf_bytes_irve,
-                file_name=f"Reporte_IRVE_{p_expediente}.pdf",
-                mime="application/pdf",
-                use_container_width=True
+            from modulos import visor_pdf
+            visor_pdf.mostrar_visor_pdf(
+                pdf_bytes=pdf_bytes_irve,
+                nombre_archivo=f"Reporte_IRVE_{p_expediente}.pdf",
+                label_boton="📥 Descargar Reporte PDF Oficial IRVE"
             )
         except Exception as err:
             st.error(f"⚠️ Ocurrió un error al generar el archivo PDF de IRVE: {err}")

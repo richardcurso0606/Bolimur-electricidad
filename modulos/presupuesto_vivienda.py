@@ -966,12 +966,20 @@ def app():
                 }
             )
 
-            import base64
-            base64_pdf_pres = base64.b64encode(pdf_bytes_pres).decode('utf-8')
-            
             st.markdown("#### 👁️ Vista Previa en Pantalla del Presupuesto Oficial PDF:")
-            pdf_display_pres = f'<iframe src="data:application/pdf;base64,{base64_pdf_pres}" width="100%" height="600" type="application/pdf" style="border: 2px solid #0284c7; border-radius: 8px; margin-bottom: 15px;"></iframe>'
-            st.markdown(pdf_display_pres, unsafe_allow_html=True)
+            with st.container():
+                try:
+                    import pymupdf
+                    doc = pymupdf.open(stream=pdf_bytes_pres, filetype="pdf")
+                    for num_pag, pagina in enumerate(doc, start=1):
+                        pix = pagina.get_pixmap(dpi=150)
+                        if len(doc) > 1:
+                            st.caption(f"📄 **Página {num_pag} de {len(doc)}**")
+                        st.image(pix.tobytes("png"), use_container_width=True)
+                except Exception:
+                    import base64
+                    b64 = base64.b64encode(pdf_bytes_pres).decode('utf-8')
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="600" type="application/pdf"></iframe>', unsafe_allow_html=True)
 
             col_exp1, col_exp2 = st.columns(2)
             with col_exp1:
