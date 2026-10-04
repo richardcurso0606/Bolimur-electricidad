@@ -445,6 +445,7 @@ def guardar_config_nube(url: str, key: str) -> bool:
 
 def testear_conexion_nube(url: str, key: str) -> tuple[bool, str]:
     """Verifica si la URL y Key de Supabase conectan correctamente"""
+    import urllib.error
     try:
         url_clean = url.strip().rstrip("/")
         req_url = f"{url_clean}/rest/v1/clientes?select=id&limit=1"
@@ -453,10 +454,16 @@ def testear_conexion_nube(url: str, key: str) -> tuple[bool, str]:
             "Authorization": f"Bearer {key.strip()}",
             "Content-Type": "application/json"
         })
-        with urllib.request.urlopen(req, timeout=6) as response:
+        with urllib.request.urlopen(req, timeout=8) as response:
             if response.status in (200, 206):
                 return True, "Conexión con la Base de Datos Nube (Supabase) establecida con éxito."
             return False, f"Código de respuesta del servidor: {response.status}"
+    except urllib.error.HTTPError as he:
+        if he.code == 401:
+            return False, "Error 401 (No autorizado): Has pegado la contraseña del proyecto o una clave no válida. La clave requerida es la 'Anon / Public API Key', que es una cadena larga de letras y números (empieza por eyJ...) que se copia en Supabase: Project Settings ➔ API ➔ Project API keys ➔ anon / public."
+        elif he.code == 404:
+            return False, "Error 404 (Tabla no encontrada): Las credenciales son válidas, pero aún no has creado las tablas en Supabase. Abre el 'SQL Editor' en Supabase, pega el script SQL de abajo y pulsa 'Run'."
+        return False, f"Error HTTP {he.code}: {he.reason}"
     except Exception as ex:
         return False, f"Error al conectar con la Nube: {ex}"
 

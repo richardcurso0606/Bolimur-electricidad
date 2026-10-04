@@ -360,6 +360,7 @@ def renderizar():
 
                 in_supa_url = st.text_input("URL de Supabase (*):", value=actual_url, placeholder="https://xyzabcdefg.supabase.co", key="in_supa_url")
                 in_supa_key = st.text_input("Anon / Public Key de Supabase (*):", value=actual_key, type="password", placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", key="in_supa_key")
+                st.caption("ℹ️ **IMPORTANTE:** No introduzcas la contraseña que inventaste al crear el proyecto. La clave requerida es la **API Key `anon` / `public`** (una cadena muy larga que empieza por `eyJ...` o `sb_publishable_...`). La encuentras en Supabase en: **⚙️ Project Settings ➔ API ➔ Project API keys ➔ `anon` `public`**.")
 
                 col_btn_s1, col_btn_s2 = st.columns(2)
                 with col_btn_s1:
