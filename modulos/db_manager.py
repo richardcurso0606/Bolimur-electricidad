@@ -82,6 +82,24 @@ def inicializar_bd():
     )
     """)
     
+    # Comprobar columnas adicionales en tabla clientes
+    cursor.execute("PRAGMA table_info(clientes)")
+    cols_cli_existentes = [row[1] for row in cursor.fetchall()]
+    cols_cli_nuevas = [
+        ("codigo_postal", "TEXT"),
+        ("municipio", "TEXT"),
+        ("provincia", "TEXT"),
+        ("distribuidora", "TEXT"),
+        ("potencia_contratada_kw", "TEXT"),
+        ("tension_suministro", "TEXT")
+    ]
+    for col_nom, col_tipo in cols_cli_nuevas:
+        if col_nom not in cols_cli_existentes:
+            try:
+                cursor.execute(f"ALTER TABLE clientes ADD COLUMN {col_nom} {col_tipo}")
+            except Exception:
+                pass
+
     # Tabla de Proyectos y Cálculos Guardados por Cliente
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS proyectos (
@@ -293,6 +311,30 @@ def obtener_cliente_por_id(cliente_id: int, usuario_id: int) -> Optional[Dict[st
         return dict(row)
     return None
 
+def buscar_cliente_duplicado(usuario_id: int, nif_cif: str, nombre_completo: str) -> Optional[Dict[str, Any]]:
+    """Comprueba si ya existe un cliente con el mismo NIF o nombre exacto"""
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    nif_clean = nif_cif.strip().upper() if nif_cif else ""
+    nom_clean = nombre_completo.strip()
+    
+    if nif_clean:
+        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? AND UPPER(nif_cif) = ?", (usuario_id, nif_clean))
+        row = cursor.fetchone()
+        if row:
+            conn.close()
+            return dict(row)
+            
+    if nom_clean:
+        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? AND LOWER(nombre_completo) = LOWER(?)", (usuario_id, nom_clean))
+        row = cursor.fetchone()
+        if row:
+            conn.close()
+            return dict(row)
+            
+    conn.close()
+    return None
+
 def crear_cliente(usuario_id: int, datos: Dict[str, Any]) -> tuple[bool, int]:
     conn = obtener_conexion()
     cursor = conn.cursor()
@@ -301,20 +343,27 @@ def crear_cliente(usuario_id: int, datos: Dict[str, Any]) -> tuple[bool, int]:
         INSERT INTO clientes (
             usuario_id, nombre_completo, nif_cif, telefono, email,
             direccion_suministro, localidad, cups, referencia_catastral,
-            tipo_inmueble, notas
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            tipo_inmueble, notas, codigo_postal, municipio, provincia,
+            distribuidora, potencia_contratada_kw, tension_suministro
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             usuario_id,
             datos.get("nombre_completo", "").strip(),
-            datos.get("nif_cif", "").strip(),
+            datos.get("nif_cif", "").strip().upper(),
             datos.get("telefono", "").strip(),
             datos.get("email", "").strip(),
             datos.get("direccion_suministro", "").strip(),
             datos.get("localidad", "").strip(),
-            datos.get("cups", "").strip(),
-            datos.get("referencia_catastral", "").strip(),
+            datos.get("cups", "").strip().upper(),
+            datos.get("referencia_catastral", "").strip().upper(),
             datos.get("tipo_inmueble", "Vivienda").strip(),
-            datos.get("notas", "").strip()
+            datos.get("notas", "").strip(),
+            datos.get("codigo_postal", "").strip(),
+            datos.get("municipio", "").strip(),
+            datos.get("provincia", "Murcia").strip(),
+            datos.get("distribuidora", "i-DE (Iberdrola)").strip(),
+            datos.get("potencia_contratada_kw", "").strip(),
+            datos.get("tension_suministro", "Monofásica 230V").strip()
         ))
         conn.commit()
         nuevo_id = cursor.lastrowid
@@ -339,19 +388,31 @@ def actualizar_cliente(cliente_id: int, usuario_id: int, datos: Dict[str, Any]) 
             cups = ?,
             referencia_catastral = ?,
             tipo_inmueble = ?,
-            notas = ?
+            notas = ?,
+            codigo_postal = ?,
+            municipio = ?,
+            provincia = ?,
+            distribuidora = ?,
+            potencia_contratada_kw = ?,
+            tension_suministro = ?
         WHERE id = ? AND usuario_id = ?
         """, (
             datos.get("nombre_completo", "").strip(),
-            datos.get("nif_cif", "").strip(),
+            datos.get("nif_cif", "").strip().upper(),
             datos.get("telefono", "").strip(),
             datos.get("email", "").strip(),
             datos.get("direccion_suministro", "").strip(),
             datos.get("localidad", "").strip(),
-            datos.get("cups", "").strip(),
-            datos.get("referencia_catastral", "").strip(),
+            datos.get("cups", "").strip().upper(),
+            datos.get("referencia_catastral", "").strip().upper(),
             datos.get("tipo_inmueble", "Vivienda").strip(),
             datos.get("notas", "").strip(),
+            datos.get("codigo_postal", "").strip(),
+            datos.get("municipio", "").strip(),
+            datos.get("provincia", "Murcia").strip(),
+            datos.get("distribuidora", "i-DE (Iberdrola)").strip(),
+            datos.get("potencia_contratada_kw", "").strip(),
+            datos.get("tension_suministro", "Monofásica 230V").strip(),
             cliente_id,
             usuario_id
         ))
@@ -373,6 +434,40 @@ def eliminar_cliente(cliente_id: int, usuario_id: int) -> bool:
     except Exception:
         conn.close()
         return False
+
+def limpiar_duplicados_clientes(usuario_id: int) -> int:
+    """Busca clientes duplicados por NIF o Nombre, reasigna sus proyectos y elimina los repetidos."""
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY id ASC", (usuario_id,))
+    todos = [dict(r) for r in cursor.fetchall()]
+    
+    agrupados: Dict[str, List[Dict[str, Any]]] = {}
+    for c in todos:
+        # Clave de agrupamiento: NIF si existe, o Nombre normalizado
+        nif = (c.get("nif_cif") or "").strip().upper()
+        nom = (c.get("nombre_completo") or "").strip().lower()
+        clave = nif if len(nif) >= 4 else nom
+        if not clave:
+            continue
+        agrupados.setdefault(clave, []).append(c)
+        
+    borrados = 0
+    for clave, lista in agrupados.items():
+        if len(lista) > 1:
+            # Mantener el primero (principal)
+            principal = lista[0]
+            duplicados = lista[1:]
+            for dup in duplicados:
+                # Reasignar proyectos al principal
+                cursor.execute("UPDATE proyectos SET cliente_id = ? WHERE cliente_id = ? AND usuario_id = ?", (principal["id"], dup["id"], usuario_id))
+                # Borrar duplicado
+                cursor.execute("DELETE FROM clientes WHERE id = ? AND usuario_id = ?", (dup["id"], usuario_id))
+                borrados += 1
+                
+    conn.commit()
+    conn.close()
+    return borrados
 
 # =========================================================================
 # FUNCIONES DE PROYECTOS Y CÁLCULOS GUARDADOS

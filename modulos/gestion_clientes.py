@@ -1,104 +1,145 @@
 # -*- coding: utf-8 -*-
 """
-Módulo de Gestión de Clientes (CRM Eléctrico) y Gestor de Proyectos
-Permite almacenar fichas de clientes y asociarles proyectos y cálculos para recuperarlos en 1 clic.
+Módulo de Gestión de Clientes (CRM Eléctrico) y Gestor de Proyectos de Obra
+Diseñado para Instaladores Electricistas Autorizados en Baja Tensión y Tramitación ante Industria
+Permite almacenar expedientes de clientes, suministros, CUPS, distribuidoras y asociar cálculos técnicos.
 """
 
 import streamlit as st
 import pandas as pd
-import datetime
 from modulos import db_manager, auth_manager
 
 def renderizar():
     usuario = auth_manager.obtener_usuario_actual()
     if not usuario:
-        st.warning("Debes iniciar sesión para gestionar clientes.")
+        st.warning("Debes iniciar sesión para gestionar tus clientes y proyectos.")
         return
 
     usuario_id = usuario["id"]
     clientes = db_manager.listar_clientes(usuario_id)
+    todos_proyectos = db_manager.listar_proyectos_usuario(usuario_id)
 
-    st.title("👥 Gestión de Clientes y Proyectos (CRM Eléctrico)")
-    st.markdown("Administra los datos de tus clientes y recupera sus presupuestos y cálculos técnicos guardados en un solo clic.")
+    # Cabecera Principal y Métricas
+    col_t1, col_t2, col_t3 = st.columns([3, 1, 1.2])
+    with col_t1:
+        st.title("👥 Expedientes de Clientes y Obras (CRM Eléctrico)")
+        st.caption("Administra los datos de suministro de tus clientes (CUPS, Catastro, Distribuidora) y accede a sus proyectos técnicos en 1 clic.")
+    with col_t2:
+        st.metric("Clientes Activos", f"{len(clientes)} clientes")
+    with col_t3:
+        st.metric("Obras Guardadas", f"{len(todos_proyectos)} proyectos")
+        if st.button("🧹 Limpiar Duplicados", key="btn_limpiar_dup_top", use_container_width=True, help="Si registraste un cliente varias veces por error, este botón unifica sus fichas automáticamente"):
+            num_borrados = db_manager.limpiar_duplicados_clientes(usuario_id)
+            if num_borrados > 0:
+                st.success(f"✅ Se han unificado y eliminado {num_borrados} fichas duplicadas.")
+                st.rerun()
+            else:
+                st.info("No se encontraron clientes duplicados en tu base de datos.")
 
     tab_clientes_lista, tab_nuevo_cliente, tab_todos_proyectos = st.tabs([
-        "📋 Lista de Clientes y Proyectos",
+        "📋 Expediente y Ficha del Cliente",
         "➕ Alta de Nuevo Cliente",
         "📂 Historial Global de Proyectos"
     ])
 
     # =========================================================================
-    # TAB 1: LISTADO DE CLIENTES Y SUS PROYECTOS
+    # TAB 1: EXPEDIENTE Y FICHA TÉCNICA DEL CLIENTE
     # =========================================================================
     with tab_clientes_lista:
         if not clientes:
-            st.info("ℹ️ Todavía no tienes clientes registrados. Utiliza la pestaña **'➕ Alta de Nuevo Cliente'** para crear tu primer cliente.")
+            st.info("ℹ️ Todavía no tienes clientes registrados. Pasa a la pestaña **'➕ Alta de Nuevo Cliente'** para crear tu primera ficha de cliente.")
         else:
-            nombres_clientes = {c["id"]: f"{c['nombre_completo']} ({c.get('nif_cif', 'Sin NIF')}) - {c.get('localidad', '')}" for c in clientes}
-            
-            col_sel1, col_sel2 = st.columns([3, 1])
-            with col_sel1:
+            # Buscador en tiempo real de clientes
+            col_b1, col_b2 = st.columns([2, 3])
+            with col_b1:
+                filtro_cli = st.text_input("🔍 Buscar cliente (Nombre, NIF, Teléfono, CUPS o Población):", key="filtro_crm_cli", placeholder="Escribe aquí...")
+
+            clientes_filtrados = clientes
+            if filtro_cli:
+                q = filtro_cli.strip().lower()
+                clientes_filtrados = [
+                    c for c in clientes
+                    if q in (c.get("nombre_completo") or "").lower()
+                    or q in (c.get("nif_cif") or "").lower()
+                    or q in (c.get("telefono") or "").lower()
+                    or q in (c.get("cups") or "").lower()
+                    or q in (c.get("direccion_suministro") or "").lower()
+                    or q in (c.get("localidad") or "").lower()
+                ]
+
+            if not clientes_filtrados:
+                st.warning(f"No se encontraron clientes que coincidan con '{filtro_cli}'. Mostrando todos.")
+                clientes_filtrados = clientes
+
+            nombres_dict = {
+                c["id"]: f"👤 {c['nombre_completo']} | NIF: {c.get('nif_cif', '-')} | 📍 {c.get('localidad', c.get('municipio', ''))}"
+                for c in clientes_filtrados
+            }
+
+            with col_b2:
                 cliente_sel_id = st.selectbox(
-                    "🔍 Selecciona un Cliente para ver su expediente y proyectos:",
-                    options=list(nombres_clientes.keys()),
-                    format_func=lambda x: nombres_clientes[x],
-                    key="crm_sel_cliente"
+                    "Selecciona el Cliente a gestionar:",
+                    options=list(nombres_dict.keys()),
+                    format_func=lambda x: nombres_dict[x],
+                    key="crm_sel_cliente_activo"
                 )
-            with col_sel2:
-                st.metric("Total Clientes", f"{len(clientes)} fichas")
 
             cliente_actual = db_manager.obtener_cliente_por_id(cliente_sel_id, usuario_id)
             if cliente_actual:
-                st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">👤 Ficha Técnica del Cliente</h4></div>', unsafe_allow_html=True)
+                # Guardar cliente activo en session_state para que otros módulos lo tomen
+                st.session_state["cliente_activo_proyecto"] = cliente_actual
+
+                st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">👤 Ficha Técnica 360º del Cliente</h4></div>', unsafe_allow_html=True)
+                
                 with st.container(border=True):
-                    col_cf1, col_cf2, col_cf3 = st.columns(3)
-                    with col_cf1:
-                        st.markdown(f"**Nombre / Razón Social:**  \n`{cliente_actual['nombre_completo']}`")
-                        st.markdown(f"**NIF / DNI / CIF:**  \n`{cliente_actual.get('nif_cif', '-')}`")
-                        st.markdown(f"**Teléfono:**  \n`{cliente_actual.get('telefono', '-')}`")
-                    with col_cf2:
-                        st.markdown(f"**Dirección del Suministro:**  \n`{cliente_actual.get('direccion_suministro', '-')}`")
-                        st.markdown(f"**Localidad:**  \n`{cliente_actual.get('localidad', '-')}`")
-                        st.markdown(f"**Email:**  \n`{cliente_actual.get('email', '-')}`")
-                    with col_cf3:
-                        st.markdown(f"**Código CUPS:**  \n`{cliente_actual.get('cups', '-')}`")
-                        st.markdown(f"**Ref. Catastral:**  \n`{cliente_actual.get('referencia_catastral', '-')}`")
-                        st.markdown(f"**Tipo Inmueble:**  \n`{cliente_actual.get('tipo_inmueble', 'Vivienda')}`")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    with col_f1:
+                        st.markdown("##### 🏷️ Titular y Contacto:")
+                        st.markdown(f"**Nombre / Razón Social:** `{cliente_actual['nombre_completo']}`")
+                        st.markdown(f"**NIF / DNI / CIF:** `{cliente_actual.get('nif_cif') or '-'}`")
+                        st.markdown(f"**Teléfono:** `{cliente_actual.get('telefono') or '-'}`")
+                        st.markdown(f"**Email:** `{cliente_actual.get('email') or '-'}`")
+
+                    with col_f2:
+                        st.markdown("##### ⚡ Datos del Punto de Suministro:")
+                        st.markdown(f"**Dirección:** `{cliente_actual.get('direccion_suministro') or '-'}`")
+                        st.markdown(f"**Población / CP:** `{cliente_actual.get('localidad') or cliente_actual.get('municipio') or '-'} {('(' + cliente_actual.get('codigo_postal') + ')') if cliente_actual.get('codigo_postal') else ''}`")
+                        st.markdown(f"**Provincia:** `{cliente_actual.get('provincia') or 'Murcia'}`")
+                        st.markdown(f"**Distribuidora:** `{cliente_actual.get('distribuidora') or 'i-DE (Iberdrola)'}`")
+
+                    with col_f3:
+                        st.markdown("##### 🏛️ Datos para Industria / Compañía:")
+                        st.markdown(f"**Código CUPS:** `{cliente_actual.get('cups') or '-'}`")
+                        st.markdown(f"**Ref. Catastral:** `{cliente_actual.get('referencia_catastral') or '-'}`")
+                        st.markdown(f"**Potencia y Tensión:** `{cliente_actual.get('potencia_contratada_kw') or '-'} kW | {cliente_actual.get('tension_suministro') or '230V'}`")
+                        st.markdown(f"**Tipo Inmueble:** `{cliente_actual.get('tipo_inmueble') or 'Vivienda'}`")
 
                     if cliente_actual.get("notas"):
-                        st.info(f"📝 **Notas Técnicas:** {cliente_actual['notas']}")
+                        st.info(f"📝 **Notas y Observaciones de Obra:** {cliente_actual['notas']}")
 
-                    # Botón editar / borrar cliente
-                    with st.expander("✏️ Editar o Eliminar este Cliente"):
-                        with st.form(f"form_edit_cli_{cliente_actual['id']}"):
-                            ce1, ce2 = st.columns(2)
-                            with ce1:
-                                enom = st.text_input("Nombre Completo:", value=cliente_actual["nombre_completo"])
-                                enif = st.text_input("NIF / DNI:", value=cliente_actual.get("nif_cif", ""))
-                                etel = st.text_input("Teléfono:", value=cliente_actual.get("telefono", ""))
-                                eemail = st.text_input("Email:", value=cliente_actual.get("email", ""))
-                            with ce2:
-                                edir = st.text_input("Dirección Suministro:", value=cliente_actual.get("direccion_suministro", ""))
-                                eloc = st.text_input("Localidad:", value=cliente_actual.get("localidad", ""))
-                                ecups = st.text_input("CUPS:", value=cliente_actual.get("cups", ""))
-                                eref = st.text_input("Ref Catastral:", value=cliente_actual.get("referencia_catastral", ""))
-                            
-                            enotas = st.text_area("Notas Técnicas:", value=cliente_actual.get("notas", ""))
-                            
-                            col_ebtn1, col_ebtn2 = st.columns(2)
-                            with col_ebtn1:
-                                if st.form_submit_button("💾 Guardar Modificaciones", type="primary", use_container_width=True):
-                                    db_manager.actualizar_cliente(cliente_actual["id"], usuario_id, {
-                                        "nombre_completo": enom, "nif_cif": enif, "telefono": etel, "email": eemail,
-                                        "direccion_suministro": edir, "localidad": eloc, "cups": ecups, "referencia_catastral": eref,
-                                        "tipo_inmueble": cliente_actual.get("tipo_inmueble", "Vivienda"), "notas": enotas
-                                    })
-                                    st.success("✅ Ficha actualizada.")
-                                    st.rerun()
-                        
-                        if st.button("🗑️ Eliminar Definitivamente este Cliente", key=f"btn_del_cli_{cliente_actual['id']}"):
-                            db_manager.eliminar_cliente(cliente_actual["id"], usuario_id)
-                            st.warning("Cliente eliminado.")
+                # Botonera de Acciones Rápidas para el Instalador de Calle
+                st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚀 Acciones Rápidas con este Cliente (1 Clic)</h4></div>', unsafe_allow_html=True)
+                with st.container(border=True):
+                    c_act1, c_act2, c_act3, c_act4 = st.columns(4)
+                    with c_act1:
+                        if st.button("🏛️ Iniciar Boletín CIE / MTD", key=f"btn_act_cie_{cliente_actual['id']}", use_container_width=True, type="primary"):
+                            st.session_state["cliente_activo_proyecto"] = cliente_actual
+                            st.session_state["menu_activo"] = "🏛️ Memoria Técnica (MTD 30)"
+                            st.rerun()
+                    with c_act2:
+                        if st.button("🏡 Iniciar Presupuesto", key=f"btn_act_pres_{cliente_actual['id']}", use_container_width=True):
+                            st.session_state["cliente_activo_proyecto"] = cliente_actual
+                            st.session_state["menu_activo"] = "🏡 Presupuesto Vivienda"
+                            st.rerun()
+                    with c_act3:
+                        if st.button("🚗 Iniciar Recarga IRVE", key=f"btn_act_irve_{cliente_actual['id']}", use_container_width=True):
+                            st.session_state["cliente_activo_proyecto"] = cliente_actual
+                            st.session_state["menu_activo"] = "🚗 Línea Recarga (IRVE)"
+                            st.rerun()
+                    with c_act4:
+                        if st.button("🔌 Calcular DI / LGA", key=f"btn_act_di_{cliente_actual['id']}", use_container_width=True):
+                            st.session_state["cliente_activo_proyecto"] = cliente_actual
+                            st.session_state["menu_activo"] = "🔌 Derivación Individual (DI)"
                             st.rerun()
 
                 # Listado de Proyectos del Cliente
@@ -106,93 +147,159 @@ def renderizar():
                 proyectos_cliente = db_manager.listar_proyectos_por_cliente(cliente_sel_id, usuario_id)
                 
                 if not proyectos_cliente:
-                    st.info("No hay proyectos guardados aún para este cliente. Realiza un cálculo en cualquiera de los módulos y presiona **'Guardar en Cliente'**.")
+                    st.info("ℹ️ No hay cálculos ni presupuestos guardados todavía para este cliente. Realiza un cálculo en cualquiera de los módulos y guárdalo asociándolo a esta ficha.")
                 else:
                     for proj in proyectos_cliente:
                         with st.container(border=True):
-                            col_p1, col_p2, col_p3, col_p4 = st.columns([3, 2, 2, 1.5])
+                            col_p1, col_p2, col_p3, col_p4 = st.columns([3.5, 2.5, 2, 1.2])
                             with col_p1:
                                 st.markdown(f"**📌 {proj['nombre_proyecto']}**")
                                 st.caption(f"Módulo: `{proj['modulo']}` | Fecha: {proj.get('fecha_guardado', '')[:16]}")
                             with col_p2:
-                                st.markdown(f"**Resumen:**  \n{proj.get('resumen_potencia_o_importe', '-')}")
+                                st.markdown(f"**Resumen Técnico:**  \n{proj.get('resumen_potencia_o_importe', '-')}")
                             with col_p3:
-                                if st.button(f"🚀 Cargar en {proj['modulo']}", key=f"btn_load_p_{proj['id']}", type="primary", use_container_width=True):
-                                    # Cargar datos en session_state y redirigir
+                                if st.button(f"🚀 Cargar y Modificar", key=f"btn_load_p_{proj['id']}", type="primary", use_container_width=True):
                                     datos_p = db_manager.cargar_proyecto_por_id(proj["id"], usuario_id)
                                     if datos_p:
                                         cargar_proyecto_en_session(proj["modulo"], datos_p.get("datos", {}), cliente_actual)
                                         st.session_state.menu_activo = obtener_label_menu_por_modulo(proj["modulo"])
-                                        st.success(f"✅ ¡Proyecto cargado! Redirigiendo a {proj['modulo']}...")
+                                        st.success(f"✅ ¡Proyecto cargado! Redirigiendo...")
                                         st.rerun()
                             with col_p4:
                                 if st.button("🗑️ Borrar", key=f"btn_del_p_{proj['id']}", use_container_width=True):
                                     db_manager.eliminar_proyecto(proj["id"], usuario_id)
                                     st.rerun()
 
+                # Editar / Eliminar Ficha
+                with st.expander("✏️ Editar o Eliminar la Ficha de este Cliente"):
+                    with st.form(f"form_edit_cli_{cliente_actual['id']}"):
+                        ce1, ce2 = st.columns(2)
+                        with ce1:
+                            enom = st.text_input("Nombre y Apellidos o Razón Social (*):", value=cliente_actual["nombre_completo"])
+                            enif = st.text_input("NIF / DNI / CIF:", value=cliente_actual.get("nif_cif", ""))
+                            etel = st.text_input("Teléfono de Contacto:", value=cliente_actual.get("telefono", ""))
+                            eemail = st.text_input("Email:", value=cliente_actual.get("email", ""))
+                            etipo = st.selectbox("Tipo de Inmueble:", ["Vivienda Residencial", "Local Comercial", "Nave Industrial", "Garaje Comunitario / IRVE", "Edificio de Viviendas"], index=0)
+                        with ce2:
+                            edir = st.text_input("Dirección del Suministro:", value=cliente_actual.get("direccion_suministro", ""))
+                            ecp = st.text_input("Código Postal:", value=cliente_actual.get("codigo_postal", "30000"))
+                            eloc = st.text_input("Municipio / Población:", value=cliente_actual.get("localidad") or cliente_actual.get("municipio") or "Murcia")
+                            eprov = st.text_input("Provincia:", value=cliente_actual.get("provincia", "Murcia"))
+                            ecups = st.text_input("Código CUPS:", value=cliente_actual.get("cups", ""))
+                            eref = st.text_input("Referencia Catastral:", value=cliente_actual.get("referencia_catastral", ""))
+                            edist = st.selectbox("Distribuidora:", ["i-DE (Iberdrola)", "Endesa e-distribución", "UFD (Naturgy)", "E-Redes (EDP)", "Otras Distribuidoras"], index=0)
+                            epot = st.text_input("Potencia Contratada (kW):", value=cliente_actual.get("potencia_contratada_kw", "5.75"))
+                        
+                        enotas = st.text_area("Observaciones y Notas Técnicas de Obra:", value=cliente_actual.get("notas", ""))
+                        
+                        col_ebtn1, col_ebtn2 = st.columns(2)
+                        with col_ebtn1:
+                            if st.form_submit_button("💾 Guardar Modificaciones", type="primary", use_container_width=True):
+                                if not enom.strip():
+                                    st.error("El nombre del cliente no puede estar vacío.")
+                                else:
+                                    db_manager.actualizar_cliente(cliente_actual["id"], usuario_id, {
+                                        "nombre_completo": enom, "nif_cif": enif, "telefono": etel, "email": eemail,
+                                        "direccion_suministro": edir, "localidad": eloc, "codigo_postal": ecp,
+                                        "municipio": eloc, "provincia": eprov, "cups": ecups, "referencia_catastral": eref,
+                                        "distribuidora": edist, "potencia_contratada_kw": epot, "tipo_inmueble": etipo,
+                                        "notas": enotas
+                                    })
+                                    st.success("✅ Ficha técnica del cliente actualizada.")
+                                    st.rerun()
+                    
+                    if st.button("🗑️ Eliminar Definitivamente este Cliente", key=f"btn_del_cli_{cliente_actual['id']}"):
+                        db_manager.eliminar_cliente(cliente_actual["id"], usuario_id)
+                        st.warning("Cliente y proyectos asociados eliminados.")
+                        st.rerun()
+
     # =========================================================================
-    # TAB 2: ALTA DE NUEVO CLIENTE
+    # TAB 2: ALTA RÁPIDA DE NUEVO CLIENTE CON PREVENCIÓN DE DUPLICADOS
     # =========================================================================
     with tab_nuevo_cliente:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">➕ Crear Nueva Ficha de Cliente</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">➕ Alta Rápida de Nueva Ficha de Cliente</h4></div>', unsafe_allow_html=True)
+        st.caption("Introduce los datos del titular y del punto de suministro. Se utilizarán automáticamente en los presupuestos, memorias técnicas MTD y boletines CIE oficiales.")
+
         with st.container(border=True):
-            with st.form("form_nuevo_cliente_crm"):
+            with st.form("form_nuevo_cliente_crm", clear_on_submit=False):
                 col_nc1, col_nc2 = st.columns(2)
                 with col_nc1:
+                    st.markdown("##### 👤 Datos del Titular:")
                     n_nom = st.text_input("Nombre y Apellidos o Razón Social (*):", placeholder="Ej: Francisco Martínez Gómez")
                     n_nif = st.text_input("NIF / DNI / CIF:", placeholder="Ej: 48555123K")
                     n_tel = st.text_input("Teléfono de Contacto:", placeholder="Ej: 611 22 33 44")
                     n_email = st.text_input("Email:", placeholder="Ej: cliente@correo.com")
+                    n_tipo = st.selectbox("Tipo de Suministro / Inmueble:", ["Vivienda Residencial", "Local Comercial", "Nave Industrial", "Garaje Comunitario / IRVE", "Edificio de Viviendas"])
+
                 with col_nc2:
-                    n_dir = st.text_input("Dirección de la Vivienda / Suministro:", placeholder="Ej: Calle Mayor, nº 14, 2ºA")
-                    n_loc = st.text_input("Localidad y Provincia:", value="Murcia, España")
+                    st.markdown("##### ⚡ Datos del Punto de Suministro:")
+                    n_dir = st.text_input("Dirección de la Vivienda / Local:", placeholder="Ej: Calle Mayor, nº 14, 2ºA")
+                    col_cp_loc1, col_cp_loc2 = st.columns(2)
+                    with col_cp_loc1:
+                        n_cp = st.text_input("Código Postal:", value="30000")
+                    with col_cp_loc2:
+                        n_loc = st.text_input("Municipio / Población:", value="Murcia")
+                    n_prov = st.text_input("Provincia:", value="Murcia")
                     n_cups = st.text_input("Código CUPS (20-22 caracteres):", placeholder="Ej: ES0021000000000000AB1P")
-                    n_ref = st.text_input("Referencia Catastral:", placeholder="Ej: 9872023VH5797S0001WX")
+                    n_ref = st.text_input("Referencia Catastral (20 caracteres):", placeholder="Ej: 9872023VH5797S0001WX")
+                    col_dis_pot1, col_dis_pot2 = st.columns(2)
+                    with col_dis_pot1:
+                        n_dist = st.selectbox("Distribuidora Eléctrica:", ["i-DE (Iberdrola)", "Endesa e-distribución", "UFD (Naturgy)", "E-Redes (EDP)", "Otras Distribuidoras"])
+                    with col_dis_pot2:
+                        n_pot = st.text_input("Potencia Prevista / Contratada (kW):", value="5.75")
                 
-                n_tipo = st.selectbox("Tipo de Inmueble:", ["Vivienda Residencial", "Local Comercial", "Nave Industrial", "Garaje Comunitario / IRVE", "Edificio de Viviendas"])
-                n_notas = st.text_area("Observaciones y Notas Técnicas:", placeholder="Ej: Reforma integral de cuadro, cambio de potencia de 3.45kW a 5.75kW con boletín CIE.")
+                n_notas = st.text_area("Observaciones y Notas Técnicas de Obra:", placeholder="Ej: Reforma integral de cuadro eléctrico, ampliación de potencia y boletín de enganche CIE ante Industria.")
                 
-                btn_crear_c = st.form_submit_button("✨ Guardar y Registrar Cliente", type="primary", use_container_width=True)
+                btn_crear_c = st.form_submit_button("✨ Guardar y Registrar Ficha del Cliente", type="primary", use_container_width=True)
                 if btn_crear_c:
-                    if not n_nom:
+                    if not n_nom.strip():
                         st.error("El nombre del cliente es obligatorio.")
                     else:
-                        ok, nuevo_c_id = db_manager.crear_cliente(usuario_id, {
-                            "nombre_completo": n_nom,
-                            "nif_cif": n_nif,
-                            "telefono": n_tel,
-                            "email": n_email,
-                            "direccion_suministro": n_dir,
-                            "localidad": n_loc,
-                            "cups": n_cups,
-                            "referencia_catastral": n_ref,
-                            "tipo_inmueble": n_tipo,
-                            "notas": n_notas
-                        })
-                        if ok:
-                            st.success(f"✅ ¡Cliente '{n_nom}' registrado correctamente!")
+                        # Comprobar si ya existe un cliente duplicado
+                        dup = db_manager.buscar_cliente_duplicado(usuario_id, n_nif, n_nom)
+                        if dup:
+                            st.warning(f"⚠️ Ya existe una ficha registrada con este NIF o Nombre: **'{dup['nombre_completo']}'** (ID: {dup['id']}). Hemos actualizado sus datos para no duplicar fichas.")
+                            db_manager.actualizar_cliente(dup["id"], usuario_id, {
+                                "nombre_completo": n_nom, "nif_cif": n_nif, "telefono": n_tel, "email": n_email,
+                                "direccion_suministro": n_dir, "localidad": n_loc, "codigo_postal": n_cp,
+                                "municipio": n_loc, "provincia": n_prov, "cups": n_cups, "referencia_catastral": n_ref,
+                                "distribuidora": n_dist, "potencia_contratada_kw": n_pot, "tipo_inmueble": n_tipo,
+                                "notas": n_notas
+                            })
+                            st.session_state["cliente_activo_proyecto"] = dup
                             st.rerun()
                         else:
-                            st.error("Error al registrar cliente.")
+                            ok, nuevo_c_id = db_manager.crear_cliente(usuario_id, {
+                                "nombre_completo": n_nom, "nif_cif": n_nif, "telefono": n_tel, "email": n_email,
+                                "direccion_suministro": n_dir, "localidad": n_loc, "codigo_postal": n_cp,
+                                "municipio": n_loc, "provincia": n_prov, "cups": n_cups, "referencia_catastral": n_ref,
+                                "distribuidora": n_dist, "potencia_contratada_kw": n_pot, "tipo_inmueble": n_tipo,
+                                "notas": n_notas
+                            })
+                            if ok:
+                                st.success(f"✅ ¡Cliente '{n_nom}' registrado correctamente con ID #{nuevo_c_id}!")
+                                st.rerun()
+                            else:
+                                st.error("Error al registrar cliente en la base de datos.")
 
     # =========================================================================
     # TAB 3: HISTORIAL GLOBAL DE PROYECTOS
     # =========================================================================
     with tab_todos_proyectos:
-        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">📂 Todos los Proyectos Guardados en tu Base de Datos</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">📂 Expediente Global de Proyectos y Cálculos Guardados</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
-            todos_proy = db_manager.listar_proyectos_usuario(usuario_id)
-            if not todos_proy:
-                st.info("No hay proyectos guardados todavía.")
+            if not todos_proyectos:
+                st.info("No hay proyectos guardados todavía en tu cuenta.")
             else:
                 filas_tabla_proy = []
-                for p in todos_proy:
+                for p in todos_proyectos:
                     filas_tabla_proy.append({
+                        "ID": p["id"],
                         "Proyecto": p["nombre_proyecto"],
-                        "Cliente": p.get("cliente_nombre") or "General / Sin asignar",
+                        "Cliente Asignado": p.get("cliente_nombre") or "General / Sin asignar",
                         "Módulo": p["modulo"],
-                        "Resumen": p.get("resumen_potencia_o_importe", "-"),
-                        "Fecha Guardado": p.get("fecha_guardado", "")[:16]
+                        "Resumen Técnico": p.get("resumen_potencia_o_importe", "-"),
+                        "Fecha de Guardado": p.get("fecha_guardado", "")[:16]
                     })
                 st.dataframe(pd.DataFrame(filas_tabla_proy), use_container_width=True, hide_index=True)
 
@@ -257,4 +364,3 @@ def obtener_label_menu_por_modulo(modulo: str) -> str:
     elif "Cálculo Rápido" in modulo:
         return "🧮 Cálculo Rápido (CDT & Icc)"
     return "🏠 Menú Principal"
-
