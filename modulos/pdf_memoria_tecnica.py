@@ -11,6 +11,7 @@ Comunidad Autónoma de la Región de Murcia (CARM) en sustitución del formato p
 
 import io
 import os
+import base64
 import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -21,6 +22,112 @@ from reportlab.graphics.shapes import Drawing, Rect, Line, String, Circle, Group
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
+
+
+def _crear_imagen_flowable(img_data, max_w=18.0*cm, max_h=20.0*cm):
+    """
+    Convierte datos de imagen o PDF (bytes, base64 data-URI, path o BytesIO)
+    en un flowable Image de ReportLab escalado proporcionalmente.
+    Soporta PNG, JPG, JPEG, WEBP y archivos PDF de una página (AutoCAD/Cade_Simu).
+    """
+    if not img_data:
+        return None
+    try:
+        raw_bytes = None
+        if isinstance(img_data, str):
+            if img_data.startswith("data:"):
+                # Data URL base64
+                _, data_part = img_data.split(",", 1)
+                raw_bytes = base64.b64decode(data_part)
+            elif os.path.exists(img_data):
+                with open(img_data, "rb") as f:
+                    raw_bytes = f.read()
+            else:
+                try:
+                    raw_bytes = base64.b64decode(img_data)
+                except Exception:
+                    return None
+        elif isinstance(img_data, bytes):
+            raw_bytes = img_data
+        elif hasattr(img_data, "read") or hasattr(img_data, "getvalue"):
+            raw_bytes = img_data.getvalue() if hasattr(img_data, "getvalue") else img_data.read()
+            
+        if not raw_bytes:
+            return None
+
+        # Si es un archivo PDF de una página, convertir a PNG con PyMuPDF
+        if raw_bytes.startswith(b"%PDF"):
+            try:
+                import fitz
+                pdf_doc = fitz.open(stream=raw_bytes, filetype="pdf")
+                if len(pdf_doc) > 0:
+                    page = pdf_doc[0]
+                    pix = page.get_pixmap(dpi=150)
+                    raw_bytes = pix.tobytes("png")
+                pdf_doc.close()
+            except Exception as ex_pdf:
+                print(f"Error procesando PDF para anexo: {ex_pdf}")
+                return None
+
+        bio = io.BytesIO(raw_bytes)
+        from PIL import Image as PILImage
+        with PILImage.open(bio) as pil_im:
+            orig_w, orig_h = pil_im.size
+
+        ratio = min(max_w / orig_w, max_h / orig_h)
+        target_w = orig_w * ratio
+        target_h = orig_h * ratio
+
+        bio.seek(0)
+        return Image(bio, width=target_w, height=target_h)
+    except Exception as e:
+        print(f"Error procesando imagen para ReportLab: {e}")
+        return None
+
+
+def _crear_anexo_plano_flowables(titulo_anexo: str, subtitulo_anexo: str, img_data, exped: str, c_primary, c_border, h_section, body_style):
+    """
+    Genera el bloque de página completa oficial para Anexos I(a), I(b) o II:
+    Cajetín superior oficial DGEAIM Murcia + Imagen centrada + Pie de referencia de expediente.
+    """
+    flowables = []
+    flowables.append(PageBreak())
+    
+    # Encabezado Oficial
+    t_hdr = Table([[Paragraph("MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+    ])
+    flowables.append(t_hdr)
+    flowables.append(Spacer(1, 4))
+    
+    # Título y Subtítulo
+    flowables.append(Paragraph(f"<b><font size='9' color='#0f172a'>{titulo_anexo}</font></b>", ParagraphStyle('AnxT', parent=body_style, alignment=1)))
+    flowables.append(Paragraph(f"<b><font size='10.5' color='#0369a1'><u>{subtitulo_anexo}</u></font></b>", ParagraphStyle('AnxSub', parent=body_style, alignment=1)))
+    flowables.append(Spacer(1, 5))
+    
+    # Imagen del plano escalada
+    img_flow = _crear_imagen_flowable(img_data, max_w=18.0*cm, max_h=20.0*cm)
+    if img_flow:
+        t_img = Table([[img_flow]], colWidths=[18.4*cm], style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOX', (0,0), (-1,-1), 0.5, c_border),
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f8fafc")),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ])
+        flowables.append(t_img)
+    else:
+        t_no_img = Table([[Paragraph("<i>[Plano no disponible o formato no reconocido]</i>", body_style)]], colWidths=[18.4*cm])
+        flowables.append(t_no_img)
+        
+    flowables.append(Spacer(1, 4))
+    flowables.append(Paragraph(f"<font size='6.5' color='#64748b'>Dirección General de Energía y Actividad Industrial y Minera | Ref. Expediente: {exped}</font>", ParagraphStyle('FootAnx', parent=body_style, alignment=2)))
+    
+    return flowables
 
 class NumberedCanvasMTDMurciaOficial(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -474,14 +581,63 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     story.append(KeepTogether(firma_box))
 
     # =========================================================================
-    # PÁGINA 2: ANEXO III - ESQUEMA UNIFILAR NORMALIZADO (DGEAIM MURCIA)
+    # PLANOS OFICIALES ANEXOS I(a), I(b) Y II (SI HAN SIDO ADJUNTADOS)
+    # =========================================================================
+    anexos = datos_mtd.get("anexos", {})
+    plano_sit = anexos.get("plano_situacion")
+    plano_emp = anexos.get("plano_emplazamiento")
+    plano_dist = anexos.get("plano_distribucion")
+    unifilar_modo = anexos.get("unifilar_modo", "auto")
+    plano_unif_custom = anexos.get("plano_unifilar_custom")
+
+    # ANEXO I (a): PLANO DE SITUACIÓN
+    if plano_sit:
+        story.extend(_crear_anexo_plano_flowables(
+            "ANEXO I (a)",
+            "PLANO DE SITUACIÓN",
+            plano_sit,
+            expediente,
+            c_primary,
+            c_border,
+            h_section,
+            body_style
+        ))
+
+    # ANEXO I (b): PLANO DE EMPLAZAMIENTO
+    if plano_emp:
+        story.extend(_crear_anexo_plano_flowables(
+            "ANEXO I (b)",
+            "PLANO DE EMPLAZAMIENTO",
+            plano_emp,
+            expediente,
+            c_primary,
+            c_border,
+            h_section,
+            body_style
+        ))
+
+    # ANEXO II: PLANO EN PLANTA DE DISTRIBUCIÓN
+    if plano_dist:
+        story.extend(_crear_anexo_plano_flowables(
+            "ANEXO II",
+            "PLANO EN PLANTA DE DISTRIBUCIÓN INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN",
+            plano_dist,
+            expediente,
+            c_primary,
+            c_border,
+            h_section,
+            body_style
+        ))
+
+    # =========================================================================
+    # ANEXO III - ESQUEMA UNIFILAR (DGEAIM MURCIA)
     # =========================================================================
     story.append(PageBreak())
     
     logo_p2 = _crear_logo_flowable(width=4.6*cm, height=2.57*cm)
     anx_hdr_data = [
         [
-            Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO (RD 842/2002)</b><br/><font size='8' color='#0369a1'><b>ANEXO III: ESQUEMA UNIFILAR NORMALIZADO (ITC-BT-25)</b></font><br/><font size='6.5' color='#475569'>Región de Murcia - Dirección General de Industria, Energía y Minas</font>", body_style),
+            Paragraph(f"<b>MEMORIA TÉCNICA DE DISEÑO (RD 842/2002)</b><br/><font size='8' color='#0369a1'><b>ANEXO III: ESQUEMA UNIFILAR {'PERSONALIZADO (AUTOCAD/CADE_SIMU)' if (unifilar_modo == 'custom' and plano_unif_custom) else 'NORMALIZADO (ITC-BT-25)'}</b></font><br/><font size='6.5' color='#475569'>Región de Murcia - Dirección General de Industria, Energía y Minas</font>", body_style),
             logo_p2 if logo_p2 else Paragraph("<b>BOLIMUR</b>", ParagraphStyle('HdrB2', parent=body_style, alignment=2))
         ]
     ]
@@ -681,12 +837,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     dwg.add(String(50, 19, "RED DE TIERRA (PE - ITC-BT-18):", fontName="Helvetica-Bold", fontSize=6.0, fillColor=colors.HexColor("#92400e")))
     dwg.add(String(50, 10, "Línea Enlace Cu 1x10 mm² | Picas de tierra 2m | <b>Resistencia Medida: Rt = 11.8 Ω</b> (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
 
-    story.append(dwg)
-    story.append(Spacer(1, 4))
-
-
-
-    # Tabla explicativa de componentes del unifilar
+    # Tabla explicativa de componentes del unifilar automático
     t_unif_desc = [
         [
             Paragraph("<b>Elemento</b>", bold_style),
@@ -722,8 +873,32 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('BOTTOMPADDING', (0,0), (-1,-1), 2),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
-    story.append(t_u_tab)
-    story.append(Spacer(1, 4))
+
+    # Si el usuario ha adjuntado su propio plano unifilar (AutoCAD / Cade_Simu / Imagen)
+    if unifilar_modo == "custom" and plano_unif_custom:
+        img_custom = _crear_imagen_flowable(plano_unif_custom, max_w=18.4*cm, max_h=21.0*cm)
+        if img_custom:
+            t_custom = Table([[img_custom]], colWidths=[18.4*cm], style=[
+                ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('BOX', (0,0), (-1,-1), 0.6, c_border),
+                ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#ffffff")),
+                ('TOPPADDING', (0,0), (-1,-1), 4),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ])
+            story.append(t_custom)
+            story.append(Spacer(1, 4))
+        else:
+            story.append(dwg)
+            story.append(Spacer(1, 4))
+            story.append(t_u_tab)
+            story.append(Spacer(1, 4))
+    else:
+        # Esquema unifilar vectorial automático de Bolimur
+        story.append(dwg)
+        story.append(Spacer(1, 4))
+        story.append(t_u_tab)
+        story.append(Spacer(1, 4))
 
     # =========================================================================
     # PÁGINA 3: ANEXO IV - DIMENSIONAMIENTO Y CÁLCULOS JUSTIFICATIVOS

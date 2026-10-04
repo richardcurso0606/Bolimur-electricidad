@@ -143,4 +143,38 @@ def test_generar_pdf_mtd_cuadro_obra_itc_bt_33():
     assert len(pdf_bytes) > 10000
     assert pdf_bytes.startswith(b"%PDF")
 
+def test_generar_pdf_mtd_con_anexos_graficos_y_unifilar_personalizado():
+    import io, base64
+    from PIL import Image as PILImage
+    
+    # Crear imagen PNG simulada para planos
+    im_dummy = PILImage.new('RGB', (400, 300), color='white')
+    bio_dummy = io.BytesIO()
+    im_dummy.save(bio_dummy, format='PNG')
+    dummy_b64 = "data:image/png;base64," + base64.b64encode(bio_dummy.getvalue()).decode('utf-8')
+    
+    datos_anexos = {
+        "tipo_instalacion": "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
+        "tipo_tramitacion": "🆕 Nueva Instalación",
+        "titular": {"nombre": "Beatriz Iriarte Quiroz", "nif": "34330049L"},
+        "emplazamiento": {"direccion": "Calle Cruceta 11", "municipio": "Murcia", "cups": "ES0021000000000000XX", "uso": "Vivienda"},
+        "instalador": {"empresa": "BOLIMUR", "nombre": "Richard Orlando Choque", "licencia": "REBT-30/15892"},
+        "suministro": {"potencia_instalada_w": 9200, "tension": "Monofásico (230 V)"},
+        "protecciones": {"iga_amperaje": 40},
+        "circuitos": [],
+        "expediente": "EXP-MUR-2026-001",
+        "anexos": {
+            "plano_situacion": dummy_b64,
+            "plano_emplazamiento": dummy_b64,
+            "plano_distribucion": dummy_b64,
+            "unifilar_modo": "custom",
+            "plano_unifilar_custom": dummy_b64
+        }
+    }
+    pdf_bytes = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_anexos)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 12000
+    assert pdf_bytes.startswith(b"%PDF")
+
+
 

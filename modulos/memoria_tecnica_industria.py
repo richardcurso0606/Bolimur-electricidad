@@ -10,6 +10,8 @@ import streamlit as st
 import datetime
 import math
 import json
+import io
+import base64
 from modulos import rebt_tablas as rebt
 from modulos import pdf_memoria_tecnica
 from modulos import db_manager, auth_manager
@@ -24,6 +26,44 @@ MUNICIPIOS_MURCIA_OFICIALES = [
     "Moratalla", "Lorquí", "Abanilla", "Blanca", "Librilla", "Pliego",
     "Villanueva del Río Segura", "Campos del Río", "Ricote", "Ulea", "Ojós"
 ]
+
+def procesar_archivo_anexo(uploaded_file) -> str:
+    """
+    Convierte el archivo subido (imagen o PDF de 1 página exportado de AutoCAD/Cade_Simu)
+    en un string data-URI base64 optimizado para almacenamiento y ReportLab.
+    """
+    if uploaded_file is None:
+        return ""
+    try:
+        raw_bytes = uploaded_file.getvalue()
+        # Si es un PDF, renderizar primera página a PNG con PyMuPDF
+        if raw_bytes.startswith(b"%PDF"):
+            try:
+                import fitz
+                pdf_doc = fitz.open(stream=raw_bytes, filetype="pdf")
+                if len(pdf_doc) > 0:
+                    page = pdf_doc[0]
+                    pix = page.get_pixmap(dpi=150)
+                    raw_bytes = pix.tobytes("png")
+                pdf_doc.close()
+            except Exception as e_pdf:
+                st.error(f"Error procesando archivo PDF: {e_pdf}")
+                return ""
+
+        from PIL import Image as PILImage
+        bio_in = io.BytesIO(raw_bytes)
+        with PILImage.open(bio_in) as im:
+            if im.mode in ("RGBA", "P"):
+                im = im.convert("RGB")
+            # Redimensionar si es muy grande manteniendo proporciones
+            im.thumbnail((1600, 1600), PILImage.Resampling.LANCZOS)
+            bio_out = io.BytesIO()
+            im.save(bio_out, format="JPEG", quality=85, optimize=True)
+            b64_str = base64.b64encode(bio_out.getvalue()).decode("utf-8")
+            return f"data:image/jpeg;base64,{b64_str}"
+    except Exception as e:
+        st.error(f"Error procesando imagen del plano: {e}")
+        return ""
 
 def cargar_plantilla_por_tipo(tipo: str):
     """
@@ -279,13 +319,14 @@ def renderizar():
     # =========================================================================
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏛️ 2. Formulario Oficial Normalizado de la Memoria Técnica de Diseño (DGEAIM Murcia)</h4></div>', unsafe_allow_html=True)
     
-    tab_f1, tab_f2, tab_f3, tab_f4, tab_f5, tab_f6 = st.tabs([
+    tab_f1, tab_f2, tab_f3, tab_f4, tab_f5, tab_f6, tab_f7 = st.tabs([
         "📍 Titular y Emplazamiento",
         "👷 Empresa e Instalador",
         "⚡ Suministro y Potencias",
         "🛡️ Cuadro CGMP y Protecciones",
         "📋 Circuitos Derivados",
-        "🧪 Protocolo Ensayos (BT-05)"
+        "🧪 Protocolo Ensayos (BT-05)",
+        "🗺️ Planos y Anexos Gráficos (I, II y III)"
     ])
 
     # --- TAB 1: TITULAR Y EMPLAZAMIENTO ---
@@ -430,6 +471,87 @@ def renderizar():
         else:
             st.error("⚠️ **HAY MEDIDAS QUE SUPERAN LOS LÍMITES REGLAMENTARIOS DEL REBT.** Subsanar anomalías antes de la tramitación ante Industria.")
 
+    # --- TAB 7: PLANOS Y ANEXOS OFICIALES (I, II Y III) ---
+    with tab_f7:
+        st.markdown("##### 🗺️ Planos Oficiales y Anexos Gráficos de la Memoria Técnica (DGEAIM Murcia):")
+        st.caption("Adjunta los planos de situación, emplazamiento y distribución para que se incorporen automáticamente en el PDF oficial en sus páginas normalizadas. También puedes elegir si usar el unifilar automático de Bolimur o adjuntar tu propio unifilar en CAD.")
+
+        col_anx1, col_anx2 = st.columns(2)
+        with col_anx1:
+            st.markdown("###### 🗺️ Anexo I (a): Plano de Situación")
+            st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
+            up_sit = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_sit")
+            if up_sit is not None:
+                b64_sit = procesar_archivo_anexo(up_sit)
+                if b64_sit:
+                    st.session_state["mtd_plano_situacion"] = b64_sit
+            if st.session_state.get("mtd_plano_situacion"):
+                st.image(st.session_state["mtd_plano_situacion"], caption="Plano de Situación cargado", use_container_width=True)
+                if st.button("🗑️ Quitar Plano de Situación", key="btn_del_sit"):
+                    st.session_state.pop("mtd_plano_situacion", None)
+                    st.rerun()
+
+            st.markdown("---")
+            st.markdown("###### 📐 Anexo II: Plano en Planta de Distribución en B.T.")
+            st.caption("Plano en planta de la vivienda, local o nave con tomas, alumbrado y cuadro (AutoCAD / Plano arquitectónico).")
+            up_dist = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_dist")
+            if up_dist is not None:
+                b64_dist = procesar_archivo_anexo(up_dist)
+                if b64_dist:
+                    st.session_state["mtd_plano_distribucion"] = b64_dist
+            if st.session_state.get("mtd_plano_distribucion"):
+                st.image(st.session_state["mtd_plano_distribucion"], caption="Plano de Distribución cargado", use_container_width=True)
+                if st.button("🗑️ Quitar Plano de Distribución", key="btn_del_dist"):
+                    st.session_state.pop("mtd_plano_distribucion", None)
+                    st.rerun()
+
+        with col_anx2:
+            st.markdown("###### 📍 Anexo I (b): Plano de Emplazamiento (Catastro)")
+            st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
+            up_emp = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_emp")
+            if up_emp is not None:
+                b64_emp = procesar_archivo_anexo(up_emp)
+                if b64_emp:
+                    st.session_state["mtd_plano_emplazamiento"] = b64_emp
+            if st.session_state.get("mtd_plano_emplazamiento"):
+                st.image(st.session_state["mtd_plano_emplazamiento"], caption="Plano de Emplazamiento cargado", use_container_width=True)
+                if st.button("🗑️ Quitar Plano de Emplazamiento", key="btn_del_emp"):
+                    st.session_state.pop("mtd_plano_emplazamiento", None)
+                    st.rerun()
+
+            st.markdown("---")
+            st.markdown("###### ⚡ Anexo III: Esquema Unifilar Oficial")
+            st.caption("Elige si deseas que Bolimur genere el unifilar vectorial oficial o si prefieres anexar tu propio plano unifilar:")
+            
+            opciones_unifilar = [
+                "🔹 Generar Esquema Unifilar Automático de Bolimur (Vectorial UNE-EN 60617)",
+                "📁 Adjuntar mi Propio Plano de Esquema Unifilar (AutoCAD / Cade_Simu / PDF)"
+            ]
+            modo_def_idx = 1 if st.session_state.get("mtd_unifilar_modo") == "custom" else 0
+            sel_modo_unif = st.radio(
+                "Modo de Generación del Esquema Unifilar:",
+                opciones_unifilar,
+                index=modo_def_idx,
+                key="radio_sel_modo_unif"
+            )
+            
+            if "Adjuntar mi Propio" in sel_modo_unif:
+                st.session_state["mtd_unifilar_modo"] = "custom"
+                up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_unif_custom")
+                if up_unif is not None:
+                    b64_unif = procesar_archivo_anexo(up_unif)
+                    if b64_unif:
+                        st.session_state["mtd_plano_unifilar_custom"] = b64_unif
+                if st.session_state.get("mtd_plano_unifilar_custom"):
+                    st.image(st.session_state["mtd_plano_unifilar_custom"], caption="Tu Esquema Unifilar Personalizado", use_container_width=True)
+                    st.success("✅ Tu propio esquema unifilar se insertará en el Anexo III con el cajetín oficial de Industria.")
+                    if st.button("🗑️ Quitar Unifilar Propio", key="btn_del_unif"):
+                        st.session_state.pop("mtd_plano_unifilar_custom", None)
+                        st.rerun()
+            else:
+                st.session_state["mtd_unifilar_modo"] = "auto"
+                st.info("ℹ️ Bolimur generará automáticamente el esquema unifilar vectorial con las protecciones IGA, diferenciales y circuitos configurados en las pestañas anteriores.")
+
     # =========================================================================
     # 3. GUARDAR VINCULADO AL CLIENTE (CRM) Y GENERACIÓN DE DOCUMENTACIÓN OFICIAL
     # =========================================================================
@@ -480,7 +602,12 @@ def renderizar():
                         "mtd_in_med_aisl": med_aisl,
                         "mtd_in_med_rt": med_rt,
                         "mtd_in_med_dif_ma": med_dif_ma,
-                        "mtd_in_med_dif_ms": med_dif_ms
+                        "mtd_in_med_dif_ms": med_dif_ms,
+                        "mtd_plano_situacion": st.session_state.get("mtd_plano_situacion", ""),
+                        "mtd_plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
+                        "mtd_plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
+                        "mtd_unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
+                        "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", "")
                     }
                     resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"
                     ok, p_id = db_manager.guardar_proyecto(
@@ -560,7 +687,14 @@ def renderizar():
                 "dif_ma": med_dif_ma,
                 "dif_ms": med_dif_ms
             },
-            "circuitos": st.session_state.get("mtd_circuitos", [])
+            "circuitos": st.session_state.get("mtd_circuitos", []),
+            "anexos": {
+                "plano_situacion": st.session_state.get("mtd_plano_situacion", ""),
+                "plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
+                "plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
+                "unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
+                "plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", "")
+            }
         }
 
         tab_doc1, tab_doc2, tab_doc3 = st.tabs([
