@@ -118,6 +118,158 @@ def inicializar_bd():
     )
     """)
 
+def escanear_perfiles_navegador_chrome() -> List[Dict[str, str]]:
+    """
+    Escanea automáticamente todos los perfiles de Google Chrome instalados en este navegador/dispositivo
+    leyendo el archivo Local State de Chrome. Si está en la nube, provee el catálogo completo de perfiles de Chrome.
+    """
+    perfiles = []
+    rutas_navegadores = [
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data" / "Local State",
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "Edge" / "User Data" / "Local State"
+    ]
+    
+    for ruta in rutas_navegadores:
+        if ruta.exists():
+            try:
+                data = json.loads(ruta.read_text(encoding="utf-8"))
+                info_cache = data.get("profile", {}).get("info_cache", {})
+                for prof_id, info in info_cache.items():
+                    user_email = (info.get("user_name") or "").strip().lower()
+                    nombre_perfil = info.get("name") or info.get("gaia_name") or prof_id
+                    gaia_nom = info.get("gaia_name") or nombre_perfil
+                    
+                    if not user_email and "fremm" in nombre_perfil.lower():
+                        user_email = "fremm.instalador@gmail.com"
+                    elif not user_email:
+                        user_email = f"{nombre_perfil.lower().replace(' ', '_')}@bolimur.local"
+                        
+                    perfiles.append({
+                        "email": user_email,
+                        "nombre": nombre_perfil,
+                        "nombre_completo": gaia_nom
+                    })
+            except Exception:
+                pass
+                
+    # Si no se ejecutó localmente o estamos en Streamlit Cloud, catálogo oficial con los 11 perfiles de Chrome
+    if not perfiles:
+        perfiles = [
+            {"email": "beatriz150675@gmail.com", "nombre": "Beatriz (Trabajo)", "nombre_completo": "Beatriz Iriarte Quiroz"},
+            {"email": "bismargonzalochoquetejerina15@gmail.com", "nombre": "bismar gonzalo", "nombre_completo": "bismar gonzalo choque tejerina"},
+            {"email": "euforiamix0606@gmail.com", "nombre": "EUFORIA", "nombre_completo": "EUFORIA MIX"},
+            {"email": "fremm.instalador@gmail.com", "nombre": "FREMM", "nombre_completo": "FREMM Instaladores Murcia"},
+            {"email": "richardcurso0606@gmail.com", "nombre": "Richard (RC0606)", "nombre_completo": "R Cursos curso"},
+            {"email": "richardemprendemurcia@gmail.com", "nombre": "Richard emprende", "nombre_completo": "Richard emprende"},
+            {"email": "rc06061970@gmail.com", "nombre": "Richard FREM", "nombre_completo": "Richard FREM"},
+            {"email": "richardpililo@gmail.com", "nombre": "Richard Orlando (Pililo)", "nombre_completo": "Richard Orlando Choque Tejerina"},
+            {"email": "richardkpricho@gmail.com", "nombre": "Richard Orlando (Kpricho)", "nombre_completo": "Richard Orlando Choque Tejerina"},
+            {"email": "13789477@alu.murciaeduca.es", "nombre": "RICHARD ORLANDO (Murcia Educa)", "nombre_completo": "RICHARD ORLANDO CHOQUE TEJERINA"},
+            {"email": "richardcursoarchivo@gmail.com", "nombre": "RIichard", "nombre_completo": "RIichard Tejerina"},
+            {"email": "RC0606@HOTMAIL.COM", "nombre": "RC0606", "nombre_completo": "Richard rc0606"}
+        ]
+        
+    return perfiles
+
+def inicializar_bd():
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    
+    # Tabla de Usuarios / Instaladores
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE,
+        username_windows TEXT,
+        password_hash TEXT,
+        nombre_instalador TEXT,
+        nombre_empresa TEXT,
+        nif_cif TEXT,
+        num_licencia_rebt TEXT,
+        categoria_rebt TEXT,
+        registro_industrial TEXT,
+        direccion TEXT,
+        localidad TEXT,
+        telefono TEXT,
+        email_contacto TEXT,
+        logo_base64 TEXT,
+        iban TEXT,
+        google_id TEXT,
+        avatar_url TEXT,
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    
+    # Comprobar columnas adicionales si la tabla ya existía
+    cursor.execute("PRAGMA table_info(usuarios)")
+    cols_existentes = [row[1] for row in cursor.fetchall()]
+    if "google_id" not in cols_existentes:
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN google_id TEXT")
+        except Exception:
+            pass
+    if "avatar_url" not in cols_existentes:
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN avatar_url TEXT")
+        except Exception:
+            pass
+    
+    # Tabla de Clientes
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clientes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        nombre_completo TEXT NOT NULL,
+        nif_cif TEXT,
+        telefono TEXT,
+        email TEXT,
+        direccion_suministro TEXT,
+        localidad TEXT,
+        cups TEXT,
+        referencia_catastral TEXT,
+        tipo_inmueble TEXT,
+        notas TEXT,
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+    )
+    """)
+    
+    # Comprobar columnas adicionales en tabla clientes
+    cursor.execute("PRAGMA table_info(clientes)")
+    cols_cli_existentes = [row[1] for row in cursor.fetchall()]
+    cols_cli_nuevas = [
+        ("usuario_email", "TEXT"),
+        ("codigo_postal", "TEXT"),
+        ("municipio", "TEXT"),
+        ("provincia", "TEXT"),
+        ("distribuidora", "TEXT"),
+        ("potencia_contratada_kw", "TEXT"),
+        ("tension_suministro", "TEXT")
+    ]
+    for col_nom, col_tipo in cols_cli_nuevas:
+        if col_nom not in cols_cli_existentes:
+            try:
+                cursor.execute(f"ALTER TABLE clientes ADD COLUMN {col_nom} {col_tipo}")
+            except Exception:
+                pass
+
+    # Tabla de Proyectos y Cálculos Guardados por Cliente
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS proyectos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        usuario_email TEXT,
+        cliente_id INTEGER,
+        nombre_proyecto TEXT NOT NULL,
+        modulo TEXT NOT NULL,
+        datos_json TEXT NOT NULL,
+        resumen_potencia_o_importe TEXT,
+        fecha_guardado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
+        FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
+    )
+    """)
+
     cursor.execute("PRAGMA table_info(proyectos)")
     cols_pro_existentes = [row[1] for row in cursor.fetchall()]
     if "usuario_email" not in cols_pro_existentes:
@@ -126,35 +278,34 @@ def inicializar_bd():
         except Exception:
             pass
     
-    # Cuentas pre-configuradas para acceso rápido
-    cuentas_google_base = [
-        ("Euforiamix0606@gmail.com", "Richard Orlando (Euforia)", "BOLIMUR ELECTRICIDAD", "REBT-30/15892"),
-        ("13789477@alu.murciaeduca.es", "Richard Orlando Choque", "FREMM / Murcia Educa", "REBT-30/15892"),
-        ("richardcurso0606@gmail.com", "Richard (RC0606)", "BOLIMUR INSTALACIONES Y REFORMAS", "REBT-30/15892"),
-        ("richard.emprende@gmail.com", "Richard Emprende", "BOLIMUR INSTALACIONES", "REBT-30/15892"),
-        ("fremm.instalador@gmail.com", "Richard FREMM", "FREMM INSTALADORES MURCIA", "REBT-30/15892")
-    ]
-    for email_g, nom_g, emp_g, lic_g in cuentas_google_base:
-        cursor.execute("SELECT id FROM usuarios WHERE LOWER(email) = LOWER(?)", (email_g,))
-        if not cursor.fetchone():
+    # Registrar automáticamente todos los perfiles de Chrome detectados
+    perfiles_detectados = escanear_perfiles_navegador_chrome()
+    for p in perfiles_detectados:
+        email_p = p["email"].strip().lower()
+        cursor.execute("SELECT id, nombre_instalador FROM usuarios WHERE LOWER(email) = LOWER(?)", (email_p,))
+        row_u = cursor.fetchone()
+        if not row_u:
             cursor.execute("""
             INSERT INTO usuarios (
                 email, username_windows, password_hash, nombre_instalador, nombre_empresa,
                 num_licencia_rebt, categoria_rebt, localidad, telefono, email_contacto
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                email_g.strip().lower(),
-                email_g.split('@')[0],
+                email_p,
+                email_p.split('@')[0],
                 hashear_password("123456"),
-                nom_g,
-                emp_g,
-                lic_g,
+                p["nombre"],
+                "BOLIMUR INSTALACIONES Y REFORMAS",
+                "REBT-30/15892",
                 "Instalador Especialista (IBTE)",
                 "Murcia, España",
                 "+34 600 000 000",
-                email_g
+                email_p
             ))
-            conn.commit()
+        else:
+            # Actualizar nombre visible del perfil si cambió
+            cursor.execute("UPDATE usuarios SET nombre_instalador = ? WHERE id = ?", (p["nombre"], row_u[0]))
+        conn.commit()
 
     conn.close()
 

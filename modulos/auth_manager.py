@@ -225,15 +225,26 @@ def renderizar_pantalla_login():
             st.markdown("##### 🔴 Elige tu Cuenta de Google para Iniciar Sesión")
             st.caption("Selecciona tu cuenta con un toque para acceder a tu base de datos y expedientes privados.")
 
-            # Listado de Cuentas de Google Disponibles en el Dispositivo
+            # Listado de Cuentas de Google / Perfiles de Chrome Detectados
             usuarios_guardados = db_manager.listar_todos_usuarios()
             if usuarios_guardados:
-                st.markdown("###### 👥 Cuentas de Google en este dispositivo (Toca para entrar en 1 clic):")
-                for u in usuarios_guardados:
+                st.markdown(f"###### 👥 Perfiles de Google Chrome Detectados ({len(usuarios_guardados)} perfiles disponibles):")
+                filtro_perfil = st.text_input("🔍 Buscar perfil o correo:", placeholder="Escribe para filtrar...", key="filtro_auth_perfil")
+                
+                usuarios_a_mostrar = usuarios_guardados
+                if filtro_perfil:
+                    q = filtro_perfil.strip().lower()
+                    usuarios_a_mostrar = [
+                        u for u in usuarios_guardados 
+                        if q in (u.get("nombre_instalador") or "").lower() 
+                        or q in (u.get("email") or "").lower()
+                    ]
+                
+                for u in usuarios_a_mostrar:
                     u_email = u.get("email", "")
                     u_nom = u.get("nombre_instalador") or u.get("nombre_empresa") or "Instalador"
                     with st.container(border=True):
-                        col_u1, col_u2 = st.columns([3, 1.3])
+                        col_u1, col_u2 = st.columns([3.2, 1.2])
                         with col_u1:
                             st.markdown(f"**🔴 {u_nom}**  \n`{u_email}`")
                         with col_u2:
