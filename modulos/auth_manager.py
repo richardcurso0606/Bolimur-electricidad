@@ -350,40 +350,19 @@ def renderizar_pantalla_login():
             <body>
             <div id="cuentas-container"></div>
             <div style="text-align: right; margin-top: 6px;">
-                <button id="btn-reset-perfiles" onclick="restaurarPerfilesChrome()" style="background: none; border: none; color: #0284c7; font-size: 11.5px; cursor: pointer; text-decoration: underline;">🔄 Restaurar lista de perfiles de Chrome</button>
+                <button id="btn-limpiar-perfiles" onclick="limpiarCuentasEsteNavegador()" style="background: none; border: none; color: #94a3b8; font-size: 11px; cursor: pointer; text-decoration: underline;">🧹 Limpiar lista de este navegador</button>
             </div>
 
             <script>
-                var PRESET_CUENTAS = [
-                    { email: 'richardcurso0606@gmail.com', nombre: 'R Cursos (Richard Curso)', favorita: true },
-                    { email: 'euforiamix0606@gmail.com', nombre: 'EUFORIA', favorita: false },
-                    { email: '13789477@alu.murciaeduca.es', nombre: 'RICHARD ORLANDO (Murcia Educa)', favorita: false },
-                    { email: 'richard.rc0606@gmail.com', nombre: 'Richard (RC0606)', favorita: false },
-                    { email: 'richard.emprende@gmail.com', nombre: 'Richard Emprende', favorita: false },
-                    { email: 'richard.frem@gmail.com', nombre: 'Richard FREM', favorita: false },
-                    { email: 'richard.orlando@gmail.com', nombre: 'Richard Orlando', favorita: false },
-                    { email: 'beatriz.trabajo@gmail.com', nombre: 'Beatriz (Trabajo)', favorita: false },
-                    { email: 'bismar.gonzalo@gmail.com', nombre: 'Bismar Gonzalo', favorita: false },
-                    { email: 'fremm.instalador@gmail.com', nombre: 'FREMM', favorita: false },
-                    { email: 'riichard@gmail.com', nombre: 'Riichard', favorita: false }
-                ];
-
                 function obtenerCuentas() {
                     var raw = localStorage.getItem('bolimur_cuentas_navegador');
-                    if (!raw) {
-                        localStorage.setItem('bolimur_cuentas_navegador', JSON.stringify(PRESET_CUENTAS));
-                        return PRESET_CUENTAS;
-                    }
                     var cuentas = [];
                     try {
-                        cuentas = JSON.parse(raw);
+                        cuentas = raw ? JSON.parse(raw) : [];
                     } catch(e) {
                         cuentas = [];
                     }
-                    if (!Array.isArray(cuentas) || cuentas.length === 0) {
-                        cuentas = PRESET_CUENTAS;
-                        localStorage.setItem('bolimur_cuentas_navegador', JSON.stringify(cuentas));
-                    }
+                    if (!Array.isArray(cuentas)) cuentas = [];
                     return cuentas;
                 }
 
@@ -392,9 +371,9 @@ def renderizar_pantalla_login():
                     renderizarCuentas();
                 }
 
-                function restaurarPerfilesChrome() {
-                    if (confirm('¿Restaurar todos los perfiles de Chrome en la lista?')) {
-                        localStorage.setItem('bolimur_cuentas_navegador', JSON.stringify(PRESET_CUENTAS));
+                function limpiarCuentasEsteNavegador() {
+                    if (confirm('¿Vaciar la lista de cuentas recordadas en este navegador?')) {
+                        localStorage.removeItem('bolimur_cuentas_navegador');
                         renderizarCuentas();
                     }
                 }
@@ -404,7 +383,7 @@ def renderizar_pantalla_login():
                     var cuentas = obtenerCuentas();
 
                     if (cuentas.length === 0) {
-                        container.innerHTML = '<div class="empty-box">ℹ️ No hay cuentas guardadas en este navegador.<br>Añade tu cuenta en el formulario de abajo para entrar.</div>';
+                        container.innerHTML = '<div class="empty-box">ℹ️ Este navegador no tiene cuentas recordadas todavía.<br>Escribe tu cuenta en el formulario de abajo para guardarla en este navegador.</div>';
                         return;
                     }
 
@@ -432,7 +411,7 @@ def renderizar_pantalla_login():
 
                     // 2. Sección Otras Cuentas
                     if (otras.length > 0) {
-                        html += '<div class="section-header">🌐 Otros Perfiles del Navegador (' + otras.length + ')</div>';
+                        html += '<div class="section-header">🌐 Otras Cuentas en este Navegador (' + otras.length + ')</div>';
                         otras.forEach(function(item) {
                             html += renderCard(item, false);
                         });
