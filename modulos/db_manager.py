@@ -118,58 +118,7 @@ def inicializar_bd():
     )
     """)
 
-def escanear_perfiles_navegador_chrome() -> List[Dict[str, str]]:
-    """
-    Escanea automáticamente todos los perfiles de Google Chrome instalados en este navegador/dispositivo
-    leyendo el archivo Local State de Chrome. Si está en la nube, provee el catálogo completo de perfiles de Chrome.
-    """
-    perfiles = []
-    rutas_navegadores = [
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data" / "Local State",
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "Edge" / "User Data" / "Local State"
-    ]
-    
-    for ruta in rutas_navegadores:
-        if ruta.exists():
-            try:
-                data = json.loads(ruta.read_text(encoding="utf-8"))
-                info_cache = data.get("profile", {}).get("info_cache", {})
-                for prof_id, info in info_cache.items():
-                    user_email = (info.get("user_name") or "").strip().lower()
-                    nombre_perfil = info.get("name") or info.get("gaia_name") or prof_id
-                    gaia_nom = info.get("gaia_name") or nombre_perfil
-                    
-                    if not user_email and "fremm" in nombre_perfil.lower():
-                        user_email = "fremm.instalador@gmail.com"
-                    elif not user_email:
-                        user_email = f"{nombre_perfil.lower().replace(' ', '_')}@bolimur.local"
-                        
-                    perfiles.append({
-                        "email": user_email,
-                        "nombre": nombre_perfil,
-                        "nombre_completo": gaia_nom
-                    })
-            except Exception:
-                pass
-                
-    # Si no se ejecutó localmente o estamos en Streamlit Cloud, catálogo oficial con los 11 perfiles de Chrome
-    if not perfiles:
-        perfiles = [
-            {"email": "beatriz150675@gmail.com", "nombre": "Beatriz (Trabajo)", "nombre_completo": "Beatriz Iriarte Quiroz"},
-            {"email": "bismargonzalochoquetejerina15@gmail.com", "nombre": "bismar gonzalo", "nombre_completo": "bismar gonzalo choque tejerina"},
-            {"email": "euforiamix0606@gmail.com", "nombre": "EUFORIA", "nombre_completo": "EUFORIA MIX"},
-            {"email": "fremm.instalador@gmail.com", "nombre": "FREMM", "nombre_completo": "FREMM Instaladores Murcia"},
-            {"email": "richardcurso0606@gmail.com", "nombre": "Richard (RC0606)", "nombre_completo": "R Cursos curso"},
-            {"email": "richardemprendemurcia@gmail.com", "nombre": "Richard emprende", "nombre_completo": "Richard emprende"},
-            {"email": "rc06061970@gmail.com", "nombre": "Richard FREM", "nombre_completo": "Richard FREM"},
-            {"email": "richardpililo@gmail.com", "nombre": "Richard Orlando (Pililo)", "nombre_completo": "Richard Orlando Choque Tejerina"},
-            {"email": "richardkpricho@gmail.com", "nombre": "Richard Orlando (Kpricho)", "nombre_completo": "Richard Orlando Choque Tejerina"},
-            {"email": "13789477@alu.murciaeduca.es", "nombre": "RICHARD ORLANDO (Murcia Educa)", "nombre_completo": "RICHARD ORLANDO CHOQUE TEJERINA"},
-            {"email": "richardcursoarchivo@gmail.com", "nombre": "RIichard", "nombre_completo": "RIichard Tejerina"},
-            {"email": "RC0606@HOTMAIL.COM", "nombre": "RC0606", "nombre_completo": "Richard rc0606"}
-        ]
-        
-    return perfiles
+
 
 def inicializar_bd():
     conn = obtener_conexion()
