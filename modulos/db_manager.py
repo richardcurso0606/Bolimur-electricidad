@@ -118,33 +118,36 @@ def inicializar_bd():
     
     conn.commit()
     
-    # Crear usuario por defecto de Windows si no existe ninguno
-    usuario_win_actual = getpass.getuser()
-    cursor.execute("SELECT id FROM usuarios WHERE username_windows = ?", (usuario_win_actual,))
-    if not cursor.fetchone():
-        cursor.execute("""
-        INSERT INTO usuarios (
-            email, username_windows, password_hash, nombre_instalador, nombre_empresa,
-            nif_cif, num_licencia_rebt, categoria_rebt, registro_industrial,
-            direccion, localidad, telefono, email_contacto
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            f"{usuario_win_actual}@bolimur.local",
-            usuario_win_actual,
-            hashear_password("123456"),
-            "Richard Orlando Choque Tejerina",
-            "BOLIMUR INSTALACIONES Y REFORMAS",
-            "B-73000000",
-            "REBT-30/15892",
-            "Instalador Especialista (IBTE)",
-            "RII-30/004521",
-            "C/ Principal, 1",
-            "Rincón de Seca, Murcia",
-            "+34 600 000 000",
-            "info@bolimur.com"
-        ))
-        conn.commit()
-        
+    # Cuentas pre-configuradas de Google del instalador (Richard Orlando / Bolimur)
+    cuentas_google_base = [
+        ("Euforiamix0606@gmail.com", "Richard Orlando (Euforia)", "BOLIMUR ELECTRICIDAD", "REBT-30/15892"),
+        ("13789477@alu.murciaeduca.es", "Richard Orlando Choque", "FREMM / Murcia Educa", "REBT-30/15892"),
+        ("richardcurso0606@gmail.com", "Richard (RC0606)", "BOLIMUR INSTALACIONES Y REFORMAS", "REBT-30/15892"),
+        ("richard.emprende@gmail.com", "Richard Emprende", "BOLIMUR INSTALACIONES", "REBT-30/15892"),
+        ("fremm.instalador@gmail.com", "Richard FREMM", "FREMM INSTALADORES MURCIA", "REBT-30/15892")
+    ]
+    for email_g, nom_g, emp_g, lic_g in cuentas_google_base:
+        cursor.execute("SELECT id FROM usuarios WHERE LOWER(email) = LOWER(?)", (email_g,))
+        if not cursor.fetchone():
+            cursor.execute("""
+            INSERT INTO usuarios (
+                email, username_windows, password_hash, nombre_instalador, nombre_empresa,
+                num_licencia_rebt, categoria_rebt, localidad, telefono, email_contacto
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                email_g.strip().lower(),
+                email_g.split('@')[0],
+                hashear_password("123456"),
+                nom_g,
+                emp_g,
+                lic_g,
+                "Instalador Especialista (IBTE)",
+                "Murcia, España",
+                "+34 600 000 000",
+                email_g
+            ))
+            conn.commit()
+
     conn.close()
 
 def hashear_password(password: str) -> str:
