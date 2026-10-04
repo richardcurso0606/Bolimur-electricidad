@@ -22,6 +22,11 @@ def test_normas_monitorizadas_estructura():
         assert "titulo" in datos
         assert "materia" in datos
         assert "impacto_bolimur" in datos
+        assert "nivel_importancia" in datos
+        assert datos["nivel_importancia"] in ["CRÍTICA", "ALTA", "MEDIA"]
+        assert "prioridad" in datos
+        assert isinstance(datos["prioridad"], int)
+        assert "motivo_criticidad" in datos
         assert len(datos["impacto_bolimur"]) > 0
 
 def test_cargar_y_guardar_cache(tmp_path):

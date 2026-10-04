@@ -22,23 +22,33 @@ except Exception:
 
 CACHE_FILE = "radar_normativo_cache.json"
 
-# Normas clave del sector eléctrico y fotovoltaico en el BOE
+# Normas clave del sector eléctrico y fotovoltaico en el BOE clasificadas por criticidad
 NORMAS_MONITORIZADAS = {
-    "BOE-A-2019-5089": {
-        "codigo": "RD 244/2019",
-        "titulo": "Real Decreto 244/2019: Condiciones administrativas, técnicas y económicas del autoconsumo de energía eléctrica",
-        "materia": "Energía Solar Fotovoltaica / Autoconsumo",
-        "organismo": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO)",
-        "icono": "☀️",
-        "impacto_bolimur": "Módulo Solar Fotovoltaica, Balance Energético, Coeficientes de reparto y Memoria MTD ITC-BT-40."
-    },
     "BOE-A-2002-18099": {
         "codigo": "RD 842/2002 (REBT)",
         "titulo": "Reglamento Electrotécnico para Baja Tensión (REBT 2002) e Instrucciones Técnicas Complementarias (ITC-BT-01 a 52)",
         "materia": "Reglamentación General de Baja Tensión",
         "organismo": "Ministerio de Industria, Comercio y Turismo / MITECO",
         "icono": "⚡",
+        "nivel_importancia": "CRÍTICA",
+        "prioridad": 1,
+        "badge_color": "#dc2626",
+        "badge_bg": "#fee2e2",
+        "motivo_criticidad": "Obligatoria en el 100% de instalaciones. Un cambio aquí altera directamente caídas de tensión, calibres, diferenciales y validez legal del Certificado de Instalación (CIE).",
         "impacto_bolimur": "Cálculo Rápido (CDT & Iz), LGA, DI, Previsión de Cargas, Cuadro de Obra y Memoria Técnica DGEAIM."
+    },
+    "BOE-A-2019-5089": {
+        "codigo": "RD 244/2019",
+        "titulo": "Real Decreto 244/2019: Condiciones administrativas, técnicas y económicas del autoconsumo de energía eléctrica",
+        "materia": "Energía Solar Fotovoltaica / Autoconsumo",
+        "organismo": "Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO)",
+        "icono": "☀️",
+        "nivel_importancia": "CRÍTICA",
+        "prioridad": 1,
+        "badge_color": "#dc2626",
+        "badge_bg": "#fee2e2",
+        "motivo_criticidad": "Regula la legalización solar, exenciones de permisos de acceso y conexión hasta 15 kW, límites de MTD vs Proyecto y coeficientes de reparto.",
+        "impacto_bolimur": "Módulo Solar Fotovoltaica, Balance Energético, Coeficientes de reparto y Memoria MTD ITC-BT-40."
     },
     "BOE-A-2014-13679": {
         "codigo": "RD 1053/2014 (ITC-BT-52)",
@@ -46,15 +56,12 @@ NORMAS_MONITORIZADAS = {
         "materia": "Movilidad Eléctrica / Puntos de Recarga IRVE",
         "organismo": "Ministerio de Industria, Energía y Turismo",
         "icono": "🚗",
+        "nivel_importancia": "CRÍTICA",
+        "prioridad": 1,
+        "badge_color": "#dc2626",
+        "badge_bg": "#fee2e2",
+        "motivo_criticidad": "Prescripción técnica ineludible para cargadores de vehículo eléctrico: esquemas de conexión 1-4, protecciones 6mA DC y caída de tensión máxima al 1%.",
         "impacto_bolimur": "Módulo IRVE, Esquemas 1-4, Diferenciales 6mA DC y Protección sobretensiones."
-    },
-    "BOE-A-2013-13645": {
-        "codigo": "Ley 24/2013",
-        "titulo": "Ley 24/2013, del Sector Eléctrico",
-        "materia": "Marco Jurídico Básico del Sistema Eléctrico",
-        "organismo": "Jefatura del Estado",
-        "icono": "⚖️",
-        "impacto_bolimur": "Régimen retributivo, derechos de acceso y conexión, y marco de autoconsumo."
     },
     "BOE-A-2022-9988": {
         "codigo": "RD 450/2022 (CTE DB-HE)",
@@ -62,7 +69,25 @@ NORMAS_MONITORIZADAS = {
         "materia": "Obligación de Generación Fotovoltaica en Edificios",
         "organismo": "Ministerio de Transportes, Movilidad y Agenda Urbana",
         "icono": "🏢",
+        "nivel_importancia": "ALTA",
+        "prioridad": 2,
+        "badge_color": "#d97706",
+        "badge_bg": "#fef3c7",
+        "motivo_criticidad": "Condicionante arquitectónico: fija la potencia solar fotovoltaica mínima obligatoria en obra nueva o reformas de edificios residenciales y terciarios.",
         "impacto_bolimur": "Cálculo de potencia fotovoltaica mínima obligatoria en obra nueva y reformas."
+    },
+    "BOE-A-2013-13645": {
+        "codigo": "Ley 24/2013",
+        "titulo": "Ley 24/2013, del Sector Eléctrico",
+        "materia": "Marco Jurídico Básico del Sistema Eléctrico",
+        "organismo": "Jefatura del Estado",
+        "icono": "⚖️",
+        "nivel_importancia": "MEDIA",
+        "prioridad": 3,
+        "badge_color": "#2563eb",
+        "badge_bg": "#dbeafe",
+        "motivo_criticidad": "Marco jurídico de fondo: derechos y obligaciones frente a distribuidoras eléctricas, régimen retributivo y sanciones sectoriales.",
+        "impacto_bolimur": "Régimen retributivo, derechos de acceso y conexión, y marco de autoconsumo."
     }
 }
 
@@ -277,11 +302,51 @@ def renderizar():
     # =========================================================================
     with tab_live:
         st.markdown("#### 📡 Seguimiento en Tiempo Real de Normas Consolidadas en el BOE")
-        st.write("Consulta directa a la base de datos oficial del Boletín Oficial del Estado. Cada vez que el Gobierno publica un Real Decreto o Ley que modifica el REBT o el Autoconsumo, el BOE actualiza su identificador de consolidación:")
+        st.write("Las normas del sector se clasifican según su **nivel de criticidad técnica y repercusión en la firma del instalador**:")
+
+        # Tarjetas de resumen por nivel de importancia
+        col_c1, col_c2, col_c3 = st.columns(3)
+        with col_c1:
+            st.markdown("""
+                <div style="background: #fef2f2; border: 1.5px solid #ef4444; border-radius: 8px; padding: 10px 14px;">
+                    <div style="color: #dc2626; font-weight: bold; font-size: 12px; text-transform: uppercase;">🔴 Importancia Crítica (3)</div>
+                    <div style="font-size: 13px; color: #1e293b; margin-top: 4px;"><b>REBT, RD 244/2019, IRVE</b><br><small>Afectan a cada cálculo, sección, caída de tensión y firma oficial del CIE.</small></div>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_c2:
+            st.markdown("""
+                <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 8px; padding: 10px 14px;">
+                    <div style="color: #d97706; font-weight: bold; font-size: 12px; text-transform: uppercase;">🟠 Importancia Alta (1)</div>
+                    <div style="font-size: 13px; color: #1e293b; margin-top: 4px;"><b>CTE DB-HE (RD 450/2022)</b><br><small>Condicionante arquitectónico: potencia solar mínima obligatoria en obra nueva.</small></div>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_c3:
+            st.markdown("""
+                <div style="background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 8px; padding: 10px 14px;">
+                    <div style="color: #2563eb; font-weight: bold; font-size: 12px; text-transform: uppercase;">🔵 Importancia Media (1)</div>
+                    <div style="font-size: 13px; color: #1e293b; margin-top: 4px;"><b>Ley 24/2013 Sector Eléctrico</b><br><small>Marco legal de fondo, derechos de acceso a red y relaciones con distribuidoras.</small></div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.write("")
+        filtro_imp = st.radio(
+            "Filtrar normas por nivel de criticidad técnica:",
+            ["🎯 Todas las Normas", "🔴 Críticas (Obligatorias / Firma MTD)", "🟠 Alta (Condicionante Edificación CTE)", "🔵 Media (Marco Legal General)"],
+            horizontal=True,
+            key="filtro_normas_criticidad"
+        )
 
         normas_db = cache.get("normas", {})
 
         for id_norma, meta in NORMAS_MONITORIZADAS.items():
+            # Aplicar filtro
+            if "Críticas" in filtro_imp and meta["nivel_importancia"] != "CRÍTICA":
+                continue
+            if "Alta" in filtro_imp and meta["nivel_importancia"] != "ALTA":
+                continue
+            if "Media" in filtro_imp and meta["nivel_importancia"] != "MEDIA":
+                continue
+
             info_live = normas_db.get(id_norma, {})
             f_act = info_live.get("fecha_actualizacion", "Consultada")
             # Formatear fecha BOE (ej. 20260323T115815Z -> 23/03/2026)
@@ -292,7 +357,20 @@ def renderizar():
 
             num_mods = len(info_live.get("modificaciones", []))
 
-            with st.expander(f"{meta['icono']} **{meta['codigo']}** — {meta['materia']} (Última consolidación BOE: {f_act_fmt})", expanded=False):
+            header_texto = f"[{meta['nivel_importancia']}] {meta['icono']} {meta['codigo']} — {meta['materia']} (BOE: {f_act_fmt})"
+
+            with st.expander(header_texto, expanded=(meta["nivel_importancia"] == "CRÍTICA")):
+                col_badge, col_info_gen = st.columns([1, 4])
+                with col_badge:
+                    st.markdown(f"""
+                        <div style="background: {meta['badge_bg']}; border: 1.5px solid {meta['badge_color']}; color: {meta['badge_color']}; border-radius: 8px; padding: 8px 12px; text-align: center; font-weight: bold; font-size: 13px;">
+                            PRIORIDAD {meta['prioridad']}<br>
+                            <span>{meta['nivel_importancia']}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                with col_info_gen:
+                    st.markdown(f"**🎯 Impacto en el Instalador:** {meta['motivo_criticidad']}")
+
                 st.markdown(f"**Título Completo Oficial:** {info_live.get('titulo') or meta['titulo']}")
                 st.markdown(f"**Organismo Competente:** `{meta['organismo']}` | **Identificador BOE:** `{id_norma}`")
                 st.markdown(f"**Módulos de Bolimur Vinculados:** `{meta['impacto_bolimur']}`")
