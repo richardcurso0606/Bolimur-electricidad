@@ -222,37 +222,39 @@ def renderizar_pantalla_login():
         
         # 1. Login con Google
         with tab_login_google:
-            st.markdown("##### 🔴 Iniciar Sesión con tu Cuenta de Google")
-            st.caption("Selecciona cualquier cuenta de Google activa en este navegador para acceder a tu base de datos y expedientes privados.")
-            
-            tiene_config = bool(google_config.get("client_id") and google_config.get("client_secret"))
-            
-            if tiene_config:
-                url_google = generar_url_oauth_google(google_config)
-                st.markdown(f"""
-                <div class="google-btn-container">
-                    <a href="{url_google}" target="_self" class="google-btn">
-                        <svg width="22" height="22" viewBox="0 0 48 48">
-                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z"/>
-                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                        </svg>
-                        <span>Elegir cuenta entre los perfiles de este navegador</span>
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown("<div style='text-align:center; color:#64748b; font-size:12px; margin: 12px 0;'>— o introduce tu correo de Google directamente —</div>", unsafe_allow_html=True)
+            st.markdown("##### 🔴 Elige tu Cuenta de Google para Iniciar Sesión")
+            st.caption("Selecciona tu cuenta con un toque para acceder a tu base de datos y expedientes privados.")
 
+            # Listado de Cuentas de Google Disponibles en el Dispositivo
+            usuarios_guardados = db_manager.listar_todos_usuarios()
+            if usuarios_guardados:
+                st.markdown("###### 👥 Cuentas de Google en este dispositivo (Toca para entrar en 1 clic):")
+                for u in usuarios_guardados:
+                    u_email = u.get("email", "")
+                    u_nom = u.get("nombre_instalador") or u.get("nombre_empresa") or "Instalador"
+                    with st.container(border=True):
+                        col_u1, col_u2 = st.columns([3, 1.3])
+                        with col_u1:
+                            st.markdown(f"**🔴 {u_nom}**  \n`{u_email}`")
+                        with col_u2:
+                            st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
+                            if st.button("👉 Entrar", key=f"btn_quick_login_{u['id']}", type="primary", use_container_width=True):
+                                u_full = db_manager.obtener_usuario_por_id(u["id"])
+                                if u_full:
+                                    u_full["auth_provider"] = "Google"
+                                    st.session_state["usuario_autenticado"] = u_full
+                                    st.success(f"✅ ¡Sesión iniciada como {u_nom} ({u_email})!")
+                                    st.rerun()
+
+            st.markdown("###### ➕ ¿Usar otra cuenta de Google (Para ti o para otro instalador)?")
             with st.container(border=True):
-                st.markdown("###### 👤 Acceso directo con tu perfil de Google:")
                 col_g1, col_g2 = st.columns([1.3, 1])
                 with col_g1:
-                    google_demo_email = st.text_input("Tu Correo de Google (*):", placeholder="tu.cuenta@gmail.com", key="g_demo_mail")
+                    google_demo_email = st.text_input("Tu Correo de Google (*):", placeholder="ejemplo.instalador@gmail.com", key="g_demo_mail")
                 with col_g2:
                     google_demo_nom = st.text_input("Nombre / Razón Social:", value="Instalador Autorizado", key="g_demo_nom")
                 
-                if st.button("🚀 Iniciar Sesión con este Perfil", type="primary", use_container_width=True, key="btn_g_demo"):
+                if st.button("🚀 Entrar con esta Cuenta de Google", type="primary", use_container_width=True, key="btn_g_demo"):
                     if google_demo_email and "@" in google_demo_email:
                         usuario = db_manager.autenticar_o_crear_usuario_google(
                             email=google_demo_email.strip().lower(),
@@ -262,7 +264,7 @@ def renderizar_pantalla_login():
                         if usuario:
                             usuario["auth_provider"] = "Google"
                             st.session_state["usuario_autenticado"] = usuario
-                            st.success(f"✅ ¡Sesión iniciada con la cuenta: **{google_demo_email}**!")
+                            st.success(f"✅ ¡Sesión iniciada con la cuenta de Google: **{google_demo_email}**!")
                             st.rerun()
                     else:
                         st.warning("Por favor introduce una dirección de correo válida de Google (ej: tu_nombre@gmail.com).")
