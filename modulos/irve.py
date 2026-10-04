@@ -576,6 +576,33 @@ def renderizar():
         * **Canalización reglamentaria:** Tubo **{tubo_dim_str}** no propagador de la llama, libre de halógenos y resistencia al impacto **IK08**.
         """)
 
+        if st.button("🚀 Tramitar esta Recarga IRVE en la Memoria Técnica Oficial (MTD 30 / CIE)", type="primary", use_container_width=True):
+            st.session_state["mtd_in_pot_inst"] = float(p_cargador_val)
+            st.session_state["mtd_in_pot_max"] = float(p_cargador_val)
+            st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz" if es_trif_irve else "Monofásico (230 V) - 50 Hz"
+            st.session_state["mtd_in_origen"] = str(info_esq_actual.get('origen', 'Centralización de Contadores'))
+            st.session_state["mtd_in_di_cable"] = f"{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
+            st.session_state["mtd_in_di_tubo"] = f"Tubo {tubo_dim_str} libre de halógenos (IK08)"
+            st.session_state["mtd_in_di_long"] = float(irve_long)
+            st.session_state["mtd_in_di_cdt"] = float(round(dv_real_irve_pct, 2))
+            st.session_state["mtd_in_grado"] = "Específica IRVE (ITC-BT-52)"
+            st.session_state["mtd_in_iga"] = int(in_pi_auto)
+            st.session_state["mtd_in_curva"] = "Curva C (General)"
+            st.session_state["mtd_in_icn"] = 6.0
+            st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)" if not es_trif_irve else "Diferencial 4P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)"
+            st.session_state["mtd_in_vtp"] = "Permanentes (POP/VTP) + Transitorias Tipo 2 (DPS/VSP) con bobina de disparo"
+            pe_sec = rebt.dimensionar_conductor_pe(s_final_irve)
+            st.session_state["mtd_in_tierra"] = f"Conductor PE 1x{pe_sec:.0f} mm² Cu | Resistencia bucle tierra Rt ≤ 15 Ω"
+            st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real"
+            st.session_state["mtd_in_emp_uso"] = "Garaje Comunitario / Punto de Recarga VE"
+            st.session_state["mtd_circuitos"] = [
+                {"nombre": "Línea Específica IRVE (Wallbox)", "potencia": float(p_cargador_val), "pia": int(in_pi_auto), "seccion": f"{'4x' if es_trif_irve else '2x'}{s_final_irve:.1f}+TT{pe_sec:.0f}", "tubo": tubo_dim_str, "longitud": float(irve_long), "cdt": float(round(dv_real_irve_pct, 2)), "norma": "ITC-BT-52"}
+            ]
+            st.session_state["mtd_tipo_inst_sel"] = "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)"
+            st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+            st.rerun()
+
+
     # =========================================================================
     # SECCIÓN 3: ESQUEMA UNIFILAR GRÁFICO OFICIAL DGEAIM / ITC-BT-52
     # =========================================================================

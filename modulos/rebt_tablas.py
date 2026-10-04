@@ -252,3 +252,130 @@ def dimensionar_tubo_irve(seccion: float, es_trifasico: bool = False) -> tuple[s
     else:
         return "Ø 63 mm o Bandeja metálica/PVC libre de halógenos", "Para grandes acometidas o canalizaciones troncales multitubo."
 
+# =========================================================================
+# 7. CONDUCTORES DE PROTECCIÓN (PE) Y TIERRAS - ITC-BT-19 TABLA 2
+# =========================================================================
+
+def dimensionar_conductor_pe(seccion_fase: float) -> float:
+    """
+    ITC-BT-19 Tabla 2: Sección mínima de conductores de protección (PE):
+    - Sfase <= 16 mm²   -->  Spe = Sfase
+    - 16 < Sfase <= 35  -->  Spe = 16 mm²
+    - Sfase > 35 mm²    -->  Spe = Sfase / 2
+    """
+    if seccion_fase <= 16:
+        return float(seccion_fase)
+    elif seccion_fase <= 35:
+        return 16.0
+    else:
+        # Seleccionar sección normalizada inmediatamente superior a Sfase / 2
+        s_half = seccion_fase / 2.0
+        for s in SECCIONES_COMERCIALES:
+            if s >= s_half:
+                return float(s)
+        return float(s_half)
+
+# =========================================================================
+# 8. COORDINACIÓN DE PROTECCIÓN TÉRMICA - ITC-BT-19 / UNE-HD 60364-4-43
+# =========================================================================
+
+def verificar_coordinacion_proteccion(ib: float, in_prot: float, iz: float) -> dict:
+    """
+    Verifica las dos condiciones reglamentarias de protección contra sobrecargas:
+    1) Ib <= In <= Iz  (La intensidad nominal del magneto está entre la de diseño y la admisible del cable)
+    2) I2 <= 1.45 * Iz (Para PIAs UNE-EN 60898, I2 = 1.45 * In, por lo que equivale a In <= Iz)
+    """
+    cumple_ib_in = (in_prot >= ib - 0.05)  # Margen numérico mínimo
+    cumple_in_iz = (in_prot <= iz + 0.05)
+    cumple_sobrecarga = cumple_ib_in and cumple_in_iz
+    
+    mensajes = []
+    if not cumple_ib_in:
+        mensajes.append(f"⚠️ El calibre del PIA ({in_prot} A) es inferior a la intensidad de diseño ({ib:.2f} A). Se disparará por sobrecarga.")
+    if not cumple_in_iz:
+        mensajes.append(f"❌ ¡PELIGRO TÉRMICO! El calibre del PIA ({in_prot} A) supera la intensidad admisible del cable ({iz:.2f} A). El cable puede quemarse antes de que dispare el automático.")
+    if cumple_sobrecarga:
+        mensajes.append(f"✅ Coordinación térmica perfecta: Ib ({ib:.2f} A) ≤ In ({in_prot} A) ≤ Iz ({iz:.2f} A).")
+        
+    return {
+        "cumple": cumple_sobrecarga,
+        "cumple_ib_in": cumple_ib_in,
+        "cumple_in_iz": cumple_in_iz,
+        "mensajes": mensajes,
+        "ib": ib,
+        "in_prot": in_prot,
+        "iz": iz
+    }
+
+# =========================================================================
+# 9. FACTORES DE CORRECCIÓN (TEMPERATURA Y AGRUPAMIENTO) - UNE-HD 60364-5-52
+# =========================================================================
+
+def obtener_factor_temperatura(temp_amb: float, aislamiento: str = "xlpe", enterrado: bool = False) -> float:
+    """
+    Factores de corrección por temperatura ambiente (Base: 40ºC al aire, 25ºC en terreno).
+    """
+    es_xlpe = ("xlpe" in aislamiento.lower() or "epr" in aislamiento.lower() or "90" in aislamiento)
+    
+    if not enterrado:
+        # Al aire (Base 40 ºC)
+        if temp_amb <= 25: return 1.14 if es_xlpe else 1.22
+        elif temp_amb <= 30: return 1.10 if es_xlpe else 1.15
+        elif temp_amb <= 35: return 1.05 if es_xlpe else 1.08
+        elif temp_amb <= 40: return 1.00
+        elif temp_amb <= 45: return 0.96 if es_xlpe else 0.91
+        elif temp_amb <= 50: return 0.90 if es_xlpe else 0.82
+        elif temp_amb <= 55: return 0.84 if es_xlpe else 0.71
+        elif temp_amb <= 60: return 0.76 if es_xlpe else 0.58
+        else: return 0.65
+    else:
+        # Enterrado (Base 25 ºC)
+        if temp_amb <= 15: return 1.08 if es_xlpe else 1.11
+        elif temp_amb <= 20: return 1.04 if es_xlpe else 1.06
+        elif temp_amb <= 25: return 1.00
+        elif temp_amb <= 30: return 0.96 if es_xlpe else 0.93
+        elif temp_amb <= 35: return 0.92 if es_xlpe else 0.87
+        elif temp_amb <= 40: return 0.87 if es_xlpe else 0.79
+        else: return 0.80
+
+def obtener_factor_agrupamiento(num_circuitos: int, instalacion: str = "tubo") -> float:
+    """
+    Factores de corrección por agrupamiento de varios circuitos en el mismo tubo o canalización.
+    """
+    if num_circuitos <= 1: return 1.00
+    elif num_circuitos == 2: return 0.80
+    elif num_circuitos == 3: return 0.70
+    elif num_circuitos == 4: return 0.65
+    elif num_circuitos == 5: return 0.60
+    elif num_circuitos == 6: return 0.57
+    elif num_circuitos <= 8: return 0.52
+    else: return 0.50
+
+# =========================================================================
+# 10. VERIFICACIÓN CONTRA CORTOCIRCUITO (ENERGÍA ESPECÍFICA I²·t)
+# =========================================================================
+
+def verificar_cortocircuito_cable(icc_ka: float, tiempo_s: float, seccion: float, material: str = "cobre", aislamiento: str = "xlpe") -> tuple[bool, float]:
+    """
+    Verifica que la sección del cable soporte la energía térmica del cortocircuito:
+    S >= sqrt(Icc² * t) / k
+    Constantes k (A·s^(1/2)/mm²):
+    - Cobre / XLPE: 143
+    - Cobre / PVC:  115
+    - Aluminio / XLPE: 94
+    - Aluminio / PVC:  76
+    """
+    mat = "aluminio" if "alum" in material.lower() else "cobre"
+    aisl = "xlpe" if ("xlpe" in aislamiento.lower() or "epr" in aislamiento.lower() or "90" in aislamiento) else "pvc"
+    
+    if mat == "cobre":
+        k = 143.0 if aisl == "xlpe" else 115.0
+    else:
+        k = 94.0 if aisl == "xlpe" else 76.0
+        
+    icc_a = icc_ka * 1000.0
+    s_min_cc = (math.sqrt((icc_a ** 2) * max(tiempo_s, 0.01))) / k
+    cumple = (seccion >= s_min_cc)
+    return cumple, s_min_cc
+
+

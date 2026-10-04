@@ -360,32 +360,35 @@ def renderizar():
     with tab_f6:
         st.markdown("##### 🧪 Bloque VI: Protocolo de Ensayos y Verificaciones Previas (ITC-BT-05 Murcia):")
         st.markdown("""
-        Valores reglamentarios de verificación según el REBT y la DGEAIM Región de Murcia:
+        Introduce los valores medidos con el equipo verificador multifunción en la instalación:
         """)
         col_t_1, col_t_2 = st.columns(2)
         with col_t_1:
-            st.info("""
-            * **Continuidad de conductores PE:** $\le 0,5\ \Omega$ (Medido: **0,11 Ω** - Conforme)
-            * **Resistencia de aislamiento a 500 Vcc:** $\ge 1,0\ \text{M}\Omega$ (Medido: **> 100 MΩ** - Conforme)
-            * **Resistencia de bucle de tierra:** $R_t \cdot I_{\Delta n} \le 24\text{ V}$ (Medido: **11,8 Ω** - Conforme)
-            """)
+            med_pe = st.number_input("Continuidad de Conductores PE (Ω) [Límite ≤ 0.50 Ω]:", value=float(st.session_state.get("mtd_in_med_pe", 0.11)), step=0.01, format="%.2f", key="mtd_in_med_pe")
+            med_aisl = st.number_input("Resistencia de Aislamiento a 500 Vcc (MΩ) [Límite ≥ 1.0 MΩ]:", value=float(st.session_state.get("mtd_in_med_aisl", 100.0)), step=1.0, format="%.1f", key="mtd_in_med_aisl")
+            med_rt = st.number_input("Resistencia de Bucle / Toma de Tierra Rt (Ω) [Límite ≤ 15 Ω]:", value=float(st.session_state.get("mtd_in_med_rt", 11.8)), step=0.1, format="%.1f", key="mtd_in_med_rt")
         with col_t_2:
-            st.info("""
-            * **Sensibilidad del Diferencial:** $I_{\Delta n} \le 30\text{ mA}$ (Medido: **22 mA** - Conforme)
-            * **Tiempo de Disparo Diferencial:** $t \le 300\text{ ms}$ (Medido: **26 ms** - Conforme)
-            * **Protector de Sobretensiones:** VSP + VTP verificado con disparo correcto.
-            """)
+            med_dif_ma = st.number_input("Corriente de Disparo Diferencial (mA) [Límite ≤ 30 mA]:", value=float(st.session_state.get("mtd_in_med_dif_ma", 22.0)), step=1.0, format="%.1f", key="mtd_in_med_dif_ma")
+            med_dif_ms = st.number_input("Tiempo de Disparo Diferencial (ms) [Límite ≤ 300 ms]:", value=float(st.session_state.get("mtd_in_med_dif_ms", 26.0)), step=1.0, format="%.1f", key="mtd_in_med_dif_ms")
+            med_vsp = st.selectbox("Comprobación Disparo de Sobretensiones (VTP + DPS):", ["Conforme (Disparo y señalización verificados)", "No Conforme"], key="mtd_in_med_vsp")
+
+        # Semáforo de verificación ITC-BT-05
+        cumple_ensayos = (med_pe <= 0.50) and (med_aisl >= 1.0) and (med_rt <= 15.0) and (med_dif_ma <= 30.0) and (med_dif_ms <= 300.0) and ("Conforme" in med_vsp)
+        if cumple_ensayos:
+            st.success("✅ **TODAS LAS VERIFICACIONES PREVIAS ITC-BT-05 SON CONFORMES CON EL REBT.** Instalación apta para puesta en servicio.")
+        else:
+            st.error("⚠️ **HAY MEDIDAS QUE SUPERAN LOS LÍMITES REGLAMENTARIOS DEL REBT.** Subsanar anomalías antes de la tramitación ante Industria.")
 
     # =========================================================================
-    # 3. GUARDAR VINCULADO AL CLIENTE (CRM) Y GENERACIÓN DEL PDF OFICIAL
+    # 3. GUARDAR VINCULADO AL CLIENTE (CRM) Y GENERACIÓN DE DOCUMENTACIÓN OFICIAL
     # =========================================================================
-    st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">💾 3. Guardar en Ficha del Cliente y Exportar PDF Oficial MTD (Murcia)</h4></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">💾 3. Guardar en Ficha del Cliente y Exportar Documentación Oficial (Murcia / REBT)</h4></div>', unsafe_allow_html=True)
     
     with st.container(border=True):
         col_s_name, col_s_btn = st.columns([3, 1.5])
         with col_s_name:
             nom_proy_default = f"MTD - {tipo_inst_sel.split('(')[0].replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('⚡', '').replace('🔌', '').strip()} - {tit_nombre}"
-            nom_proy_mtd = st.text_input("Nombre / Referencia de la Memoria Técnica para Guardar:", value=nom_proy_default, key="mtd_nom_guardar")
+            nom_proy_mtd = st.text_input("Nombre / Referencia del Expediente para Guardar:", value=nom_proy_default, key="mtd_nom_guardar")
         with col_s_btn:
             st.write("")
             st.write("")
@@ -393,7 +396,6 @@ def renderizar():
                 if not cli_sel_id:
                     st.error("Debes seleccionar un cliente del CRM arriba para asociar la memoria técnica.")
                 else:
-                    # Empaquetar estado completo
                     datos_guardar = {
                         "mtd_tipo_inst_sel": tipo_inst_sel,
                         "mtd_in_tit_nom": tit_nombre,
@@ -421,7 +423,12 @@ def renderizar():
                         "mtd_in_vtp": prot_vtp,
                         "mtd_in_tierra": prot_tierra,
                         "mtd_in_spl": prot_spl,
-                        "mtd_circuitos": st.session_state.get("mtd_circuitos", [])
+                        "mtd_circuitos": st.session_state.get("mtd_circuitos", []),
+                        "mtd_in_med_pe": med_pe,
+                        "mtd_in_med_aisl": med_aisl,
+                        "mtd_in_med_rt": med_rt,
+                        "mtd_in_med_dif_ma": med_dif_ma,
+                        "mtd_in_med_dif_ms": med_dif_ms
                     }
                     resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {sum_tension} | {emp_muni}"
                     ok, p_id = db_manager.guardar_proyecto(
@@ -440,13 +447,13 @@ def renderizar():
 
         st.divider()
 
-        # GENERACIÓN DEL DOCUMENTO PDF OFICIAL
+        # DOCUMENTOS OFICIALES PARA INDUSTRIA Y CLIENTE
         col_g1, col_g2 = st.columns([3, 2])
         with col_g1:
             exp_in = st.text_input("Nº de Expediente Oficial (DGEAIM Murcia):", value=f"EXP-MTD-{emp_muni[:3].upper()}-2026-01", key="mtd_exp_final")
         with col_g2:
             st.write("")
-            st.caption("Documento normalizado con formato oficial DGEAIM, tablas técnicas, esquema unifilar y protocolo BT-05.")
+            st.caption("Generación simultánea de toda la documentación requerida por Industria y el REBT.")
 
         datos_para_pdf = {
             "tipo_instalacion": tipo_inst_sel,
@@ -493,16 +500,54 @@ def renderizar():
                 "sobretensiones": prot_vtp,
                 "puesta_a_tierra": prot_tierra
             },
+            "ensayos": {
+                "pe_ohm": med_pe,
+                "aisl_mohm": med_aisl,
+                "rt_ohm": med_rt,
+                "dif_ma": med_dif_ma,
+                "dif_ms": med_dif_ms
+            },
             "circuitos": st.session_state.get("mtd_circuitos", [])
         }
 
-        try:
-            pdf_bytes_mtd = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_para_pdf)
-            from modulos import visor_pdf
-            visor_pdf.mostrar_visor_pdf(
-                pdf_bytes=pdf_bytes_mtd,
-                nombre_archivo=f"MTD_Oficial_DGEAIM_Murcia_{exp_in}.pdf",
-                label_boton="📥 Descargar Memoria Técnica Oficial MTD (PDF para Industria Murcia)"
-            )
-        except Exception as err:
-            st.error(f"⚠️ Error al generar el PDF de la Memoria Técnica: {err}")
+        tab_doc1, tab_doc2, tab_doc3 = st.tabs([
+            "🏛️ Memoria Técnica Oficial (MTD 30)",
+            "📑 Certificado de Instalación (CIE / Boletín)",
+            "📘 Manual de Instrucciones (ITC-BT-04)"
+        ])
+
+        from modulos import visor_pdf
+
+        with tab_doc1:
+            try:
+                pdf_bytes_mtd = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_para_pdf)
+                visor_pdf.mostrar_visor_pdf(
+                    pdf_bytes=pdf_bytes_mtd,
+                    nombre_archivo=f"MTD_Oficial_DGEAIM_Murcia_{exp_in}.pdf",
+                    label_boton="📥 Descargar Memoria Técnica Oficial MTD (PDF Murcia)"
+                )
+            except Exception as err:
+                st.error(f"⚠️ Error al generar el PDF de la MTD: {err}")
+
+        with tab_doc2:
+            try:
+                pdf_bytes_cie = pdf_memoria_tecnica.generar_pdf_cie_oficial(datos_para_pdf)
+                visor_pdf.mostrar_visor_pdf(
+                    pdf_bytes=pdf_bytes_cie,
+                    nombre_archivo=f"CIE_Boletin_Oficial_{exp_in}.pdf",
+                    label_boton="📥 Descargar Certificado de Instalación CIE (Boletín Eléctrico)"
+                )
+            except Exception as err:
+                st.error(f"⚠️ Error al generar el Certificado CIE: {err}")
+
+        with tab_doc3:
+            try:
+                pdf_bytes_man = pdf_memoria_tecnica.generar_pdf_manual_usuario(datos_para_pdf)
+                visor_pdf.mostrar_visor_pdf(
+                    pdf_bytes=pdf_bytes_man,
+                    nombre_archivo=f"Manual_Instrucciones_Usuario_{tit_nombre.replace(' ', '_')}.pdf",
+                    label_boton="📥 Descargar Manual de Instrucciones de Usuario (ITC-BT-04)"
+                )
+            except Exception as err:
+                st.error(f"⚠️ Error al generar el Manual de Usuario: {err}")
+

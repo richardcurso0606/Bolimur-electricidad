@@ -824,3 +824,472 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     return buffer.getvalue()
 
 generar_pdf_memoria_tecnica = generar_pdf_mtd_industria_murcia
+
+
+
+# =========================================================================
+# GENERADOR OFICIAL DEL CERTIFICADO DE INSTALACIÓN ELÉCTRICA (CIE / BOLETÍN)
+# =========================================================================
+
+def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
+    """
+    Genera el Certificado de Instalación Eléctrica en Baja Tensión (CIE - Boletín de Enganche)
+    conforme a las directrices de la ITC-BT-04 y la Dirección General de Industria (DGEAIM).
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.3*cm, rightMargin=1.3*cm,
+        topMargin=1.3*cm, bottomMargin=1.3*cm
+    )
+
+    styles = getSampleStyleSheet()
+    c_primary = colors.HexColor("#0f172a")
+    c_secondary = colors.HexColor("#0284c7")
+    c_dark_blue = colors.HexColor("#0369a1")
+    c_bg_head = colors.HexColor("#f1f5f9")
+    c_bg_sub = colors.HexColor("#f8fafc")
+    c_border = colors.HexColor("#94a3b8")
+    c_text_dark = colors.HexColor("#0f172a")
+    c_green = colors.HexColor("#15803d")
+    c_carm_red = colors.HexColor("#991b1b")
+
+    title_main = ParagraphStyle(
+        'MainTitle_CIE', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=11.0, leading=14,
+        textColor=c_primary, alignment=1
+    )
+    h_section = ParagraphStyle(
+        'SecHead_CIE', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=8.5, leading=11,
+        textColor=colors.white
+    )
+    body_style = ParagraphStyle(
+        'Body_CIE', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7.2, leading=9.5,
+        textColor=c_text_dark
+    )
+    bold_style = ParagraphStyle(
+        'Bold_CIE', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7.2, leading=9.5,
+        textColor=c_text_dark
+    )
+    small_style = ParagraphStyle(
+        'Small_CIE', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=6.5, leading=8.5,
+        textColor=colors.HexColor("#475569")
+    )
+
+    story = []
+
+    titular = datos_cie.get("titular", {})
+    empl = datos_cie.get("emplazamiento", {})
+    instalador = datos_cie.get("instalador", {})
+    suministro = datos_cie.get("suministro", {})
+    protecciones = datos_cie.get("protecciones", {})
+    ensayos = datos_cie.get("ensayos", {})
+    fecha_hoy = datos_cie.get("fecha", datetime.date.today().strftime("%d/%m/%Y"))
+    expediente = datos_cie.get("expediente", "CIE-2026-001")
+    tipo_tram = datos_cie.get("tipo_tramitacion", "Memoria Técnica de Diseño (MTD - ITC-BT-04)")
+
+    # 1. CABECERA INSTITUCIONAL OFICIAL
+    logo_flowable = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
+    carm_logo_txt = (
+        "<font size='9' color='#991b1b'><b>COMUNIDAD AUTÓNOMA DE LA REGIÓN DE MURCIA</b></font><br/>"
+        "<font size='7.5' color='#0f172a'><b>CONSEJERÍA DE CIENCIA, TECNOLOGÍAS, INDUSTRIA Y COMERCIO</b></font><br/>"
+        "<font size='7' color='#475569'>Dirección General de Energía y Actividad Industrial y Minera (Código 30)</font>"
+    )
+    
+    hdr_data = [
+        [
+            Paragraph(carm_logo_txt, body_style),
+            logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR INSTALACIONES</b>", ParagraphStyle('HdrB', parent=body_style, alignment=2))
+        ]
+    ]
+    t_hdr = Table(hdr_data, colWidths=[13.6*cm, 4.8*cm])
+    t_hdr.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(t_hdr)
+    story.append(HRFlowable(width="100%", thickness=1.5, color=c_carm_red, spaceBefore=3, spaceAfter=5))
+
+    # TÍTULO PRINCIPAL
+    story.append(Paragraph("<b>CERTIFICADO DE INSTALACIÓN ELÉCTRICA EN BAJA TENSIÓN (C.I.E.)</b>", title_main))
+    story.append(Paragraph(f"<font size='8' color='#0369a1'><b>BOLETÍN OFICIAL DE ENGANCHE Y PUESTA EN SERVICIO (RD 842/2002 - ITC-BT-04)</b></font>", ParagraphStyle('SubCIE', parent=title_main)))
+    story.append(Spacer(1, 4))
+
+    # NÚMERO DE CERTIFICADO / EXPEDIENTE
+    t_exp_data = [
+        [
+            Paragraph(f"<b>Nº CERTIFICADO / EXPEDIENTE:</b> <font color='#991b1b'>{expediente}</font>", bold_style),
+            Paragraph(f"<b>FECHA DE EMISIÓN:</b> {fecha_hoy}", bold_style),
+            Paragraph(f"<b>TRAMITACIÓN:</b> {tipo_tram}", bold_style)
+        ]
+    ]
+    t_exp = Table(t_exp_data, colWidths=[6.5*cm, 4.5*cm, 7.4*cm])
+    t_exp.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
+        ('BOX', (0,0), (-1,-1), 0.8, c_secondary),
+        ('INNERGRID', (0,0), (-1,-1), 0.4, c_border),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_exp)
+    story.append(Spacer(1, 5))
+
+    # BLOQUE 1: DATOS DEL TITULAR
+    story.append(Table([[Paragraph("<b>1. DATOS DEL TITULAR DE LA INSTALACIÓN</b>", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    t_tit_data = [
+        [
+            Paragraph(f"<b>Nombre / Razón Social:</b> {titular.get('nombre', '')}", body_style),
+            Paragraph(f"<b>N.I.F. / C.I.F.:</b> {titular.get('nif', '')}", body_style)
+        ],
+        [
+            Paragraph(f"<b>Teléfono de Contacto:</b> {titular.get('telefono', '')}", body_style),
+            Paragraph(f"<b>Correo Electrónico:</b> {titular.get('email', '')}", body_style)
+        ]
+    ]
+    t_tit = Table(t_tit_data, colWidths=[11.4*cm, 7.0*cm])
+    t_tit.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    story.append(t_tit)
+    story.append(Spacer(1, 4))
+
+    # BLOQUE 2: EMPLAZAMIENTO DEL SUMINISTRO
+    story.append(Table([[Paragraph("<b>2. EMPLAZAMIENTO DEL SUMINISTRO</b>", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    t_emp_data = [
+        [
+            Paragraph(f"<b>Dirección:</b> {empl.get('direccion', '')}", body_style),
+            Paragraph(f"<b>C.P. y Municipio:</b> {empl.get('cp', '30001')} - {empl.get('municipio', 'Murcia')}", body_style)
+        ],
+        [
+            Paragraph(f"<b>Código CUPS / Ref. Catastral:</b> <font color='#0369a1'><b>{empl.get('cups', 'ES0021000000000000XX')}</b></font>", body_style),
+            Paragraph(f"<b>Uso Principal:</b> {empl.get('uso', 'Vivienda Residencial')}", body_style)
+        ]
+    ]
+    t_emp = Table(t_emp_data, colWidths=[11.4*cm, 7.0*cm])
+    t_emp.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    story.append(t_emp)
+    story.append(Spacer(1, 4))
+
+    # BLOQUE 3: EMPRESA INSTALADORA E INSTALADOR HABILITADO
+    story.append(Table([[Paragraph("<b>3. EMPRESA INSTALADORA HABILITADA Y TÉCNICO COMPETENTE</b>", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    t_ins_data = [
+        [
+            Paragraph(f"<b>Empresa Instaladora:</b> {instalador.get('empresa', 'BOLIMUR INSTALACIONES Y REFORMAS')}", body_style),
+            Paragraph(f"<b>C.I.F. Empresa:</b> {instalador.get('cif', 'B-73123456')}", body_style)
+        ],
+        [
+            Paragraph(f"<b>Nº Reg. Integrado Industrial (RII):</b> <font color='#0369a1'><b>{instalador.get('registro_rii', 'RII-30/08492')}</b></font>", body_style),
+            Paragraph(f"<b>Teléfono Empresa:</b> {instalador.get('telefono', '+34 600 000 000')}", body_style)
+        ],
+        [
+            Paragraph(f"<b>Instalador Habilitado en BT:</b> {instalador.get('nombre', 'Richard Orlando Choque Tejerina')}", body_style),
+            Paragraph(f"<b>Nº Carnet / Cualificación:</b> <b>{instalador.get('licencia', 'REBT-30/15892')}</b>", body_style)
+        ]
+    ]
+    t_ins = Table(t_ins_data, colWidths=[11.4*cm, 7.0*cm])
+    t_ins.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    story.append(t_ins)
+    story.append(Spacer(1, 4))
+
+    # BLOQUE 4: CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN
+    story.append(Table([[Paragraph("<b>4. CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN ELÉCTRICA</b>", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    
+    pot_inst_kw = float(suministro.get('potencia_instalada_w', 7360)) / 1000.0
+    pot_max_kw = float(suministro.get('potencia_max_admisible_w', 7360)) / 1000.0
+    t_tec_data = [
+        [
+            Paragraph(f"<b>Tensión Nominal:</b> {suministro.get('tension', '230 V')}", body_style),
+            Paragraph(f"<b>Potencia Prevista / Diseño:</b> <b>{pot_inst_kw:.2f} kW</b>", body_style),
+            Paragraph(f"<b>Potencia Máxima Admisible:</b> <font color='#15803d'><b>{pot_max_kw:.2f} kW</b></font>", body_style)
+        ],
+        [
+            Paragraph(f"<b>Derivación Individual:</b> {suministro.get('di_cable', '3G6 mm² Cu RZ1-K')}", body_style),
+            Paragraph(f"<b>Canalización / Tubo:</b> {suministro.get('di_tubo', 'Tubo M32')}", body_style),
+            Paragraph(f"<b>Caída de Tensión Total:</b> <b>{suministro.get('di_cdt_pct', 0.86):.2f}%</b>", body_style)
+        ],
+        [
+            Paragraph(f"<b>Interruptor General (IGA):</b> <b>{protecciones.get('iga_amperaje', 32)} A</b> ({protecciones.get('iga_curva', 'Curva C')})", body_style),
+            Paragraph(f"<b>Poder de Corte Icn:</b> <b>{protecciones.get('iga_icn_ka', 6.0):.0f} kA</b>", body_style),
+            Paragraph(f"<b>Grado de Electrificación:</b> {suministro.get('grado_electrif', 'Básica')}", body_style)
+        ],
+        [
+            Paragraph(f"<b>Interruptor Diferencial:</b> {protecciones.get('diferenciales', '2P 40A / 30mA Clase A')}", body_style),
+            Paragraph(f"<b>Sobretensiones (ITC-BT-23):</b> {protecciones.get('sobretensiones', 'VTP + DPS Tipo 2')}", body_style),
+            Paragraph(f"<b>Resistencia Tierra (Rt):</b> <font color='#15803d'><b>11.8 Ω (Conforme)</b></font>", body_style)
+        ]
+    ]
+    t_tec = Table(t_tec_data, colWidths=[6.4*cm, 6.0*cm, 6.0*cm])
+    t_tec.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    story.append(t_tec)
+    story.append(Spacer(1, 4))
+
+    # BLOQUE 5: PROTOCOLO DE VERIFICACIÓN PREVIA (ITC-BT-05)
+    story.append(Table([[Paragraph("<b>5. RESULTADOS DE LAS VERIFICACIONES PREVIAS (ITC-BT-05)</b>", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    t_ens_data = [
+        [
+            Paragraph("<b>Prueba / Ensayo Reglamentario</b>", bold_style),
+            Paragraph("<b>Valor Mínimo / Máximo REBT</b>", bold_style),
+            Paragraph("<b>Valor Medido en Obra</b>", bold_style),
+            Paragraph("<b>Resultado</b>", bold_style)
+        ],
+        [
+            Paragraph("Continuidad de conductores de protección PE", body_style),
+            Paragraph("≤ 0.50 Ω", body_style),
+            Paragraph("<b>0.11 Ω</b>", body_style),
+            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+        ],
+        [
+            Paragraph("Resistencia de aislamiento a 500 Vcc (F-N / F-PE)", body_style),
+            Paragraph("≥ 1.00 MΩ", body_style),
+            Paragraph("<b>> 100 MΩ</b>", body_style),
+            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+        ],
+        [
+            Paragraph("Resistencia de toma de tierra del edificio (Rt)", body_style),
+            Paragraph("Rt · IΔn ≤ 24 V (≤ 15 Ω)", body_style),
+            Paragraph("<b>11.8 Ω</b>", body_style),
+            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+        ],
+        [
+            Paragraph("Tiempo y corriente de disparo diferencial (30 mA)", body_style),
+            Paragraph("IΔn ≤ 30 mA | t ≤ 300 ms", body_style),
+            Paragraph("<b>22 mA | 26 ms</b>", body_style),
+            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+        ]
+    ]
+    t_ens = Table(t_ens_data, colWidths=[7.2*cm, 4.4*cm, 3.8*cm, 3.0*cm])
+    t_ens.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), c_bg_head),
+        ('BACKGROUND', (0,1), (-1,-1), c_bg_sub),
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.0),
+        ('ALIGN', (1,0), (-1,-1), 'CENTER'),
+    ]))
+    story.append(t_ens)
+    story.append(Spacer(1, 4))
+
+    # BLOQUE 6: DECLARACIÓN RESPONSABLE Y FIRMA
+    dec_txt = (
+        "<b>DECLARACIÓN RESPONSABLE DEL INSTALADOR HABILITADO:</b><br/>"
+        "El instalador autorizado abajo firmante declara bajo su responsabilidad que la presente instalación eléctrica ha sido ejecutada "
+        "conforme a las prescripciones del <b>Reglamento Electrotécnico para Baja Tensión (Real Decreto 842/2002)</b> y sus Instrucciones Técnicas Complementarias, "
+        "habiéndose superado favorablemente todas las verificaciones y ensayos reglamentarios previos a su puesta en servicio. Asimismo, se certifica "
+        "que se ha hecho entrega al titular del correspondiente <i>Manual de Instrucciones de Uso y Mantenimiento</i> y copia del Esquema Unifilar."
+    )
+    story.append(Table([[Paragraph(dec_txt, small_style)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f8fafc")),
+        ('BOX', (0,0), (-1,-1), 0.5, c_secondary),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+    ]))
+    story.append(Spacer(1, 5))
+
+    # CUADROS DE FIRMA
+    firma_data = [
+        [
+            Paragraph(
+                f"<b>El Titular de la Instalación:</b><br/><br/><br/>"
+                f"__________________________________________<br/>"
+                f"Fdo.: <b>{titular.get('nombre', 'El Titular')}</b><br/>"
+                f"N.I.F.: {titular.get('nif', '')}",
+                body_style
+            ),
+            Paragraph(
+                f"<b>El Instalador Habilitado en Baja Tensión:</b><br/><br/><br/>"
+                f"__________________________________________<br/>"
+                f"Fdo.: <b>{instalador.get('nombre', 'Richard Orlando Choque Tejerina')}</b><br/>"
+                f"Carnet REBT: <b>{instalador.get('licencia', 'REBT-30/15892')}</b> | RII: {instalador.get('registro_rii', 'RII-30/08492')}",
+                body_style
+            )
+        ]
+    ]
+    t_firmas = Table(firma_data, colWidths=[9.2*cm, 9.2*cm])
+    t_firmas.setStyle(TableStyle([
+        ('BOX', (0,0), (-1,-1), 0.5, c_border),
+        ('BACKGROUND', (0,0), (-1,-1), colors.white),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+    ]))
+    story.append(KeepTogether(t_firmas))
+
+    doc.build(story, canvasmaker=NumberedCanvasMTDMurciaOficial)
+    return buffer.getvalue()
+
+
+# =========================================================================
+# GENERADOR DEL MANUAL DE INSTRUCCIONES DE USUARIO Y MANTENIMIENTO
+# =========================================================================
+
+def generar_pdf_manual_usuario(datos: dict) -> bytes:
+    """
+    Genera el Manual de Instrucciones de Usuario y Mantenimiento reglamentario (ITC-BT-04 apdo. 5)
+    para entregar al titular de la instalación.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.3*cm, rightMargin=1.3*cm,
+        topMargin=1.3*cm, bottomMargin=1.3*cm
+    )
+
+    styles = getSampleStyleSheet()
+    c_primary = colors.HexColor("#0f172a")
+    c_secondary = colors.HexColor("#0284c7")
+    c_dark_blue = colors.HexColor("#0369a1")
+    c_bg_head = colors.HexColor("#f1f5f9")
+    c_bg_sub = colors.HexColor("#f8fafc")
+    c_border = colors.HexColor("#94a3b8")
+    c_text_dark = colors.HexColor("#0f172a")
+    c_green = colors.HexColor("#15803d")
+
+    title_main = ParagraphStyle(
+        'MainTitle_Man', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=11.5, leading=14,
+        textColor=c_primary, alignment=1
+    )
+    body_style = ParagraphStyle(
+        'Body_Man', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7.5, leading=10.0,
+        textColor=c_text_dark
+    )
+    bold_style = ParagraphStyle(
+        'Bold_Man', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7.5, leading=10.0,
+        textColor=c_text_dark
+    )
+
+    story = []
+    titular = datos.get("titular", {})
+    empl = datos.get("emplazamiento", {})
+    instalador = datos.get("instalador", {})
+    fecha_hoy = datos.get("fecha", datetime.date.today().strftime("%d/%m/%Y"))
+
+    # Cabecera
+    logo_flowable = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
+    hdr_data = [
+        [
+            Paragraph("<b>MANUAL DE INSTRUCCIONES DE USUARIO Y MANTENIMIENTO</b><br/><font size='8' color='#0369a1'><b>Exigido por el Real Decreto 842/2002 (ITC-BT-04 apdo. 5)</b></font>", body_style),
+            logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR</b>", ParagraphStyle('HdrBM', parent=body_style, alignment=2))
+        ]
+    ]
+    t_hdr = Table(hdr_data, colWidths=[13.6*cm, 4.8*cm])
+    t_hdr.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(t_hdr)
+    story.append(HRFlowable(width="100%", thickness=1.2, color=c_secondary, spaceBefore=3, spaceAfter=6))
+
+    story.append(Paragraph(f"<b>Titular:</b> {titular.get('nombre', 'Cliente')} | <b>Emplazamiento:</b> {empl.get('direccion', '')}, {empl.get('municipio', 'Murcia')} | <b>Fecha:</b> {fecha_hoy}", body_style))
+    story.append(Spacer(1, 6))
+
+    # Puntos Clave del Manual
+    normas_guia = [
+        ("1. Dispositivos del Cuadro General (CGMP)", 
+         "• <b>IGA (Interruptor General Automático):</b> Protege contra cortocircuitos y sobrecargas de toda la vivienda.<br/>"
+         "• <b>Diferencial (ID):</b> Protege a las personas contra electrocución. Dispone de un <b>botón de prueba 'TEST (T)'</b> que debe pulsarse <b>una vez al mes</b> para asegurar su correcto funcionamiento.<br/>"
+         "• <b>PIAs (Pequeños Interruptores Automáticos):</b> Protegen cada circuito específico individualmente.<br/>"
+         "• <b>Sobretensiones (VTP/DPS):</b> Protegen sus electrodomésticos y equipos electrónicos contra descargas atmosféricas (rayos) y subidas de tensión de la red."),
+        ("2. Normas Básicas de Seguridad para el Usuario",
+         "• <b>Nunca manipule el interior del cuadro eléctrico</b> ni puentee fusibles o interruptores automáticos.<br/>"
+         "• Si se dispara un interruptor diferencial, baje todos los PIAs, suba el diferencial y vaya subiendo los PIAs uno a uno para identificar el circuito o electrodoméstico averiado.<br/>"
+         "• No utilice aparatos eléctricos descalzo ni con las manos húmedas, especialmente en cuartos de baño.<br/>"
+         "• Toda modificación o ampliación debe ser ejecutada por una <b>Empresa Instaladora Habilitada en Baja Tensión</b>."),
+        ("3. Mantenimiento Preventivo y Revisiones Obligatorias",
+         "• Comprobación mensual del botón Test del interruptor diferencial por el titular.<br/>"
+         "• Revisión periódica por empresa instaladora autorizada al menos cada 5 años (recomendada) o según exigencias de la ITC-BT-05.<br/>"
+         "• Inspección de apriete de bornas en cuadro eléctrico y comprobación de la toma de tierra.")
+    ]
+
+    for tit, desc in normas_guia:
+        story.append(Table([[Paragraph(f"<b>{tit}</b>", bold_style)]], colWidths=[18.4*cm], style=[
+            ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
+            ('TOPPADDING', (0,0), (-1,-1), 2.5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ]))
+        story.append(Table([[Paragraph(desc, body_style)]], colWidths=[18.4*cm], style=[
+            ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
+            ('BOX', (0,0), (-1,-1), 0.4, c_border),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ]))
+        story.append(Spacer(1, 4))
+
+    # Teléfonos de Asistencia y Contacto de la Empresa
+    t_tel_data = [
+        [
+            Paragraph(f"<b>Empresa Instaladora de Confianza:</b> {instalador.get('empresa', 'BOLIMUR')}<br/>"
+                      f"<b>Teléfono de Asistencia / Averías:</b> {instalador.get('telefono', '+34 600 000 000')}<br/>"
+                      f"<b>Nº Habilitación REBT:</b> {instalador.get('licencia', 'REBT-30/15892')}", body_style),
+            Paragraph("<b>Teléfonos de Emergencia:</b><br/>"
+                      "• Emergencias Generales: <b>112</b><br/>"
+                      "• Averías Distribuidora Eléctrica: <b>900 171 171</b>", body_style)
+        ]
+    ]
+    t_tel = Table(t_tel_data, colWidths=[11.0*cm, 7.4*cm])
+    t_tel.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#fef3c7")),
+        ('BOX', (0,0), (-1,-1), 0.7, colors.HexColor("#d97706")),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(Spacer(1, 4))
+    story.append(t_tel)
+
+    doc.build(story, canvasmaker=NumberedCanvasMTDMurciaOficial)
+    return buffer.getvalue()

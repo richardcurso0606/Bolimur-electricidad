@@ -63,3 +63,31 @@ def test_generar_pdf_mtd_industria_murcia_bytes():
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 10000
     assert pdf_bytes.startswith(b"%PDF")
+
+def test_generar_pdf_cie_oficial_bytes():
+    datos_cie = {
+        "titular": {"nombre": "Juan Pérez", "nif": "48123456X", "telefono": "600123456", "email": "juan@test.com"},
+        "emplazamiento": {"direccion": "C/ Mayor 12", "cp": "30001", "municipio": "Murcia", "cups": "ES0021000000000000XX", "uso": "Vivienda"},
+        "instalador": {"empresa": "BOLIMUR", "cif": "B-73000000", "nombre": "Richard Orlando Choque", "licencia": "REBT-30/15892", "registro_rii": "RII-30/08492", "telefono": "600000000"},
+        "suministro": {"potencia_instalada_w": 5750, "potencia_max_admisible_w": 9200, "tension": "Monofásico (230 V)", "di_cable": "2x10 mm² Cu", "di_tubo": "Tubo M32", "di_cdt_pct": 0.72, "grado_electrif": "Básica"},
+        "protecciones": {"iga_amperaje": 25, "iga_curva": "Curva C", "iga_icn_ka": 6.0, "diferenciales": "2P 40A / 30mA Clase A", "sobretensiones": "VTP+DPS Tipo 2"},
+        "expediente": "EXP-CIE-2026-01",
+        "fecha": "03/10/2026"
+    }
+    pdf_bytes = pdf_memoria_tecnica.generar_pdf_cie_oficial(datos_cie)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 5000
+    assert pdf_bytes.startswith(b"%PDF")
+
+def test_generar_pdf_manual_usuario_bytes():
+    datos_man = {
+        "titular": {"nombre": "Juan Pérez"},
+        "emplazamiento": {"direccion": "C/ Mayor 12", "municipio": "Murcia"},
+        "instalador": {"empresa": "BOLIMUR", "telefono": "600000000", "licencia": "REBT-30/15892"},
+        "fecha": "03/10/2026"
+    }
+    pdf_bytes = pdf_memoria_tecnica.generar_pdf_manual_usuario(datos_man)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 3000
+    assert pdf_bytes.startswith(b"%PDF")
+

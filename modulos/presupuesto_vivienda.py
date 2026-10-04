@@ -2684,6 +2684,41 @@ def app():
                     use_container_width=True
                 )
 
+            st.write("")
+            if st.button("🚀 Tramitar Memoria Técnica Oficial (MTD 30) y CIE para esta Vivienda", type="primary", use_container_width=True):
+                st.session_state["mtd_in_pot_inst"] = float(pot_w_val)
+                st.session_state["mtd_in_pot_max"] = float(pot_w_val)
+                st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
+                st.session_state["mtd_in_di_cable"] = f"2x10 mm² Cu + TT 1x10 mm² {tipo_cable_sel}"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos (ITC-BT-15)"
+                st.session_state["mtd_in_di_long"] = 15.0
+                st.session_state["mtd_in_di_cdt"] = 0.72
+                st.session_state["mtd_in_grado"] = grado_electr
+                st.session_state["mtd_in_iga"] = int(iga_amperaje)
+                st.session_state["mtd_in_curva"] = "Curva C (General)"
+                st.session_state["mtd_in_icn"] = 6.0
+                st.session_state["mtd_in_dif"] = f"{n_difs}x ID 2P 40A / 30mA Clase A / Superinmunizado"
+                st.session_state["mtd_in_vtp"] = "Permanentes (POP/VTP) + Transitorias Tipo 2 (DPS/VSP) con bobina de disparo"
+                st.session_state["mtd_in_tierra"] = "Conductor PE 1x10 mm² Cu | Picas en anillo Rt ≤ 15 Ω"
+                st.session_state["mtd_in_emp_uso"] = f"Vivienda Residencial ({grado_electr})"
+                st.session_state["mtd_circuitos"] = [
+                    {
+                        "nombre": f"{c['id']} - {c['denominacion']}",
+                        "potencia": float(c['pot_w']),
+                        "pia": int(c['pia']),
+                        "seccion": str(c['cable_sec']),
+                        "tubo": str(c['tubo_diam']),
+                        "longitud": float(c['long_m']),
+                        "cdt": float(round(c['cdt_pct'], 2)),
+                        "norma": "ITC-BT-25"
+                    }
+                    for c in circuitos_unifilar
+                ]
+                st.session_state["mtd_tipo_inst_sel"] = "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)"
+                st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                st.rerun()
+
             st.markdown(f"""
             <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 18px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
                 <p style="margin: 3px 0;"><b>Subtotal Comercial Neto (Base Imponible):</b> {subtotal_general_neto:,.2f} €</p>
@@ -2691,6 +2726,7 @@ def app():
                 <h2 style="color: #16a34a; margin: 8px 0 0 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:,.2f} €</h2>
             </div>
             """, unsafe_allow_html=True)
+
 
         elif modo_impresion.startswith("📐"):
             st.header("📐 Esquema Unifilar Oficial para Industria (Región de Murcia - DGEAIM)")

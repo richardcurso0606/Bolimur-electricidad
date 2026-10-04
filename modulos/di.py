@@ -189,7 +189,21 @@ def renderizar():
         Garantiza una caída de tensión real del **{dv_real_di_pct:.3f}%**. Protegida en cuadro por **IGA de {in_iga_auto} A (Curva C)** y tubo de **{tubo_diam_di}**.
         """)
 
+        if st.button("🚀 Tramitar esta DI en la Memoria Técnica Oficial (MTD 30 / CIE)", type="primary", use_container_width=True):
+            st.session_state["mtd_in_pot_inst"] = float(di_pot)
+            st.session_state["mtd_in_pot_max"] = float(di_pot)
+            st.session_state["mtd_in_di_cable"] = f"{'4x' if es_trifasico else '2x'}{s_final_di} mm² Cu + TT 1x{s_final_di} mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
+            st.session_state["mtd_in_di_tubo"] = f"Tubo {tubo_diam_di} libre de halógenos (ITC-BT-15)"
+            st.session_state["mtd_in_di_long"] = float(di_long)
+            st.session_state["mtd_in_di_cdt"] = float(round(dv_real_di_pct, 2))
+            st.session_state["mtd_in_iga"] = int(in_iga_auto)
+            st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz" if es_trifasico else "Monofásico (230 V) - 50 Hz"
+            st.session_state["mtd_tipo_inst_sel"] = "🔌 Derivación Individual DI (ITC-BT-15)"
+            st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+            st.rerun()
+
     # --- SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF DI ---
+
     st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
         with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):

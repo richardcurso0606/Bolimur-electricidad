@@ -168,3 +168,81 @@ class TestPresupuestoExcel:
         assert len(excel_bytes) > 100
         # Validar cabecera de archivo ZIP / XLSX (PK..)
         assert excel_bytes[:2] == b'PK'
+
+
+class TestREBTFuncionesAvanzadas:
+    """Pruebas para coordinación térmica, tierras, cortocircuito y factores."""
+
+    def test_dimensionar_conductor_pe(self):
+        # Sfase <= 16 -> Spe = Sfase
+        assert rebt.dimensionar_conductor_pe(1.5) == 1.5
+        assert rebt.dimensionar_conductor_pe(2.5) == 2.5
+        assert rebt.dimensionar_conductor_pe(6.0) == 6.0
+        assert rebt.dimensionar_conductor_pe(10.0) == 10.0
+        assert rebt.dimensionar_conductor_pe(16.0) == 16.0
+        # 16 < Sfase <= 35 -> Spe = 16
+        assert rebt.dimensionar_conductor_pe(25.0) == 16.0
+        assert rebt.dimensionar_conductor_pe(35.0) == 16.0
+        # Sfase > 35 -> Spe = Sfase / 2 normalizada
+        assert rebt.dimensionar_conductor_pe(50.0) == 25.0
+        assert rebt.dimensionar_conductor_pe(70.0) == 35.0
+        assert rebt.dimensionar_conductor_pe(95.0) == 50.0
+
+    def test_verificar_coordinacion_proteccion(self):
+        # Caso correcto: Ib (28A) <= In (32A) <= Iz (41A)
+        res_ok = rebt.verificar_coordinacion_proteccion(28.0, 32.0, 41.0)
+        assert res_ok["cumple"] is True
+
+        # Caso incorrecto por In < Ib: Ib (35A) > In (32A)
+        res_falla_ib = rebt.verificar_coordinacion_proteccion(35.0, 32.0, 41.0)
+        assert res_falla_ib["cumple"] is False
+        assert res_falla_ib["cumple_ib_in"] is False
+
+        # Caso peligro térmico: In (50A) > Iz (41A)
+        res_falla_iz = rebt.verificar_coordinacion_proteccion(28.0, 50.0, 41.0)
+        assert res_falla_iz["cumple"] is False
+        assert res_falla_iz["cumple_in_iz"] is False
+
+    def test_verificar_cortocircuito_cable(self):
+        # 6 kA, 0.05s, 10mm² Cu XLPE (k=143)
+        cumple, s_min = rebt.verificar_cortocircuito_cable(6.0, 0.05, 10.0, "cobre", "xlpe")
+        assert s_min < 10.0
+        assert cumple is True
+
+    def test_factores_correccion(self):
+        f_temp_40 = rebt.obtener_factor_temperatura(40.0, "xlpe")
+        assert f_temp_40 == 1.00
+        f_temp_50 = rebt.obtener_factor_temperatura(50.0, "xlpe")
+        assert f_temp_50 == 0.90
+
+        f_agrup_1 = rebt.obtener_factor_agrupamiento(1)
+        assert f_agrup_1 == 1.00
+        f_agrup_2 = rebt.obtener_factor_agrupamiento(2)
+        assert f_agrup_2 == 0.80
+
+
+class TestTablasNormativas:
+    """Verifica el módulo de tablas normativas, buscador e índice."""
+
+    def test_categorias_e_indice(self):
+        from modulos import tablas_normativas
+        assert len(tablas_normativas.CATEGORIAS_TABLAS) >= 7
+        # Verificar que todos los IDs tienen título asignado
+        for cat, lista_ids in tablas_normativas.CATEGORIAS_TABLAS.items():
+            assert len(lista_ids) > 0
+            for tid in lista_ids:
+                tit = tablas_normativas._obtener_titulo_tabla(tid)
+                assert isinstance(tit, str)
+                assert len(tit) > 5
+
+    def test_buscador_tablas(self):
+        from modulos import tablas_normativas
+        res_iz = tablas_normativas._buscar_tablas("temperatura")
+        assert len(res_iz) > 0
+        assert "tab_factores_temperatura" in res_iz
+
+        res_irve = tablas_normativas._buscar_tablas("irve")
+        assert len(res_irve) > 0
+        assert "tab_esquemas_irve_bt52" in res_irve
+
+

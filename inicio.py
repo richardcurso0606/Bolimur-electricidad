@@ -69,6 +69,14 @@ except Exception as e:
     memoria_tecnica_industria = None
     errores_import["memoria_tecnica_industria"] = traceback.format_exc()
 
+try:
+    from modulos import tablas_normativas
+except Exception as e:
+    tablas_normativas = None
+    errores_import["tablas_normativas"] = traceback.format_exc()
+
+
+
 # =========================================================================
 # ESTILOS CSS GLOBALES
 # =========================================================================
@@ -383,89 +391,10 @@ elif "Presupuesto" in seleccion_modulo or "🏡" in seleccion_modulo or "Viviend
             st.code(errores_import["presupuesto_vivienda"])
 
 elif "Tablas" in seleccion_modulo or "📚" in seleccion_modulo:
-    st.title("📚 Tablas y Fórmulas Oficiales del REBT")
-    st.markdown("Consulta rápida de parámetros normalizados según el Real Decreto 842/2002 y normas UNE asociadas.")
+    if tablas_normativas:
+        tablas_normativas.renderizar()
+    else:
+        st.error("Módulo de Tablas Normativas no disponible.")
+        if "tablas_normativas" in errores_import:
+            st.code(errores_import["tablas_normativas"])
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🌡️ Conductividades y Resistividades",
-        "⚡ Intensidades Admisibles (Iz)",
-        "🛠️ Tubos Reglamentarios",
-        "📐 Fórmulas Oficiales"
-    ])
-
-    with tab1:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🌡️ Conductividad (γ) y Resistividad (ρ) a Temperatura de Servicio</h4></div>', unsafe_allow_html=True)
-        with st.container(border=True):
-            st.markdown("""
-            Según la norma **UNE-HD 60364-5-52**, la conductividad del conductor disminuye con la temperatura. Para cálculos en régimen permanente se adoptan los valores a máxima temperatura admisible:
-            """)
-            df_cond = pd.DataFrame([
-                {"Material": "Cobre", "Aislamiento": "XLPE / EPR", "Temp. Máx Servicio": "90 ºC", "Conductividad γ [m/(Ω·mm²)]": 44.0, "Resistividad ρ [Ω·mm²/m]": 0.0227},
-                {"Material": "Cobre", "Aislamiento": "PVC", "Temp. Máx Servicio": "70 ºC", "Conductividad γ [m/(Ω·mm²)]": 48.5, "Resistividad ρ [Ω·mm²/m]": 0.0206},
-                {"Material": "Aluminio", "Aislamiento": "XLPE / EPR", "Temp. Máx Servicio": "90 ºC", "Conductividad γ [m/(Ω·mm²)]": 28.0, "Resistividad ρ [Ω·mm²/m]": 0.0357},
-                {"Material": "Aluminio", "Aislamiento": "PVC", "Temp. Máx Servicio": "70 ºC", "Conductividad γ [m/(Ω·mm²)]": 31.0, "Resistividad ρ [Ω·mm²/m]": 0.0323},
-            ])
-            st.dataframe(df_cond, use_container_width=True, hide_index=True)
-
-    with tab2:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ Intensidades Admisibles en Conductores (Iz) - UNE-HD 60364-5-52 / ITC-BT-19</h4></div>', unsafe_allow_html=True)
-        with st.container(border=True):
-            c_mat, c_ais, c_met = st.columns(3)
-            with c_mat:
-                sel_m = st.selectbox("Material:", ["Cobre", "Aluminio"], key="tab_m")
-            with c_ais:
-                sel_a = st.selectbox("Aislamiento:", ["XLPE / EPR (90ºC)", "PVC (70ºC)"], key="tab_a")
-            with c_met:
-                sel_met = st.selectbox("Método de Instalación:", ["Bajo tubo (B1 / B2)", "Enterrado bajo tubo (D)"], key="tab_met")
-
-            if rebt:
-                tabla = rebt.obtener_tabla_iz(sel_m, sel_a, sel_met)
-                df_iz = pd.DataFrame([
-                    {"Sección (mm²)": s, "Intensidad Admisible Iz (A)": iz} for s, iz in sorted(tabla.items())
-                ])
-                st.dataframe(df_iz, use_container_width=True, hide_index=True)
-
-    with tab3:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🛠️ Diámetros Exteriores Mínimos de Tubos Protectores</h4></div>', unsafe_allow_html=True)
-        with st.container(border=True):
-            col_t1, col_t2 = st.columns(2)
-            with col_t1:
-                st.markdown("#### Derivaciones Individuales (ITC-BT-15 apdo. 3)")
-                st.info("⚠️ **El diámetro mínimo reglamentario para cualquier Derivación Individual es Ø 32 mm** con previsión para ampliación del 100%.")
-                df_tubo_di = pd.DataFrame([
-                    {"Sección Conductor": "Hasta 6 mm²", "Diámetro Tubo": "Ø 32 mm", "Norma": "ITC-BT-15 (Mínimo absoluto)"},
-                    {"Sección Conductor": "10 a 16 mm²", "Diámetro Tubo": "Ø 40 mm", "Norma": "ITC-BT-15"},
-                    {"Sección Conductor": "25 a 35 mm²", "Diámetro Tubo": "Ø 50 mm", "Norma": "ITC-BT-15"},
-                    {"Sección Conductor": "≥ 50 mm²", "Diámetro Tubo": "Ø 63 mm o Bandeja", "Norma": "ITC-BT-15"}
-                ])
-                st.dataframe(df_tubo_di, use_container_width=True, hide_index=True)
-
-            with col_t2:
-                st.markdown("#### Línea General de Alimentación - LGA (ITC-BT-14 Tabla 1)")
-                st.info("⚠️ **El diámetro mínimo reglamentario para LGA trifásica (3F+N+PE) parte de Ø 110 mm**.")
-                df_tubo_lga = pd.DataFrame([
-                    {"Sección Conductor": "Hasta 25 mm²", "Diámetro Mínimo Tubo": "Ø 110 mm", "Norma": "ITC-BT-14 Tabla 1"},
-                    {"Sección Conductor": "35 mm²", "Diámetro Mínimo Tubo": "Ø 125 mm", "Norma": "ITC-BT-14 Tabla 1"},
-                    {"Sección Conductor": "50 a 70 mm²", "Diámetro Mínimo Tubo": "Ø 140 mm", "Norma": "ITC-BT-14 Tabla 1"},
-                    {"Sección Conductor": "95 a 120 mm²", "Diámetro Mínimo Tubo": "Ø 160 mm", "Norma": "ITC-BT-14 Tabla 1"},
-                    {"Sección Conductor": "150 mm²", "Diámetro Mínimo Tubo": "Ø 180 mm", "Norma": "ITC-BT-14 Tabla 1"},
-                    {"Sección Conductor": "≥ 185 mm²", "Diámetro Mínimo Tubo": "Ø 200 a 225 mm", "Norma": "ITC-BT-14 Tabla 1"}
-                ])
-                st.dataframe(df_tubo_lga, use_container_width=True, hide_index=True)
-
-    with tab4:
-        st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">📐 Formulario Reglamentario REBT</h4></div>', unsafe_allow_html=True)
-        with st.container(border=True):
-            st.markdown(r"""
-            * **Intensidad de Diseño Monofásica:**
-              $$I_b = \frac{P}{V \cdot \cos\varphi}$$
-            * **Intensidad de Diseño Trifásica:**
-              $$I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}$$
-            * **Caída de Tensión Monofásica ($230\text{ V}$):**
-              $$\Delta V = \frac{2 \cdot P \cdot L}{\gamma \cdot S \cdot V} \quad \implies \quad \Delta V\% = \frac{\Delta V}{V} \cdot 100$$
-            * **Caída de Tensión Trifásica ($400\text{ V}$):**
-              $$\Delta V = \frac{P \cdot L}{\gamma \cdot S \cdot V} \quad \implies \quad \Delta V\% = \frac{\Delta V}{V} \cdot 100$$
-            * **Previsión de Cargas en Edificios Residenciales (ITC-BT-10):**
-              $$P_t = P_1 (\text{Viviendas}) + P_2 (\text{Locales}) + P_3 (\text{Servicios}) + P_4 (\text{Garajes e IRVE})$$
-              Para $n > 20$ viviendas: $K = 15,4 + (n - 20) \cdot 0,5$.
-            """)
