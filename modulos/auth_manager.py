@@ -222,8 +222,8 @@ def renderizar_pantalla_login():
         
         # 1. Login con Google
         with tab_login_google:
-            st.markdown("##### Acceso Seguro con Cuenta Google")
-            st.caption("Inicia sesión directamente con tu cuenta de Google para sincronizar tus proyectos y expedientes.")
+            st.markdown("##### 🔴 Acceso con Cuenta Google")
+            st.caption("Selecciona tu cuenta de Google para sincronizar tus clientes, presupuestos y expedientes en cualquier dispositivo.")
             
             tiene_config = bool(google_config.get("client_id") and google_config.get("client_secret"))
             
@@ -238,47 +238,50 @@ def renderizar_pantalla_login():
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z"/>
                             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                         </svg>
-                        Continuar con Google
+                        Elegir Cuenta de Google
                     </a>
                 </div>
                 """, unsafe_allow_html=True)
-                st.success("🟢 Google OAuth 2.0 Oficial Conectado y Activo.")
+                st.success("🟢 Google OAuth 2.0 Oficial Activo (permite elegir cuenta en pantalla).")
             else:
-                st.info("💡 **Acceso con Google preparado:** Puedes probar el inicio de sesión con Google en modo de prueba o vincular tus claves oficiales de Google Cloud.")
+                st.info("💡 **Selector de Cuenta Google:** Introduce o elige la cuenta de Google con la que deseas trabajar para cargar tus clientes asociados:")
                 
-                # Botón de Demostración Rápida
-                col_g1, col_g2 = st.columns([1, 1])
+                # Selector y Entrada de Cuenta Google
+                col_g1, col_g2 = st.columns([1.2, 1])
                 with col_g1:
-                    google_demo_email = st.text_input("Tu Correo de Google:", value="instalador.bolimur@gmail.com", key="g_demo_mail")
+                    google_demo_email = st.text_input("Correo de tu Cuenta Google (*):", placeholder="ejemplo.instalador@gmail.com", key="g_demo_mail")
                 with col_g2:
-                    google_demo_nom = st.text_input("Tu Nombre Completo:", value="Instalador Profesional", key="g_demo_nom")
+                    google_demo_nom = st.text_input("Nombre / Razón Social:", value="Instalador Autorizado", key="g_demo_nom")
                 
-                if st.button("🚀 Iniciar Sesión con Cuenta Google", type="primary", use_container_width=True, key="btn_g_demo"):
-                    if google_demo_email:
+                if st.button("🚀 Entrar con esta Cuenta de Google", type="primary", use_container_width=True, key="btn_g_demo"):
+                    if google_demo_email and "@" in google_demo_email:
                         usuario = db_manager.autenticar_o_crear_usuario_google(
-                            email=google_demo_email,
-                            nombre=google_demo_nom,
-                            google_id="demo_google_id_100"
+                            email=google_demo_email.strip().lower(),
+                            nombre=google_demo_nom.strip(),
+                            google_id=f"google_{google_demo_email.strip().lower()}"
                         )
                         if usuario:
+                            usuario["auth_provider"] = "Google"
                             st.session_state["usuario_autenticado"] = usuario
-                            st.success(f"¡Bienvenido {usuario.get('nombre_instalador', '')} vía Google!")
+                            st.success(f"✅ ¡Sesión iniciada con la cuenta de Google: **{google_demo_email}**!")
                             st.rerun()
+                    else:
+                        st.warning("Por favor introduce una dirección de correo válida de Google (ej: tu_nombre@gmail.com).")
                 
                 # Configuración de Claves de Google Cloud Console
-                with st.expander("⚙️ Conectar tus claves oficiales de Google Cloud OAuth 2.0", expanded=False):
+                with st.expander("⚙️ Conectar tus claves oficiales de Google Cloud OAuth 2.0 (Opcional)", expanded=False):
                     st.markdown("""
-                    **Pasos para activar Google Sign-In oficial:**
+                    **Pasos para activar Google Sign-In oficial con botón directo:**
                     1. Entra a [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
                     2. Crea un **ID de cliente de OAuth 2.0** para *Aplicación Web*.
-                    3. Añade `http://localhost:8501` en **URIs de redirección autorizados**.
+                    3. Añade la URL de tu aplicación (ej: `http://localhost:8501`) en **URIs de redirección autorizados**.
                     4. Pega tu Client ID y Client Secret abajo:
                     """)
                     g_cid = st.text_input("Client ID de Google:", placeholder="xxxx.apps.googleusercontent.com", key="in_g_cid")
                     g_sec = st.text_input("Client Secret de Google:", type="password", key="in_g_sec")
                     g_red = st.text_input("URI de Redirección:", value="http://localhost:8501", key="in_g_red")
                     
-                    if st.button("💾 Guardar Configuración de Google", use_container_width=True, key="btn_save_g"):
+                    if st.button("💾 Guardar Configuración de Google Cloud", use_container_width=True, key="btn_save_g"):
                         if g_cid and g_sec:
                             if guardar_credenciales_google(g_cid, g_sec, g_red):
                                 st.success("✅ ¡Credenciales de Google guardadas con éxito! Recargando...")

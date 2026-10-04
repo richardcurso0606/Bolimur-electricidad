@@ -36,10 +36,11 @@ def renderizar():
             else:
                 st.info("No se encontraron clientes duplicados en tu base de datos.")
 
-    tab_clientes_lista, tab_nuevo_cliente, tab_todos_proyectos = st.tabs([
+    tab_clientes_lista, tab_nuevo_cliente, tab_todos_proyectos, tab_sincro = st.tabs([
         "📋 Expediente y Ficha del Cliente",
         "➕ Alta de Nuevo Cliente",
-        "📂 Historial Global de Proyectos"
+        "📂 Historial Global de Proyectos",
+        "☁️ Sincronización y Acceso Móvil / PC"
     ])
 
     # =========================================================================
@@ -302,6 +303,67 @@ def renderizar():
                         "Fecha de Guardado": p.get("fecha_guardado", "")[:16]
                     })
                 st.dataframe(pd.DataFrame(filas_tabla_proy), use_container_width=True, hide_index=True)
+
+    # =========================================================================
+    # TAB 4: SINCRONIZACIÓN Y ACCESO MULTI-DISPOSITIVO (PC / MÓVIL / TABLET)
+    # =========================================================================
+    with tab_sincro:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">☁️ Sincronización y Acceso desde Cualquier Dispositivo (PC, Móvil o Tablet)</h4></div>', unsafe_allow_html=True)
+        st.caption("Asegura el acceso a tus clientes, cálculos y boletines CIE desde el taller, la furgoneta o en plena obra.")
+
+        col_sync1, col_sync2 = st.columns(2)
+
+        with col_sync1:
+            with st.container(border=True):
+                st.markdown("#### 📥 1. Exportar Copia de Seguridad Completa (JSON)")
+                st.write("Descarga un archivo seguro con todos tus clientes registrados, proyectos y expedientes para transferirlo a tu móvil, portátil o tablet.")
+                
+                json_backup = db_manager.exportar_copia_seguridad_nube(usuario_id)
+                st.download_button(
+                    label="💾 Descargar Respaldo de Clientes y Obras (JSON)",
+                    data=json_backup,
+                    file_name="Copia_Seguridad_Clientes_Bolimur.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    type="primary"
+                )
+
+        with col_sync2:
+            with st.container(border=True):
+                st.markdown("#### 📤 2. Restaurar / Importar en este Dispositivo")
+                st.write("Sube un archivo de respaldo generado desde otro PC o móvil para cargar todos tus clientes y proyectos en 1 segundo.")
+                
+                archivo_in = st.file_uploader("Selecciona archivo JSON de respaldo:", type=["json"], key="upload_crm_backup")
+                if archivo_in is not None:
+                    contenido_str = archivo_in.getvalue().decode("utf-8")
+                    if st.button("🚀 Importar y Sincronizar Clientes", key="btn_do_import_crm", use_container_width=True, type="primary"):
+                        ok_imp, msg_imp = db_manager.importar_copia_seguridad_nube(usuario_id, contenido_str)
+                        if ok_imp:
+                            st.success(f"✅ {msg_imp}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg_imp}")
+
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">📱 Cómo Usar la Aplicación en tu Teléfono Móvil o Tablet</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                st.markdown("""
+                **🌐 Opción 1: En la misma red Wi-Fi (Taller / Oficina / Casa)**
+                1. Asegúrate de que tu PC y tu teléfono móvil están conectados a la **misma red Wi-Fi**.
+                2. En tu PC, abre la terminal y arranca la aplicación:
+                   `streamlit run inicio.py --server.address=0.0.0.0`
+                3. Abre el navegador de tu móvil o tablet e introduce la dirección IP de tu ordenador (ej: `http://192.168.1.50:8501`).
+                4. **¡Listo!** Verás exactamente los mismos clientes y proyectos en tu móvil.
+                """)
+            with col_m2:
+                st.markdown("""
+                **☁️ Opción 2: En la Nube (24/7 desde la calle con datos 4G/5G)**
+                1. Tu código ya está en GitHub en el repositorio `Bolimur-electricidad`.
+                2. Entra en [share.streamlit.io](https://share.streamlit.io) y conéctalo gratis con tu cuenta de GitHub.
+                3. Obtendrás un enlace web oficial seguro (`https://bolimur.streamlit.app`) accesible desde cualquier lugar del mundo.
+                4. Al iniciar sesión con tu cuenta de Google en cualquier teléfono o PC, accederás a todos tus clientes al instante.
+                """)
 
 
 def cargar_proyecto_en_session(modulo: str, datos: dict, cliente: dict):

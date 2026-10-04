@@ -209,11 +209,40 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
+    user_email = usuario_actual.get("email", "")
+    is_google = "gmail.com" in user_email.lower() or bool(usuario_actual.get("google_id")) or usuario_actual.get("auth_provider") == "Google"
+
     with st.container(border=True):
-        st.markdown(f"👤 **Instalador:**  \n<small>{usuario_actual.get('nombre_instalador', 'Usuario')}</small>", unsafe_allow_html=True)
-        st.markdown(f"📜 **Licencia:**  \n<small>`{usuario_actual.get('num_licencia_rebt', 'REBT')}`</small>", unsafe_allow_html=True)
-        if st.button("🚪 Cerrar Sesión", key="btn_logout_side", use_container_width=True):
-            auth_manager.cerrar_sesion()
+        if is_google:
+            st.markdown(f"""
+            <div style="background: #f0f9ff; border: 1.5px solid #0284c7; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">🔴</span>
+                    <div>
+                        <div style="font-size: 11px; font-weight: bold; color: #0369a1; text-transform: uppercase;">Cuenta Google Activa</div>
+                        <div style="font-size: 12px; color: #1e293b; font-weight: 600; word-break: break-all;">{user_email}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+                <div style="font-size: 11px; font-weight: bold; color: #475569; text-transform: uppercase;">👤 Sesión de Usuario</div>
+                <div style="font-size: 12px; color: #1e293b; font-weight: 600; word-break: break-all;">{user_email or usuario_actual.get('username_windows', 'Local')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown(f"👤 **Instalador:** `{usuario_actual.get('nombre_instalador', 'Usuario')}`")
+        st.markdown(f"📜 **Licencia:** `{usuario_actual.get('num_licencia_rebt', 'REBT-30/00000')}`")
+        
+        col_sbtn1, col_sbtn2 = st.columns(2)
+        with col_sbtn1:
+            if st.button("🔄 Cambiar", key="btn_switch_acc", use_container_width=True, help="Cambiar a otra cuenta de Google o usuario"):
+                auth_manager.cerrar_sesion()
+        with col_sbtn2:
+            if st.button("🚪 Salir", key="btn_logout_side", use_container_width=True, help="Cerrar sesión actual"):
+                auth_manager.cerrar_sesion()
 
     st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
 
