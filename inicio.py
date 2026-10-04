@@ -81,6 +81,12 @@ except Exception as e:
     asistente_ia_rebt = None
     errores_import["asistente_ia_rebt"] = traceback.format_exc()
 
+try:
+    from modulos import fotovoltaica
+except Exception as e:
+    fotovoltaica = None
+    errores_import["fotovoltaica"] = traceback.format_exc()
+
 
 
 # =========================================================================
@@ -258,6 +264,7 @@ with st.sidebar:
     opciones = [
         ("🏠  Menú Principal", "🏠 Menú Principal"),
         ("🤖  Consultor IA REBT", "🤖 Consultor IA REBT"),
+        ("☀️  Solar Fotovoltaica", "☀️ Solar Fotovoltaica"),
         ("🏛️  Memoria Técnica (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
         ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
         ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
@@ -300,12 +307,25 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
                 st.session_state.menu_activo = "🤖 Consultor IA REBT"
                 st.rerun()
 
-    # BANNER DESTACADO 2: MTD INDUSTRIA MURCIA
+    # BANNER DESTACADO 2: SOLAR FOTOVOLTAICA
+    with st.container(border=True):
+        col_pv_txt, col_pv_btn = st.columns([3, 1])
+        with col_pv_txt:
+            st.markdown("### ☀️ Energía Solar Fotovoltaica en Autoconsumo (ITC-BT-40 / RD 244/2019)")
+            st.write("Dimensionamiento de ingeniería y campo: cálculo térmico de strings ($V_{oc,\\max}$ a -5ºC, $V_{mp,\\min}$ a 70ºC), verificación MPPT e inversor, cable solar H1Z2Z2-K, cuadro AC con diferencial 6mA DC, balance de producción anual (HSP Murcia), guía de obra de calle, resolución de averías y Memoria Técnica de Diseño Oficial (DGEAIM Murcia).")
+        with col_pv_btn:
+            st.write("")
+            st.write("")
+            if st.button("☀️ Abrir Fotovoltaica", key="btn_home_pv_featured", use_container_width=True):
+                st.session_state.menu_activo = "☀️ Solar Fotovoltaica"
+                st.rerun()
+
+    # BANNER DESTACADO 3: MTD INDUSTRIA MURCIA
     with st.container(border=True):
         col_mtd_txt, col_mtd_btn = st.columns([3, 1])
         with col_mtd_txt:
             st.markdown("### 🏛️ Generador Oficial de Memoria Técnica de Diseño (MTD 30 - Murcia)")
-            st.write("Módulo especializado para la tramitación telemática ante la **Dirección General de Energía y Actividad Industrial y Minera (DGEAIM - Región de Murcia)**. Incluye auto-rellenado automático desde cálculos (Vivienda ITC-BT-25, IRVE ITC-BT-52, Locales), protocolo de pruebas ITC-BT-05, esquema unifilar y exportación en PDF oficial.")
+            st.write("Módulo especializado para la tramitación telemática ante la **Dirección General de Energía y Actividad Industrial y Minera (DGEAIM - Región de Murcia)**. Incluye auto-rellenado automático desde cálculos (Vivienda ITC-BT-25, IRVE ITC-BT-52, Locales, Fotovoltaica), protocolo de pruebas ITC-BT-05, esquema unifilar y exportación en PDF oficial.")
         with col_mtd_btn:
             st.write("")
             st.write("")
@@ -379,6 +399,14 @@ elif "Consultor IA" in seleccion_modulo or "🤖" in seleccion_modulo:
         st.error("Módulo Consultor IA REBT no disponible.")
         if "asistente_ia_rebt" in errores_import:
             st.code(errores_import["asistente_ia_rebt"])
+
+elif "Solar" in seleccion_modulo or "☀️" in seleccion_modulo or "Fotovoltaica" in seleccion_modulo:
+    if fotovoltaica:
+        fotovoltaica.renderizar()
+    else:
+        st.error("Módulo de Solar Fotovoltaica no disponible.")
+        if "fotovoltaica" in errores_import:
+            st.code(errores_import["fotovoltaica"])
 
 elif "Memoria" in seleccion_modulo or "MTD" in seleccion_modulo or "🏛️" in seleccion_modulo or "Industria" in seleccion_modulo:
     if memoria_tecnica_industria:

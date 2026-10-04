@@ -35,7 +35,7 @@ def ejecutar_auditoria():
     # -------------------------------------------------------------------------
     # FASE 1: Verificación de Todos los Módulos del Sistema
     # -------------------------------------------------------------------------
-    print("\n[FASE 1/7] Verificando sintaxis e importaciones de los 23 módulos...")
+    print("\n[FASE 1/7] Verificando sintaxis e importaciones de los 25 módulos del sistema...")
     modulos_sistema = [
         "modulos.rebt_tablas",
         "modulos.tablas_normativas",
@@ -43,6 +43,8 @@ def ejecutar_auditoria():
         "modulos.di",
         "modulos.lga",
         "modulos.irve",
+        "modulos.fotovoltaica",
+        "modulos.pdf_fotovoltaica",
         "modulos.calculo_rapido",
         "modulos.presupuesto_vivienda",
         "modulos.gestion_clientes",
@@ -95,6 +97,15 @@ def ejecutar_auditoria():
         from modulos import di
         assert hasattr(di, "render_interfaz_di") or hasattr(di, "calcular_di") or True
         print("  ✓ Módulos de Derivación Individual (DI) y Línea General de Alimentación (LGA) conformes.")
+
+        # Verificación Fotovoltaica (ITC-BT-40 / RD 244/2019)
+        from modulos import fotovoltaica as fv
+        res_fv = fv.calcular_string_dc(6, 500, 50.0, 42.0, 12.0, 11.5, -0.0028, -0.0035)
+        assert res_fv["voc_string_max"] == 325.2
+        assert res_fv["ok_voc_inversor"] is True
+        res_ac_fv = fv.calcular_linea_ac(5000.0, 230.0, False, 12.0, 6.0)
+        assert res_ac_fv["pia_sugerido"] == 32
+        print("  ✓ Módulo de Energía Solar Fotovoltaica (ITC-BT-40): Cálculo térmico de strings y línea AC conformes.")
     except Exception as e:
         err_msg = f"Error en cálculos y tablas REBT: {e}"
         errores.append(err_msg)

@@ -70,7 +70,31 @@ def cargar_plantilla_por_tipo(tipo: str):
     """
     Rellena automáticamente los parámetros técnicos y circuitos según el tipo de instalación reglamentaria.
     """
-    if "IRVE" in tipo or "Recarga" in tipo or "Vehículo" in tipo:
+    if "Fotovoltaic" in tipo or "Autoconsumo" in tipo or "Solar" in tipo:
+        st.session_state["mtd_in_pot_inst"] = 5000.0
+        st.session_state["mtd_in_pot_max"] = 5000.0
+        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+        st.session_state["mtd_in_origen"] = "Generador Fotovoltaico Interconectado a Red Interior (ITC-BT-40)"
+        st.session_state["mtd_in_di_cable"] = "3G6 mm² Cu RZ1-K (AS) 0.6/1kV"
+        st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos"
+        st.session_state["mtd_in_di_long"] = 12.0
+        st.session_state["mtd_in_di_cdt"] = 0.58
+        st.session_state["mtd_in_grado"] = "Autoconsumo Fotovoltaico (ITC-BT-40)"
+        st.session_state["mtd_in_iga"] = 25
+        st.session_state["mtd_in_curva"] = "Curva C (General)"
+        st.session_state["mtd_in_icn"] = 6.0
+        st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (UNE-EN 62955)"
+        st.session_state["mtd_in_vtp"] = "Permanentes (POP) + Transitorias Tipo 2 con bobina y protección anti-isla integrada"
+        st.session_state["mtd_in_tierra"] = "Conductor PE 1x6 mm² Cu uniendo marcos y estructuras a tierra | Rt ≤ 15 Ω"
+        st.session_state["mtd_in_spl"] = "Smart Meter / Vatímetro de inyección cero / balance neto"
+        st.session_state["mtd_in_emp_uso"] = "Instalación Generadora en Autoconsumo (RD 244/2019)"
+        st.session_state["mtd_circuitos"] = [
+            {"nombre": "Línea Evacuación AC Inversor", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 12, "cdt": 0.58, "norma": "ITC-BT-40"},
+            {"nombre": "Circuito Generación DC String 1", "potencia": 2750, "pia": 15, "seccion": "2x6.0 H1Z2Z2-K", "tubo": "M25 UV", "longitud": 18, "cdt": 0.65, "norma": "ITC-BT-40"},
+            {"nombre": "Circuito Generación DC String 2", "potencia": 2750, "pia": 15, "seccion": "2x6.0 H1Z2Z2-K", "tubo": "M25 UV", "longitud": 20, "cdt": 0.72, "norma": "ITC-BT-40"}
+        ]
+
+    elif "IRVE" in tipo or "Recarga" in tipo or "Vehículo" in tipo:
         st.session_state["mtd_in_pot_inst"] = 7360.0
         st.session_state["mtd_in_pot_max"] = 7360.0
         st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -228,6 +252,7 @@ def renderizar():
             tipo_inst_sel = st.selectbox(
                 "Tipo de Instalación (REBT):",
                 [
+                    "☀️ Autoconsumo Solar Fotovoltaico (ITC-BT-40 / RD 244/2019)",
                     "🏗️ Instalación Provisional y Temporal de Obras (ITC-BT-33 / Cuadro de Obra)",
                     "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
                     "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
