@@ -351,6 +351,9 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     protecciones = datos_mtd.get("protecciones", {})
     circuitos = datos_mtd.get("circuitos", [])
     tipo_instalacion = datos_mtd.get("tipo_instalacion", "Vivienda Residencial (ITC-BT-25)")
+    if not tipo_instalacion or tipo_instalacion.startswith("⚪") or "Blanco" in tipo_instalacion or "Seleccionar" in tipo_instalacion:
+        uso_emp = emplazamiento.get("uso", "").strip()
+        tipo_instalacion = uso_emp if uso_emp else "Instalación Eléctrica en Baja Tensión"
     fecha_str = datos_mtd.get("fecha", datetime.date.today().strftime("%d/%m/%Y"))
     expediente = datos_mtd.get("expediente", "EXP-MTD-MURCIA-2026")
 

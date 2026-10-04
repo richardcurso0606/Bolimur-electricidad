@@ -176,5 +176,22 @@ def test_generar_pdf_mtd_con_anexos_graficos_y_unifilar_personalizado():
     assert len(pdf_bytes) > 12000
     assert pdf_bytes.startswith(b"%PDF")
 
+def test_generar_pdf_mtd_con_tipo_en_blanco():
+    datos_blanco = {
+        "tipo_instalacion": "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --",
+        "tipo_tramitacion": "🆕 Nueva Instalación",
+        "titular": {"nombre": "Cliente En Blanco", "nif": "12345678A"},
+        "emplazamiento": {"direccion": "Calle de Prueba", "municipio": "Murcia", "uso": "Vivienda Unifamiliar"},
+        "instalador": {"empresa": "BOLIMUR", "nombre": "Richard Orlando Choque", "licencia": "REBT-30/15892"},
+        "suministro": {"potencia_instalada_w": 5750, "tension": "Monofásico (230 V)"},
+        "protecciones": {"iga_amperaje": 25},
+        "circuitos": [],
+        "expediente": "EXP-BLANCO-2026"
+    }
+    pdf_bytes = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_blanco)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 5000
+    assert pdf_bytes.startswith(b"%PDF")
+
 
 

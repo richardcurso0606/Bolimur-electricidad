@@ -69,8 +69,29 @@ def procesar_archivo_anexo(uploaded_file) -> str:
 def cargar_plantilla_por_tipo(tipo: str):
     """
     Rellena automáticamente los parámetros técnicos y circuitos según el tipo de instalación reglamentaria.
+    Si tipo es en blanco o no seleccionado, inicializa los campos técnicos limpios y sin circuitos.
     """
-    if "Fotovoltaic" in tipo or "Autoconsumo" in tipo or "Solar" in tipo:
+    if not tipo or "Blanco" in tipo or "Seleccionar" in tipo or tipo.startswith("⚪"):
+        st.session_state["mtd_in_pot_inst"] = 0.0
+        st.session_state["mtd_in_pot_max"] = 0.0
+        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+        st.session_state["mtd_in_origen"] = ""
+        st.session_state["mtd_in_di_cable"] = ""
+        st.session_state["mtd_in_di_tubo"] = ""
+        st.session_state["mtd_in_di_long"] = 0.0
+        st.session_state["mtd_in_di_cdt"] = 0.0
+        st.session_state["mtd_in_grado"] = "Básica"
+        st.session_state["mtd_in_iga"] = 25
+        st.session_state["mtd_in_curva"] = "Curva C (General)"
+        st.session_state["mtd_in_icn"] = 6.0
+        st.session_state["mtd_in_dif"] = ""
+        st.session_state["mtd_in_vtp"] = ""
+        st.session_state["mtd_in_tierra"] = ""
+        st.session_state["mtd_in_spl"] = "No aplica"
+        st.session_state["mtd_in_emp_uso"] = ""
+        st.session_state["mtd_circuitos"] = []
+
+    elif "Fotovoltaic" in tipo or "Autoconsumo" in tipo or "Solar" in tipo:
         st.session_state["mtd_in_pot_inst"] = 5000.0
         st.session_state["mtd_in_pot_max"] = 5000.0
         st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -192,6 +213,50 @@ def cargar_plantilla_por_tipo(tipo: str):
             {"nombre": "C4 - Alumbrado de Seguridad y Balizamiento de Obra", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.60, "norma": "ITC-BT-33"}
         ]
 
+    elif "Derivación" in tipo or " DI " in tipo or "ITC-BT-15" in tipo:
+        st.session_state["mtd_in_pot_inst"] = 9200.0
+        st.session_state["mtd_in_pot_max"] = 14490.0
+        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+        st.session_state["mtd_in_origen"] = "Contador / Centralización de Contadores (ITC-BT-16)"
+        st.session_state["mtd_in_di_cable"] = "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV"
+        st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos (ITC-BT-15)"
+        st.session_state["mtd_in_di_long"] = 20.0
+        st.session_state["mtd_in_di_cdt"] = 0.85
+        st.session_state["mtd_in_grado"] = "Elevada"
+        st.session_state["mtd_in_iga"] = 40
+        st.session_state["mtd_in_curva"] = "Curva C (General)"
+        st.session_state["mtd_in_icn"] = 6.0
+        st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A Superinmunizado"
+        st.session_state["mtd_in_vtp"] = "Permanentes + Transitorias Tipo 2 con bobina de emisión"
+        st.session_state["mtd_in_tierra"] = "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω"
+        st.session_state["mtd_in_spl"] = "No aplica"
+        st.session_state["mtd_in_emp_uso"] = "Derivación Individual B.T. (ITC-BT-15)"
+        st.session_state["mtd_circuitos"] = [
+            {"nombre": "Línea Derivación Individual", "potencia": 9200, "pia": 40, "seccion": "2x16+TT16", "tubo": "M40", "longitud": 20, "cdt": 0.85, "norma": "ITC-BT-15"}
+        ]
+
+    elif "Alimentación" in tipo or "LGA" in tipo or "ITC-BT-14" in tipo:
+        st.session_state["mtd_in_pot_inst"] = 43600.0
+        st.session_state["mtd_in_pot_max"] = 50000.0
+        st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
+        st.session_state["mtd_in_origen"] = "Caja General de Protección (CGP / ITC-BT-13)"
+        st.session_state["mtd_in_di_cable"] = "3x50/25 mm² Al/Cu RZ1-K 0.6/1kV"
+        st.session_state["mtd_in_di_tubo"] = "Conducto / Tubo M110 libre de halógenos"
+        st.session_state["mtd_in_di_long"] = 15.0
+        st.session_state["mtd_in_di_cdt"] = 0.42
+        st.session_state["mtd_in_grado"] = "Comercial / Edificio"
+        st.session_state["mtd_in_iga"] = 63
+        st.session_state["mtd_in_curva"] = "Curva C (General)"
+        st.session_state["mtd_in_icn"] = 15.0
+        st.session_state["mtd_in_dif"] = "Protección General con Toroidal / Relé electrónico"
+        st.session_state["mtd_in_vtp"] = "Protección contra sobretensiones Tipo 1+2"
+        st.session_state["mtd_in_tierra"] = "Línea principal PE 1x35 mm² Cu | Rt ≤ 10 Ω"
+        st.session_state["mtd_in_spl"] = "No aplica"
+        st.session_state["mtd_in_emp_uso"] = "Línea General de Alimentación (ITC-BT-14)"
+        st.session_state["mtd_circuitos"] = [
+            {"nombre": "Línea General LGA Centralización", "potencia": 43600, "pia": 63, "seccion": "3x50+25+TT25", "tubo": "M110", "longitud": 15, "cdt": 0.42, "norma": "ITC-BT-14"}
+        ]
+
 def aplicar_datos_cliente_a_formulario(cli_obj: dict):
     """Vuelca los datos del cliente de CRM en los campos del formulario"""
     if not cli_obj:
@@ -270,8 +335,12 @@ def renderizar():
         st.caption("Formulario oficial normalizado para tramitación telemática de instalaciones en Baja Tensión ante la Dirección General de Energía (Código Provincial 30 - Murcia).")
     with col_b1_m:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        if st.button("🔄 Restablecer MTD", key="btn_reset_mtd_mod", use_container_width=True):
-            st.session_state.pop("mtd_circuitos", None)
+        if st.button("🔄 Nueva MTD en Blanco", key="btn_reset_mtd_mod", use_container_width=True):
+            for k in list(st.session_state.keys()):
+                if k.startswith("mtd_") or k.startswith("quick_up_") or k.startswith("up_mtd_"):
+                    st.session_state.pop(k, None)
+            st.session_state["mtd_tipo_inst_sel"] = "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --"
+            cargar_plantilla_por_tipo("⚪")
             st.rerun()
 
     # Usuario autenticado
@@ -292,24 +361,33 @@ def renderizar():
         col_t1, col_t1_b, col_t2 = st.columns([1.3, 1.3, 2.4])
         
         with col_t1:
+            opciones_tipo_inst = [
+                "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --",
+                "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
+                "☀️ Autoconsumo Solar Fotovoltaico (ITC-BT-40 / RD 244/2019)",
+                "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
+                "🏢 Local Comercial / Nave Industrial (ITC-BT-28)",
+                "🏗️ Instalación Provisional y Temporal de Obras (ITC-BT-33 / Cuadro de Obra)",
+                "⚡ Línea General de Alimentación LGA (ITC-BT-14)",
+                "🔌 Derivación Individual DI (ITC-BT-15)"
+            ]
+            tipo_actual = st.session_state.get("mtd_tipo_inst_sel", opciones_tipo_inst[0])
+            idx_tipo_def = opciones_tipo_inst.index(tipo_actual) if tipo_actual in opciones_tipo_inst else 0
+
             tipo_inst_sel = st.selectbox(
                 "Tipo de Instalación (REBT):",
-                [
-                    "☀️ Autoconsumo Solar Fotovoltaico (ITC-BT-40 / RD 244/2019)",
-                    "🏗️ Instalación Provisional y Temporal de Obras (ITC-BT-33 / Cuadro de Obra)",
-                    "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
-                    "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
-                    "🏢 Local Comercial / Nave Industrial (ITC-BT-28)",
-                    "⚡ Línea General de Alimentación LGA (ITC-BT-14)",
-                    "🔌 Derivación Individual DI (ITC-BT-15)"
-                ],
-                index=0,
+                opciones_tipo_inst,
+                index=idx_tipo_def,
                 key="mtd_tipo_inst_sel"
             )
             
-            if st.button("⚡ Auto-Rellenar Plantilla", type="secondary", use_container_width=True):
+            lbl_btn_plantilla = "🧹 Limpiar / Poner en Blanco" if (tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel) else "⚡ Cargar Plantilla Seleccionada"
+            if st.button(lbl_btn_plantilla, type="secondary", use_container_width=True):
                 cargar_plantilla_por_tipo(tipo_inst_sel)
-                st.success("✅ ¡Plantilla técnica auto-rellenada!")
+                if tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel:
+                    st.success("✅ MTD reiniciada en blanco.")
+                else:
+                    st.success(f"✅ ¡Plantilla técnica auto-rellenada para {tipo_inst_sel.split('(')[0].strip()}!")
                 st.rerun()
 
         with col_t1_b:
@@ -509,21 +587,21 @@ def renderizar():
         st.markdown("##### 📍 Bloque I: Datos del Titular y Emplazamiento en la Región de Murcia:")
         col_e1, col_e2 = st.columns(2)
         with col_e1:
-            tit_nombre = st.text_input("Nombre / Razón Social del Titular:", value=st.session_state.get("mtd_in_tit_nom", cli_obj.get("nombre_completo", "Propietario / Titular")), key="mtd_in_tit_nom")
-            tit_nif = st.text_input("NIF / CIF del Titular:", value=st.session_state.get("mtd_in_tit_nif", cli_obj.get("nif_cif", "12345678Z")), key="mtd_in_tit_nif")
-            tit_tel = st.text_input("Teléfono del Titular:", value=st.session_state.get("mtd_in_tit_tel", cli_obj.get("telefono", "+34 600 000 000")), key="mtd_in_tit_tel")
-            tit_email = st.text_input("Correo Electrónico:", value=st.session_state.get("mtd_in_tit_email", cli_obj.get("email", "cliente@ejemplo.com")), key="mtd_in_tit_email")
+            tit_nombre = st.text_input("Nombre / Razón Social del Titular:", value=st.session_state.get("mtd_in_tit_nom", cli_obj.get("nombre_completo", "")), key="mtd_in_tit_nom")
+            tit_nif = st.text_input("NIF / CIF del Titular:", value=st.session_state.get("mtd_in_tit_nif", cli_obj.get("nif_cif", "")), key="mtd_in_tit_nif")
+            tit_tel = st.text_input("Teléfono del Titular:", value=st.session_state.get("mtd_in_tit_tel", cli_obj.get("telefono", "")), key="mtd_in_tit_tel")
+            tit_email = st.text_input("Correo Electrónico:", value=st.session_state.get("mtd_in_tit_email", cli_obj.get("email", "")), key="mtd_in_tit_email")
         with col_e2:
-            emp_dir = st.text_input("Dirección de la Instalación / Plaza:", value=st.session_state.get("mtd_in_emp_dir", cli_obj.get("direccion_suministro", "C/ Mayor, nº 45, Plaza Garaje nº 12")), key="mtd_in_emp_dir")
-            emp_cp = st.text_input("Código Postal:", value=st.session_state.get("mtd_in_emp_cp", "30001"), key="mtd_in_emp_cp")
+            emp_dir = st.text_input("Dirección de la Instalación / Plaza:", value=st.session_state.get("mtd_in_emp_dir", cli_obj.get("direccion_suministro", cli_obj.get("direccion", ""))), key="mtd_in_emp_dir")
+            emp_cp = st.text_input("Código Postal:", value=st.session_state.get("mtd_in_emp_cp", cli_obj.get("codigo_postal", "30001")), key="mtd_in_emp_cp")
             
             # Buscar index de municipio
             muni_default = st.session_state.get("mtd_in_emp_muni", "Murcia (Capital / Pedanías)")
             idx_muni = MUNICIPIOS_MURCIA_OFICIALES.index(muni_default) if muni_default in MUNICIPIOS_MURCIA_OFICIALES else 0
             emp_muni = st.selectbox("Municipio de la Región de Murcia:", MUNICIPIOS_MURCIA_OFICIALES, index=idx_muni, key="mtd_in_emp_muni")
             
-            emp_cups = st.text_input("Código CUPS / Ref. Catastral:", value=st.session_state.get("mtd_in_emp_cups", cli_obj.get("cups", "ES0021000000000000XX")), key="mtd_in_emp_cups")
-            emp_uso = st.text_input("Uso del Inmueble / Local:", value=st.session_state.get("mtd_in_emp_uso", "Garaje Comunitario / Residencial"), key="mtd_in_emp_uso")
+            emp_cups = st.text_input("Código CUPS / Ref. Catastral:", value=st.session_state.get("mtd_in_emp_cups", cli_obj.get("cups", "")), key="mtd_in_emp_cups")
+            emp_uso = st.text_input("Uso del Inmueble / Local:", value=st.session_state.get("mtd_in_emp_uso", cli_obj.get("tipo_inmueble", "")), key="mtd_in_emp_uso")
 
     # --- TAB 2: EMPRESA E INSTALADOR ---
     with tab_f2:
@@ -543,22 +621,22 @@ def renderizar():
         st.markdown("##### ⚡ Bloque III: Suministro, Potencia de Cálculo y Derivación Individual:")
         col_s1, col_s2 = st.columns(2)
         with col_s1:
-            sum_pot_inst = st.number_input("Potencia de Diseño / Prevista (W):", value=float(st.session_state.get("mtd_in_pot_inst", 7360.0)), step=250.0, key="mtd_in_pot_inst")
-            sum_pot_max = st.number_input("Potencia Máxima Admisible de la Línea (W):", value=float(st.session_state.get("mtd_in_pot_max", 7360.0)), step=250.0, key="mtd_in_pot_max")
+            sum_pot_inst = st.number_input("Potencia de Diseño / Prevista (W):", value=float(st.session_state.get("mtd_in_pot_inst", 0.0)), step=250.0, key="mtd_in_pot_inst")
+            sum_pot_max = st.number_input("Potencia Máxima Admisible de la Línea (W):", value=float(st.session_state.get("mtd_in_pot_max", 0.0)), step=250.0, key="mtd_in_pot_max")
             
             t_opts = ["Monofásico (230 V) - 50 Hz", "Trifásico (400 V) - 50 Hz"]
             t_def = st.session_state.get("mtd_in_tension", t_opts[0])
             idx_t = t_opts.index(t_def) if t_def in t_opts else 0
             sum_tension = st.selectbox("Tensión Nominal y Fases:", t_opts, index=idx_t, key="mtd_in_tension")
-            sum_origen = st.text_input("Origen del Suministro:", value=st.session_state.get("mtd_in_origen", "Centralización de Contadores (Esquema 2)"), key="mtd_in_origen")
+            sum_origen = st.text_input("Origen del Suministro:", value=st.session_state.get("mtd_in_origen", ""), key="mtd_in_origen")
         with col_s2:
-            sum_di_cable = st.text_input("Conductor de Alimentación / DI:", value=st.session_state.get("mtd_in_di_cable", "3G6 mm² Cu RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"), key="mtd_in_di_cable")
-            sum_di_tubo = st.text_input("Tubo Protector:", value=st.session_state.get("mtd_in_di_tubo", "Tubo M32 libre de halógenos (IK08)"), key="mtd_in_di_tubo")
-            sum_di_long = st.number_input("Longitud de la Línea (m):", value=float(st.session_state.get("mtd_in_di_long", 25.0)), step=1.0, key="mtd_in_di_long")
-            sum_di_cdt = st.number_input("Caída de Tensión Calculada (%):", value=float(st.session_state.get("mtd_in_di_cdt", 0.86)), step=0.05, key="mtd_in_di_cdt")
+            sum_di_cable = st.text_input("Conductor de Alimentación / DI:", value=st.session_state.get("mtd_in_di_cable", ""), key="mtd_in_di_cable")
+            sum_di_tubo = st.text_input("Tubo Protector:", value=st.session_state.get("mtd_in_di_tubo", ""), key="mtd_in_di_tubo")
+            sum_di_long = st.number_input("Longitud de la Línea (m):", value=float(st.session_state.get("mtd_in_di_long", 0.0)), step=1.0, key="mtd_in_di_long")
+            sum_di_cdt = st.number_input("Caída de Tensión Calculada (%):", value=float(st.session_state.get("mtd_in_di_cdt", 0.0)), step=0.05, key="mtd_in_di_cdt")
             
-            g_opts = ["Básica", "Elevada", "Específica IRVE (ITC-BT-52)", "Comercial / Servicios", "Provisional de Obra (ITC-BT-33)"]
-            g_def = st.session_state.get("mtd_in_grado", g_opts[2])
+            g_opts = ["Básica", "Elevada", "Específica IRVE (ITC-BT-52)", "Comercial / Servicios", "Provisional de Obra (ITC-BT-33)", "Autoconsumo Fotovoltaico (ITC-BT-40)"]
+            g_def = st.session_state.get("mtd_in_grado", g_opts[0])
             idx_g = g_opts.index(g_def) if g_def in g_opts else 0
             sum_grado = st.selectbox("Grado de Electrificación / Uso:", g_opts, index=idx_g, key="mtd_in_grado")
 
@@ -567,7 +645,7 @@ def renderizar():
         st.markdown("##### 🛡️ Bloque IV: Dispositivos Generales de Mando y Protección (CGMP):")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
-            prot_iga = st.number_input("Calibre del Interruptor General (IGA / PIA) (A):", value=int(st.session_state.get("mtd_in_iga", 32)), step=1, key="mtd_in_iga")
+            prot_iga = st.number_input("Calibre del Interruptor General (IGA / PIA) (A):", value=int(st.session_state.get("mtd_in_iga", 25)), step=1, key="mtd_in_iga")
             
             c_opts = ["Curva C (General)", "Curva B", "Curva D"]
             c_def = st.session_state.get("mtd_in_curva", c_opts[0])
@@ -575,11 +653,11 @@ def renderizar():
             prot_curva = st.selectbox("Curva de Disparo IGA:", c_opts, index=idx_c, key="mtd_in_curva")
             
             prot_icn = st.number_input("Poder de Corte Icn (kA):", value=float(st.session_state.get("mtd_in_icn", 6.0)), step=1.0, key="mtd_in_icn")
-            prot_dif = st.text_input("Interruptor Diferencial Principal:", value=st.session_state.get("mtd_in_dif", "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)"), key="mtd_in_dif")
+            prot_dif = st.text_input("Interruptor Diferencial Principal:", value=st.session_state.get("mtd_in_dif", ""), key="mtd_in_dif")
         with col_p2:
-            prot_vtp = st.text_input("Protección Sobretensiones:", value=st.session_state.get("mtd_in_vtp", "Permanentes (POP/VTP) + Transitorias Tipo 2 (DPS/VSP) con bobina de disparo"), key="mtd_in_vtp")
-            prot_tierra = st.text_input("Puesta a Tierra (PE):", value=st.session_state.get("mtd_in_tierra", "Conductor PE 1x6 mm² Cu | Resistencia bucle tierra Rt ≤ 15 Ω"), key="mtd_in_tierra")
-            prot_spl = st.text_input("Sistema de Balanceo de Carga (SPL):", value=st.session_state.get("mtd_in_spl", "Sensor toroidal CT para modulación dinámica en tiempo real"), key="mtd_in_spl")
+            prot_vtp = st.text_input("Protección Sobretensiones:", value=st.session_state.get("mtd_in_vtp", ""), key="mtd_in_vtp")
+            prot_tierra = st.text_input("Puesta a Tierra (PE):", value=st.session_state.get("mtd_in_tierra", ""), key="mtd_in_tierra")
+            prot_spl = st.text_input("Sistema de Balanceo de Carga (SPL):", value=st.session_state.get("mtd_in_spl", "No aplica"), key="mtd_in_spl")
 
     # --- TAB 5: CIRCUITOS DERIVADOS ---
     with tab_f5:
@@ -588,6 +666,8 @@ def renderizar():
         circs_actuales = st.session_state.get("mtd_circuitos", [])
         if circs_actuales:
             st.dataframe(circs_actuales, use_container_width=True)
+        else:
+            st.info("ℹ️ No hay circuitos en la lista. Puedes cargarlos con la plantilla técnica superior o añadir circuitos manualmente a continuación.")
 
         with st.expander("➕ Añadir / Modificar Circuito Terminal:", expanded=False):
             col_c1, col_c2, col_c3, col_c4 = st.columns(4)
@@ -855,7 +935,11 @@ def renderizar():
     with st.container(border=True):
         col_s_name, col_s_btn = st.columns([3, 1.5])
         with col_s_name:
-            nom_proy_default = f"MTD - {tipo_inst_sel.split('(')[0].replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('⚡', '').replace('🔌', '').strip()} - {tit_nombre}"
+            if tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel or "Seleccionar" in tipo_inst_sel:
+                tipo_desc = emp_uso.strip() or "Instalación Eléctrica BT"
+            else:
+                tipo_desc = tipo_inst_sel.split('(')[0].replace('☀️', '').replace('🏗️', '').replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('⚡', '').replace('🔌', '').strip()
+            nom_proy_default = f"MTD - {tipo_desc} - {tit_nombre or 'Sin Titular'}"
             nom_proy_mtd = st.text_input("Nombre / Referencia del Expediente para Guardar:", value=nom_proy_default, key="mtd_nom_guardar")
         with col_s_btn:
             st.write("")
@@ -931,8 +1015,10 @@ def renderizar():
             st.write("")
             st.caption("Generación simultánea de toda la documentación requerida por Industria y el REBT.")
 
+        tipo_para_doc = (emp_uso.strip() or "Instalación Eléctrica en Baja Tensión") if (tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel or "Seleccionar" in tipo_inst_sel) else tipo_inst_sel
+
         datos_para_pdf = {
-            "tipo_instalacion": tipo_inst_sel,
+            "tipo_instalacion": tipo_para_doc,
             "tipo_tramitacion": tipo_tram_sel,
             "expediente": exp_in,
             "fecha": datetime.date.today().strftime("%d/%m/%Y"),
