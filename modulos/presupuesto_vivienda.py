@@ -1354,6 +1354,7 @@ def app():
 
         # Precio medio por punto instalado (Calculado sobre el total con IVA o Total Neto según prefieras; aquí usamos Total Cliente Con IVA / Puntos)
         precio_medio_por_punto = (total_cliente / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+        precio_medio_por_punto_neto = (subtotal_general_neto / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
 
         # ==========================================
         # CONSTRUCCIÓN DE LA ORDEN DE COMPRA POR CATEGORÍAS
@@ -1717,6 +1718,7 @@ def app():
         cuota_iva = subtotal_general_neto * (iva_sel / 100.0)
         total_cliente = subtotal_general_neto + cuota_iva
         precio_medio_por_punto = (total_cliente / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+        precio_medio_por_punto_neto = (subtotal_general_neto / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
 
         # Pre-generar archivos de Orden de Compra / Reporte de Materiales
         excel_oc_bytes = exportar_excel_orden_compra(
@@ -1934,7 +1936,8 @@ def app():
 
             st.subheader("📊 Resumen Global de Puntos y Coste Medio por Punto")
             st.write(f"- 🔌 **Número Total de Puntos / Mecanismos Instalados:** `{total_puntos_mecanismos} uds` (Interruptores, Schukos, Tomas de Fuerza y Red)")
-            st.write(f"- 💶 **Precio Medio por Punto (Aplicando el Total con IVA):** **`{precio_medio_por_punto:.2f} € / punto`**")
+            st.write(f"- 💶 **Precio Medio por Punto SIN IVA (Base Imponible):** **`{precio_medio_por_punto_neto:.2f} € / punto`**")
+            st.write(f"- 💶 **Precio Medio por Punto CON IVA ({iva_sel}%):** **`{precio_medio_por_punto:.2f} € / punto`**")
             st.info("💡 *Nota:* Este indicador te muestra a cuánto sale de media cada punto instalado (incluyendo cableado, canalización, protecciones y mano de obra prorrateados).")
             st.markdown("---")
 
@@ -2428,7 +2431,8 @@ def app():
             with col_kpic3:
                 st.metric(f"🧾 IVA ({iva_sel}%)", f"{cuota_iva:,.2f} €")
             with col_kpic4:
-                st.metric("🔌 Total Puntos / Ratio", f"{total_puntos_mecanismos} uds ({precio_medio_por_punto:.2f} €/pto)")
+                st.metric("🔌 Total Puntos / Ratio", f"{total_puntos_mecanismos} uds")
+                st.caption(f"**{precio_medio_por_punto_neto:,.2f} €/pto** S/IVA  \n**{precio_medio_por_punto:,.2f} €/pto** C/IVA")
 
             st.markdown("---")
 
@@ -2645,6 +2649,7 @@ def app():
                     "total_cliente": total_cliente,
                     "total_puntos": total_puntos_mecanismos,
                     "precio_medio_punto": precio_medio_por_punto,
+                    "precio_medio_punto_neto": precio_medio_por_punto_neto,
                     "serie_mecanismos": serie_mecanismos,
                     "marca_protecciones": marca_protecciones,
                     "potencia_kw": potencia_prevista_kw,
@@ -2699,8 +2704,17 @@ def app():
                     use_container_width=True
                 )
 
-            st.write("")
-            if st.button("🚀 Tramitar Memoria Técnica Oficial (MTD 30) y CIE para esta Vivienda", type="primary", use_container_width=True):
+            st.markdown("""
+            <div style="border: 2px solid #0284c7; background: #f0f9ff; border-radius: 10px; padding: 18px; margin: 18px 0 10px 0;">
+                <h4 style="color: #0369a1; margin: 0 0 8px 0;">🗺️ ¿Dónde se adjuntan los Planos de Situación, Emplazamiento y Esquema Unifilar?</h4>
+                <p style="color: #334155; margin: 0; font-size: 14px;">
+                    Los planos oficiales (situación en callejero municipal, emplazamiento catastral y esquema unifilar oficial de la vivienda) se gestionan en el módulo oficial de <b>Memoria Técnica & Planos (MTD 30)</b>.<br/>
+                    Al pulsar el botón inferior, todos los circuitos, potencias y datos de este presupuesto se transfieren automáticamente y se abrirá directamente el gestor de planos listo para subir tus archivos (PNG, JPG o PDF).
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if st.button("🚀 Tramitar Memoria Técnica (MTD 30), Subir Planos y Tramitar CIE para esta Vivienda", type="primary", use_container_width=True):
                 st.session_state["mtd_in_pot_inst"] = float(pot_w_val)
                 st.session_state["mtd_in_pot_max"] = float(pot_w_val)
                 st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -2731,6 +2745,7 @@ def app():
                     for c in circuitos_unifilar
                 ]
                 st.session_state["mtd_tipo_inst_sel"] = "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)"
+                st.session_state["mtd_abrir_planos"] = True
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
                 st.rerun()
 

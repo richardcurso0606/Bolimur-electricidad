@@ -77,15 +77,31 @@ def renderizar():
         if not clientes:
             st.info("ℹ️ Todavía no tienes clientes visibles bajo esta cuenta.")
             with st.container(border=True):
-                st.markdown("##### 🔍 ¿Tenías clientes creados anteriormente?")
-                st.write("Si diste de alta clientes antes de iniciar sesión con tu cuenta de Google (`richardcurso0606@gmail.com`) o en una sesión previa, puedes buscarlos en la base de datos para vincularlos a tu cuenta actual:")
-                if st.button("🔄 Recuperar y Vincular Clientes Anteriores a mi Cuenta", key="btn_recup_clientes_empty", type="primary"):
-                    recup = db_manager.recuperar_todos_clientes_locales(usuario_id)
-                    if recup > 0:
-                        st.success(f"✅ ¡Se han recuperado y vinculado {recup} expedientes a tu cuenta!")
-                        st.rerun()
+                st.markdown("##### 🔍 ¿Tenías clientes creados anteriormente o en el Servidor Nube?")
+                st.write("Si diste de alta clientes en una sesión previa o en la base de datos de Supabase, puedes recuperarlos inmediatamente:")
+                
+                col_rec1, col_rec2 = st.columns(2)
+                with col_rec1:
+                    if tiene_nube:
+                        if st.button("☁️ Sincronizar y Descargar desde la Nube (Supabase)", key="btn_sync_clientes_empty", type="primary", use_container_width=True):
+                            with st.spinner("Conectando con Supabase y descargando expedientes..."):
+                                ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
+                                if ok_s:
+                                    st.success(f"✅ {msg_s}")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {msg_s}")
                     else:
-                        st.warning("⚠️ No se encontraron clientes en el almacenamiento de este servidor. En Streamlit Cloud (`*.streamlit.app`), el servidor web es temporal y reinicia su disco cada vez que se actualiza el código desde GitHub. Para que tus clientes y obras queden guardados **de forma permanente 24/7**, conecta Supabase en la pestaña **'☁️ Sincronización y Base de Datos Nube'**.")
+                        st.warning("☁️ No hay servidor Supabase conectado todavía. Puedes configurarlo en la pestaña **'☁️ Sincronización y Base de Datos Nube'**.")
+
+                with col_rec2:
+                    if st.button("🔄 Recuperar y Vincular Clientes Locales Anteriores", key="btn_recup_clientes_empty", use_container_width=True):
+                        recup = db_manager.recuperar_todos_clientes_locales(usuario_id)
+                        if recup > 0:
+                            st.success(f"✅ ¡Se han recuperado y vinculado {recup} expedientes a tu cuenta!")
+                            st.rerun()
+                        else:
+                            st.info("No se encontraron clientes locales adicionales en la base de datos de este dispositivo.")
         else:
             # Buscador en tiempo real de clientes
             col_b1, col_b2 = st.columns([2, 3])
@@ -453,10 +469,18 @@ GRANT ALL ON TABLE proyectos TO anon, authenticated, service_role;
 
                 st.markdown("---")
                 st.markdown("#### 📊 Estado de Persistencia")
-                if tiene_nube:
+                try:
+                    from modulos import config_servidor
+                    fija_activa = bool(getattr(config_servidor, "SUPABASE_URL", "").strip() and getattr(config_servidor, "SUPABASE_KEY", "").strip())
+                except Exception:
+                    fija_activa = False
+
+                if fija_activa:
+                    st.success("📌 **Conexión Fija Permanente Activa**\n\nLas credenciales de Supabase están grabadas como fijas en el sistema (`modulos/config_servidor.py`). No se perderán aunque reinicies o se apague el servidor.")
+                elif tiene_nube:
                     st.success(f"🟢 **Nube Activa**\n\nLos datos de `{user_email}` se guardan y sincronizan automáticamente en la nube 24/7.")
                 else:
-                    st.warning("🟡 **Modo Local Privado**\n\nTus datos se guardan en este dispositivo bajo tu cuenta privada. Conecta Supabase arriba para sincronización 24/7 en la nube.")
+                    st.warning("🟡 **Modo Local Privado**\n\nTus datos se guardan en este dispositivo bajo tu cuenta privada. Conecta Supabase a la izquierda para que queden guardados como fijos.")
 
         st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">📦 Copia de Seguridad Rápida JSON (Sin Conexión)</h4></div>', unsafe_allow_html=True)
         col_sync1, col_sync2 = st.columns(2)

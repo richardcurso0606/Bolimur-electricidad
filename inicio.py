@@ -292,7 +292,7 @@ with st.sidebar:
         ("🤖  Consultor IA REBT", "🤖 Consultor IA REBT"),
         ("☀️  Solar Fotovoltaica", "☀️ Solar Fotovoltaica"),
         ("🛰️  Radar Normativo BOE", "🛰️ Radar Normativo BOE"),
-        ("🏛️  Memoria Técnica (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
+        ("🏛️  Memoria Técnica & Planos (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
         ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
         ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
         ("🧮  Cálculo Rápido (CDT & Icc)", "🧮 Cálculo Rápido (CDT & Icc)"),
@@ -305,7 +305,10 @@ with st.sidebar:
     ]
 
     for label, target in opciones:
-        if st.button(label, use_container_width=True):
+        es_activo = (st.session_state.menu_activo == target)
+        btn_type = "primary" if es_activo else "secondary"
+        btn_label = f"▶ {label}" if es_activo else label
+        if st.button(btn_label, key=f"nav_btn_{target}", use_container_width=True, type=btn_type):
             st.session_state.menu_activo = target
             st.rerun()
 
@@ -347,16 +350,16 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
                 st.session_state.menu_activo = "☀️ Solar Fotovoltaica"
                 st.rerun()
 
-    # BANNER DESTACADO 3: MTD INDUSTRIA MURCIA
+    # BANNER DESTACADO 3: MTD INDUSTRIA MURCIA & PLANOS
     with st.container(border=True):
         col_mtd_txt, col_mtd_btn = st.columns([3, 1])
         with col_mtd_txt:
-            st.markdown("### 🏛️ Generador Oficial de Memoria Técnica de Diseño (MTD 30 - Murcia)")
-            st.write("Módulo especializado para la tramitación telemática ante la **Dirección General de Energía y Actividad Industrial y Minera (DGEAIM - Región de Murcia)**. Incluye auto-rellenado automático desde cálculos (Vivienda ITC-BT-25, IRVE ITC-BT-52, Locales, Fotovoltaica), protocolo de pruebas ITC-BT-05, esquema unifilar y exportación en PDF oficial.")
+            st.markdown("### 🏛️ Generador Oficial de Memoria Técnica de Diseño (MTD 30) & Planos Oficiales")
+            st.write("Módulo oficial para tramitación ante Industria (DGEAIM Murcia). Incluye auto-rellenado desde cálculos, protocolo ITC-BT-05, **gestor gráfico de Planos de Situación, Emplazamiento Catastral y Esquema Unifilar oficial** (con auditoría IA REBT), y exportación en PDF de MTD, CIE y Manual.")
         with col_mtd_btn:
             st.write("")
             st.write("")
-            if st.button("🚀 Tramitar MTD Murcia", key="btn_home_mtd_featured", use_container_width=True):
+            if st.button("🚀 Tramitar MTD & Planos", key="btn_home_mtd_featured", use_container_width=True):
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
                 st.rerun()
 

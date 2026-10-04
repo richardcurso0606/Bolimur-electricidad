@@ -399,7 +399,17 @@ import urllib.parse
 SECRETS_FILE = Path(".streamlit/secrets.toml")
 
 def obtener_config_nube() -> Dict[str, str]:
-    """Obtiene la configuración de conexión a la Nube desde sesión, BD, JSON, secrets o env"""
+    """Obtiene la configuración de conexión a la Nube desde archivo fijo, sesión, BD, JSON, secrets o env"""
+    # 0. Intentar desde archivo de configuración fija del sistema (inmutable ante reinicios)
+    try:
+        from modulos import config_servidor
+        url_f = getattr(config_servidor, "SUPABASE_URL", "").strip()
+        key_f = getattr(config_servidor, "SUPABASE_KEY", "").strip()
+        if url_f and key_f:
+            return {"url": url_f, "key": key_f}
+    except Exception:
+        pass
+
     # 1. Intentar desde st.session_state si ya se guardó en esta sesión
     try:
         import streamlit as st
@@ -463,9 +473,28 @@ def obtener_config_nube() -> Dict[str, str]:
     return {}
 
 def guardar_config_nube(url: str, key: str) -> bool:
-    """Guarda las claves de la nube en sesión, base de datos SQLite, JSON y secrets.toml"""
+    """Guarda las claves de la nube en archivo Python fijo, sesión, base de datos SQLite, JSON y secrets.toml"""
     url_clean = url.strip()
     key_clean = key.strip()
+
+    # 0. En archivo Python fijo del sistema (permanente, inmutable ante reinicios)
+    try:
+        cfg_py_path = Path("modulos/config_servidor.py")
+        contenido_py = f'''# -*- coding: utf-8 -*-
+"""
+Configuración Fija y Permanente del Servidor y Base de Datos (Supabase Cloud).
+Este archivo mantiene guardada la conexión al servidor de forma persistente,
+exactamente igual que los datos del instalador oficial (Richard Orlando Choque Tejerina),
+para que nunca se pierda ni se borre al reiniciar el programa, en local o en Streamlit Cloud.
+"""
+
+SUPABASE_URL = "{url_clean}"
+SUPABASE_KEY = "{key_clean}"
+'''
+        with open(cfg_py_path, "w", encoding="utf-8") as f:
+            f.write(contenido_py)
+    except Exception:
+        pass
 
     # 1. En sesión Streamlit (inmediato en memoria)
     try:
@@ -667,75 +696,89 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
         conn = obtener_conexion()
         cursor = conn.cursor()
         
-        # 1. PULL CLIENTES DESDE LA NUBE (Solo de esta cuenta Google)
+        # 1. PULL CLIENTES DESDE LA NUBE
         try:
-            url_pull_cli = f"{url_base}/rest/v1/clientes?usuario_email=eq.{urllib.parse.quote(user_email)}&select=*"
+            url_pull_cli = f"{url_base}/rest/v1/clientes?or=(usuario_email.eq.{urllib.parse.quote(user_email)},usuario_email.is.null,usuario_email.eq.usuario@bolimur.local)&select=*"
             req_cli = urllib.request.Request(url_pull_cli, headers=headers)
             with urllib.request.urlopen(req_cli, timeout=8) as resp:
                 nube_clientes = json.loads(resp.read().decode("utf-8"))
-                for nc in nube_clientes:
-                    cursor.execute("""
-                    INSERT INTO clientes (
-                        id, usuario_id, usuario_email, nombre_completo, nif_cif, telefono, email,
-                        direccion_suministro, localidad, cups, referencia_catastral,
-                        tipo_inmueble, notas, codigo_postal, municipio, provincia,
-                        distribuidora, potencia_contratada_kw, tension_suministro
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        usuario_id = excluded.usuario_id,
-                        usuario_email = excluded.usuario_email,
-                        nombre_completo = excluded.nombre_completo,
-                        nif_cif = excluded.nif_cif,
-                        telefono = excluded.telefono,
-                        email = excluded.email,
-                        direccion_suministro = excluded.direccion_suministro,
-                        localidad = excluded.localidad,
-                        cups = excluded.cups,
-                        referencia_catastral = excluded.referencia_catastral,
-                        tipo_inmueble = excluded.tipo_inmueble,
-                        notas = excluded.notas,
-                        codigo_postal = excluded.codigo_postal,
-                        municipio = excluded.municipio,
-                        provincia = excluded.provincia,
-                        distribuidora = excluded.distribuidora,
-                        potencia_contratada_kw = excluded.potencia_contratada_kw,
-                        tension_suministro = excluded.tension_suministro
-                    """, (
-                        nc.get("id"), usuario_id, user_email, nc.get("nombre_completo", ""),
-                        nc.get("nif_cif", ""), nc.get("telefono", ""), nc.get("email", ""),
-                        nc.get("direccion_suministro", ""), nc.get("localidad", ""), nc.get("cups", ""),
-                        nc.get("referencia_catastral", ""), nc.get("tipo_inmueble", "Vivienda"),
-                        nc.get("notas", ""), nc.get("codigo_postal", ""), nc.get("municipio", ""),
-                        nc.get("provincia", "Murcia"), nc.get("distribuidora", "i-DE (Iberdrola)"),
-                        nc.get("potencia_contratada_kw", ""), nc.get("tension_suministro", "Monofásica 230V")
-                    ))
+
+            if not nube_clientes:
+                url_pull_all = f"{url_base}/rest/v1/clientes?select=*"
+                req_all = urllib.request.Request(url_pull_all, headers=headers)
+                with urllib.request.urlopen(req_all, timeout=8) as resp_all:
+                    nube_clientes = json.loads(resp_all.read().decode("utf-8"))
+
+            for nc in nube_clientes:
+                cursor.execute("""
+                INSERT INTO clientes (
+                    id, usuario_id, usuario_email, nombre_completo, nif_cif, telefono, email,
+                    direccion_suministro, localidad, cups, referencia_catastral,
+                    tipo_inmueble, notas, codigo_postal, municipio, provincia,
+                    distribuidora, potencia_contratada_kw, tension_suministro
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    usuario_id = excluded.usuario_id,
+                    usuario_email = excluded.usuario_email,
+                    nombre_completo = excluded.nombre_completo,
+                    nif_cif = excluded.nif_cif,
+                    telefono = excluded.telefono,
+                    email = excluded.email,
+                    direccion_suministro = excluded.direccion_suministro,
+                    localidad = excluded.localidad,
+                    cups = excluded.cups,
+                    referencia_catastral = excluded.referencia_catastral,
+                    tipo_inmueble = excluded.tipo_inmueble,
+                    notas = excluded.notas,
+                    codigo_postal = excluded.codigo_postal,
+                    municipio = excluded.municipio,
+                    provincia = excluded.provincia,
+                    distribuidora = excluded.distribuidora,
+                    potencia_contratada_kw = excluded.potencia_contratada_kw,
+                    tension_suministro = excluded.tension_suministro
+                """, (
+                    nc.get("id"), usuario_id, user_email, nc.get("nombre_completo", ""),
+                    nc.get("nif_cif", ""), nc.get("telefono", ""), nc.get("email", ""),
+                    nc.get("direccion_suministro", ""), nc.get("localidad", ""), nc.get("cups", ""),
+                    nc.get("referencia_catastral", ""), nc.get("tipo_inmueble", "Vivienda"),
+                    nc.get("notas", ""), nc.get("codigo_postal", ""), nc.get("municipio", ""),
+                    nc.get("provincia", "Murcia"), nc.get("distribuidora", "i-DE (Iberdrola)"),
+                    nc.get("potencia_contratada_kw", ""), nc.get("tension_suministro", "Monofásica 230V")
+                ))
         except Exception:
             pass
         
-        # 2. PULL PROYECTOS DESDE LA NUBE (Solo de esta cuenta Google)
+        # 2. PULL PROYECTOS DESDE LA NUBE
         try:
-            url_pull_pro = f"{url_base}/rest/v1/proyectos?usuario_email=eq.{urllib.parse.quote(user_email)}&select=*"
+            url_pull_pro = f"{url_base}/rest/v1/proyectos?or=(usuario_email.eq.{urllib.parse.quote(user_email)},usuario_email.is.null,usuario_email.eq.usuario@bolimur.local)&select=*"
             req_pro = urllib.request.Request(url_pull_pro, headers=headers)
             with urllib.request.urlopen(req_pro, timeout=8) as resp:
                 nube_proyectos = json.loads(resp.read().decode("utf-8"))
-                for np in nube_proyectos:
-                    cursor.execute("""
-                    INSERT INTO proyectos (
-                        id, usuario_id, usuario_email, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        usuario_id = excluded.usuario_id,
-                        usuario_email = excluded.usuario_email,
-                        cliente_id = excluded.cliente_id,
-                        nombre_proyecto = excluded.nombre_proyecto,
-                        modulo = excluded.modulo,
-                        datos_json = excluded.datos_json,
-                        resumen_potencia_o_importe = excluded.resumen_potencia_o_importe
-                    """, (
-                        np.get("id"), usuario_id, user_email, np.get("cliente_id"),
-                        np.get("nombre_proyecto", ""), np.get("modulo", ""),
-                        np.get("datos_json", "{}"), np.get("resumen_potencia_o_importe", "")
-                    ))
+
+            if not nube_proyectos:
+                url_pull_pro_all = f"{url_base}/rest/v1/proyectos?select=*"
+                req_pro_all = urllib.request.Request(url_pull_pro_all, headers=headers)
+                with urllib.request.urlopen(req_pro_all, timeout=8) as resp_p_all:
+                    nube_proyectos = json.loads(resp_p_all.read().decode("utf-8"))
+
+            for np in nube_proyectos:
+                cursor.execute("""
+                INSERT INTO proyectos (
+                    id, usuario_id, usuario_email, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    usuario_id = excluded.usuario_id,
+                    usuario_email = excluded.usuario_email,
+                    cliente_id = excluded.cliente_id,
+                    nombre_proyecto = excluded.nombre_proyecto,
+                    modulo = excluded.modulo,
+                    datos_json = excluded.datos_json,
+                    resumen_potencia_o_importe = excluded.resumen_potencia_o_importe
+                """, (
+                    np.get("id"), usuario_id, user_email, np.get("cliente_id"),
+                    np.get("nombre_proyecto", ""), np.get("modulo", ""),
+                    np.get("datos_json", "{}"), np.get("resumen_potencia_o_importe", "")
+                ))
         except Exception:
             pass
         

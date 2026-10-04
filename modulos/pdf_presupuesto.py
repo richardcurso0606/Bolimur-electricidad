@@ -251,6 +251,10 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     total_cliente = float(presupuesto_data.get("total_cliente", 0.0))
     total_puntos = presupuesto_data.get("total_puntos", 0)
     precio_medio_punto = float(presupuesto_data.get("precio_medio_punto", 0.0))
+    precio_medio_punto_neto = float(presupuesto_data.get(
+        "precio_medio_punto_neto",
+        (subtotal_neto / total_puntos) if total_puntos else 0.0
+    ))
     plazo_dias = presupuesto_data.get("plazo_dias", 0.0)
 
     resumen_title = Paragraph("<b>TOTAL PRESUPUESTO OFERTA (CON IVA):</b>", ParagraphStyle('ResTitle', parent=body_style, fontSize=10.5, textColor=c_primary, fontName='Helvetica-Bold'))
@@ -261,7 +265,8 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         f"• Base Imponible Neta (Sin IVA): <b>{subtotal_neto:,.2f} €</b> &nbsp;|&nbsp; "
         f"• Impuesto sobre el Valor Añadido (IVA {iva_pct:.0f}%): <b>{cuota_iva:,.2f} €</b><br/>"
         f"• Puntos de Mecanismos Totales: <b>{total_puntos} uds</b> &nbsp;|&nbsp; "
-        f"• Ratio medio por punto: <b>{precio_medio_punto:.2f} €/punto</b> (instalación completa)<br/>"
+        f"• Precio medio por punto: <b>{precio_medio_punto_neto:,.2f} €/punto sin IVA</b> &nbsp;/&nbsp; "
+        f"<b>{precio_medio_punto:,.2f} €/punto con IVA</b> (instalación completa)<br/>"
         f"• Plazo Estimado de Ejecución: <b>{plazo_dias:.1f} días laborables</b> &nbsp;|&nbsp; "
         f"• Garantía Oficial: <b>3 Años</b> en mano de obra y materiales",
         body_style

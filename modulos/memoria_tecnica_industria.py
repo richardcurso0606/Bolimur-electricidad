@@ -218,6 +218,49 @@ def renderizar():
     <style>
     div[data-baseweb="select"] { width: 100% !important; }
     div[data-baseweb="select"] * { white-space: normal !important; word-break: break-word !important; }
+
+    /* Barra de Pestañas (st.tabs) Mejorada y de Alto Contraste */
+    div[data-baseweb="tab-list"] {
+        gap: 6px !important;
+        background-color: #f8fafc !important;
+        padding: 8px 10px 4px 10px !important;
+        border-radius: 10px 10px 0 0 !important;
+        border-bottom: 3px solid #0284c7 !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+
+    button[data-baseweb="tab"] {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 9px 15px !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
+        transition: all 0.15s ease-in-out !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+    }
+
+    button[data-baseweb="tab"]:hover {
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+        border-color: #38bdf8 !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border-color: #0284c7 !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3) !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] p,
+    button[data-baseweb="tab"][aria-selected="true"] span,
+    button[data-baseweb="tab"][aria-selected="true"] div {
+        color: #ffffff !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -344,15 +387,121 @@ def renderizar():
     # FORMULARIO TÉCNICO OFICIAL DGEAIM REGIÓN DE MURCIA (CÓDIGO 30)
     # =========================================================================
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏛️ 2. Formulario Oficial Normalizado de la Memoria Técnica de Diseño (DGEAIM Murcia)</h4></div>', unsafe_allow_html=True)
-    
+
+    # Panel Visual de Planos y Documentación Gráfica
+    tiene_sit = bool(st.session_state.get("mtd_plano_situacion"))
+    tiene_emp = bool(st.session_state.get("mtd_plano_emplazamiento"))
+    tiene_dist = bool(st.session_state.get("mtd_plano_distribucion"))
+    unif_modo = st.session_state.get("mtd_unifilar_modo", "auto")
+    tiene_unif = bool(st.session_state.get("mtd_plano_unifilar_custom")) if unif_modo == "custom" else True
+    n_fotos = len(st.session_state.get("mtd_fotos_obra", []))
+    abrir_planos_auto = st.session_state.pop("mtd_abrir_planos", False)
+
+    with st.container(border=True):
+        st.markdown("#### 🗺️ Gestor Gráfico de Planos Oficiales y Esquema Unifilar")
+        st.caption("Visualiza el estado de los documentos gráficos requeridos por Industria (DGEAIM Murcia). Puedes adjuntarlos aquí en el desplegable o en la pestaña **7. 🗺️ PLANOS Y UNIFILAR**:")
+
+        badge_sit = '<span style="color:#16a34a; font-weight:bold; font-size:12.5px;">✅ Adjuntado</span>' if tiene_sit else '<span style="color:#64748b; font-size:12.5px;">⚪ Sin adjuntar</span>'
+        badge_emp = '<span style="color:#16a34a; font-weight:bold; font-size:12.5px;">✅ Adjuntado</span>' if tiene_emp else '<span style="color:#64748b; font-size:12.5px;">⚪ Sin adjuntar</span>'
+        if unif_modo == 'auto':
+            badge_unif = '<span style="color:#0284c7; font-weight:bold; font-size:12.5px;">⚙️ Vectorial Auto</span>'
+        elif tiene_unif:
+            badge_unif = '<span style="color:#16a34a; font-weight:bold; font-size:12.5px;">📁 Plano Propio</span>'
+        else:
+            badge_unif = '<span style="color:#ef4444; font-weight:bold; font-size:12.5px;">⚠️ Falta archivo</span>'
+
+        bg_sit = '#f0fdf4' if tiene_sit else '#f8fafc'
+        border_sit = '#16a34a' if tiene_sit else '#cbd5e1'
+        bg_emp = '#f0fdf4' if tiene_emp else '#f8fafc'
+        border_emp = '#16a34a' if tiene_emp else '#cbd5e1'
+        bg_fotos = '#f0fdf4' if n_fotos > 0 else '#f8fafc'
+        border_fotos = '#16a34a' if n_fotos > 0 else '#cbd5e1'
+
+        cp1, cp2, cp3, cp4 = st.columns(4)
+        with cp1:
+            st.markdown(
+                f"<div style='border:1px solid {border_sit}; background:{bg_sit}; padding:10px 12px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO I (a)</div>"
+                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>🗺️ Situación</div>"
+                f"{badge_sit}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        with cp2:
+            st.markdown(
+                f"<div style='border:1px solid {border_emp}; background:{bg_emp}; padding:10px 12px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO I (b)</div>"
+                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>📍 Emplazamiento</div>"
+                f"{badge_emp}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        with cp3:
+            st.markdown(
+                f"<div style='border:1px solid #0284c7; background:#f0f9ff; padding:10px 12px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO III</div>"
+                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>⚡ Unifilar</div>"
+                f"{badge_unif}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        with cp4:
+            st.markdown(
+                f"<div style='border:1px solid {border_fotos}; background:{bg_fotos}; padding:10px 12px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO V</div>"
+                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>📸 Fotos Obra</div>"
+                f"<span style='color:#334155; font-weight:bold; font-size:12.5px;'>{n_fotos} fotos</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+        with st.expander("⚡ 📤 SUBIR / GESTIONAR PLANOS RÁPIDAMENTE AQUÍ (Sin buscar pestañas)", expanded=abrir_planos_auto):
+            st.info("💡 **Subida Rápida:** Puedes subir o sustituir tus archivos de plano directamente aquí. Se guardan y sincronizan automáticamente con el expediente y la pestaña 7.")
+            col_qp1, col_qp2 = st.columns(2)
+            with col_qp1:
+                with st.container(border=True):
+                    st.markdown("##### 🗺️ Plano de Situación (Callejero / Municipio)")
+                    st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
+                    up_sit_quick = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="quick_up_sit")
+                    if up_sit_quick is not None:
+                        b64_sq = procesar_archivo_anexo(up_sit_quick)
+                        if b64_sq:
+                            st.session_state["mtd_plano_situacion"] = b64_sq
+                            st.rerun()
+                    if st.session_state.get("mtd_plano_situacion"):
+                        st.image(st.session_state["mtd_plano_situacion"], caption="Plano de Situación Cargado", use_container_width=True)
+                        if st.button("🗑️ Quitar Situación", key="btn_del_sit_quick"):
+                            st.session_state.pop("mtd_plano_situacion", None)
+                            st.rerun()
+
+            with col_qp2:
+                with st.container(border=True):
+                    st.markdown("##### 📍 Plano de Emplazamiento (Catastro)")
+                    st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
+                    up_emp_quick = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="quick_up_emp")
+                    if up_emp_quick is not None:
+                        b64_eq = procesar_archivo_anexo(up_emp_quick)
+                        if b64_eq:
+                            st.session_state["mtd_plano_emplazamiento"] = b64_eq
+                            st.rerun()
+                    if st.session_state.get("mtd_plano_emplazamiento"):
+                        st.image(st.session_state["mtd_plano_emplazamiento"], caption="Plano de Emplazamiento Cargado", use_container_width=True)
+                        if st.button("🗑️ Quitar Emplazamiento", key="btn_del_emp_quick"):
+                            st.session_state.pop("mtd_plano_emplazamiento", None)
+                            st.rerun()
+
+    lbl_tab7 = "🗺️ 7. PLANOS Y UNIFILAR"
+    if tiene_sit or tiene_emp or tiene_dist:
+        lbl_tab7 += " (📎 Con Planos)"
+
     tab_f1, tab_f2, tab_f3, tab_f4, tab_f5, tab_f6, tab_f7 = st.tabs([
-        "📍 Titular y Emplazamiento",
-        "👷 Empresa e Instalador",
-        "⚡ Suministro y Potencias",
-        "🛡️ Cuadro CGMP y Protecciones",
-        "📋 Circuitos Derivados",
-        "🧪 Protocolo Ensayos (BT-05)",
-        "🗺️ Planos y Anexos Gráficos (I, II y III)"
+        "📍 1. Titular",
+        "👷 2. Instalador",
+        "⚡ 3. Suministro",
+        "🛡️ 4. Cuadro CGMP",
+        "📋 5. Circuitos",
+        "🧪 6. Ensayos BT-05",
+        lbl_tab7
     ])
 
     # --- TAB 1: TITULAR Y EMPLAZAMIENTO ---
@@ -506,107 +655,113 @@ def renderizar():
 
         col_anx1, col_anx2 = st.columns(2)
         with col_anx1:
-            st.markdown("###### 🗺️ Anexo I (a): Plano de Situación")
-            st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
-            up_sit = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_sit")
-            if up_sit is not None:
-                b64_sit = procesar_archivo_anexo(up_sit)
-                if b64_sit:
-                    st.session_state["mtd_plano_situacion"] = b64_sit
-            if st.session_state.get("mtd_plano_situacion"):
-                st.image(st.session_state["mtd_plano_situacion"], caption="Plano de Situación cargado", use_container_width=True)
-                if st.button("🗑️ Quitar Plano de Situación", key="btn_del_sit"):
-                    st.session_state.pop("mtd_plano_situacion", None)
-                    st.rerun()
+            with st.container(border=True):
+                st.markdown("###### 🗺️ Anexo I (a): Plano de Situación")
+                st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
+                up_sit = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_sit")
+                if up_sit is not None:
+                    b64_sit = procesar_archivo_anexo(up_sit)
+                    if b64_sit:
+                        st.session_state["mtd_plano_situacion"] = b64_sit
+                if st.session_state.get("mtd_plano_situacion"):
+                    st.success("✅ Plano de Situación listo para el PDF oficial.")
+                    st.image(st.session_state["mtd_plano_situacion"], caption="Plano de Situación cargado", use_container_width=True)
+                    if st.button("🗑️ Quitar Plano de Situación", key="btn_del_sit"):
+                        st.session_state.pop("mtd_plano_situacion", None)
+                        st.rerun()
 
-            st.markdown("---")
-            st.markdown("###### 📐 Anexo II: Plano en Planta de Distribución en B.T.")
-            st.caption("Plano en planta de la vivienda, local o nave con tomas, alumbrado y cuadro (AutoCAD / Plano arquitectónico).")
-            up_dist = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_dist")
-            if up_dist is not None:
-                b64_dist = procesar_archivo_anexo(up_dist)
-                if b64_dist:
-                    st.session_state["mtd_plano_distribucion"] = b64_dist
-            if st.session_state.get("mtd_plano_distribucion"):
-                st.image(st.session_state["mtd_plano_distribucion"], caption="Plano de Distribución cargado", use_container_width=True)
-                if st.button("🗑️ Quitar Plano de Distribución", key="btn_del_dist"):
-                    st.session_state.pop("mtd_plano_distribucion", None)
-                    st.rerun()
+            with st.container(border=True):
+                st.markdown("###### 📐 Anexo II: Plano en Planta de Distribución en B.T.")
+                st.caption("Plano en planta de la vivienda, local o nave con tomas, alumbrado y cuadro (AutoCAD / Plano arquitectónico).")
+                up_dist = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_dist")
+                if up_dist is not None:
+                    b64_dist = procesar_archivo_anexo(up_dist)
+                    if b64_dist:
+                        st.session_state["mtd_plano_distribucion"] = b64_dist
+                if st.session_state.get("mtd_plano_distribucion"):
+                    st.success("✅ Plano de Distribución listo para el PDF oficial.")
+                    st.image(st.session_state["mtd_plano_distribucion"], caption="Plano de Distribución cargado", use_container_width=True)
+                    if st.button("🗑️ Quitar Plano de Distribución", key="btn_del_dist"):
+                        st.session_state.pop("mtd_plano_distribucion", None)
+                        st.rerun()
 
         with col_anx2:
-            st.markdown("###### 📍 Anexo I (b): Plano de Emplazamiento (Catastro)")
-            st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
-            up_emp = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_emp")
-            if up_emp is not None:
-                b64_emp = procesar_archivo_anexo(up_emp)
-                if b64_emp:
-                    st.session_state["mtd_plano_emplazamiento"] = b64_emp
-            if st.session_state.get("mtd_plano_emplazamiento"):
-                st.image(st.session_state["mtd_plano_emplazamiento"], caption="Plano de Emplazamiento cargado", use_container_width=True)
-                if st.button("🗑️ Quitar Plano de Emplazamiento", key="btn_del_emp"):
-                    st.session_state.pop("mtd_plano_emplazamiento", None)
-                    st.rerun()
+            with st.container(border=True):
+                st.markdown("###### 📍 Anexo I (b): Plano de Emplazamiento (Catastro)")
+                st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
+                up_emp = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_emp")
+                if up_emp is not None:
+                    b64_emp = procesar_archivo_anexo(up_emp)
+                    if b64_emp:
+                        st.session_state["mtd_plano_emplazamiento"] = b64_emp
+                if st.session_state.get("mtd_plano_emplazamiento"):
+                    st.success("✅ Plano de Emplazamiento listo para el PDF oficial.")
+                    st.image(st.session_state["mtd_plano_emplazamiento"], caption="Plano de Emplazamiento cargado", use_container_width=True)
+                    if st.button("🗑️ Quitar Plano de Emplazamiento", key="btn_del_emp"):
+                        st.session_state.pop("mtd_plano_emplazamiento", None)
+                        st.rerun()
 
-            st.markdown("---")
-            st.markdown("###### ⚡ Anexo III: Esquema Unifilar Oficial")
-            st.caption("Elige si deseas que Bolimur genere el unifilar vectorial oficial o si prefieres anexar tu propio plano unifilar:")
-            
-            opciones_unifilar = [
-                "🔹 Generar Esquema Unifilar Automático de Bolimur (Vectorial UNE-EN 60617)",
-                "📁 Adjuntar mi Propio Plano de Esquema Unifilar (AutoCAD / Cade_Simu / PDF)"
-            ]
-            modo_def_idx = 1 if st.session_state.get("mtd_unifilar_modo") == "custom" else 0
-            sel_modo_unif = st.radio(
-                "Modo de Generación del Esquema Unifilar:",
-                opciones_unifilar,
-                index=modo_def_idx,
-                key="radio_sel_modo_unif"
-            )
-            
-            if "Adjuntar mi Propio" in sel_modo_unif:
-                st.session_state["mtd_unifilar_modo"] = "custom"
-                up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_unif_custom")
-                if up_unif is not None:
-                    b64_unif = procesar_archivo_anexo(up_unif)
-                    if b64_unif:
-                        st.session_state["mtd_plano_unifilar_custom"] = b64_unif
-                if st.session_state.get("mtd_plano_unifilar_custom"):
-                    st.image(st.session_state["mtd_plano_unifilar_custom"], caption="Tu Esquema Unifilar Personalizado", use_container_width=True)
-                    st.success("✅ Tu propio esquema unifilar se insertará en el Anexo III con el cajetín oficial de Industria.")
+            with st.container(border=True):
+                st.markdown("###### ⚡ Anexo III: Esquema Unifilar Oficial")
+                st.caption("Elige si deseas que Bolimur genere el unifilar vectorial oficial o si prefieres anexar tu propio plano unifilar:")
+                
+                opciones_unifilar = [
+                    "🔹 Generar Esquema Unifilar Automático de Bolimur (Vectorial UNE-EN 60617)",
+                    "📁 Adjuntar mi Propio Plano de Esquema Unifilar (AutoCAD / Cade_Simu / PDF)"
+                ]
+                modo_def_idx = 1 if st.session_state.get("mtd_unifilar_modo") == "custom" else 0
+                sel_modo_unif = st.radio(
+                    "Modo de Generación del Esquema Unifilar:",
+                    opciones_unifilar,
+                    index=modo_def_idx,
+                    key="radio_sel_modo_unif"
+                )
+                
+                if "Adjuntar mi Propio" in sel_modo_unif:
+                    st.session_state["mtd_unifilar_modo"] = "custom"
+                    st.markdown("<div style='background:#fef3c7; border:1px solid #f59e0b; padding:8px 12px; border-radius:6px; margin:8px 0; font-size:13px;'>📁 <b>Modo Plano Propio Activado:</b> Selecciona abajo tu imagen o PDF del unifilar para reemplazar el esquema estándar.</div>", unsafe_allow_html=True)
+                    up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_unif_custom")
+                    if up_unif is not None:
+                        b64_unif = procesar_archivo_anexo(up_unif)
+                        if b64_unif:
+                            st.session_state["mtd_plano_unifilar_custom"] = b64_unif
+                    if st.session_state.get("mtd_plano_unifilar_custom"):
+                        st.image(st.session_state["mtd_plano_unifilar_custom"], caption="Tu Esquema Unifilar Personalizado", use_container_width=True)
+                        st.success("✅ Tu propio esquema unifilar se insertará en el Anexo III con el cajetín oficial de Industria.")
 
-                    # Auditoría IA del Unifilar
-                    if st.session_state.get("mtd_auditoria_unifilar"):
-                        auditor_ia_rebt.render_tarjeta_auditoria(st.session_state["mtd_auditoria_unifilar"], "Esquema Unifilar Personalizado")
+                        # Auditoría IA del Unifilar
+                        if st.session_state.get("mtd_auditoria_unifilar"):
+                            auditor_ia_rebt.render_tarjeta_auditoria(st.session_state["mtd_auditoria_unifilar"], "Esquema Unifilar Personalizado")
 
-                    col_u1, col_u2 = st.columns([1.5, 1])
-                    with col_u1:
-                        lbl_u_btn = "🔄 Re-auditar Unifilar" if st.session_state.get("mtd_auditoria_unifilar") else "🤖 Auditar Unifilar con IA"
-                        if st.button(lbl_u_btn, key="btn_audit_unif", use_container_width=True):
-                            with st.spinner("Auditoría REBT en curso: analizando protecciones, secciones y normativa..."):
-                                ctx_u = {
-                                    "tipo": tipo_inst_sel,
-                                    "potencia_w": sum_pot_inst,
-                                    "tension": sum_tension,
-                                    "iga": f"{prot_iga} A",
-                                    "diferenciales": f"{prot_dif} mA",
-                                    "sobretensiones": prot_vtp
-                                }
-                                res_u = auditor_ia_rebt.auditar_evidencia_multimodal(
-                                    imagen_b64=st.session_state["mtd_plano_unifilar_custom"],
-                                    tipo_evidencia="Esquema Unifilar B.T.",
-                                    descripcion_usuario="Plano unifilar personalizado",
-                                    contexto_instalacion=ctx_u
-                                )
-                                st.session_state["mtd_auditoria_unifilar"] = res_u
+                        col_u1, col_u2 = st.columns([1.5, 1])
+                        with col_u1:
+                            lbl_u_btn = "🔄 Re-auditar Unifilar" if st.session_state.get("mtd_auditoria_unifilar") else "🤖 Auditar Unifilar con IA"
+                            if st.button(lbl_u_btn, key="btn_audit_unif", use_container_width=True):
+                                with st.spinner("Auditoría REBT en curso: analizando protecciones, secciones y normativa..."):
+                                    ctx_u = {
+                                        "tipo": tipo_inst_sel,
+                                        "potencia_w": sum_pot_inst,
+                                        "tension": sum_tension,
+                                        "iga": f"{prot_iga} A",
+                                        "diferenciales": f"{prot_dif} mA",
+                                        "sobretensiones": prot_vtp
+                                    }
+                                    res_u = auditor_ia_rebt.auditar_evidencia_multimodal(
+                                        imagen_b64=st.session_state["mtd_plano_unifilar_custom"],
+                                        tipo_evidencia="Esquema Unifilar B.T.",
+                                        descripcion_usuario="Plano unifilar personalizado",
+                                        contexto_instalacion=ctx_u
+                                    )
+                                    st.session_state["mtd_auditoria_unifilar"] = res_u
+                                    st.rerun()
+                        with col_u2:
+                            if st.button("🗑️ Quitar Unifilar Propio", key="btn_del_unif", use_container_width=True):
+                                st.session_state.pop("mtd_plano_unifilar_custom", None)
+                                st.session_state.pop("mtd_auditoria_unifilar", None)
                                 st.rerun()
-                    with col_u2:
-                        if st.button("🗑️ Quitar Unifilar Propio", key="btn_del_unif", use_container_width=True):
-                            st.session_state.pop("mtd_plano_unifilar_custom", None)
-                            st.session_state.pop("mtd_auditoria_unifilar", None)
-                            st.rerun()
-            else:
-                st.session_state["mtd_unifilar_modo"] = "auto"
-                st.info("ℹ️ Bolimur generará automáticamente el esquema unifilar vectorial con las protecciones IGA, diferenciales y circuitos configurados en las pestañas anteriores.")
+                else:
+                    st.session_state["mtd_unifilar_modo"] = "auto"
+                    st.info("ℹ️ Bolimur generará automáticamente el esquema unifilar vectorial con las protecciones IGA, diferenciales y circuitos configurados en las pestañas anteriores.")
 
         st.markdown("---")
         st.markdown("##### 📸 Anexo V: Reportaje Fotográfico de Fin de Obra y Evidencias REBT (ITC-BT-05)")
