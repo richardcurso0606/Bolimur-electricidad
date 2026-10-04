@@ -30,3 +30,30 @@ def test_responder_consulta_rebt_sin_clave():
     # Cuando no hay clave API configurada, debe responder con el motor offline de inmediato sin excepción
     resp = asistente_ia_rebt.responder_consulta_rebt("¿Qué exige el cuadro de obra provisional?")
     assert "ITC-BT-33" in resp or "cuadro" in resp.lower()
+
+def test_procesar_archivo_camara_o_adjunto():
+    import io
+    from PIL import Image
+    assert asistente_ia_rebt.procesar_archivo_camara_o_adjunto(None) == ""
+    
+    # Crear un archivo simulado con una imagen válida
+    im = Image.new('RGB', (20, 20), color='blue')
+    bio = io.BytesIO()
+    im.save(bio, format='PNG')
+    raw_bytes = bio.getvalue()
+    
+    class MockUploadedFile:
+        def getvalue(self):
+            return raw_bytes
+            
+    res_b64 = asistente_ia_rebt.procesar_archivo_camara_o_adjunto(MockUploadedFile())
+    assert res_b64.startswith("data:image/jpeg;base64,")
+
+def test_responder_consulta_rebt_con_imagen_offline():
+    raw_img = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    resp = asistente_ia_rebt.responder_consulta_rebt(
+        consulta="Revisa este cuadro general de mando y protección",
+        imagen_b64=raw_img
+    )
+    assert "Diagnóstico Técnico" in resp or "REBT" in resp
+    assert "ITC-BT" in resp

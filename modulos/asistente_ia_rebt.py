@@ -220,22 +220,74 @@ def buscar_respuesta_offline(consulta: str) -> str:
         "el asistente analizará tu caso particular con razonamiento profundo en tiempo real."
     )
 
-def consultar_gemini_rebt(consulta: str, historial: list, api_key: str) -> str:
-    """Consulta al modelo Google Gemini con el system prompt de Ingeniero Eléctrico e Instalador REBT."""
+import re
+import io
+import base64
+
+def procesar_archivo_camara_o_adjunto(uploaded_file) -> str:
+    """
+    Procesa un archivo tomado desde la cámara o subido (JPG, PNG, PDF de 1 página)
+    y lo convierte en una data URI base64 optimizada para visión artificial.
+    """
+    if uploaded_file is None:
+        return ""
+    try:
+        raw_bytes = uploaded_file.getvalue()
+        # Si es un PDF, renderizar primera página a PNG con PyMuPDF
+        if raw_bytes.startswith(b"%PDF"):
+            try:
+                import fitz
+                pdf_doc = fitz.open(stream=raw_bytes, filetype="pdf")
+                if len(pdf_doc) > 0:
+                    page = pdf_doc[0]
+                    pix = page.get_pixmap(dpi=150)
+                    raw_bytes = pix.tobytes("png")
+                pdf_doc.close()
+            except Exception as e_pdf:
+                st.error(f"Error procesando archivo PDF: {e_pdf}")
+                return ""
+
+        from PIL import Image as PILImage
+        bio_in = io.BytesIO(raw_bytes)
+        with PILImage.open(bio_in) as im:
+            if im.mode in ("RGBA", "P"):
+                im = im.convert("RGB")
+            # Redimensionar a máx 1600px manteniendo relación de aspecto
+            im.thumbnail((1600, 1600), PILImage.Resampling.LANCZOS)
+            bio_out = io.BytesIO()
+            im.save(bio_out, format="JPEG", quality=85, optimize=True)
+            b64_str = base64.b64encode(bio_out.getvalue()).decode("utf-8")
+            return f"data:image/jpeg;base64,{b64_str}"
+    except Exception as e:
+        st.error(f"Error procesando imagen para la IA: {e}")
+        return ""
+
+def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b64: str = None) -> str:
+    """Consulta al modelo Google Gemini con el system prompt de Ingeniero Eléctrico e Instalador REBT, con soporte multimodal."""
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     # Construir contenido
     contents = []
-    for h in historial[-8:]: # Últimos 8 mensajes para contexto
+    for h in historial[-6:]: # Contexto de mensajes previos
         role = "user" if h["role"] == "user" else "model"
-        contents.append({
-            "role": role,
-            "parts": [{"text": h["content"]}]
-        })
-    contents.append({
-        "role": "user",
-        "parts": [{"text": consulta}]
-    })
+        parts = [{"text": h["content"]}]
+        contents.append({"role": role, "parts": parts})
+    
+    # Mensaje actual del usuario con imagen opcional
+    prompt_texto = consulta.strip() or "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica."
+    user_parts = [{"text": prompt_texto}]
+    
+    if imagen_b64:
+        mime_type, clean_b64 = auditor_ia_rebt._limpiar_b64_imagen(imagen_b64)
+        if clean_b64:
+            user_parts.append({
+                "inlineData": {
+                    "mimeType": mime_type,
+                    "data": clean_b64
+                }
+            })
+            
+    contents.append({"role": "user", "parts": user_parts})
     
     payload = {
         "contents": contents,
@@ -243,28 +295,14 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str) -> str:
             "parts": [{"text": SYSTEM_PROMPT_INGENIERO_INSTALADOR}]
         },
         "generationConfig": {
-            "temperature": 0.3,
+            "temperature": 0.25,
             "topP": 0.85,
-            "maxOutputTokens": 1800
+            "maxOutputTokens": 2000
         }
     }
     
     try:
-        resp = requests.post(endpoint, json=payload, timeout=25)
-        if resp.status_code == 200:
-            data = resp.json()
-            cands = data.get("candidates", [])
-            if cands:
-                texto = cands[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                if texto.strip():
-                    return texto.strip()
-    except Exception as e:
-        pass
-        
-    # Fallback a gemini-1.5-flash
-    endpoint_fb = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    try:
-        resp = requests.post(endpoint_fb, json=payload, timeout=25)
+        resp = requests.post(endpoint, json=payload, timeout=30)
         if resp.status_code == 200:
             data = resp.json()
             cands = data.get("candidates", [])
@@ -275,14 +313,57 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str) -> str:
     except Exception:
         pass
         
+    # Fallback a gemini-1.5-flash
+    endpoint_fb = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    try:
+        resp = requests.post(endpoint_fb, json=payload, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            cands = data.get("candidates", [])
+            if cands:
+                texto = cands[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                if texto.strip():
+                    return texto.strip()
+    except Exception:
+        pass
+        
+    return responder_consulta_offline_con_imagen(consulta, imagen_b64)
+
+def responder_consulta_offline_con_imagen(consulta: str, imagen_b64: str = None) -> str:
+    """Responde en modo offline combinando la base de conocimiento y el motor de reglas REBT si hay imagen."""
+    if imagen_b64:
+        res_auditoria = auditor_ia_rebt._auditar_con_motor_reglas_rebt(
+            tipo_evidencia=consulta or "Evidencia de Obra / Cuadro Eléctrico",
+            descripcion_usuario=consulta or "Consulta sobre imagen"
+        )
+        dictamen_md = (
+            f"### 🔍 Diagnóstico Técnico Offline sobre la Imagen (REBT)\n\n"
+            f"**Dictamen Preliminar:** `{res_auditoria.get('calificacion', 'Inspección REBT')}`\n\n"
+            f"{res_auditoria.get('resumen', '')}\n\n"
+            "**Elementos Verificados reglamentariamente:**\n"
+        )
+        for e in res_auditoria.get("elementos_identificados", []):
+            dictamen_md += f"- {e}\n"
+            
+        dictamen_md += "\n**Comprobaciones de Seguridad:**\n"
+        for c in res_auditoria.get("comprobaciones", []):
+            dictamen_md += f"- ✅ **{c.get('criterio')}** (`{c.get('norma_rebt')}`): {c.get('detalle')}\n"
+            
+        dictamen_md += "\n**Recomendaciones del Instalador e Ingeniero:**\n"
+        for r in res_auditoria.get("recomendaciones", []):
+            dictamen_md += f"• {r}\n"
+            
+        dictamen_md += "\n> 💡 *Nota:* Para análisis visual profundo con reconocimiento de lectura de pantallas o cableado real, introduce tu clave gratuita de Google Gemini en el panel superior."
+        return dictamen_md
+        
     return buscar_respuesta_offline(consulta)
 
-def responder_consulta_rebt(consulta: str, historial: list = None) -> str:
-    """Enruta la consulta a Gemini o al motor offline."""
+def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: str = None) -> str:
+    """Enruta la consulta a Gemini con soporte multimodal o al motor offline."""
     key = auditor_ia_rebt.obtener_gemini_api_key()
     if key and len(key) > 10:
-        return consultar_gemini_rebt(consulta, historial or [], key)
-    return buscar_respuesta_offline(consulta)
+        return consultar_gemini_rebt(consulta, historial or [], key, imagen_b64=imagen_b64)
+    return responder_consulta_offline_con_imagen(consulta, imagen_b64)
 
 def render_interfaz_asistente_rebt():
     """Renderiza la interfaz principal del Consultor IA REBT."""
@@ -308,6 +389,52 @@ def render_interfaz_asistente_rebt():
                 auditor_ia_rebt.guardar_gemini_api_key(key_in)
                 st.success("Clave guardada.")
                 st.rerun()
+
+    # Bloque de captura con Cámara o Subida de Archivos
+    if "ia_chat_imagen_activa" not in st.session_state:
+        st.session_state["ia_chat_imagen_activa"] = None
+
+    with st.expander("📷 Adjuntar Imagen / Plano / Documento o Usar la Cámara en Vivo", expanded=bool(st.session_state.get("ia_chat_imagen_activa"))):
+        tab_cam, tab_up = st.tabs(["📸 Tomar Foto con la Cámara", "📁 Subir Archivo (JPG, PNG, PDF)"])
+        
+        with tab_cam:
+            st.caption("Apunta con la cámara de tu móvil o portátil al cuadro eléctrico, pica de tierra, rotulación o display:")
+            cam_pic = st.camera_input("Capturar foto desde el dispositivo", key="cam_input_ia_chat")
+            if cam_pic is not None:
+                b64_cam = procesar_archivo_camara_o_adjunto(cam_pic)
+                if b64_cam:
+                    st.session_state["ia_chat_imagen_activa"] = b64_cam
+
+        with tab_up:
+            st.caption("Sube un esquema unifilar, plano o fotografía desde tu galería o disco (PNG, JPG, PDF):")
+            up_file = st.file_uploader("Seleccionar archivo técnico:", type=["png", "jpg", "jpeg", "webp", "pdf"], key="file_up_ia_chat")
+            if up_file is not None:
+                b64_up = procesar_archivo_camara_o_adjunto(up_file)
+                if b64_up:
+                    st.session_state["ia_chat_imagen_activa"] = b64_up
+
+        if st.session_state.get("ia_chat_imagen_activa"):
+            col_prev1, col_prev2 = st.columns([1.2, 3])
+            with col_prev1:
+                st.image(st.session_state["ia_chat_imagen_activa"], caption="Evidencia lista para consultar", width=220)
+                if st.button("🗑️ Descartar Imagen", key="btn_del_chat_img"):
+                    st.session_state["ia_chat_imagen_activa"] = None
+                    st.rerun()
+            with col_prev2:
+                st.info("✅ **Imagen adjunta cargada**. Escribe cualquier consulta sobre ella abajo o pulsa el botón directo para una auditoría general:")
+                if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_analizar_img_directo"):
+                    img_actual = st.session_state["ia_chat_imagen_activa"]
+                    txt_q = "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica. Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
+                    st.session_state.mensajes_chat_rebt.append({
+                        "role": "user",
+                        "content": txt_q,
+                        "image": img_actual
+                    })
+                    st.session_state["ia_chat_imagen_activa"] = None
+                    with st.spinner("Analizando imagen con visión técnica e ingeniería REBT..."):
+                        resp = responder_consulta_rebt(txt_q, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_actual)
+                        st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+                    st.rerun()
 
     # Preguntas Rápidas Frecuentes
     st.markdown("##### ⚡ Consultas Rápidas de Taller y Obra:")
@@ -339,6 +466,7 @@ def render_interfaz_asistente_rebt():
                     "¡Hola! Soy tu **Consultor de Ingeniería y Maestro Instalador REBT** de Bolimur. "
                     "Estoy preparado para resolver cualquier duda sobre cálculos eléctricos, dimensionamiento de conductores, "
                     "aparamenta, esquemas unifilares, tramitación de MTD ante Industria (DGEAIM Murcia) o límites legales de la ITC-BT-04.\n\n"
+                    "📷 **Novedad:** Ahora puedes **tomar fotos con tu cámara o adjuntar planos y PDFs** en el panel superior para que los revise y te dé mi dictamen.\n\n"
                     "¿Qué instalación estás ejecutando o qué consulta técnica tienes hoy?"
                 )
             }
@@ -346,9 +474,14 @@ def render_interfaz_asistente_rebt():
 
     # Procesar si se seleccionó una píldora rápida
     if pregunta_seleccionada:
-        st.session_state.mensajes_chat_rebt.append({"role": "user", "content": pregunta_seleccionada})
+        img_p = st.session_state.get("ia_chat_imagen_activa")
+        st.session_state["ia_chat_imagen_activa"] = None
+        user_p = {"role": "user", "content": pregunta_seleccionada}
+        if img_p:
+            user_p["image"] = img_p
+        st.session_state.mensajes_chat_rebt.append(user_p)
         with st.spinner("Consultando normativa técnica REBT y criterios de ingeniería..."):
-            resp = responder_consulta_rebt(pregunta_seleccionada, st.session_state.mensajes_chat_rebt[:-1])
+            resp = responder_consulta_rebt(pregunta_seleccionada, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_p)
             st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
         st.rerun()
 
@@ -359,21 +492,32 @@ def render_interfaz_asistente_rebt():
         for m in st.session_state.mensajes_chat_rebt:
             if m["role"] == "user":
                 with st.chat_message("user", avatar="👷"):
+                    if m.get("image"):
+                        st.image(m["image"], caption="📷 Evidencia técnica adjunta", width=320)
                     st.markdown(m["content"])
             else:
                 with st.chat_message("assistant", avatar="⚡"):
                     st.markdown(m["content"])
 
     # Entrada del usuario en la parte inferior
-    prompt = st.chat_input("Escribe aquí tu consulta técnica o reglamentaria (ej: ¿Puedo poner cable de 1.5 con PIA de 16A?)...")
+    prompt = st.chat_input("Escribe tu consulta o pregunta sobre la imagen adjunta (ej: ¿Este cuadro cumple con la ITC-BT-17?)...")
     if prompt:
-        st.session_state.mensajes_chat_rebt.append({"role": "user", "content": prompt})
+        img_enviar = st.session_state.get("ia_chat_imagen_activa")
+        st.session_state["ia_chat_imagen_activa"] = None
+        
+        user_entry = {"role": "user", "content": prompt}
+        if img_enviar:
+            user_entry["image"] = img_enviar
+        st.session_state.mensajes_chat_rebt.append(user_entry)
+        
         with st.chat_message("user", avatar="👷"):
+            if img_enviar:
+                st.image(img_enviar, caption="📷 Evidencia técnica adjunta", width=320)
             st.markdown(prompt)
 
         with st.chat_message("assistant", avatar="⚡"):
-            with st.spinner("Analizando según REBT e Instrucciones Técnicas Complementarias..."):
-                respuesta = responder_consulta_rebt(prompt, st.session_state.mensajes_chat_rebt[:-1])
+            with st.spinner("Analizando imagen y consulta según REBT e ingeniería eléctrica..."):
+                respuesta = responder_consulta_rebt(prompt, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_enviar)
                 st.markdown(respuesta)
                 st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": respuesta})
 
@@ -387,4 +531,5 @@ def render_interfaz_asistente_rebt():
                     "content": "Conversación reiniciada. ¿En qué te puedo asesorar ahora sobre el REBT o tus proyectos?"
                 }
             ]
+            st.session_state["ia_chat_imagen_activa"] = None
             st.rerun()
