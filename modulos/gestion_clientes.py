@@ -16,31 +16,61 @@ def renderizar():
         return
 
     usuario_id = usuario["id"]
-    clientes = db_manager.listar_clientes(usuario_id)
-    todos_proyectos = db_manager.listar_proyectos_usuario(usuario_id)
+    
+    # Modo Empresa / Compartir clientes entre todas las cuentas del instalador (Activado por defecto)
+    if "crm_modo_empresa" not in st.session_state:
+        st.session_state["crm_modo_empresa"] = True
+        
+    modo_empresa = st.session_state["crm_modo_empresa"]
+    config_nube = db_manager.obtener_config_nube()
+    tiene_nube = bool(config_nube.get("url") and config_nube.get("key"))
+
+    # Sincronización inicial automática si hay nube configurada
+    if tiene_nube and "crm_sync_auto_done" not in st.session_state:
+        st.session_state["crm_sync_auto_done"] = True
+        try:
+            db_manager.sincronizar_con_nube(usuario_id)
+        except Exception:
+            pass
+
+    clientes = db_manager.listar_clientes(usuario_id, modo_empresa=modo_empresa)
+    todos_proyectos = db_manager.listar_proyectos_usuario(usuario_id, modo_empresa=modo_empresa)
 
     # Cabecera Principal y Métricas
-    col_t1, col_t2, col_t3 = st.columns([3, 1, 1.2])
+    col_t1, col_t2, col_t3, col_t4 = st.columns([2.5, 1, 1, 1.3])
     with col_t1:
-        st.title("👥 Expedientes de Clientes y Obras (CRM Eléctrico)")
-        st.caption("Administra los datos de suministro de tus clientes (CUPS, Catastro, Distribuidora) y accede a sus proyectos técnicos en 1 clic.")
+        st.title("👥 Expedientes de Clientes y Obras")
+        if tiene_nube:
+            st.markdown("🟢 **Sincronización en la Nube Activa (Supabase)** — Datos sincronizados 24/7 en PC, Móvil y Tablet.")
+        else:
+            st.markdown("🏢 **Modo Instalador Multi-Cuenta** — Clientes y proyectos compartidos en todos tus dispositivos.")
     with col_t2:
         st.metric("Clientes Activos", f"{len(clientes)} clientes")
     with col_t3:
         st.metric("Obras Guardadas", f"{len(todos_proyectos)} proyectos")
-        if st.button("🧹 Limpiar Duplicados", key="btn_limpiar_dup_top", use_container_width=True, help="Si registraste un cliente varias veces por error, este botón unifica sus fichas automáticamente"):
-            num_borrados = db_manager.limpiar_duplicados_clientes(usuario_id)
-            if num_borrados > 0:
-                st.success(f"✅ Se han unificado y eliminado {num_borrados} fichas duplicadas.")
-                st.rerun()
-            else:
-                st.info("No se encontraron clientes duplicados en tu base de datos.")
+    with col_t4:
+        if tiene_nube:
+            if st.button("⚡ Sincronizar Nube", key="btn_sync_top", use_container_width=True, type="primary"):
+                ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
+                if ok_s:
+                    st.success(f"✅ {msg_s}")
+                    st.rerun()
+                else:
+                    st.error(f"❌ {msg_s}")
+        else:
+            if st.button("🧹 Limpiar Duplicados", key="btn_limpiar_dup_top", use_container_width=True, help="Si registraste un cliente varias veces por error, este botón unifica sus fichas automáticamente"):
+                num_borrados = db_manager.limpiar_duplicados_clientes(usuario_id, modo_empresa=modo_empresa)
+                if num_borrados > 0:
+                    st.success(f"✅ Se han unificado y eliminado {num_borrados} fichas duplicadas.")
+                    st.rerun()
+                else:
+                    st.info("No se encontraron clientes duplicados en tu base de datos.")
 
     tab_clientes_lista, tab_nuevo_cliente, tab_todos_proyectos, tab_sincro = st.tabs([
         "📋 Expediente y Ficha del Cliente",
         "➕ Alta de Nuevo Cliente",
         "📂 Historial Global de Proyectos",
-        "☁️ Sincronización y Acceso Móvil / PC"
+        "☁️ Sincronización y Base de Datos Nube"
     ])
 
     # =========================================================================
@@ -305,22 +335,126 @@ def renderizar():
                 st.dataframe(pd.DataFrame(filas_tabla_proy), use_container_width=True, hide_index=True)
 
     # =========================================================================
-    # TAB 4: SINCRONIZACIÓN Y ACCESO MULTI-DISPOSITIVO (PC / MÓVIL / TABLET)
+    # TAB 4: SINCRONIZACIÓN Y BASE DE DATOS EN LA NUBE (SUPABASE / REST / MULTI-DEVICE)
     # =========================================================================
     with tab_sincro:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">☁️ Sincronización y Acceso desde Cualquier Dispositivo (PC, Móvil o Tablet)</h4></div>', unsafe_allow_html=True)
-        st.caption("Asegura el acceso a tus clientes, cálculos y boletines CIE desde el taller, la furgoneta o en plena obra.")
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">☁️ Base de Datos en la Nube y Acceso 24/7 (PC, Móvil y Tablet)</h4></div>', unsafe_allow_html=True)
+        st.caption("Conecta tu base de datos en la nube gratuita (Supabase) para que tus clientes y proyectos se guarden automáticamente y estén accesibles al instante desde cualquier teléfono o PC.")
 
+        col_cfg_nube, col_estado_nube = st.columns([2, 1.2])
+
+        with col_cfg_nube:
+            with st.container(border=True):
+                st.markdown("#### ⚙️ Conexión a Base de Datos en la Nube (Supabase Cloud)")
+                st.write("Configura tu base de datos Supabase gratuita para sincronización automática en tiempo real.")
+
+                actual_url = config_nube.get("url", "")
+                actual_key = config_nube.get("key", "")
+
+                in_supa_url = st.text_input("URL de Supabase (*):", value=actual_url, placeholder="https://xyzabcdefg.supabase.co", key="in_supa_url")
+                in_supa_key = st.text_input("Anon / Public Key de Supabase (*):", value=actual_key, type="password", placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", key="in_supa_key")
+
+                col_btn_s1, col_btn_s2 = st.columns(2)
+                with col_btn_s1:
+                    if st.button("🔌 Probar y Guardar Conexión", type="primary", use_container_width=True, key="btn_save_supa"):
+                        if in_supa_url and in_supa_key:
+                            ok_test, msg_test = db_manager.testear_conexion_nube(in_supa_url, in_supa_key)
+                            if ok_test:
+                                db_manager.guardar_config_nube(in_supa_url, in_supa_key)
+                                st.success("✅ ¡Conectado con éxito a Supabase Cloud! Se ha guardado la configuración.")
+                                # Ejecutar sincronización inicial
+                                ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
+                                if ok_s:
+                                    st.info(f"🔄 {msg_s}")
+                                st.rerun()
+                            else:
+                                st.error(f"❌ {msg_test}")
+                                st.warning("Asegúrate de que creaste las tablas en Supabase ejecutando el script SQL que se muestra abajo.")
+                        else:
+                            st.warning("Introduce la URL y Key de tu proyecto Supabase.")
+
+                with col_btn_s2:
+                    if st.button("⚡ Sincronizar Ahora (Local ⇄ Nube)", use_container_width=True, key="btn_manual_sync_tab4"):
+                        ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
+                        if ok_s:
+                            st.success(f"✅ {msg_s}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg_s}")
+
+                with st.expander("📋 Ver Script SQL para Crear Tablas en Supabase (Copiar y Pegar)", expanded=False):
+                    st.markdown("""
+                    **Pasos para configurar Supabase gratis en 2 minutos:**
+                    1. Entra a [supabase.com](https://supabase.com) y crea un proyecto gratuito.
+                    2. Ve al menú **SQL Editor** en Supabase, pega el siguiente script y pulsa **Run**:
+                    """)
+                    sql_script = """-- Tablas para Bolimur REBT PRO en Supabase Cloud
+CREATE TABLE IF NOT EXISTS clientes (
+    id BIGINT PRIMARY KEY,
+    usuario_id BIGINT,
+    nombre_completo TEXT NOT NULL,
+    nif_cif TEXT,
+    telefono TEXT,
+    email TEXT,
+    direccion_suministro TEXT,
+    localidad TEXT,
+    cups TEXT,
+    referencia_catastral TEXT,
+    tipo_inmueble TEXT,
+    notas TEXT,
+    codigo_postal TEXT,
+    municipio TEXT,
+    provincia TEXT,
+    distribuidora TEXT,
+    potencia_contratada_kw TEXT,
+    tension_suministro TEXT,
+    fecha_creacion TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS proyectos (
+    id BIGINT PRIMARY KEY,
+    usuario_id BIGINT,
+    cliente_id BIGINT,
+    nombre_proyecto TEXT NOT NULL,
+    modulo TEXT,
+    datos_json TEXT,
+    resumen_potencia_o_importe TEXT,
+    fecha_guardado TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Desactivar RLS o permitir acceso con anon key para sincronización
+ALTER TABLE clientes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE proyectos DISABLE ROW LEVEL SECURITY;
+"""
+                    st.code(sql_script, language="sql")
+                    st.markdown("3. Ve a **Project Settings -> API** y copia la **Project URL** y la clave **anon / public**.")
+
+        with col_estado_nube:
+            with st.container(border=True):
+                st.markdown("#### 📊 Estado de Persistencia")
+                if tiene_nube:
+                    st.success("🟢 **Nube Activa y Sincronizada**\n\nTodos los clientes y proyectos creados en tu móvil o PC se sincronizan en la nube automáticamente.")
+                else:
+                    st.warning("🟡 **Modo Local Compartido**\n\nTus clientes se guardan en el dispositivo actual y se comparten entre todas tus cuentas Google de Bolimur. Conecta Supabase arriba para sincronización 24/7 en la nube.")
+
+                st.markdown("---")
+                st.markdown("#### 🏢 Modo de Visualización:")
+                modo_sel = st.toggle("🏢 Ver Clientes de Todas mis Cuentas de Instalador", value=modo_empresa, key="tgl_modo_empresa_crm")
+                if modo_sel != modo_empresa:
+                    st.session_state["crm_modo_empresa"] = modo_sel
+                    st.rerun()
+
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">📦 Copia de Seguridad Rápida JSON (Sin Conexión)</h4></div>', unsafe_allow_html=True)
         col_sync1, col_sync2 = st.columns(2)
 
         with col_sync1:
             with st.container(border=True):
-                st.markdown("#### 📥 1. Exportar Copia de Seguridad Completa (JSON)")
-                st.write("Descarga un archivo seguro con todos tus clientes registrados, proyectos y expedientes para transferirlo a tu móvil, portátil o tablet.")
+                st.markdown("##### 📥 Exportar Respaldo Completo")
+                st.write("Descarga un archivo JSON con todos tus clientes registrados y proyectos para guardarlo o transferirlo manualmente.")
                 
                 json_backup = db_manager.exportar_copia_seguridad_nube(usuario_id)
                 st.download_button(
-                    label="💾 Descargar Respaldo de Clientes y Obras (JSON)",
+                    label="💾 Descargar Respaldo JSON",
                     data=json_backup,
                     file_name="Copia_Seguridad_Clientes_Bolimur.json",
                     mime="application/json",
@@ -330,13 +464,13 @@ def renderizar():
 
         with col_sync2:
             with st.container(border=True):
-                st.markdown("#### 📤 2. Restaurar / Importar en este Dispositivo")
-                st.write("Sube un archivo de respaldo generado desde otro PC o móvil para cargar todos tus clientes y proyectos en 1 segundo.")
+                st.markdown("##### 📤 Restaurar Respaldo en este Dispositivo")
+                st.write("Sube un archivo JSON de respaldo para importar tus clientes y proyectos en 1 segundo.")
                 
-                archivo_in = st.file_uploader("Selecciona archivo JSON de respaldo:", type=["json"], key="upload_crm_backup")
+                archivo_in = st.file_uploader("Selecciona archivo JSON:", type=["json"], key="upload_crm_backup")
                 if archivo_in is not None:
                     contenido_str = archivo_in.getvalue().decode("utf-8")
-                    if st.button("🚀 Importar y Sincronizar Clientes", key="btn_do_import_crm", use_container_width=True, type="primary"):
+                    if st.button("🚀 Importar Respaldo", key="btn_do_import_crm", use_container_width=True, type="primary"):
                         ok_imp, msg_imp = db_manager.importar_copia_seguridad_nube(usuario_id, contenido_str)
                         if ok_imp:
                             st.success(f"✅ {msg_imp}")
