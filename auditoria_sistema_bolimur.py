@@ -35,7 +35,7 @@ def ejecutar_auditoria():
     # -------------------------------------------------------------------------
     # FASE 1: Verificación de Todos los Módulos del Sistema
     # -------------------------------------------------------------------------
-    print("\n[FASE 1/7] Verificando sintaxis e importaciones de los 22 módulos...")
+    print("\n[FASE 1/7] Verificando sintaxis e importaciones de los 23 módulos...")
     modulos_sistema = [
         "modulos.rebt_tablas",
         "modulos.tablas_normativas",
@@ -48,6 +48,7 @@ def ejecutar_auditoria():
         "modulos.gestion_clientes",
         "modulos.memoria_tecnica_industria",
         "modulos.auditor_ia_rebt",
+        "modulos.asistente_ia_rebt",
         "modulos.pdf_memoria_tecnica",
         "modulos.pdf_presupuesto",
         "modulos.pdf_prevision",

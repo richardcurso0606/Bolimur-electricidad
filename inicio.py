@@ -75,6 +75,12 @@ except Exception as e:
     tablas_normativas = None
     errores_import["tablas_normativas"] = traceback.format_exc()
 
+try:
+    from modulos import asistente_ia_rebt
+except Exception as e:
+    asistente_ia_rebt = None
+    errores_import["asistente_ia_rebt"] = traceback.format_exc()
+
 
 
 # =========================================================================
@@ -251,6 +257,7 @@ with st.sidebar:
 
     opciones = [
         ("🏠  Menú Principal", "🏠 Menú Principal"),
+        ("🤖  Consultor IA REBT", "🤖 Consultor IA REBT"),
         ("🏛️  Memoria Técnica (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
         ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
         ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
@@ -278,8 +285,22 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
     st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
     st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
     
-    st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, gestionar clientes, redactar memorias para Industria o elaborar presupuestos:")
+    st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, resolver dudas reglamentarias con la IA o tramitar memorias oficiales:")
 
+    # BANNER DESTACADO 1: CONSULTOR IA EXPERTO REBT
+    with st.container(border=True):
+        col_ia_txt, col_ia_btn = st.columns([3, 1])
+        with col_ia_txt:
+            st.markdown("### 🤖 Consultor IA: Experto REBT & Ingeniero Eléctrico")
+            st.write("Tu asesor técnico 24/7 con doble visión de **Ingeniero Eléctrico** y **Maestro Instalador de Campo**. Resuelve cualquier duda reglamentaria del REBT, cálculos de caídas de tensión, coordinación de protecciones, límites de MTD vs Proyecto de Ingeniero y requisitos de Industria en Murcia.")
+        with col_ia_btn:
+            st.write("")
+            st.write("")
+            if st.button("💬 Consultar a la IA", key="btn_home_ia_consultor", type="primary", use_container_width=True):
+                st.session_state.menu_activo = "🤖 Consultor IA REBT"
+                st.rerun()
+
+    # BANNER DESTACADO 2: MTD INDUSTRIA MURCIA
     with st.container(border=True):
         col_mtd_txt, col_mtd_btn = st.columns([3, 1])
         with col_mtd_txt:
@@ -288,7 +309,7 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
         with col_mtd_btn:
             st.write("")
             st.write("")
-            if st.button("🚀 Tramitar MTD Murcia", key="btn_home_mtd_featured", type="primary", use_container_width=True):
+            if st.button("🚀 Tramitar MTD Murcia", key="btn_home_mtd_featured", use_container_width=True):
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
                 st.rerun()
 
@@ -350,6 +371,14 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             if st.button("Abrir Perfil del Instalador", key="btn_home_prof", use_container_width=True):
                 st.session_state.menu_activo = "👤 Perfil del Instalador"
                 st.rerun()
+
+elif "Consultor IA" in seleccion_modulo or "🤖" in seleccion_modulo:
+    if asistente_ia_rebt:
+        asistente_ia_rebt.render_interfaz_asistente_rebt()
+    else:
+        st.error("Módulo Consultor IA REBT no disponible.")
+        if "asistente_ia_rebt" in errores_import:
+            st.code(errores_import["asistente_ia_rebt"])
 
 elif "Memoria" in seleccion_modulo or "MTD" in seleccion_modulo or "🏛️" in seleccion_modulo or "Industria" in seleccion_modulo:
     if memoria_tecnica_industria:
