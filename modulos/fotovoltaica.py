@@ -27,8 +27,9 @@ except Exception:
 # =========================================================================
 # CONSTANTES TÉCNICAS Y REGLAMENTARIAS (REBT / CTE / UNE-EN 62548)
 # =========================================================================
-HSP_MURCIA_MEDIA = 5.10  # Horas Sol Pico promedio diario en la Región de Murcia (kWh/m²/día)
-TEMP_REF_STC = 25.0      # Temperatura de ensayo estándar (STC) en ºC
+HSP_MURCIA_MEDIA = 5.10     # Horas Sol Pico promedio diario anual en Murcia (kWh/m²/día) - Conexión a Red
+HSP_MURCIA_INVIERNO = 2.80  # Horas Sol Pico en mes desfavorable (Diciembre en Murcia) - Aisladas
+TEMP_REF_STC = 25.0         # Temperatura de ensayo estándar (STC) en ºC
 TEMP_MIN_DISENO = -5.0   # Temperatura ambiente mínima de diseño en Murcia / Interior (ºC)
 TEMP_MAX_CELULA = 70.0   # Temperatura máxima alcanzada por la célula en cubierta en verano (ºC)
 FACTOR_SEG_DC = 1.25     # Factor de seguridad REBT para Isc en generadores DC
@@ -244,6 +245,74 @@ def calcular_balance_anual(
         "co2_evitado_ton": round(co2_evitado_ton, 2)
     }
 
+def calcular_sistema_aislado_baterias(
+    consumo_diario_wh: float,
+    dias_autonomia: float = 3.0,
+    tension_bateria_v: float = 48.0,
+    tipo_bateria: str = "Litio (LiFePO4)",
+    profundidad_descarga_dod: float = 0.85,
+    hsp_invierno: float = 2.80,
+    rendimiento_global: float = 0.75,
+    potencia_pico_modulo_w: float = 500.0,
+    potencia_cargas_max_w: float = 3000.0
+) -> Dict[str, Any]:
+    """
+    Calcula una instalación fotovoltaica aislada de red (Off-Grid) con acumulación en baterías.
+    Dimensiona el campo solar para el mes más desfavorable (HSP invierno Diciembre en Murcia),
+    la capacidad de baterías en Ah y kWh útiles, el regulador de carga MPPT y el inversor-cargador.
+    """
+    # 1. Energía diaria requerida considerando pérdidas del sistema
+    e_necesaria_diaria_wh = consumo_diario_wh / max(rendimiento_global, 0.5)
+
+    # 2. Potencia pico de paneles para el peor mes
+    potencia_pico_requerida_w = e_necesaria_diaria_wh / max(hsp_invierno, 1.0)
+    num_modulos = max(1, math.ceil(potencia_pico_requerida_w / potencia_pico_modulo_w))
+    potencia_pico_instalada_w = num_modulos * potencia_pico_modulo_w
+
+    # 3. Capacidad del banco de baterías
+    energia_util_requerida_wh = consumo_diario_wh * dias_autonomia
+    energia_total_bateria_wh = energia_util_requerida_wh / max(profundidad_descarga_dod, 0.3)
+    capacidad_total_ah = energia_total_bateria_wh / max(tension_bateria_v, 12.0)
+
+    # 4. Dimensionamiento del Regulador MPPT
+    corriente_regulador_a = potencia_pico_instalada_w / tension_bateria_v
+    corriente_diseno_reg_a = corriente_regulador_a * 1.20
+    regs_comerciales = [20, 30, 40, 50, 60, 80, 100, 150]
+    reg_sugerido = 60
+    for r in regs_comerciales:
+        if r >= corriente_diseno_reg_a:
+            reg_sugerido = r
+            break
+    else:
+        reg_sugerido = 150
+
+    # 5. Inversor-Cargador de Aislada (Onda Senoidal Pura)
+    pot_inv_nominal_w = potencia_cargas_max_w * 1.25
+    pot_inv_pico_w = pot_inv_nominal_w * 2.0
+    pot_generador_kva = round((pot_inv_nominal_w * 1.3) / 1000.0, 1)
+
+    return {
+        "consumo_diario_wh": consumo_diario_wh,
+        "consumo_diario_kwh": round(consumo_diario_wh / 1000.0, 2),
+        "dias_autonomia": dias_autonomia,
+        "tension_bateria_v": tension_bateria_v,
+        "tipo_bateria": tipo_bateria,
+        "dod_porcentaje": round(profundidad_descarga_dod * 100.0, 1),
+        "energia_util_kwh": round(energia_util_requerida_wh / 1000.0, 2),
+        "energia_total_bateria_kwh": round(energia_total_bateria_wh / 1000.0, 2),
+        "capacidad_total_ah": round(capacidad_total_ah, 1),
+        "potencia_pico_requerida_w": round(potencia_pico_requerida_w, 1),
+        "num_modulos": num_modulos,
+        "potencia_pico_instalada_w": round(potencia_pico_instalada_w, 1),
+        "potencia_pico_instalada_kw": round(potencia_pico_instalada_w / 1000.0, 2),
+        "corriente_regulador_a": round(corriente_regulador_a, 1),
+        "corriente_diseno_reg_a": round(corriente_diseno_reg_a, 1),
+        "regulador_mppt_sugerido_a": reg_sugerido,
+        "inversor_nominal_w": round(pot_inv_nominal_w, 0),
+        "inversor_pico_w": round(pot_inv_pico_w, 0),
+        "grupo_electrogeno_kva": pot_generador_kva
+    }
+
 def clasificar_tramite_fotovoltaico(potencia_inversor_kw: float) -> Tuple[str, str, str]:
     """
     Determina si la instalación fotovoltaica requiere MTD o Proyecto de Ingeniero según ITC-BT-04 Grupo F.
@@ -259,6 +328,300 @@ def clasificar_tramite_fotovoltaico(potencia_inversor_kw: float) -> Tuple[str, s
     return tipo_doc, firmante, alerta
 
 # =========================================================================
+# MODO AISLADA DE RED CON BATERÍAS (OFF-GRID)
+# =========================================================================
+def _renderizar_modo_aislada(user_auth, cliente_sel):
+    st.markdown("""
+        <div style="background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <span style="color: #15803d; font-weight: bold; font-size: 16px;">🔋 Modo Instalación Solar Aislada de Red (Off-Grid con Acumulación en Baterías)</span>
+                    <p style="color: #166534; font-size: 12.5px; margin: 3px 0 0 0;">Dimensionamiento para el mes más desfavorable de invierno (Diciembre en Murcia: HSP = 2.80 h/día) para garantizar suministro continuo 24/7 sin red de compañía.</p>
+                </div>
+                <div style="background: rgba(22, 163, 74, 0.15); border-radius: 6px; padding: 4px 10px; text-align: center; border: 1px solid #16a34a;">
+                    <span style="color: #15803d; font-size: 12px; font-weight: bold;">HSP Invierno: 2.8 h/d</span>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    tab_ais_bat, tab_ais_pv, tab_ais_inv, tab_ais_obra, tab_ais_pdf = st.tabs([
+        "🔋 1. Consumo & Banco de Baterías",
+        "☀️ 2. Campo Solar & Regulador MPPT",
+        "⚡ 3. Inversor-Cargador & Grupo Electrógeno",
+        "🛠️ 4. Guía de Obra & Mantenimiento Off-Grid",
+        "📑 5. Memoria Oficial PDF Aislada & CRM"
+    ])
+
+    with tab_ais_bat:
+        st.markdown("#### 🔋 Dimensionamiento del Banco de Baterías y Autonomía")
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            st.markdown("##### 💡 Consumo Diario de la Instalación")
+            modo_calc_e = st.radio("Método de Estimación de Consumo:", ["Directo (Wh/día o kWh/día)", "Asistente por Electrodomésticos"], horizontal=True, key="pv_ais_modo_e")
+            
+            if "Directo" in modo_calc_e:
+                e_diaria_wh = st.number_input("Consumo Diario Total Estimado (Wh/día):", min_value=100.0, max_value=50000.0, value=3500.0, step=100.0, key="pv_ais_e_directa")
+            else:
+                st.caption("Indica el equipamiento en la vivienda o caseta de campo:")
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                    w_luces = st.number_input("Iluminación LED (Wh/día):", min_value=0.0, value=250.0, step=50.0, key="pv_ais_w_luces")
+                    w_frigo = st.number_input("Frigorífico / Congelador (Wh/día):", min_value=0.0, value=900.0, step=100.0, key="pv_ais_w_frigo")
+                    w_tv = st.number_input("TV / Portátil / WiFi (Wh/día):", min_value=0.0, value=400.0, step=50.0, key="pv_ais_w_tv")
+                with col_e2:
+                    w_bomba = st.number_input("Bomba de Agua / Presión (Wh/día):", min_value=0.0, value=650.0, step=50.0, key="pv_ais_w_bomba")
+                    w_otros = st.number_input("Otros / Herramientas / Cargas (Wh/día):", min_value=0.0, value=800.0, step=100.0, key="pv_ais_w_otros")
+                e_diaria_wh = w_luces + w_frigo + w_tv + w_bomba + w_otros
+                st.info(f"Consumo Total Calculado: **{e_diaria_wh:.0f} Wh/día** ({e_diaria_wh/1000.0:.2f} kWh/día)")
+
+            dias_autonomia = st.slider("Días de Autonomía Requeridos (sin sol):", min_value=1.0, max_value=5.0, value=3.0, step=0.5, key="pv_ais_dias_auto", help="Número de días nublados consecutivos que las baterías deben alimentar el consumo sin descargarse en exceso.")
+
+        with col_c2:
+            st.markdown("##### ⚙️ Parámetros del Banco de Baterías")
+            tipo_bat = st.selectbox("Tecnología de Baterías:", [
+                "Litio LiFePO4 (DOD 85% - Larga Duración >4000 ciclos)",
+                "GEL / AGM Hermética (DOD 50% - Sin Mantenimiento)",
+                "Plomo Ácido Abierto / OPzS (DOD 50% - Estacionaria Industrial)"
+            ], index=0, key="pv_ais_tipo_bat")
+
+            dod = 0.85 if "Litio" in tipo_bat else 0.50
+
+            v_bat = st.selectbox("Tensión Nominal del Sistema de Acumulación (V):", [12.0, 24.0, 48.0], index=2, key="pv_ais_v_bat", help="12V para consumos < 1 kWh/día; 24V para 1-3 kWh/día; 48V para consumos > 3 kWh/día (estándar profesional)")
+
+            p_cargas_max = st.number_input("Potencia Máxima Simultánea de Cargas (W):", min_value=300.0, max_value=20000.0, value=3000.0, step=250.0, key="pv_ais_p_max_w")
+
+        # CÁLCULO OFF-GRID
+        res_ais = calcular_sistema_aislado_baterias(
+            consumo_diario_wh=e_diaria_wh,
+            dias_autonomia=dias_autonomia,
+            tension_bateria_v=v_bat,
+            tipo_bateria=tipo_bat,
+            profundidad_descarga_dod=dod,
+            hsp_invierno=HSP_MURCIA_INVIERNO,
+            rendimiento_global=0.75,
+            potencia_pico_modulo_w=500.0,
+            potencia_cargas_max_w=p_cargas_max
+        )
+
+        st.markdown("---")
+        mb1, mb2, mb3, mb4 = st.columns(4)
+        with mb1:
+            st.metric("Consumo Diario", f"{res_ais['consumo_diario_kwh']:.2f} kWh/día", f"{res_ais['consumo_diario_wh']:.0f} Wh/día")
+        with mb2:
+            st.metric("Capacidad Total Batería", f"{res_ais['capacidad_total_ah']:.0f} Ah", f"a {v_bat:.0f} V")
+        with mb3:
+            st.metric("Energía Acumulada Total", f"{res_ais['energia_total_bateria_kwh']:.2f} kWh", f"DOD: {res_ais['dod_porcentaje']}%")
+        with mb4:
+            st.metric("Energía Útil Acumulada", f"{res_ais['energia_util_kwh']:.2f} kWh", f"{dias_autonomia} días autonomía")
+
+        with st.container(border=True):
+            st.markdown(f"""
+            💡 **Configuración Recomendada de Batería ({tipo_bat.split('(')[0].strip()} a {v_bat:.0f}V):**
+            - Capacidad requerida a {v_bat:.0f}V: **`{res_ais['capacidad_total_ah']:.0f} Ah`** (Energía bruta: `{res_ais['energia_total_bateria_kwh']:.2f} kWh`).
+            - Si utilizas módulos comerciales de Litio de 48V (ej. Pylontech US3000 / US5000 de ~3.5 a 4.8 kWh): Requieres **`{max(1, math.ceil(res_ais['energia_total_bateria_kwh'] / 3.5))} módulos`** en paralelo.
+            - Si utilizas elementos de 2V de tracción/OPzS: Requieres una serie de **`{int(v_bat / 2)} vasos de 2V`** de `{res_ais['capacidad_total_ah']:.0f} Ah` C10.
+            """)
+
+    with tab_ais_pv:
+        st.markdown("#### ☀️ Dimensionamiento del Campo Solar y Regulador MPPT (Mes Desfavorable)")
+        st.write(f"En una instalación aislada, el número de placas se calcula obligatoriamente para el **mes peor de invierno** (Diciembre en Murcia, HSP = **`{HSP_MURCIA_INVIERNO} h/día`**), asegurando que las baterías alcancen el 100% de carga incluso en los días más cortos del año.")
+
+        col_pv1, col_pv2 = st.columns(2)
+        with col_pv1:
+            sel_preset_ais = st.selectbox("Modelo de Panel Solar para Aislada:", list(PRESETS_PANELES.keys()), index=1, key="pv_ais_mod_sel")
+            p_data_ais = PRESETS_PANELES[sel_preset_ais]
+            p_pot_ais = st.number_input("Potencia Panel (Wp):", min_value=100.0, max_value=700.0, value=float(p_data_ais["potencia_w"]), step=10.0, key="pv_ais_p_pot")
+            p_voc_ais = st.number_input("Voc Módulo (V):", value=float(p_data_ais["voc"]), step=0.1, key="pv_ais_voc")
+            p_vmp_ais = st.number_input("Vmp Módulo (V):", value=float(p_data_ais["vmp"]), step=0.1, key="pv_ais_vmp")
+        with col_pv2:
+            p_isc_ais = st.number_input("Isc Módulo (A):", value=float(p_data_ais["isc"]), step=0.1, key="pv_ais_isc")
+            p_imp_ais = st.number_input("Imp Módulo (A):", value=float(p_data_ais["imp"]), step=0.1, key="pv_ais_imp")
+            hsp_inv_ais = st.number_input("HSP Mes Desfavorable (Invierno):", min_value=1.5, max_value=5.0, value=HSP_MURCIA_INVIERNO, step=0.1, key="pv_ais_hsp_inv")
+            v_max_mppt = st.selectbox("Tensión Máx. Entrada PV Regulador MPPT:", [100.0, 150.0, 250.0, 450.0], index=1, key="pv_ais_vmppt_max")
+
+        # Recálculo con panel elegido
+        res_ais = calcular_sistema_aislado_baterias(
+            consumo_diario_wh=e_diaria_wh,
+            dias_autonomia=dias_autonomia,
+            tension_bateria_v=v_bat,
+            tipo_bateria=tipo_bat,
+            profundidad_descarga_dod=dod,
+            hsp_invierno=hsp_inv_ais,
+            rendimiento_global=0.75,
+            potencia_pico_modulo_w=p_pot_ais,
+            potencia_cargas_max_w=p_cargas_max
+        )
+
+        st.markdown("---")
+        mpv1, mpv2, mpv3, mpv4 = st.columns(4)
+        with mpv1:
+            st.metric("Potencia Pico Requerida", f"{res_ais['potencia_pico_requerida_w']:.0f} Wp", f"HSP Invierno: {hsp_inv_ais} h/d")
+        with mpv2:
+            st.metric("Nº de Paneles Solares", f"{res_ais['num_modulos']} módulos", f"de {p_pot_ais:.0f} Wp")
+        with mpv3:
+            st.metric("Potencia Pico Instalada", f"{res_ais['potencia_pico_instalada_kw']:.2f} kWp", f"{res_ais['potencia_pico_instalada_w']:.0f} Wp")
+        with mpv4:
+            st.metric("Regulador MPPT Sugerido", f"{res_ais['regulador_mppt_sugerido_a']} A", f"Corriente cálculo: {res_ais['corriente_regulador_a']:.1f} A")
+
+        with st.container(border=True):
+            st.markdown(f"""
+            ##### 🔌 Esquema del Campo Solar DC y Conexión al MPPT:
+            - **Potencia Total Campo Solar:** `{res_ais['potencia_pico_instalada_w']:.0f} Wp` distribuidos en `{res_ais['num_modulos']} módulos`.
+            - **Configuración de Strings recomendada:** Conectar en series de **`2 a 3 paneles`** para obtener entre 80V y 125V de trabajo, dentro del rango óptimo del regulador MPPT (límite máximo: `{v_max_mppt:.0f} V`).
+            - **Corriente de Carga hacia Baterías:** `{res_ais['corriente_regulador_a']:.1f} A` a `{v_bat:.0f}V` ➔ **Regulador MPPT comercial de `{res_ais['regulador_mppt_sugerido_a']} A`** (ej. Victron SmartSolar MPPT 150/{res_ais['regulador_mppt_sugerido_a']} o similar).
+            """)
+
+    with tab_ais_inv:
+        st.markdown("#### ⚡ Inversor-Cargador de Aislada y Generador de Apoyo")
+        col_inv1, col_inv2 = st.columns(2)
+        with col_inv1:
+            st.markdown("##### 🔌 Inversor-Cargador Senoidal Puro")
+            st.markdown(f"""
+            - **Potencia Nominal Continua Sugerida:** `{res_ais['inversor_nominal_w']:.0f} W` (230V AC - 50 Hz).
+            - **Potencia Pico de Arranque:** `{res_ais['inversor_pico_w']:.0f} W` (capacidad de sobrecarga del 200% para arranque de bombas y compresores frigoríficos).
+            - **Tensión de Entrada DC:** `{v_bat:.0f} V DC`.
+            - **Forma de Onda:** Onda Senoidal Pura (imprescindible para no quemar motores, bombas ni electrónica fina).
+            """)
+        with col_inv2:
+            st.markdown("##### ⛽ Grupo Electrógeno de Apoyo / Socorro")
+            st.markdown(f"""
+            - **Potencia Recomendada del Generador:** `{res_ais['grupo_electrogeno_kva']:.1f} kVA` (Gasolina / Diésel a 1.500 o 3.000 rpm con AVR).
+            - **Arranque Automático por Contacto Seco:** El inversor dispone de un relé libre de potencial que envía señal de arranque al grupo cuando la batería desciende del umbral crítico (ej. `< 20%` en litio o `< 46V` en sistema de 48V).
+            - **Cargador AC Integrado:** El inversor rectifica la corriente del grupo y recarga la batería a 30-50A mientras alimenta simultáneamente la casa.
+            """)
+
+        st.markdown("##### 🛡️ Protecciones Críticas en Instalaciones Aisladas")
+        st.markdown(f"""
+        - **Fusible de Protección del Banco de Baterías:** Fusible ultrarrápido tipo **Mega / ANL de 150 A a 250 A** situado inmediatamente en el borne positivo (+) antes de llegar al inversor.
+        - **Sección de Cables de Batería:** Debido a las altas corrientes a `{v_bat:.0f}V` ($I = P/V = {res_ais['inversor_nominal_w']/v_bat:.0f}\\text{ A}$), se exige cable de cobre flexible de **mínimo 35 mm² a 50 mm²**.
+        - **Puesta a Tierra y Creación del Régimen de Neutro:** Conectar uno de los polos de salida AC del inversor a la pica de tierra general ($R_t \\le 15\\ \\Omega$) para definir el **Neutro de la instalación** y permitir que el interruptor diferencial de 30 mA dispare ante una derivación.
+        """)
+
+    with tab_ais_obra:
+        st.markdown("#### 🛠️ Guía de Obra y Mantenimiento de Sistemas Aislados con Baterías")
+        col_mo1, col_mo2 = st.columns(2)
+        with col_mo1:
+            st.markdown("""
+            ##### 🔋 1. Sala de Baterías y Seguridad (ITC-BT-30)
+            - **Ventilación Obligatoria:** Si se emplean baterías de plomo abierto u OPzS, durante la fase de carga desprenden hidrógeno. El local debe disponer de ventilación natural cruzada alta y baja al exterior para evitar riesgo de explosión (norma UNE-EN 50272-2).
+            - **Bandeja Antiácido:** Banco colocado sobre bancada aislada del suelo con cubeto de retención de derrames.
+            - **Temperatura de Operación:** La temperatura ideal es **20ºC a 25ºC**. Con más de 35ºC en verano, la vida de las baterías de plomo se reduce a la mitad. En invierno, si la temperatura baja de 0ºC, el BMS de las baterías de litio bloquea la carga para no degradar las celdas.
+            """)
+        with col_mo2:
+            st.markdown("""
+            ##### 🧪 2. Protocolo de Mantenimiento Preventivo
+            - **Para Baterías de Plomo / OPzS:**
+              1. Medir densidad del electrolito cada 3 meses con densímetro: valor correcto entre **1.24 y 1.28 g/cm³** a plena carga.
+              2. Reponer nivel exclusivamente con **agua destilada o desionizada** (nunca añadir ácido sulfúrico).
+              3. Programar en el regulador/inversor una **carga de ecualización periódica mensual** a 2.4V/celda durante 2 horas para eliminar cristales de sulfato de plomo.
+            - **Para Baterías de Litio LiFePO4:**
+              1. Comprobar periódicamente el balanceo de celdas mediante la app o display del BMS (diferencia entre celdas < 0.02V).
+              2. Mantener firmware del inversor y protocolo de comunicación CAN/RS485 actualizado.
+            """)
+
+    with tab_ais_pdf:
+        st.markdown("#### 📑 Generación de Memoria Oficial y Guardado CRM (Aislada)")
+        col_pa1, col_pa2 = st.columns(2)
+        with col_pa1:
+            nom_proy_ais = st.text_input("Nombre del Proyecto:", value=f"Instalación Solar Aislada {res_ais['potencia_pico_instalada_kw']:.1f}kWp + Bat {res_ais['energia_total_bateria_kwh']:.1f}kWh - {cliente_sel.get('nombre_completo', 'Casa de Campo') if cliente_sel else 'Casa de Campo'}", key="pv_ais_nom_proy")
+            tit_ais_nom = st.text_input("Titular:", value=cliente_sel.get("nombre_completo", "Propietario Casa de Campo") if cliente_sel else "Propietario Casa de Campo", key="pv_ais_tit_nom")
+            tit_ais_nif = st.text_input("NIF / CIF:", value=cliente_sel.get("nif_cif", "12345678Z") if cliente_sel else "12345678Z", key="pv_ais_tit_nif")
+        with col_pa2:
+            dir_ais = st.text_input("Ubicación Emplazamiento:", value=cliente_sel.get("direccion_suministro", "Paraje Los Aljibes, Parcela 42, Murcia") if cliente_sel else "Paraje Los Aljibes, Parcela 42, Murcia", key="pv_ais_dir")
+            muni_ais = st.selectbox("Municipio (Murcia):", ["Murcia (Capital / Pedanías)", "Cartagena", "Lorca", "Molina de Segura", "Cieza", "Yecla", "Jumilla", "Caravaca de la Cruz", "Moratalla", "Totana"], index=0, key="pv_ais_muni")
+
+        datos_memoria_ais = {
+            "nombre_proyecto": nom_proy_ais,
+            "titular_nombre": tit_ais_nom,
+            "titular_nif": tit_ais_nif,
+            "titular_telefono": cliente_sel.get("telefono", "+34 600 000 000") if cliente_sel else "+34 600 000 000",
+            "titular_email": cliente_sel.get("email", "cliente@ejemplo.com") if cliente_sel else "cliente@ejemplo.com",
+            "direccion": dir_ais,
+            "municipio": muni_ais,
+            "cp": "30001",
+            "cups": "SIN CUPS (Instalación Aislada de Red)",
+            "tipo_inmueble": "Vivienda Aislada / Caseta de Campo / Bombeo",
+            "empresa_instaladora": user_auth.get("nombre_empresa", "BOLIMUR INSTALACIONES Y REFORMAS"),
+            "cif_empresa": user_auth.get("nif_cif", "B-73123456"),
+            "num_licencia": user_auth.get("num_licencia_rebt", "REBT-30/15892"),
+            "tecnico_instalador": user_auth.get("nombre_instalador", "Richard Orlando Choque Tejerina"),
+            "fecha": datetime.now().strftime("%d/%m/%Y"),
+            "modalidad_autoconsumo": f"Instalación Aislada de Red con Baterías ({tipo_bat.split('(')[0].strip()} {res_ais['capacidad_total_ah']:.0f}Ah @ {v_bat:.0f}V)",
+            "potencia_pico_w": res_ais["potencia_pico_instalada_w"],
+            "num_modulos": res_ais["num_modulos"],
+            "modelo_modulo": sel_preset_ais,
+            "pot_modulo_w": p_pot_ais,
+            "voc_modulo": p_voc_ais,
+            "vmp_modulo": p_vmp_ais,
+            "isc_modulo": p_isc_ais,
+            "imp_modulo": p_imp_ais,
+            "num_strings": 1,
+            "modulos_por_string": res_ais["num_modulos"],
+            "voc_max_string": p_voc_ais * res_ais["num_modulos"],
+            "vmp_min_string": p_vmp_ais * res_ais["num_modulos"] * 0.85,
+            "cable_dc_seccion": "6.0 mm² Cu H1Z2Z2-K",
+            "tubo_dc": "Tubo M25 UV",
+            "longitud_dc": 12.0,
+            "cdt_dc_pct": 0.65,
+            "potencia_inversor_w": res_ais["inversor_nominal_w"],
+            "tension_ac": 230.0,
+            "es_trifasico": False,
+            "i_nominal_ac": round(res_ais["inversor_nominal_w"] / 230.0, 2),
+            "i_diseno_ac": round((res_ais["inversor_nominal_w"] / 230.0) * 1.25, 2),
+            "pia_ac": 25,
+            "diferencial_ac": "40A / 30mA Clase A Superinmunizado",
+            "cable_ac_seccion": "6.0 mm² Cu RZ1-K",
+            "tubo_ac": "Tubo M32 Libre Halógenos",
+            "longitud_ac": 8.0,
+            "cdt_ac_pct": 0.45,
+            "hsp": hsp_inv_ais,
+            "produccion_anual_kwh": round(res_ais["potencia_pico_instalada_kw"] * 5.10 * 365 * 0.80, 1),
+            "ahorro_anual_eur": round((res_ais["consumo_diario_kwh"] * 365) * 0.22, 2),
+            "co2_anual_ton": round((res_ais["potencia_pico_instalada_kw"] * 5.10 * 365 * 0.80 * 0.357) / 1000.0, 2),
+            "resistencia_tierra_ohm": 11.2,
+            "aislamiento_dc_mohm": 92.0,
+            "aislamiento_ac_mohm": 115.0
+        }
+
+        col_ba1, col_ba2 = st.columns(2)
+        with col_ba1:
+            if st.button("💾 Guardar Proyecto Aislada en CRM", type="primary", key="btn_save_crm_aislada", use_container_width=True):
+                if db_manager:
+                    c_id = cliente_sel.get("id") if cliente_sel else None
+                    ok_db, proy_id = db_manager.guardar_proyecto(
+                        usuario_id=user_auth.get("id", 1),
+                        cliente_id=c_id,
+                        nombre_proyecto=nom_proy_ais,
+                        modulo="Fotovoltaica Aislada con Baterías",
+                        datos=datos_memoria_ais,
+                        resumen=f"{res_ais['potencia_pico_instalada_kw']} kWp Solar | Bat {res_ais['energia_total_bateria_kwh']} kWh ({res_ais['capacidad_total_ah']:.0f}Ah @ {v_bat:.0f}V) | Inv {res_ais['inversor_nominal_w']:.0f}W"
+                    )
+                    if ok_db:
+                        st.success(f"✅ ¡Proyecto Fotovoltaico Aislado '{nom_proy_ais}' guardado con éxito! (ID: {proy_id})")
+                    else:
+                        st.error("Error al guardar en base de datos.")
+        with col_ba2:
+            if st.button("📄 Generar Memoria Oficial MTD Aislada (PDF)", key="btn_gen_pdf_aislada", use_container_width=True):
+                if pdf_fotovoltaica:
+                    with st.spinner("Compilando Memoria Técnica Oficial de Instalación Solar Aislada..."):
+                        try:
+                            pdf_bytes = pdf_fotovoltaica.generar_pdf_fotovoltaica(datos_memoria_ais)
+                            b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+                            st.success("✅ ¡Memoria Oficial de Instalación Aislada generada correctamente!")
+                            st.download_button(
+                                label=f"⬇️ Descargar Memoria Fotovoltaica Aislada ({nom_proy_ais}.pdf)",
+                                data=pdf_bytes,
+                                file_name=f"MTD_Aislada_{res_ais['potencia_pico_instalada_kw']:.1f}kWp_{datetime.now().strftime('%Y%m%d')}.pdf",
+                                mime="application/pdf",
+                                use_container_width=True
+                            )
+                            pdf_display = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="650" type="application/pdf" style="border: 2px solid #16a34a; border-radius: 8px;"></iframe>'
+                            st.markdown(pdf_display, unsafe_allow_html=True)
+                        except Exception as ex:
+                            st.error(f"Error generando PDF: {ex}")
+
+# =========================================================================
 # INTERFAZ STREAMLIT PRINCIPAL
 # =========================================================================
 def renderizar():
@@ -267,11 +630,11 @@ def renderizar():
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div>
                     <h2 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">☀️ INGENIERÍA Y MONTAJE SOLAR FOTOVOLTAICO</h2>
-                    <p style="color: #e0f2fe; margin: 5px 0 0 0; font-size: 13px;">Autoconsumo Solar (ITC-BT-40 / RD 244/2019 / DGEAIM Murcia) | Cálculos de Ingeniería y Experiencia de Calle</p>
+                    <p style="color: #e0f2fe; margin: 5px 0 0 0; font-size: 13px;">Autoconsumo Conectado a Red (RD 244/2019) e Instalaciones Aisladas con Baterías (Off-Grid) | DGEAIM Murcia</p>
                 </div>
                 <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 14px; text-align: center; border: 1px solid rgba(255,255,255,0.3);">
                     <span style="color: #fef08a; font-size: 11px; font-weight: bold; text-transform: uppercase;">Región de Murcia</span><br>
-                    <span style="color: #ffffff; font-size: 15px; font-weight: bold;">HSP ~ 5.1 h/día</span>
+                    <span style="color: #ffffff; font-size: 15px; font-weight: bold;">HSP 2.8 a 5.1</span>
                 </div>
             </div>
         </div>
@@ -288,9 +651,19 @@ def renderizar():
         "telefono": "+34 600 000 000"
     })
 
-    # Barra superior con cliente y clasificación legal
-    col_c1, col_c2 = st.columns([2, 1])
-    with col_c1:
+    # Barra superior con tipo de instalación y cliente CRM
+    col_t_sel, col_cli_sel = st.columns([1.6, 1.4])
+    with col_t_sel:
+        tipologia_inst = st.radio(
+            "⚡ Tipología de Instalación Fotovoltaica:",
+            [
+                "🌐 Conectada a Red (Autoconsumo RD 244/2019 / ITC-BT-40)",
+                "🔋 Aislada de Red con Baterías (Off-Grid / Casas de Campo / Bombeo)"
+            ],
+            horizontal=False,
+            key="pv_tipologia_sistema_radio"
+        )
+    with col_cli_sel:
         clientes = db_manager.listar_clientes(user_auth["id"]) if db_manager else []
         cliente_sel = None
         if clientes:
@@ -299,7 +672,14 @@ def renderizar():
             cliente_sel = db_manager.obtener_cliente_por_id(cli_id, user_auth["id"]) if db_manager else None
         else:
             st.info("💡 Puedes asociar clientes registrados en el CRM o ingresar los datos directamente.")
-    with col_c2:
+
+    if "Aislada" in tipologia_inst:
+        _renderizar_modo_aislada(user_auth, cliente_sel)
+        return
+
+    # MODO CONECTADA A RED (AUTOCONSUMO RD 244/2019)
+    col_red1, col_red2 = st.columns([2, 1])
+    with col_red1:
         modalidad_ac = st.selectbox(
             "Modalidad Autoconsumo (RD 244/2019):",
             [
@@ -311,6 +691,9 @@ def renderizar():
             index=0,
             key="pv_modalidad"
         )
+    with col_red2:
+        st.write("")
+        st.info("🌐 Conexión a red interior según ITC-BT-40")
 
     # PESTAÑAS PRINCIPALES DEL MÓDULO FOTOVOLTAICO
     tab_dc, tab_ac, tab_eco, tab_obra, tab_pdf = st.tabs([

@@ -203,3 +203,98 @@ def test_generar_pdf_fotovoltaica():
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 2000
     assert pdf_bytes.startswith(b"%PDF")
+
+def test_calcular_sistema_aislado_baterias():
+    """Verifica el cálculo de una instalación solar aislada con baterías (Off-Grid)"""
+    res = fv.calcular_sistema_aislado_baterias(
+        consumo_diario_wh=3000.0,
+        dias_autonomia=3.0,
+        tension_bateria_v=48.0,
+        tipo_bateria="Litio LiFePO4",
+        profundidad_descarga_dod=0.85,
+        hsp_invierno=2.80,
+        rendimiento_global=0.75,
+        potencia_pico_modulo_w=500.0,
+        potencia_cargas_max_w=3000.0
+    )
+
+    assert res["consumo_diario_kwh"] == 3.0
+    assert res["dias_autonomia"] == 3.0
+    assert res["tension_bateria_v"] == 48.0
+    # Energía útil = 3000 * 3 = 9000 Wh = 9 kWh
+    assert res["energia_util_kwh"] == 9.0
+    # Energía total batería = 9000 / 0.85 = 10588.2 Wh = 10.59 kWh
+    assert abs(res["energia_total_bateria_kwh"] - 10.59) < 0.1
+    # Capacidad total Ah = 10588.2 / 48 = 220.6 Ah
+    assert abs(res["capacidad_total_ah"] - 220.6) < 1.0
+    # Potencia requerida paneles = (3000 / 0.75) / 2.80 = 4000 / 2.80 = 1428.6 W
+    assert abs(res["potencia_pico_requerida_w"] - 1428.6) < 1.0
+    # Módulos de 500W -> ceil(1428.6 / 500) = 3 módulos = 1500 Wp
+    assert res["num_modulos"] == 3
+    assert res["potencia_pico_instalada_w"] == 1500.0
+    # Regulador MPPT: 1500 / 48 = 31.25 A -> con 1.20 = 37.5 A -> comercial 40A
+    assert res["regulador_mppt_sugerido_a"] == 40
+    # Inversor nominal = 3000 * 1.25 = 3750 W
+    assert res["inversor_nominal_w"] == 3750.0
+    assert res["inversor_pico_w"] == 7500.0
+    assert res["grupo_electrogeno_kva"] > 4.0
+
+def test_generar_pdf_fotovoltaica_aislada():
+    """Verifica la generación del PDF oficial de una instalación fotovoltaica aislada con baterías"""
+    datos_aislada = {
+        "nombre_proyecto": "Instalación Solar Aislada Casa de Campo 3kWp",
+        "titular_nombre": "Antonio Martínez Sánchez",
+        "titular_nif": "23456789W",
+        "titular_telefono": "+34 655 444 333",
+        "titular_email": "antonio@ejemplo.com",
+        "direccion": "Paraje Los Aljibes, s/n, Murcia",
+        "municipio": "Murcia (Capital / Pedanías)",
+        "cp": "30001",
+        "cups": "SIN CUPS (Instalación Aislada de Red)",
+        "tipo_inmueble": "Vivienda Aislada",
+        "empresa_instaladora": "BOLIMUR INSTALACIONES Y REFORMAS",
+        "cif_empresa": "B-73123456",
+        "num_licencia": "REBT-30/15892",
+        "tecnico_instalador": "Richard Orlando Choque Tejerina",
+        "fecha": "04/10/2026",
+        "modalidad_autoconsumo": "Instalación Aislada con Baterías Litio LiFePO4 (220Ah @ 48V)",
+        "potencia_pico_w": 3000.0,
+        "num_modulos": 6,
+        "modelo_modulo": "TOPCon N-Type 500W",
+        "pot_modulo_w": 500.0,
+        "voc_modulo": 50.0,
+        "vmp_modulo": 42.0,
+        "isc_modulo": 12.0,
+        "imp_modulo": 11.5,
+        "num_strings": 1,
+        "modulos_por_string": 6,
+        "voc_max_string": 300.0,
+        "vmp_min_string": 210.0,
+        "cable_dc_seccion": "6.0 mm² Cu H1Z2Z2-K",
+        "tubo_dc": "Tubo M25 UV",
+        "longitud_dc": 10.0,
+        "cdt_dc_pct": 0.55,
+        "potencia_inversor_w": 3750.0,
+        "tension_ac": 230.0,
+        "es_trifasico": False,
+        "i_nominal_ac": 16.30,
+        "i_diseno_ac": 20.38,
+        "pia_ac": 25,
+        "diferencial_ac": "40A / 30mA Clase A Superinmunizado",
+        "cable_ac_seccion": "6.0 mm² Cu RZ1-K",
+        "tubo_ac": "Tubo M32 Libre Halógenos",
+        "longitud_ac": 8.0,
+        "cdt_ac_pct": 0.42,
+        "hsp": 2.80,
+        "produccion_anual_kwh": 4380.0,
+        "ahorro_anual_eur": 850.0,
+        "co2_anual_ton": 1.56,
+        "resistencia_tierra_ohm": 10.8,
+        "aislamiento_dc_mohm": 92.0,
+        "aislamiento_ac_mohm": 125.0
+    }
+
+    pdf_bytes = pdf_fotovoltaica.generar_pdf_fotovoltaica(datos_aislada)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 2000
+    assert pdf_bytes.startswith(b"%PDF")

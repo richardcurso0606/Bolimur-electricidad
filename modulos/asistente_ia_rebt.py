@@ -15,18 +15,29 @@ SYSTEM_PROMPT_INGENIERO_INSTALADOR = """
 Eres el Consultor Senior de Ingeniería Eléctrica y Maestro Instalador Habilitado de Bolimur.
 Combinas dos perfiles complementarios:
 1. Vista de Ingeniero Eléctrico: Riguroso en el Reglamento Electrotécnico para Baja Tensión (REBT 2002 - RD 842/2002),
-   sus Instrucciones Técnicas Complementarias (ITC-BT-01 a ITC-BT-52), Guías Técnicas de Aplicación del Ministerio
+   sus Instrucciones Técnicas Complementarias (ITC-BT-01 a ITC-BT-52), normativa de Generación y Autoconsumo (ITC-BT-40,
+   Real Decreto 244/2019, UNE-EN 62548, UNE-EN 50549-1), Guías Técnicas de Aplicación del Ministerio
    y criterios de la Dirección General de Energía y Actividad Industrial y Minera (DGEAIM - Región de Murcia).
-2. Maestro Instalador Electricista de Campo: Práctico, con 25 años de experiencia a pie de obra. Conoces la realidad del tubo corrugado,
-   cajas de derivación, marcas habituales (Schneider, Hager, Legrand, Simon, Prysmian, Top Cable), uso de comprobadores
-   multifunción (Kyoritsu, Fluke, Megger) y los defectos más frecuentes que tumban expedientes en Industria y OCAs.
+2. Maestro Instalador y Experto de Mantenimiento de Campo: Práctico, con 25 años de experiencia a pie de obra tanto en
+   baja tensión convencional (cuadros, tubos, tierras, derivaciones, IRVE) como en ENERGÍA SOLAR FOTOVOLTAICA:
+   - Instalaciones Conectadas a Red (RD 244/2019): Autoconsumo individual/colectivo, con/sin excedentes, inyección cero (anti-vertido),
+     compensación simplificada, ratio DC/AC, protecciones anti-isla y caídas de tensión AC <= 1.0% para evitar sobretensión > 253V.
+   - Instalaciones Aisladas de Red (Off-Grid): Cálculo por consumo diario (Wh/día), autonomía en días (2 a 4 días), dimensionamiento
+     para el mes más desfavorable de invierno (diciembre HSP ~2.8 h/día en Murcia), banco de baterías (Litio LiFePO4 DOD 85-90% vs
+     Gel/AGM/OPzS DOD 50%), reguladores de carga MPPT (etapas Bulk, Absorción, Flotación, Ecualización), inversores-cargadores de onda
+     senoidal pura y grupos electrógenos de apoyo con contacto seco.
+   - Montaje de calle y Mantenimiento: Anclajes en teja, sándwich o lastre de hormigón (CTE DB-SE-AE), crimpado profesional MC4 con
+     tenaza de carraca para evitar arcos eléctricos DC, puesta a tierra de marcos y perfiles (Cu >= 6 mm², Rt <= 15 Ω), ensayos previos
+     ITC-BT-05 (aislamiento DC 1000V >= 1 MΩ, aislamiento AC 500V >= 0.5 MΩ) y resolución rápida de averías en campo (Isolation Fault,
+     Grid Overvoltage, disparos de diferencial con fugas de 6 mA DC, y termografía de puntos calientes/hotspots).
 
 Tus principios de respuesta:
-- Cita siempre que sea aplicable la ITC-BT exacta (ej. ITC-BT-04, ITC-BT-15, ITC-BT-17, ITC-BT-18, ITC-BT-25, etc.).
-- Si la consulta involucra una instalación que supera los límites de MTD (como bares, restaurantes, locales de pública concurrencia,
-  garajes > 5 coches o potencias > 50/100 kW), advierte claramente que requiere PROYECTO TÉCNICO visado por Ingeniero Colegiado y OCA.
-- Sé claro, directo y estructurado (utiliza viñetas, tablas markdown y fórmulas KaTeX cuando haya cálculos de caída de tensión o potencias).
-- Aporta tanto la fórmula y el artículo legal como el consejo práctico de taller o montaje para que el instalador no tenga problemas con el cliente ni con el perito del seguro.
+- Cita siempre la ITC-BT exacta (ej. ITC-BT-04, ITC-BT-15, ITC-BT-17, ITC-BT-18, ITC-BT-25, ITC-BT-40, ITC-BT-52, RD 244/2019).
+- Diferencia claramente si la consulta es sobre CONEXIÓN A RED (RD 244/2019) o AISLADA CON BATERÍAS (Off-Grid).
+- Si la potencia del inversor fotovoltaico supera los 10 kW (ITC-BT-04 Grupo F) o el local es de pública concurrencia, advierte claramente
+  que requiere PROYECTO TÉCNICO visado por Ingeniero Colegiado y OCA inicial.
+- Sé claro, directo y estructurado (utiliza viñetas, tablas markdown y fórmulas KaTeX cuando haya cálculos técnicos o económicos).
+- Aporta tanto la fórmula y el artículo legal como el consejo práctico de taller o montaje para que el instalador resuelva la obra sin incidencias.
 - Responde siempre en español profesional, técnico y motivador.
 """
 
@@ -175,6 +186,89 @@ En la Región de Murcia (DGEAIM) y según las especificaciones técnicas de la d
 3. **Cableado y Tubos:**
    - Sección mínima habitual: **$6\\text{ mm}^2$** en cobre libre de halógenos ($C_{ca}\\text{-s1b,d1,a1}$) bajo tubo M32.
    - Caída de tensión máxima permitida en la línea IRVE: **$5\\%$** desde el origen."""
+    },
+    {
+        "keywords": ["aislada", "conexion a red", "red y aislada", "diferencia aislada", "off grid", "tipos de instalaciones fotovoltaicas"],
+        "pregunta": "¿Cuál es la diferencia entre una instalación solar conectada a red y una aislada (off-grid)?",
+        "respuesta": """### ☀️ Conexión a Red vs Instalación Aislada (Off-Grid) - ITC-BT-40 y RD 244/2019
+
+Existen dos filosofías de ingeniería y montaje completamente distintas:
+
+1. **🌐 Instalación Conectada a Red (Autoconsumo RD 244/2019):**
+   - **Objetivo:** Ahorrar en la factura eléctrica. La red de la distribuidora (i-DE) está siempre conectada y actúa como respaldo infinito.
+   - **Dimensionamiento:** Se diseña con la **HSP media anual** (~5.1 h/día en Murcia) para cubrir el 60-80% del consumo del cliente.
+   - **Componentes:** Placas solares $\\rightarrow$ Inversor de red $\\rightarrow$ Smart Meter (vatímetro) $\\rightarrow$ Cuadro de protecciones AC (PIA 125%, Diferencial Clase A/B con 6mA DC, POP+DPS Tipo 2).
+   - **Comportamiento si se corta la luz:** El inversor **se apaga de inmediato por protección anti-isla (UNE-EN 50549-1 en $<0.5\\text{ s}$)** para no electrocutar a los operarios de la distribuidora que reparen la línea de la calle, a menos que disponga de sistema *Back-up / EPS* con conmutación de red.
+
+2. **🔋 Instalación Aislada de Red (Off-Grid / Casas de campo / Bombeo):**
+   - **Objetivo:** Autonomía 100% independiente donde no llega la red eléctrica.
+   - **Dimensionamiento crítico:** ¡Se calcula con las **HSP del mes peor de invierno** (Diciembre en Murcia: ~2.8 h/día)! Si calcularas con la media anual, en invierno el cliente se quedaría sin luz.
+   - **Componentes indispensables:**
+     - **Banco de Baterías:** Acumula la energía para la noche y días nublados ($2\\text{ a }4\\text{ días de autonomía}$).
+     - **Regulador de Carga MPPT:** Modula la tensión de los paneles para cargar la batería en 3 etapas (Bulk, Absorción, Flotación).
+     - **Inversor-Cargador de Onda Senoidal Pura:** Transforma los 12V, 24V o 48V de baterías en 230V AC y permite conectar un grupo electrógeno de apoyo.
+   - **Protecciones:** Fusibles DC gPV en paneles y fusibles ultrarrápidos de batería (Mega/ANL de 150-250A) para evitar explosiones por cortocircuito de acumulación."""
+    },
+    {
+        "keywords": ["dimensionar aislada", "calculo aislada", "baterias", "autonomia aislada", "regulador mppt", "bateria litio", "gel"],
+        "pregunta": "¿Cómo se dimensiona una instalación fotovoltaica aislada con baterías?",
+        "respuesta": """### 🔋 Metodología de Dimensionamiento de una Instalación Aislada (Off-Grid)
+
+El cálculo se realiza en 4 pasos secuenciales de ingeniería:
+
+1. **Consumo Diario de Energía ($E_d$ en Wh/día):**
+   Sumar la potencia de cada aparato por sus horas de uso:
+   $$E_d = \\sum (P_i \\cdot t_i)$$
+   *(Ejemplo: 4 luces LED (40W x 5h = 200Wh) + Frigo A++ (800Wh/día) + TV (70W x 4h = 280Wh) + Bomba presión (600W x 0.5h = 300Wh) = **$1.580\\text{ Wh/día}$**).*
+
+2. **Capacidad del Banco de Baterías ($C_{\\text{Ah}}$):**
+   Para $N_d$ días de autonomía (típicamente 2 o 3 días):
+   $$C_{\\text{Ah}} = \\frac{E_d \\cdot N_d}{V_{\\text{bat}} \\cdot DOD \\cdot \\eta_{\\text{bat}}}$$
+   - **Baterías de Litio ($LiFePO_4$):** Profundidad de descarga $DOD = 0,85$ a $0,90$ (aprovechas el 85-90% sin dañarla, duran > 4.000 ciclos).
+   - **Baterías de Plomo / Gel / AGM:** $DOD = 0,50$ (si descargas más del 50%, la batería se sulfata y muere en 2 años).
+   - **Tensión recomendada:** $12\\text{V}$ para consumos $<1\\text{ kWh/día}$; $24\\text{V}$ para $1-3\\text{ kWh/día}$; **$48\\text{V}$** para $>3\\text{ kWh/día}$.
+
+3. **Potencia Pico del Campo Solar ($P_{\\text{pico}}$):**
+   Calculada con el mes más desfavorable (Diciembre en Murcia: $\\text{HSP} = 2,80\\text{ h/día}$):
+   $$P_{\\text{pico}} = \\frac{E_d}{\\text{HSP}_{\\text{invierno}} \\cdot \\eta_{\\text{global}}} = \\frac{1580}{2,80 \\cdot 0,75} \\approx 752\\text{ Wp} \\rightarrow 2\\text{ paneles de }450-500\\text{W}$$
+
+4. **Regulador MPPT e Inversor-Cargador:**
+   - **Regulador MPPT:** Corriente $I_{\\text{reg}} = \\frac{P_{\\text{pico}}}{V_{\\text{bat}}} \\cdot 1,20$.
+   - **Inversor senoidal puro:** Potencia nominal igual a la suma de cargas simultáneas $\\times 1,25$, con capacidad de sobrecarga de arranque del $200\\%$ para motores de bombas y compresores de nevera."""
+    },
+    {
+        "keywords": ["isolation fault", "fallo aislamiento", "fuga tierra inversor", "derivacion tierra placa"],
+        "pregunta": "¿Cómo resolver el error 'Isolation Fault' (Fallo de aislamiento DC) en un inversor solar?",
+        "respuesta": """### 🔴 Diagnóstico Rápido en Obra: 'Isolation Fault' / Fallo de Aislamiento DC
+
+Es la avería número 1 en días de lluvia o con rocío matinal. El inversor comprueba con su relé interno que la resistencia de aislamiento entre polos activos (+ / -) y tierra sea $\\ge 1,0\\text{ M}\\Omega$ (UNE-EN 62109). Si detecta humedad o un cable pellizcado, se bloquea por seguridad.
+
+**Truco de Maestro Instalador para localizarlo en 5 minutos sin desmontar paneles:**
+1. Desconecta el seccionador DC y quita los conectores MC4 (+ y -) del inversor.
+2. Pon el polímetro en **tensión continua (DC)**.
+3. Mide la tensión entre el **polo positivo (+) y la toma de tierra (PE)**: anota $V_{(+)-PE}$.
+4. Mide la tensión entre el **polo negativo (-) y la toma de tierra (PE)**: anota $V_{(-)-PE}$.
+5. Comprueba que la suma $V_{(+)-PE} + |V_{(-)-PE}| = V_{oc,\\text{string}}$.
+6. **Localización exacta:**
+   $$\\text{Posición del panel derivado} = \\frac{V_{(+)-PE}}{V_{oc,\\text{módulo}}}$$
+   *(Ejemplo: String de 8 paneles de $50\\text{V}$ cada uno ($V_{oc}=400\\text{V}$). Si mides $V_{(+)-PE} = 150\\text{ V}$, el fallo está exactamente en el conector o cable del **tercer módulo** contable desde el polo positivo: $150 / 50 = 3$).*
+7. Vas directamente a ese panel y encontrarás el cable aprisionado bajo la grapa de aluminio de la estructura o un conector MC4 mal sellado lleno de agua."""
+    },
+    {
+        "keywords": ["grid overvoltage", "253v", "tension de red", "inversor se apaga", "sobretension inversor"],
+        "pregunta": "¿Por qué el inversor se apaga al mediodía con error 'Grid Overvoltage' (Tensión > 253V)?",
+        "respuesta": """### ⚡ Avería: Inversor se apaga con sol radiante por 'Grid Overvoltage' ($V > 253\\text{ V}$)
+
+1. **La Causa Técnica:**
+   - La norma europea **UNE-EN 50549** obliga al inversor a desconectarse si la tensión en sus bornes supera los **$253\\text{ V}$** ($230\\text{ V} + 10\\%$).
+   - Para poder inyectar energía a la vivienda o a la red, el inversor **debe elevar su propia tensión** por encima de la tensión de la red para vencer la resistencia del cable:
+     $$V_{\\text{inversor}} = V_{\\text{red}} + \\Delta V_{\\text{cable}}$$
+   - Si la línea de evacuación AC es muy larga o de sección insuficiente (ej. $2,5\\text{ mm}^2$ o $4\\text{ mm}^2$), la caída de tensión $\\Delta V$ será de $5\\text{ V}$ o $6\\text{ V}$. Si la red de la calle ya viene a $248\\text{ V}$, el inversor sube a $254\\text{ V}$ y **se bloquea automáticamente**.
+
+2. **La Solución de Campo:**
+   - **Aumentar la sección del cable AC:** La caída de tensión en la línea AC debe ser **$\\le 1,0\\%$ (máximo 2,3 V)**. Cambiar la línea de 4 mm² a 6 mm² o 10 mm² reduce la resistencia y la tensión en bornes del inversor baja inmediatamente de 253V.
+   - **Comprobar apriete de bornes:** Un borne flojo en el PIA o diferencial añade resistencia de contacto que eleva la tensión localmente.
+   - **Si la red en reposo ya supera los 250V:** Abrir reclamación a la distribuidora eléctrica (i-DE) para que regulen las tomas del centro de transformación (bajar el *tap* del transformador)."""
     }
 ]
 
@@ -496,14 +590,15 @@ def render_interfaz_asistente_rebt():
                     st.rerun()
 
     # Preguntas Rápidas Frecuentes
-    st.markdown("##### ⚡ Consultas Rápidas de Taller y Obra:")
+    st.markdown("##### ⚡ Consultas Rápidas de Taller, Obra y Solar Fotovoltaica:")
     pills = [
         "⚖️ ¿Cuándo necesito Proyecto de Ingeniero en vez de MTD?",
-        "🔌 ¿Cómo se calcula la sección de una Derivación Individual?",
+        "☀️ ¿Cuál es la diferencia entre una instalación solar a red y aislada?",
+        "🔋 ¿Cómo se dimensiona una instalación fotovoltaica aislada con baterías?",
+        "🔴 ¿Cómo resolver el error 'Isolation Fault' (Fallo de aislamiento DC)?",
+        "⚡ ¿Por qué el inversor se apaga por 'Grid Overvoltage' (Tensión > 253V)?",
         "🛡️ ¿Cuántos circuitos puedo poner bajo un diferencial de 30mA?",
-        "🏗️ ¿Qué exige la norma para un Cuadro de Obra (ITC-BT-33)?",
-        "🌍 ¿Qué valor de tierra me exige el REBT y cómo medirlo?",
-        "⚡ ¿Qué sobretensiones son obligatorias en Murcia?",
+        "🔌 ¿Cómo se calcula la sección de una Derivación Individual?",
         "🚗 ¿Qué protecciones exige la ITC-BT-52 para recarga VE?"
     ]
 
