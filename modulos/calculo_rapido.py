@@ -39,6 +39,17 @@ def renderizar():
     </style>
     """, unsafe_allow_html=True)
 
+    try:
+        from modulos import selector_cliente_proyecto
+        datos_cr = {
+            "val_pot_q": st.session_state.get("cr_pot", 0.0),
+            "long_q": st.session_state.get("cr_long", 0.0)
+        }
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 Asignar a Cliente o Guardar Cálculo Independiente</h4></div>', unsafe_allow_html=True)
+        selector_cliente_proyecto.renderizar_barra_cliente_proyecto("Cálculo Rápido", datos_cr, "Cálculo Rápido de Sección y Protecciones")
+    except Exception:
+        pass
+
     st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros del Circuito y Método de Instalación (ITC-BT-19)</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
         rc1, rc2 = st.columns(2)
