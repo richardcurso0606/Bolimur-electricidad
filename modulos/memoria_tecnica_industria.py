@@ -15,6 +15,7 @@ import base64
 from modulos import rebt_tablas as rebt
 from modulos import pdf_memoria_tecnica
 from modulos import db_manager, auth_manager
+from modulos import auditor_ia_rebt
 
 MUNICIPIOS_MURCIA_OFICIALES = [
     "Murcia (Capital / Pedanías)", "Cartagena", "Lorca", "Molina de Segura", 
@@ -473,8 +474,10 @@ def renderizar():
 
     # --- TAB 7: PLANOS Y ANEXOS OFICIALES (I, II Y III) ---
     with tab_f7:
-        st.markdown("##### 🗺️ Planos Oficiales y Anexos Gráficos de la Memoria Técnica (DGEAIM Murcia):")
-        st.caption("Adjunta los planos de situación, emplazamiento y distribución para que se incorporen automáticamente en el PDF oficial en sus páginas normalizadas. También puedes elegir si usar el unifilar automático de Bolimur o adjuntar tu propio unifilar en CAD.")
+        st.markdown("##### 🗺️ Planos Oficiales, Anexos Gráficos y Auditoría Inteligente REBT:")
+        st.caption("Adjunta los planos de situación, emplazamiento y distribución para su incorporación en el PDF oficial. También puedes auditar tus fotos y unifilar con el Copiloto de Inteligencia Artificial.")
+
+        auditor_ia_rebt.render_ui_configuracion_ia()
 
         col_anx1, col_anx2 = st.columns(2)
         with col_anx1:
@@ -545,9 +548,37 @@ def renderizar():
                 if st.session_state.get("mtd_plano_unifilar_custom"):
                     st.image(st.session_state["mtd_plano_unifilar_custom"], caption="Tu Esquema Unifilar Personalizado", use_container_width=True)
                     st.success("✅ Tu propio esquema unifilar se insertará en el Anexo III con el cajetín oficial de Industria.")
-                    if st.button("🗑️ Quitar Unifilar Propio", key="btn_del_unif"):
-                        st.session_state.pop("mtd_plano_unifilar_custom", None)
-                        st.rerun()
+
+                    # Auditoría IA del Unifilar
+                    if st.session_state.get("mtd_auditoria_unifilar"):
+                        auditor_ia_rebt.render_tarjeta_auditoria(st.session_state["mtd_auditoria_unifilar"], "Esquema Unifilar Personalizado")
+
+                    col_u1, col_u2 = st.columns([1.5, 1])
+                    with col_u1:
+                        lbl_u_btn = "🔄 Re-auditar Unifilar" if st.session_state.get("mtd_auditoria_unifilar") else "🤖 Auditar Unifilar con IA"
+                        if st.button(lbl_u_btn, key="btn_audit_unif", use_container_width=True):
+                            with st.spinner("Auditoría REBT en curso: analizando protecciones, secciones y normativa..."):
+                                ctx_u = {
+                                    "tipo": tipo_inst_sel,
+                                    "potencia_w": sum_pot_inst,
+                                    "tension": sum_tension,
+                                    "iga": f"{prot_iga} A",
+                                    "diferenciales": f"{prot_dif} mA",
+                                    "sobretensiones": prot_vtp
+                                }
+                                res_u = auditor_ia_rebt.auditar_evidencia_multimodal(
+                                    imagen_b64=st.session_state["mtd_plano_unifilar_custom"],
+                                    tipo_evidencia="Esquema Unifilar B.T.",
+                                    descripcion_usuario="Plano unifilar personalizado",
+                                    contexto_instalacion=ctx_u
+                                )
+                                st.session_state["mtd_auditoria_unifilar"] = res_u
+                                st.rerun()
+                    with col_u2:
+                        if st.button("🗑️ Quitar Unifilar Propio", key="btn_del_unif", use_container_width=True):
+                            st.session_state.pop("mtd_plano_unifilar_custom", None)
+                            st.session_state.pop("mtd_auditoria_unifilar", None)
+                            st.rerun()
             else:
                 st.session_state["mtd_unifilar_modo"] = "auto"
                 st.info("ℹ️ Bolimur generará automáticamente el esquema unifilar vectorial con las protecciones IGA, diferenciales y circuitos configurados en las pestañas anteriores.")
@@ -605,9 +636,36 @@ def renderizar():
                 with f_cols[c_idx]:
                     with st.container(border=True):
                         st.image(f_item["data"], caption=f_item["titulo"], use_container_width=True)
-                        if st.button("🗑️ Eliminar Foto", key=f"btn_del_foto_{f_idx}", use_container_width=True):
-                            st.session_state["mtd_fotos_obra"].pop(f_idx)
-                            st.rerun()
+                        
+                        # Mostrar tarjeta de auditoría si ya está auditada
+                        if f_item.get("auditoria"):
+                            auditor_ia_rebt.render_tarjeta_auditoria(f_item["auditoria"], f_item["titulo"])
+
+                        col_fa1, col_fa2 = st.columns([1.5, 1])
+                        with col_fa1:
+                            lbl_fa_btn = "🔄 Re-auditar" if f_item.get("auditoria") else "🤖 Auditar IA"
+                            if st.button(lbl_fa_btn, key=f"btn_audit_foto_{f_idx}", use_container_width=True):
+                                with st.spinner("Analizando evidencia con IA y REBT..."):
+                                    ctx_f = {
+                                        "tipo": tipo_inst_sel,
+                                        "potencia_w": sum_pot_inst,
+                                        "tension": sum_tension,
+                                        "iga": f"{prot_iga} A",
+                                        "diferenciales": f"{prot_dif} mA",
+                                        "sobretensiones": prot_vtp
+                                    }
+                                    res_f = auditor_ia_rebt.auditar_evidencia_multimodal(
+                                        imagen_b64=f_item["data"],
+                                        tipo_evidencia=f_item.get("titulo", "Evidencia de Obra"),
+                                        descripcion_usuario=f_item.get("titulo", ""),
+                                        contexto_instalacion=ctx_f
+                                    )
+                                    f_item["auditoria"] = res_f
+                                    st.rerun()
+                        with col_fa2:
+                            if st.button("🗑️ Eliminar", key=f"btn_del_foto_{f_idx}", use_container_width=True):
+                                st.session_state["mtd_fotos_obra"].pop(f_idx)
+                                st.rerun()
 
     # =========================================================================
     # 3. GUARDAR VINCULADO AL CLIENTE (CRM) Y GENERACIÓN DE DOCUMENTACIÓN OFICIAL
@@ -665,6 +723,7 @@ def renderizar():
                         "mtd_plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
                         "mtd_unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
                         "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", ""),
+                        "mtd_auditoria_unifilar": st.session_state.get("mtd_auditoria_unifilar", {}),
                         "mtd_fotos_obra": st.session_state.get("mtd_fotos_obra", [])
                     }
                     resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"

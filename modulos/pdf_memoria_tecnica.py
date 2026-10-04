@@ -175,7 +175,18 @@ def _crear_anexo_fotografico_flowables(fotos: list, exped: str, c_primary, c_bor
                 else:
                     fila_imgs.append(Paragraph("<i>[Imagen no disponible]</i>", body_style))
                     
-                txt_cell = Paragraph(f"<b>📷 {f_desc}</b>", ParagraphStyle('CapP', parent=body_style, fontSize=6.5, leading=8.5, alignment=1, textColor=colors.HexColor("#1e293b")))
+                audit = f_item.get("auditoria") if isinstance(f_item, dict) else None
+                badge_txt = ""
+                if audit:
+                    est = audit.get("estado", "").lower()
+                    if est == "conforme":
+                        badge_txt = " <font color='#059669'><b>[✓ REBT Conforme]</b></font>"
+                    elif est == "advertencia":
+                        badge_txt = " <font color='#d97706'><b>[⚠ REBT Con Observaciones]</b></font>"
+                    elif est == "no_conforme":
+                        badge_txt = " <font color='#dc2626'><b>[✗ REBT Defecto]</b></font>"
+                        
+                txt_cell = Paragraph(f"<b>📷 {f_desc}</b>{badge_txt}", ParagraphStyle('CapP', parent=body_style, fontSize=6.5, leading=8.5, alignment=1, textColor=colors.HexColor("#1e293b")))
                 fila_txts.append(txt_cell)
                 
             if len(fila_imgs) == 1:
