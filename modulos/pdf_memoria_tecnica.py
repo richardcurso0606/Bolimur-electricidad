@@ -1028,6 +1028,26 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     story.append(t_ins)
     story.append(Spacer(1, 4))
 
+    # Cálculos dinámicos de conformidad según REBT desde ensayos multifunción
+    pe_val = float(ensayos.get("pe_ohm", 0.11))
+    aisl_val = float(ensayos.get("aisl_mohm", 100.0))
+    rt_val = float(ensayos.get("rt_ohm", 11.8))
+    dif_ma = float(ensayos.get("dif_ma", 22.0))
+    dif_ms = float(ensayos.get("dif_ms", 26.0))
+
+    pe_res = "CONFORME" if pe_val <= 0.50 else "NO CONFORME"
+    pe_color = "#15803d" if pe_val <= 0.50 else "#dc2626"
+
+    aisl_res = "CONFORME" if aisl_val >= 1.0 else "NO CONFORME"
+    aisl_color = "#15803d" if aisl_val >= 1.0 else "#dc2626"
+    aisl_txt = f"{aisl_val:.1f} MΩ" if aisl_val < 100 else "> 100 MΩ"
+
+    rt_res = "CONFORME" if rt_val <= 15.0 else "NO CONFORME"
+    rt_color = "#15803d" if rt_val <= 15.0 else "#dc2626"
+
+    dif_res = "CONFORME" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "NO CONFORME"
+    dif_color = "#15803d" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "#dc2626"
+
     # BLOQUE 4: CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN
     story.append(Table([[Paragraph("<b>4. CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN ELÉCTRICA</b>", h_section)]], colWidths=[18.4*cm], style=[
         ('BACKGROUND', (0,0), (-1,-1), c_primary),
@@ -1056,7 +1076,7 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
         [
             Paragraph(f"<b>Interruptor Diferencial:</b> {protecciones.get('diferenciales', '2P 40A / 30mA Clase A')}", body_style),
             Paragraph(f"<b>Sobretensiones (ITC-BT-23):</b> {protecciones.get('sobretensiones', 'VTP + DPS Tipo 2')}", body_style),
-            Paragraph(f"<b>Resistencia Tierra (Rt):</b> <font color='#15803d'><b>11.8 Ω (Conforme)</b></font>", body_style)
+            Paragraph(f"<b>Resistencia Tierra (Rt):</b> <font color='{rt_color}'><b>{rt_val:.1f} Ω ({rt_res.capitalize()})</b></font>", body_style)
         ]
     ]
     t_tec = Table(t_tec_data, colWidths=[6.4*cm, 6.0*cm, 6.0*cm])
@@ -1076,6 +1096,20 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
         ('TOPPADDING', (0,0), (-1,-1), 2.5),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
     ]))
+
+    pe_res = "CONFORME" if pe_val <= 0.50 else "NO CONFORME"
+    pe_color = "#15803d" if pe_val <= 0.50 else "#dc2626"
+
+    aisl_res = "CONFORME" if aisl_val >= 1.0 else "NO CONFORME"
+    aisl_color = "#15803d" if aisl_val >= 1.0 else "#dc2626"
+    aisl_txt = f"{aisl_val:.1f} MΩ" if aisl_val < 100 else "> 100 MΩ"
+
+    rt_res = "CONFORME" if rt_val <= 15.0 else "NO CONFORME"
+    rt_color = "#15803d" if rt_val <= 15.0 else "#dc2626"
+
+    dif_res = "CONFORME" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "NO CONFORME"
+    dif_color = "#15803d" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "#dc2626"
+
     t_ens_data = [
         [
             Paragraph("<b>Prueba / Ensayo Reglamentario</b>", bold_style),
@@ -1086,26 +1120,26 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
         [
             Paragraph("Continuidad de conductores de protección PE", body_style),
             Paragraph("≤ 0.50 Ω", body_style),
-            Paragraph("<b>0.11 Ω</b>", body_style),
-            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+            Paragraph(f"<b>{pe_val:.2f} Ω</b>", body_style),
+            Paragraph(f"<font color='{pe_color}'><b>{pe_res}</b></font>", bold_style)
         ],
         [
             Paragraph("Resistencia de aislamiento a 500 Vcc (F-N / F-PE)", body_style),
             Paragraph("≥ 1.00 MΩ", body_style),
-            Paragraph("<b>> 100 MΩ</b>", body_style),
-            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+            Paragraph(f"<b>{aisl_txt}</b>", body_style),
+            Paragraph(f"<font color='{aisl_color}'><b>{aisl_res}</b></font>", bold_style)
         ],
         [
             Paragraph("Resistencia de toma de tierra del edificio (Rt)", body_style),
             Paragraph("Rt · IΔn ≤ 24 V (≤ 15 Ω)", body_style),
-            Paragraph("<b>11.8 Ω</b>", body_style),
-            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+            Paragraph(f"<b>{rt_val:.1f} Ω</b>", body_style),
+            Paragraph(f"<font color='{rt_color}'><b>{rt_res}</b></font>", bold_style)
         ],
         [
             Paragraph("Tiempo y corriente de disparo diferencial (30 mA)", body_style),
             Paragraph("IΔn ≤ 30 mA | t ≤ 300 ms", body_style),
-            Paragraph("<b>22 mA | 26 ms</b>", body_style),
-            Paragraph("<font color='#15803d'><b>CONFORME</b></font>", bold_style)
+            Paragraph(f"<b>{dif_ma:.0f} mA | {dif_ms:.0f} ms</b>", body_style),
+            Paragraph(f"<font color='{dif_color}'><b>{dif_res}</b></font>", bold_style)
         ]
     ]
     t_ens = Table(t_ens_data, colWidths=[7.2*cm, 4.4*cm, 3.8*cm, 3.0*cm])

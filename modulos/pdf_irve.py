@@ -439,6 +439,25 @@ def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict,
     story.append(Paragraph("3. Protocolo de Verificaciones Previas y Ensayos Oficiales (ITC-BT-05)", h1_style))
     story.append(HRFlowable(width="100%", thickness=0.8, color=c_secondary, spaceBefore=1, spaceAfter=3))
 
+    ensayos = irve_params.get("ensayos", {})
+    pe_val = float(ensayos.get("pe_ohm", 0.12))
+    aisl_val = float(ensayos.get("aisl_mohm", 100.0))
+    rt_val = float(ensayos.get("rt_ohm", 11.4))
+    dif_ms = float(ensayos.get("dif_ms", 24.0))
+
+    pe_res = "CONFORME" if pe_val <= 0.50 else "NO CONFORME"
+    pe_col = c_green if pe_val <= 0.50 else c_red_murcia
+
+    aisl_res = "CONFORME" if aisl_val >= 1.0 else "NO CONFORME"
+    aisl_col = c_green if aisl_val >= 1.0 else c_red_murcia
+    aisl_txt = f"{aisl_val:.1f} MΩ" if aisl_val < 100 else "> 100 MΩ"
+
+    rt_res = "CONFORME" if rt_val <= 15.0 else "NO CONFORME"
+    rt_col = c_green if rt_val <= 15.0 else c_red_murcia
+
+    dif_res = "CONFORME" if dif_ms <= 300.0 else "NO CONFORME"
+    dif_col = c_green if dif_ms <= 300.0 else c_red_murcia
+
     ensayos_data = [
         [
             Paragraph("<b>Ensayo / Verificación Reglamentaria</b>", bold_style),
@@ -449,26 +468,26 @@ def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict,
         [
             Paragraph("Continuidad de conductores de protección (PE)", body_style),
             Paragraph("R ≤ 0,5 Ω", body_style),
-            Paragraph("0,12 Ω", body_style),
-            Paragraph("<b>CONFORME</b>", ParagraphStyle('Conf', parent=body_style, textColor=c_green))
+            Paragraph(f"{pe_val:.2f} Ω", body_style),
+            Paragraph(f"<b>{pe_res}</b>", ParagraphStyle('Conf', parent=body_style, textColor=pe_col))
         ],
         [
             Paragraph("Resistencia de aislamiento a 500 Vcc", body_style),
             Paragraph("R_aisl ≥ 1,0 MΩ", body_style),
-            Paragraph("> 100 MΩ", body_style),
-            Paragraph("<b>CONFORME</b>", ParagraphStyle('Conf2', parent=body_style, textColor=c_green))
+            Paragraph(aisl_txt, body_style),
+            Paragraph(f"<b>{aisl_res}</b>", ParagraphStyle('Conf2', parent=body_style, textColor=aisl_col))
         ],
         [
             Paragraph("Resistencia del bucle de tierra (R_t)", body_style),
             Paragraph("R_t · IΔn ≤ 24 V (garajes)", body_style),
-            Paragraph("11,4 Ω", body_style),
-            Paragraph("<b>CONFORME</b>", ParagraphStyle('Conf3', parent=body_style, textColor=c_green))
+            Paragraph(f"{rt_val:.1f} Ω", body_style),
+            Paragraph(f"<b>{rt_res}</b>", ParagraphStyle('Conf3', parent=body_style, textColor=rt_col))
         ],
         [
             Paragraph("Tiempo de disparo del interruptor diferencial (30 mA)", body_style),
             Paragraph("t_disparo ≤ 300 ms", body_style),
-            Paragraph("24 ms (Clase A / B)", body_style),
-            Paragraph("<b>CONFORME</b>", ParagraphStyle('Conf4', parent=body_style, textColor=c_green))
+            Paragraph(f"{dif_ms:.0f} ms (Clase A / B)", body_style),
+            Paragraph(f"<b>{dif_res}</b>", ParagraphStyle('Conf4', parent=body_style, textColor=dif_col))
         ],
         [
             Paragraph("Protección contra sobretensiones transitorias y permanentes", body_style),

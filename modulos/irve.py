@@ -791,6 +791,16 @@ def renderizar():
                 p_cups = st.text_input("Código CUPS / Ref. Catastral Suministro:", "ES0021000000000000XX", key="irve_pdf_cups")
                 p_expediente = st.text_input("Nº Expediente / Referencia Interna:", "EXP-IRVE-MURCIA-2026", key="irve_pdf_exp")
 
+            with st.expander("🧪 Resultados de las Verificaciones Previas Multifunción (ITC-BT-05)", expanded=True):
+                st.caption("Introduce los valores medidos en obra con el comprobador de instalaciones multifunción para el circuito IRVE:")
+                col_i_m1, col_i_m2 = st.columns(2)
+                with col_i_m1:
+                    irve_med_pe = st.number_input("Continuidad Conductor PE (Ω) [Límite ≤ 0.50 Ω]:", value=0.12, step=0.01, format="%.2f", key="irve_med_pe")
+                    irve_med_aisl = st.number_input("Resistencia Aislamiento a 500 Vcc (MΩ) [Límite ≥ 1.0 MΩ]:", value=100.0, step=1.0, format="%.1f", key="irve_med_aisl")
+                with col_i_m2:
+                    irve_med_rt = st.number_input("Resistencia Bucle de Tierra Rt (Ω) [Límite ≤ 15 Ω]:", value=11.4, step=0.1, format="%.1f", key="irve_med_rt")
+                    irve_med_dif_ms = st.number_input("Tiempo Disparo Diferencial (ms) [Límite ≤ 300 ms]:", value=24.0, step=1.0, format="%.1f", key="irve_med_dif_ms")
+
             proyecto_info = {
                 "nombre": p_nombre,
                 "emplazamiento": p_emplazamiento,
@@ -814,7 +824,13 @@ def renderizar():
                 "metodo": metodo_irve_key,
                 "esquema": info_esq_actual['nombre'],
                 "red": tipo_red_irve,
-                "es_trifasico": es_trif_irve
+                "es_trifasico": es_trif_irve,
+                "ensayos": {
+                    "pe_ohm": irve_med_pe,
+                    "aisl_mohm": irve_med_aisl,
+                    "rt_ohm": irve_med_rt,
+                    "dif_ms": irve_med_dif_ms
+                }
             }
 
             irve_results = {

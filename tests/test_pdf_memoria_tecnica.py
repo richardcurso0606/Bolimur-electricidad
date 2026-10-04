@@ -71,6 +71,13 @@ def test_generar_pdf_cie_oficial_bytes():
         "instalador": {"empresa": "BOLIMUR", "cif": "B-73000000", "nombre": "Richard Orlando Choque", "licencia": "REBT-30/15892", "registro_rii": "RII-30/08492", "telefono": "600000000"},
         "suministro": {"potencia_instalada_w": 5750, "potencia_max_admisible_w": 9200, "tension": "Monofásico (230 V)", "di_cable": "2x10 mm² Cu", "di_tubo": "Tubo M32", "di_cdt_pct": 0.72, "grado_electrif": "Básica"},
         "protecciones": {"iga_amperaje": 25, "iga_curva": "Curva C", "iga_icn_ka": 6.0, "diferenciales": "2P 40A / 30mA Clase A", "sobretensiones": "VTP+DPS Tipo 2"},
+        "ensayos": {
+            "pe_ohm": 0.18,
+            "aisl_mohm": 85.0,
+            "rt_ohm": 8.5,
+            "dif_ma": 21.0,
+            "dif_ms": 28.0
+        },
         "expediente": "EXP-CIE-2026-01",
         "fecha": "03/10/2026"
     }
