@@ -225,7 +225,12 @@ def inicializar_bd():
         try:
             cursor.execute("ALTER TABLE proyectos ADD COLUMN usuario_email TEXT")
         except Exception:
-            pass
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS config_sistema (
+        clave TEXT PRIMARY KEY,
+        valor TEXT
+    )
+    """)
     
     conn.commit()
     conn.close()
@@ -392,8 +397,18 @@ import urllib.parse
 SECRETS_FILE = Path(".streamlit/secrets.toml")
 
 def obtener_config_nube() -> Dict[str, str]:
-    """Obtiene la configuración de conexión a la Nube (Supabase / Postgres / REST)"""
-    # 1. Intentar desde st.secrets si está disponible
+    """Obtiene la configuración de conexión a la Nube desde sesión, BD, JSON, secrets o env"""
+    # 1. Intentar desde st.session_state si ya se guardó en esta sesión
+    try:
+        import streamlit as st
+        if "config_nube_custom" in st.session_state:
+            cfg = st.session_state["config_nube_custom"]
+            if cfg.get("url") and cfg.get("key"):
+                return cfg
+    except Exception:
+        pass
+
+    # 2. Intentar desde st.secrets si está configurado en Streamlit Cloud
     try:
         import streamlit as st
         if "supabase" in st.secrets:
@@ -402,8 +417,32 @@ def obtener_config_nube() -> Dict[str, str]:
             return dict(st.secrets["database"])
     except Exception:
         pass
-    
-    # 2. Intentar leer manualmente .streamlit/secrets.toml
+
+    # 3. Intentar desde la base de datos SQLite (tabla config_sistema)
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("SELECT clave, valor FROM config_sistema WHERE clave IN ('supabase_url', 'supabase_key')")
+        rows = cursor.fetchall()
+        conn.close()
+        db_cfg = {r["clave"]: r["valor"] for r in rows}
+        if db_cfg.get("supabase_url") and db_cfg.get("supabase_key"):
+            return {"url": db_cfg["supabase_url"], "key": db_cfg["supabase_key"]}
+    except Exception:
+        pass
+
+    # 4. Intentar desde archivo local JSON (no depende de librerías externas)
+    json_path = Path("supabase_config.json")
+    if json_path.exists():
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                cfg_json = json.load(f)
+                if cfg_json.get("url") and cfg_json.get("key"):
+                    return cfg_json
+        except Exception:
+            pass
+
+    # 5. Intentar leer manualmente .streamlit/secrets.toml
     if SECRETS_FILE.exists():
         try:
             import toml
@@ -412,36 +451,67 @@ def obtener_config_nube() -> Dict[str, str]:
                 return data["supabase"]
         except Exception:
             pass
-            
-    # 3. Intentar desde variables de entorno
+
+    # 6. Intentar desde variables de entorno
     url = os.environ.get("SUPABASE_URL", "")
     key = os.environ.get("SUPABASE_KEY", "")
     if url and key:
         return {"url": url, "key": key}
-        
+
     return {}
 
 def guardar_config_nube(url: str, key: str) -> bool:
-    """Guarda las claves de la nube en .streamlit/secrets.toml para persistencia automática"""
+    """Guarda las claves de la nube en sesión, base de datos SQLite, JSON y secrets.toml"""
+    url_clean = url.strip()
+    key_clean = key.strip()
+
+    # 1. En sesión Streamlit (inmediato en memoria)
+    try:
+        import streamlit as st
+        st.session_state["config_nube_custom"] = {"url": url_clean, "key": key_clean}
+    except Exception:
+        pass
+
+    # 2. En la base de datos SQLite (tabla config_sistema)
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS config_sistema (clave TEXT PRIMARY KEY, valor TEXT)")
+        cursor.execute("INSERT INTO config_sistema (clave, valor) VALUES ('supabase_url', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor", (url_clean,))
+        cursor.execute("INSERT INTO config_sistema (clave, valor) VALUES ('supabase_key', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor", (key_clean,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+    # 3. En archivo JSON local (no requiere dependencias externas)
+    json_path = Path("supabase_config.json")
+    try:
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump({"url": url_clean, "key": key_clean}, f, indent=2)
+    except Exception:
+        pass
+
+    # 4. En .streamlit/secrets.toml si toml está disponible
     try:
         SECRETS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        import toml
         data = {}
         if SECRETS_FILE.exists():
             try:
-                import toml
                 data = toml.load(str(SECRETS_FILE))
             except Exception:
                 pass
         data["supabase"] = {
-            "url": url.strip(),
-            "key": key.strip()
+            "url": url_clean,
+            "key": key_clean
         }
-        import toml
         with open(SECRETS_FILE, "w", encoding="utf-8") as f:
             toml.dump(data, f)
-        return True
     except Exception:
-        return False
+        pass
+
+    return True
 
 def testear_conexion_nube(url: str, key: str) -> tuple[bool, str]:
     """Verifica si la URL y Key de Supabase conectan correctamente"""
@@ -682,6 +752,11 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
             try:
                 with urllib.request.urlopen(req_push_cli, timeout=8):
                     pass
+            except urllib.error.HTTPError as he:
+                body_err = he.read().decode('utf-8', errors='ignore')
+                if "row-level security" in body_err.lower() or he.code == 401:
+                    conn.close()
+                    return False, "⚠️ Bloqueo de Seguridad RLS en Supabase: Las tablas tienen activada la protección Row-Level Security. En el SQL Editor de Supabase, ejecuta: 'ALTER TABLE clientes DISABLE ROW LEVEL SECURITY; ALTER TABLE proyectos DISABLE ROW LEVEL SECURITY;' para autorizar la sincronización."
             except Exception:
                 pass
                 
@@ -699,6 +774,11 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
             try:
                 with urllib.request.urlopen(req_push_pro, timeout=8):
                     pass
+            except urllib.error.HTTPError as he:
+                body_err = he.read().decode('utf-8', errors='ignore')
+                if "row-level security" in body_err.lower() or he.code == 401:
+                    conn.close()
+                    return False, "⚠️ Bloqueo de Seguridad RLS en Supabase: Ejecuta en el SQL Editor de Supabase: 'ALTER TABLE proyectos DISABLE ROW LEVEL SECURITY;'"
             except Exception:
                 pass
                 

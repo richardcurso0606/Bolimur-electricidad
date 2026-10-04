@@ -436,9 +436,11 @@ CREATE TABLE IF NOT EXISTS proyectos (
 CREATE INDEX IF NOT EXISTS idx_clientes_email ON clientes (usuario_email);
 CREATE INDEX IF NOT EXISTS idx_proyectos_email ON proyectos (usuario_email);
 
--- Desactivar RLS o permitir acceso con anon key para sincronización
+-- Desactivar RLS y otorgar permisos de lectura y escritura
 ALTER TABLE clientes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE proyectos DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE clientes TO anon, authenticated, service_role;
+GRANT ALL ON TABLE proyectos TO anon, authenticated, service_role;
 """
                     st.code(sql_script, language="sql")
                     st.markdown("3. Ve a **Project Settings -> API** y copia la **Project URL** y la clave **anon / public**.")
