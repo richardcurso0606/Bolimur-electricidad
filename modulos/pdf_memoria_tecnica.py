@@ -282,7 +282,16 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]))
 
     pot_inst_w = float(suministro.get("potencia_instalada_w", 5750.0))
+    tipo_tram = datos_mtd.get("tipo_tramitacion", "Nueva Instalación")
+    es_nueva = "[ X ] Nueva" if "Nueva" in tipo_tram else "[  ] Nueva"
+    es_ampliacion = "[ X ] Ampliación" if "Ampliación" in tipo_tram else "[  ] Ampliación"
+    es_modificacion = "[ X ] Modificación / Reforma" if ("Modificación" in tipo_tram or "Reforma" in tipo_tram) else "[  ] Modificación / Reforma"
+
     t_tecn_data = [
+        [
+            Paragraph(f"<b>Carácter de la Instalación:</b> {es_nueva}   {es_ampliacion}   {es_modificacion}", bold_style),
+            Paragraph(f"<b>Régimen:</b> {tipo_tram.replace('🆕 ', '').replace('📈 ', '').replace('🔧 ', '').replace('🔄 ', '').replace('📋 ', '')}", body_style)
+        ],
         [
             Paragraph(f"<b>Emplazamiento:</b> {emplazamiento.get('direccion', '-')}, {emplazamiento.get('municipio', 'Murcia')}", body_style),
             Paragraph(f"<b>CUPS / Ref. Cat.:</b> {emplazamiento.get('cups', 'ES0021000000000000XX')}", body_style)
@@ -928,7 +937,7 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
         [
             Paragraph(f"<b>Nº CERTIFICADO / EXPEDIENTE:</b> <font color='#991b1b'>{expediente}</font>", bold_style),
             Paragraph(f"<b>FECHA DE EMISIÓN:</b> {fecha_hoy}", bold_style),
-            Paragraph(f"<b>TRAMITACIÓN:</b> {tipo_tram}", bold_style)
+            Paragraph(f"<b>TRAMITACIÓN:</b> {tipo_tram.replace('🆕 ', '').replace('📈 ', '').replace('🔧 ', '').replace('🔄 ', '').replace('📋 ', '')}", bold_style)
         ]
     ]
     t_exp = Table(t_exp_data, colWidths=[6.5*cm, 4.5*cm, 7.4*cm])

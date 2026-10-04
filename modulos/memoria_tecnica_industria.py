@@ -156,11 +156,11 @@ def renderizar():
     # =========================================================================
     st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 1. Expediente, Cliente (CRM) y Gestión de Memorias Guardadas</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
-        col_t1, col_t2 = st.columns([1.5, 2.5])
+        col_t1, col_t1_b, col_t2 = st.columns([1.3, 1.3, 2.4])
         
         with col_t1:
             tipo_inst_sel = st.selectbox(
-                "Tipo de Instalación Reglamentaria (REBT):",
+                "Tipo de Instalación (REBT):",
                 [
                     "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
                     "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
@@ -172,10 +172,24 @@ def renderizar():
                 key="mtd_tipo_inst_sel"
             )
             
-            if st.button("⚡ Auto-Rellenar Plantilla Técnica", type="secondary", use_container_width=True):
+            if st.button("⚡ Auto-Rellenar Plantilla", type="secondary", use_container_width=True):
                 cargar_plantilla_por_tipo(tipo_inst_sel)
-                st.success("✅ ¡Datos técnicos y circuitos auto-rellenados!")
+                st.success("✅ ¡Plantilla técnica auto-rellenada!")
                 st.rerun()
+
+        with col_t1_b:
+            tipo_tram_sel = st.selectbox(
+                "Carácter de la Instalación / Trámite:",
+                [
+                    "🆕 Nueva Instalación (Alta Inicial)",
+                    "📈 Ampliación de Potencia / Cargas",
+                    "🔧 Modificación de Importancia / Reforma",
+                    "🔄 Adecuación Reglamentaria (REBT)",
+                    "📋 Boletín de Reconocimiento / Cambio Titular"
+                ],
+                index=0,
+                key="mtd_tipo_tram_sel"
+            )
 
         with col_t2:
             clientes = db_manager.listar_clientes(user_auth["id"])
@@ -408,6 +422,7 @@ def renderizar():
                 else:
                     datos_guardar = {
                         "mtd_tipo_inst_sel": tipo_inst_sel,
+                        "mtd_tipo_tram_sel": tipo_tram_sel,
                         "mtd_in_tit_nom": tit_nombre,
                         "mtd_in_tit_nif": tit_nif,
                         "mtd_in_tit_tel": tit_tel,
@@ -440,7 +455,7 @@ def renderizar():
                         "mtd_in_med_dif_ma": med_dif_ma,
                         "mtd_in_med_dif_ms": med_dif_ms
                     }
-                    resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {sum_tension} | {emp_muni}"
+                    resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"
                     ok, p_id = db_manager.guardar_proyecto(
                         usuario_id=user_auth["id"],
                         cliente_id=cli_sel_id,
@@ -467,6 +482,7 @@ def renderizar():
 
         datos_para_pdf = {
             "tipo_instalacion": tipo_inst_sel,
+            "tipo_tramitacion": tipo_tram_sel,
             "expediente": exp_in,
             "fecha": datetime.date.today().strftime("%d/%m/%Y"),
             "titular": {
