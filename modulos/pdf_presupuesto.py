@@ -1230,7 +1230,7 @@ def generar_pdf_unifilar_industria(proyecto_info, unifilar_data):
     d.add(Line(tx - 4, ty - 2.5, tx + 4, ty - 2.5, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.0))
     d.add(Line(tx - 2, ty - 5, tx + 2, ty - 5, strokeColor=colors.HexColor("#92400e"), strokeWidth=0.8))
     d.add(String(50, 19, "RED DE TIERRA (PE - ITC-BT-18):", fontName="Helvetica-Bold", fontSize=6.0, fillColor=colors.HexColor("#92400e")))
-    d.add(String(50, 10, "Línea Enlace Cu 1x10 mm² | Picas de tierra 2m | <b>Resistencia Medida: Rt = 11.8 Ω</b> (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
+    d.add(String(50, 10, "Línea Enlace Cu 1x10 mm² | Picas de tierra 2m | Resistencia Medida: Rt = 11.8 Ω (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
 
     story.append(d)
     story.append(Spacer(1, 6))
