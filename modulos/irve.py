@@ -735,6 +735,33 @@ def renderizar():
             {"concepto": "Elaboración de Memoria Técnica de Diseño (MTD) y Certificado CIE Oficial", "cantidad": 1, "unidad": "ud", "precio_ud": c_cie}
         ]
 
+        col_t_irve1, col_t_irve2 = st.columns([1.5, 1])
+        with col_t_irve1:
+            if st.button("📥 Traspasar este circuito IRVE a la Memoria Técnica (MTD)", type="primary", use_container_width=True, key="btn_transfer_irve_mtd"):
+                if "mtd_circuitos" not in st.session_state or not isinstance(st.session_state["mtd_circuitos"], list):
+                    st.session_state["mtd_circuitos"] = []
+                
+                # Eliminar circuito IRVE previo si existiera para no duplicar
+                st.session_state["mtd_circuitos"] = [c for c in st.session_state["mtd_circuitos"] if "IRVE" not in c.get("nombre", "") and "C13" not in c.get("nombre", "")]
+                
+                c_nom_irve = f"C13 - Recarga VE Wallbox ({p_cargador_val/1000:.1f} kW)"
+                st.session_state["mtd_circuitos"].append({
+                    "nombre": c_nom_irve,
+                    "potencia": int(p_cargador_val),
+                    "pia": int(in_pi_auto),
+                    "seccion": f"{'4' if es_trif_irve else '2'}x{s_final_irve:.0f}+TT{s_final_irve:.0f}",
+                    "tubo": f"M{tubo_dim_str}",
+                    "longitud": int(irve_long),
+                    "cdt": float(f"{dv_real_irve_pct:.2f}"),
+                    "norma": "ITC-BT-52"
+                })
+                st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real (SPL)"
+                st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                st.success("✅ ¡Punto de Recarga IRVE traspasado a la Memoria Técnica! Redirigiendo...")
+                st.rerun()
+        with col_t_irve2:
+            st.caption("Inserta este circuito IRVE como circuito C13 en la Memoria Técnica General.")
+
     # =========================================================================
     # SECCIÓN 5: ASISTENTE IA EXPERTO EN IRVE Y REBT (VOZ Y TEXTO)
     # =========================================================================

@@ -290,6 +290,23 @@ def renderizar():
         Garantiza una caída real del **{dv_real_lga_pct:.3f}%**. Protegida en origen por **Fusibles gG de {in_lga_auto} A** y canalizada bajo **tubo de {tubo_diam}**.
         """)
 
+        col_t_lga1, col_t_lga2 = st.columns([1.5, 1])
+        with col_t_lga1:
+            if st.button("📥 Traspasar esta LGA a la Memoria Técnica (MTD)", type="primary", use_container_width=True, key="btn_transfer_lga_mtd"):
+                st.session_state["mtd_in_di_cable"] = f"3x{s_final_lga:.0f}+1x{s_final_lga:.0f} mm² {lga_mat.upper()} {lga_aisl}"
+                st.session_state["mtd_in_di_tubo"] = f"Tubo {tubo_diam} (ITC-BT-14)"
+                st.session_state["mtd_in_di_long"] = float(lga_long)
+                st.session_state["mtd_in_di_cdt"] = float(f"{dv_real_lga_pct:.2f}")
+                st.session_state["mtd_in_pot_inst"] = float(lga_pot)
+                st.session_state["mtd_in_pot_max"] = float(lga_pot * 1.25)
+                st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = f"Caja General de Protección (CGP) con fusibles {in_lga_auto}A gG"
+                st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                st.success("✅ ¡LGA traspasada con éxito a la Memoria Técnica! Redirigiendo...")
+                st.rerun()
+        with col_t_lga2:
+            st.caption("Carga los parámetros de la LGA como alimentación principal de la Memoria Técnica.")
+
     # --- SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF ---
     st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):

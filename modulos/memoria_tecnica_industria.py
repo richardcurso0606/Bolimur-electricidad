@@ -356,6 +356,16 @@ def renderizar():
                 st.success("Circuito añadido.")
                 st.rerun()
 
+        col_b_mtd1, col_b_mtd2 = st.columns([1.6, 1])
+        with col_b_mtd1:
+            if st.button("💰 Generar Presupuesto de Obra desde este Cuadro de Circuitos", type="secondary", use_container_width=True, key="btn_gen_presup_from_mtd"):
+                st.session_state["presupuesto_circuitos_importados"] = st.session_state.get("mtd_circuitos", [])
+                st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
+                st.success("✅ ¡Traspasando cuadro de protecciones y líneas al módulo de Presupuestos! Redirigiendo...")
+                st.rerun()
+        with col_b_mtd2:
+            st.caption("Crea automáticamente un presupuesto con las líneas, PIAs, diferenciales y metros de cable.")
+
     # --- TAB 6: PROTOCOLO DE ENSAYOS (ITC-BT-05) ---
     with tab_f6:
         st.markdown("##### 🧪 Bloque VI: Protocolo de Ensayos y Verificaciones Previas (ITC-BT-05 Murcia):")

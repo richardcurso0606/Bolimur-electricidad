@@ -460,6 +460,16 @@ def renderizar():
         *Valor listo y optimizado para el cálculo inmediato de la Línea General de Alimentación (LGA).*
         """)
 
+        col_t_pt1, col_t_pt2 = st.columns([1.5, 1])
+        with col_t_pt1:
+            if st.button("⚡ Calcular Línea General (LGA) con esta Potencia Total (Pt)", type="primary", use_container_width=True, key="btn_transfer_pt_lga"):
+                st.session_state["lga_in_pot"] = float(pt_total)
+                st.session_state.menu_activo = "⚡ Línea General (LGA)"
+                st.success("✅ ¡Potencia total ($P_t$) traspasada a la LGA! Redirigiendo al cálculo de la LGA...")
+                st.rerun()
+        with col_t_pt2:
+            st.caption("Abre el dimensionado de la Línea General de Alimentación con la potencia simultánea calculada.")
+
     # =========================================================================
     # SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF OFICIAL
     # =========================================================================

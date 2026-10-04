@@ -275,6 +275,21 @@ def app():
     else:
         st.sidebar.success(f"📁 Base de datos conectada: `{excel_cargado}` ({len(df_precios)} artículos)")
 
+    circs_imp = st.session_state.get("presupuesto_circuitos_importados", [])
+    if circs_imp:
+        with st.container(border=True):
+            col_imp1, col_imp2 = st.columns([3, 1])
+            with col_imp1:
+                st.markdown(f"##### 📥 {len(circs_imp)} Circuitos Sincronizados desde la Memoria Técnica (MTD):")
+                resumen_circs = ", ".join([f"**{c.get('nombre', 'Circuito')}** ({c.get('pia', 16)}A)" for c in circs_imp[:5]])
+                if len(circs_imp) > 5:
+                    resumen_circs += f" ... y {len(circs_imp)-5} más."
+                st.write(resumen_circs)
+            with col_imp2:
+                if st.button("🗑️ Descartar importación", key="btn_clear_imp_mtd"):
+                    del st.session_state["presupuesto_circuitos_importados"]
+                    st.rerun()
+
     # ==========================================
     # ASISTENTE WEB DE ACTUALIZACIÓN DE PRECIOS
     # ==========================================

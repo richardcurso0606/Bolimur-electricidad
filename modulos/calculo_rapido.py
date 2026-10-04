@@ -160,6 +160,29 @@ def renderizar():
         Garantiza una caída de tensión real del **{dv_real_pct_q:.3f}%**. Coordinada con **PIA {prot_q} A (Curva C)**. Tubo recomendado: **M{tubo_diam_q}**.
         """)
 
+        col_t_cr1, col_t_cr2 = st.columns([1.5, 1])
+        with col_t_cr1:
+            if st.button("📥 Traspasar este circuito a la Memoria Técnica (MTD)", type="primary", use_container_width=True, key="btn_transfer_cr_mtd"):
+                if "mtd_circuitos" not in st.session_state or not isinstance(st.session_state["mtd_circuitos"], list):
+                    st.session_state["mtd_circuitos"] = []
+                
+                c_nom_prop = f"Circuito Alimentador ({val_pot_q/1000.0:.2f} kW - {long_q}m)"
+                st.session_state["mtd_circuitos"].append({
+                    "nombre": c_nom_prop,
+                    "potencia": int(val_pot_q),
+                    "pia": int(prot_q),
+                    "seccion": f"{'4' if es_trif_q else '2'}x{s_opt_q:.0f}+TT{s_opt_q:.0f}",
+                    "tubo": f"M{tubo_diam_q}",
+                    "longitud": int(long_q),
+                    "cdt": float(f"{dv_real_pct_q:.2f}"),
+                    "norma": "REBT"
+                })
+                st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                st.success("✅ ¡Circuito traspasado a la Memoria Técnica de Diseño! Redirigiendo...")
+                st.rerun()
+        with col_t_cr2:
+            st.caption("Inserta este circuito calculado en el cuadro de circuitos de la Memoria Técnica Oficial.")
+
     # --- SECCIÓN DE EXPORTACIÓN A PDF ---
     st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
