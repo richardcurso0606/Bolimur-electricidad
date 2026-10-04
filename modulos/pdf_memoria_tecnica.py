@@ -283,14 +283,15 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
 
     pot_inst_w = float(suministro.get("potencia_instalada_w", 5750.0))
     tipo_tram = datos_mtd.get("tipo_tramitacion", "Nueva Instalación")
-    es_nueva = "[ X ] Nueva" if "Nueva" in tipo_tram else "[  ] Nueva"
+    es_nueva = "[ X ] Nueva" if ("Nueva" in tipo_tram and "Temporal" not in tipo_tram and "Obra" not in tipo_tram) else "[  ] Nueva"
+    es_temporal = "[ X ] Temporal / Obra" if ("Temporal" in tipo_tram or "Obra" in tipo_tram or "ITC-BT-33" in tipo_tram) else "[  ] Temporal / Obra"
     es_ampliacion = "[ X ] Ampliación" if "Ampliación" in tipo_tram else "[  ] Ampliación"
-    es_modificacion = "[ X ] Modificación / Reforma" if ("Modificación" in tipo_tram or "Reforma" in tipo_tram) else "[  ] Modificación / Reforma"
+    es_modificacion = "[ X ] Modificación" if ("Modificación" in tipo_tram or "Reforma" in tipo_tram) else "[  ] Modificación"
 
     t_tecn_data = [
         [
-            Paragraph(f"<b>Carácter de la Instalación:</b> {es_nueva}   {es_ampliacion}   {es_modificacion}", bold_style),
-            Paragraph(f"<b>Régimen:</b> {tipo_tram.replace('🆕 ', '').replace('📈 ', '').replace('🔧 ', '').replace('🔄 ', '').replace('📋 ', '')}", body_style)
+            Paragraph(f"<b>Carácter:</b> {es_nueva}  {es_temporal}  {es_ampliacion}  {es_modificacion}", bold_style),
+            Paragraph(f"<b>Régimen:</b> {tipo_tram.replace('🆕 ', '').replace('🏗️ ', '').replace('📈 ', '').replace('🔧 ', '').replace('🔄 ', '').replace('📋 ', '')}", body_style)
         ],
         [
             Paragraph(f"<b>Emplazamiento:</b> {emplazamiento.get('direccion', '-')}, {emplazamiento.get('municipio', 'Murcia')}", body_style),
@@ -305,8 +306,8 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
             Paragraph(f"<b>Potencia Total Prevista:</b> <b>{pot_inst_w/1000:.2f} kW</b> ({pot_inst_w:,.0f} W)", bold_style)
         ],
         [
-            Paragraph("<b>Grupo Instalación según 3.1 ITC-BT-04:</b> Grupo F (Viviendas / Edificios) / Grupo O (IRVE)", body_style),
-            Paragraph("<b>Superficie Útil:</b> 90 m² | <b>Ocupación:</b> < 50 pers.", body_style)
+            Paragraph(f"<b>Grupo Instalación según 3.1 ITC-BT-04:</b> {'Grupo G (Instalaciones Temporales de Obras / ITC-BT-33)' if ('Obra' in tipo_instalacion or 'ITC-BT-33' in tipo_instalacion) else ('Grupo O (IRVE - ITC-BT-52)' if 'IRVE' in tipo_instalacion else 'Grupo F (Viviendas / Edificios)')}", body_style),
+            Paragraph("<b>Superficie Útil:</b> Obra / Parcela | <b>Ocupación:</b> Personal de obra" if ('Obra' in tipo_instalacion or 'ITC-BT-33' in tipo_instalacion) else "<b>Superficie Útil:</b> 90 m² | <b>Ocupación:</b> < 50 pers.", body_style)
         ]
     ]
     t_tecn = Table(t_tecn_data, colWidths=[10.5*cm, 7.9*cm])

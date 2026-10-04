@@ -98,3 +98,49 @@ def test_generar_pdf_manual_usuario_bytes():
     assert len(pdf_bytes) > 3000
     assert pdf_bytes.startswith(b"%PDF")
 
+def test_generar_pdf_mtd_cuadro_obra_itc_bt_33():
+    datos_obra = {
+        "tipo_instalacion": "🏗️ Instalación Provisional y Temporal de Obras (ITC-BT-33 / Cuadro de Obra)",
+        "tipo_tramitacion": "🏗️ Instalación Temporal de Obra (Suministro Provisional)",
+        "titular": {"nombre": "Constructora e Inversiones SL", "nif": "B-30999888"},
+        "emplazamiento": {"direccion": "Parcela 45, Sector Residencial", "municipio": "Murcia", "cups": "ES0021000000000000XX", "uso": "Obra de Edificación"},
+        "instalador": {"empresa": "BOLIMUR", "cif": "B-73000000", "nombre": "Richard Orlando Choque", "licencia": "REBT-30/15892", "registro_rii": "RII-30/08492"},
+        "suministro": {
+            "potencia_instalada_w": 15000,
+            "potencia_max_admisible_w": 15000,
+            "tension": "Trifásico (400 V) - 50 Hz",
+            "di_cable": "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV",
+            "di_tubo": "Tubo M40 intemperie IK09",
+            "di_long_m": 15.0,
+            "di_cdt_pct": 0.52,
+            "grado_electrif": "Provisional de Obra (ITC-BT-33)"
+        },
+        "protecciones": {
+            "iga_amperaje": 40,
+            "iga_curva": "Curva D",
+            "iga_icn_ka": 10.0,
+            "diferenciales": "4P 40A / 30mA Clase A con Seta Parada Emergencia",
+            "sobretensiones": "Permanentes + Transitorias Tipo 2 con bobina",
+            "puesta_a_tierra": "Pica tierra obra Rt ≤ 15 Ω"
+        },
+        "ensayos": {
+            "pe_ohm": 0.12,
+            "aisl_mohm": 100.0,
+            "rt_ohm": 9.4,
+            "dif_ma": 22.0,
+            "dif_ms": 25.0
+        },
+        "circuitos": [
+            {"nombre": "C1 - Toma CETAC Trifásica 32A (Grúa)", "potencia": 10000, "pia": 32, "seccion": "4x6.0+TT6.0", "tubo": "M32", "longitud": 15, "cdt": 0.65, "norma": "ITC-BT-33"},
+            {"nombre": "C2 - Toma CETAC Trifásica 16A (Hormigonera)", "potencia": 5000, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-33"},
+            {"nombre": "C3 - Tomas CETAC/Schuko Monofásicas 16A", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.78, "norma": "ITC-BT-33"}
+        ],
+        "expediente": "EXP-OBRA-2026-01",
+        "fecha": "04/10/2026"
+    }
+    pdf_bytes = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_obra)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 10000
+    assert pdf_bytes.startswith(b"%PDF")
+
+

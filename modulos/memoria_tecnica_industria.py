@@ -102,6 +102,31 @@ def cargar_plantilla_por_tipo(tipo: str):
             {"nombre": "C4 - Climatización / Bomba Calor", "potencia": 6000, "pia": 25, "seccion": "4x6.0+TT6.0", "tubo": "M32", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-28"}
         ]
 
+    elif "Obra" in tipo or "Provisional" in tipo or "ITC-BT-33" in tipo:
+        st.session_state["mtd_in_pot_inst"] = 15000.0
+        st.session_state["mtd_in_pot_max"] = 15000.0
+        st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
+        st.session_state["mtd_in_origen"] = "Acometida Provisional desde Red Distribuidora (CPM / CGP Intemperie)"
+        st.session_state["mtd_in_di_cable"] = "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
+        st.session_state["mtd_in_di_tubo"] = "Tubo M40 intemperie resistente a impactos IK09"
+        st.session_state["mtd_in_di_long"] = 15.0
+        st.session_state["mtd_in_di_cdt"] = 0.52
+        st.session_state["mtd_in_grado"] = "Provisional de Obra (ITC-BT-33)"
+        st.session_state["mtd_in_iga"] = 40
+        st.session_state["mtd_in_curva"] = "Curva D"
+        st.session_state["mtd_in_icn"] = 10.0
+        st.session_state["mtd_in_dif"] = "Diferencial 4P 40A / 30mA Clase A Superinmunizado + Seta Parada Emergencia"
+        st.session_state["mtd_in_vtp"] = "Permanentes + Transitorias Tipo 2 con corte omnipolar y bobina de disparo"
+        st.session_state["mtd_in_tierra"] = "Pica de puesta a tierra independiente de obra (Rt ≤ 15 Ω) | Conductor PE 1x16 mm² Cu"
+        st.session_state["mtd_in_spl"] = "No aplica"
+        st.session_state["mtd_in_emp_uso"] = "Instalación Provisional y Temporal de Obras (ITC-BT-33)"
+        st.session_state["mtd_circuitos"] = [
+            {"nombre": "C1 - Toma CETAC Trifásica 32A 3P+N+T (Grúa / Maquinaria)", "potencia": 10000, "pia": 32, "seccion": "4x6.0+TT6.0", "tubo": "M32", "longitud": 15, "cdt": 0.65, "norma": "ITC-BT-33"},
+            {"nombre": "C2 - Toma CETAC Trifásica 16A 3P+N+T (Hormigonera / Elevador)", "potencia": 5000, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-33"},
+            {"nombre": "C3 - Tomas CETAC/Schuko Monofásicas 16A (Herramientas manuales)", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.78, "norma": "ITC-BT-33"},
+            {"nombre": "C4 - Alumbrado de Seguridad y Balizamiento de Obra", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.60, "norma": "ITC-BT-33"}
+        ]
+
 def aplicar_datos_cliente_a_formulario(cli_obj: dict):
     """Vuelca los datos del cliente de CRM en los campos del formulario"""
     if not cli_obj:
@@ -162,6 +187,7 @@ def renderizar():
             tipo_inst_sel = st.selectbox(
                 "Tipo de Instalación (REBT):",
                 [
+                    "🏗️ Instalación Provisional y Temporal de Obras (ITC-BT-33 / Cuadro de Obra)",
                     "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
                     "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
                     "🏢 Local Comercial / Nave Industrial (ITC-BT-28)",
@@ -182,6 +208,7 @@ def renderizar():
                 "Carácter de la Instalación / Trámite:",
                 [
                     "🆕 Nueva Instalación (Alta Inicial)",
+                    "🏗️ Instalación Temporal de Obra (Suministro Provisional)",
                     "📈 Ampliación de Potencia / Cargas",
                     "🔧 Modificación de Importancia / Reforma",
                     "🔄 Adecuación Reglamentaria (REBT)",
@@ -314,7 +341,7 @@ def renderizar():
             sum_di_long = st.number_input("Longitud de la Línea (m):", value=float(st.session_state.get("mtd_in_di_long", 25.0)), step=1.0, key="mtd_in_di_long")
             sum_di_cdt = st.number_input("Caída de Tensión Calculada (%):", value=float(st.session_state.get("mtd_in_di_cdt", 0.86)), step=0.05, key="mtd_in_di_cdt")
             
-            g_opts = ["Básica", "Elevada", "Específica IRVE (ITC-BT-52)", "Comercial / Servicios"]
+            g_opts = ["Básica", "Elevada", "Específica IRVE (ITC-BT-52)", "Comercial / Servicios", "Provisional de Obra (ITC-BT-33)"]
             g_def = st.session_state.get("mtd_in_grado", g_opts[2])
             idx_g = g_opts.index(g_def) if g_def in g_opts else 0
             sum_grado = st.selectbox("Grado de Electrificación / Uso:", g_opts, index=idx_g, key="mtd_in_grado")
