@@ -225,6 +225,8 @@ def inicializar_bd():
         try:
             cursor.execute("ALTER TABLE proyectos ADD COLUMN usuario_email TEXT")
         except Exception:
+            pass
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS config_sistema (
         clave TEXT PRIMARY KEY,

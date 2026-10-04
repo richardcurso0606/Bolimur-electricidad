@@ -12,14 +12,34 @@ st.set_page_config(page_title="Bolimur - Cálculos Eléctricos REBT", page_icon=
 # =========================================================================
 errores_import = {}
 
+auth_manager = None
+db_manager = None
+perfil_instalador = None
+gestion_clientes = None
+
 try:
     from modulos import auth_manager
-    from modulos import db_manager
-    from modulos import perfil_instalador
-    from modulos import gestion_clientes
 except Exception as e:
     auth_manager = None
     errores_import["auth_manager"] = traceback.format_exc()
+
+try:
+    from modulos import db_manager
+except Exception as e:
+    db_manager = None
+    errores_import["db_manager"] = traceback.format_exc()
+
+try:
+    from modulos import perfil_instalador
+except Exception as e:
+    perfil_instalador = None
+    errores_import["perfil_instalador"] = traceback.format_exc()
+
+try:
+    from modulos import gestion_clientes
+except Exception as e:
+    gestion_clientes = None
+    errores_import["gestion_clientes"] = traceback.format_exc()
 
 try:
     from modulos import calculo_rapido
