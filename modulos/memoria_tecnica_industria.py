@@ -552,6 +552,63 @@ def renderizar():
                 st.session_state["mtd_unifilar_modo"] = "auto"
                 st.info("ℹ️ Bolimur generará automáticamente el esquema unifilar vectorial con las protecciones IGA, diferenciales y circuitos configurados en las pestañas anteriores.")
 
+        st.markdown("---")
+        st.markdown("##### 📸 Anexo V: Reportaje Fotográfico de Fin de Obra y Evidencias REBT (ITC-BT-05)")
+        st.caption("Guarda fotografías clave de la ejecución. Es tu blindaje legal ante inspecciones de Industria o averías futuras, y se incluye como Anexo V oficial con pie explicativo:")
+
+        if "mtd_fotos_obra" not in st.session_state:
+            st.session_state["mtd_fotos_obra"] = []
+
+        col_add_f1, col_add_f2, col_add_f3 = st.columns([2, 2.5, 1.2])
+        with col_add_f1:
+            tipo_foto_sugerida = st.selectbox(
+                "Tipo de Evidencia Fotográfica:",
+                [
+                    "Cuadro General (CGMP) montado y rotulado",
+                    "Punto de Puesta a Tierra (Pica, Arqueta y Borna)",
+                    "Acometida / CGP / Módulo de Contadores",
+                    "Display Comprobador Multifunción (Medida Rt / PE)",
+                    "Ensayo Disparo Diferencial (Multifunción)",
+                    "Canalizaciones y Tubos empotrados en obra",
+                    "Mecanismos y Cuadro de Mando en Vivienda / Local",
+                    "Otra fotografía libre de la instalación"
+                ],
+                key="sel_tipo_foto_sug"
+            )
+        with col_add_f2:
+            tit_foto_custom = st.text_input("Descripción técnica de la foto:", value=tipo_foto_sugerida, key="txt_desc_foto_in")
+        with col_add_f3:
+            st.write("")
+            st.caption("Sube la foto abajo:")
+
+        up_nueva_foto = st.file_uploader("Subir Fotografía de la Obra (JPG o PNG):", type=["png", "jpg", "jpeg", "webp"], key="uploader_foto_obra_temp")
+        if up_nueva_foto is not None:
+            col_bf1, col_bf2 = st.columns([1.5, 3])
+            with col_bf1:
+                if st.button("➕ Insertar Foto al Reportaje", type="primary", use_container_width=True, key="btn_add_foto_list"):
+                    b64_f = procesar_archivo_anexo(up_nueva_foto)
+                    if b64_f:
+                        st.session_state["mtd_fotos_obra"].append({
+                            "titulo": tit_foto_custom,
+                            "data": b64_f
+                        })
+                        st.success(f"✅ Foto '{tit_foto_custom}' añadida al reportaje.")
+                        st.rerun()
+
+        # Mostrar galería de fotos adjuntadas
+        fotos_actuales = st.session_state.get("mtd_fotos_obra", [])
+        if fotos_actuales:
+            st.markdown(f"###### 📷 Fotografías registradas en este expediente ({len(fotos_actuales)} foto/s):")
+            f_cols = st.columns(min(len(fotos_actuales), 3))
+            for f_idx, f_item in enumerate(fotos_actuales):
+                c_idx = f_idx % len(f_cols)
+                with f_cols[c_idx]:
+                    with st.container(border=True):
+                        st.image(f_item["data"], caption=f_item["titulo"], use_container_width=True)
+                        if st.button("🗑️ Eliminar Foto", key=f"btn_del_foto_{f_idx}", use_container_width=True):
+                            st.session_state["mtd_fotos_obra"].pop(f_idx)
+                            st.rerun()
+
     # =========================================================================
     # 3. GUARDAR VINCULADO AL CLIENTE (CRM) Y GENERACIÓN DE DOCUMENTACIÓN OFICIAL
     # =========================================================================
@@ -607,7 +664,8 @@ def renderizar():
                         "mtd_plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
                         "mtd_plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
                         "mtd_unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
-                        "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", "")
+                        "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", ""),
+                        "mtd_fotos_obra": st.session_state.get("mtd_fotos_obra", [])
                     }
                     resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"
                     ok, p_id = db_manager.guardar_proyecto(
@@ -693,7 +751,8 @@ def renderizar():
                 "plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
                 "plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
                 "unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
-                "plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", "")
+                "plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", ""),
+                "fotos": st.session_state.get("mtd_fotos_obra", [])
             }
         }
 

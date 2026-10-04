@@ -129,6 +129,84 @@ def _crear_anexo_plano_flowables(titulo_anexo: str, subtitulo_anexo: str, img_da
     
     return flowables
 
+
+def _crear_anexo_fotografico_flowables(fotos: list, exped: str, c_primary, c_border, h_section, body_style, bold_style):
+    """
+    Genera el ANEXO V: REPORTAJE FOTOGRÁFICO DE FIN DE OBRA Y EVIDENCIAS TÉCNICAS (ITC-BT-05).
+    Organiza las fotos en cuadrícula de 2 columnas por página con cajetín y pie explicativo.
+    """
+    if not fotos:
+        return []
+
+    flowables = []
+    chunk_size = 4
+    for p_idx in range(0, len(fotos), chunk_size):
+        chunk = fotos[p_idx:p_idx + chunk_size]
+        flowables.append(PageBreak())
+        
+        # Encabezado Oficial
+        t_hdr = Table([[Paragraph("MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN", h_section)]], colWidths=[18.4*cm], style=[
+            ('BACKGROUND', (0,0), (-1,-1), c_primary),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ])
+        flowables.append(t_hdr)
+        flowables.append(Spacer(1, 3))
+        
+        flowables.append(Paragraph("<b><font size='9' color='#0f172a'>ANEXO V</font></b>", ParagraphStyle('AnxVT', parent=body_style, alignment=1)))
+        flowables.append(Paragraph("<b><font size='10.5' color='#0369a1'><u>REPORTAJE FOTOGRÁFICO Y EVIDENCIAS DE CONFORMIDAD REBT (ITC-BT-05)</u></font></b>", ParagraphStyle('AnxVSub', parent=body_style, alignment=1)))
+        flowables.append(Paragraph("<font size='6.5' color='#64748b'>Registro Gráfico de Ejecución de Obra, Verificaciones Ocultas y Comprobaciones con Instrumentación</font>", ParagraphStyle('AnxVDesc', parent=body_style, alignment=1)))
+        flowables.append(Spacer(1, 6))
+
+        grid_data = []
+        for i in range(0, len(chunk), 2):
+            par_fotos = chunk[i:i+2]
+            fila_imgs = []
+            fila_txts = []
+            
+            for f_item in par_fotos:
+                f_data = f_item.get("data") if isinstance(f_item, dict) else f_item
+                f_desc = f_item.get("titulo", "Evidencia fotográfica de obra") if isinstance(f_item, dict) else "Evidencia fotográfica"
+                
+                img_flow = _crear_imagen_flowable(f_data, max_w=8.8*cm, max_h=8.0*cm)
+                if img_flow:
+                    fila_imgs.append(img_flow)
+                else:
+                    fila_imgs.append(Paragraph("<i>[Imagen no disponible]</i>", body_style))
+                    
+                txt_cell = Paragraph(f"<b>📷 {f_desc}</b>", ParagraphStyle('CapP', parent=body_style, fontSize=6.5, leading=8.5, alignment=1, textColor=colors.HexColor("#1e293b")))
+                fila_txts.append(txt_cell)
+                
+            if len(fila_imgs) == 1:
+                fila_imgs.append(Paragraph("", body_style))
+                fila_txts.append(Paragraph("", body_style))
+                
+            grid_data.append(fila_imgs)
+            grid_data.append(fila_txts)
+
+        col_w = 9.0*cm
+        t_grid = Table(grid_data, colWidths=[col_w, col_w])
+        t_grid_style = [
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 2),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('LEFTPADDING', (0,0), (-1,-1), 3),
+            ('RIGHTPADDING', (0,0), (-1,-1), 3),
+        ]
+        for r_idx in range(0, len(grid_data), 2):
+            t_grid_style.append(('BOX', (0, r_idx), (0, r_idx), 0.5, c_border))
+            t_grid_style.append(('BOX', (1, r_idx), (1, r_idx), 0.5, c_border))
+            t_grid_style.append(('BACKGROUND', (0, r_idx), (1, r_idx), colors.HexColor("#f8fafc")))
+            
+        t_grid.setStyle(TableStyle(t_grid_style))
+        flowables.append(t_grid)
+        flowables.append(Spacer(1, 4))
+        flowables.append(Paragraph(f"<font size='6.5' color='#64748b'>Dirección General de Energía y Actividad Industrial y Minera | Ref. Expediente: {exped} | Pág. {p_idx//chunk_size + 1}</font>", ParagraphStyle('FootAnxV', parent=body_style, alignment=2)))
+        
+    return flowables
+
 class NumberedCanvasMTDMurciaOficial(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1021,6 +1099,21 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(t_norm)
+
+    # =========================================================================
+    # ANEXO V: REPORTAJE FOTOGRÁFICO DE FIN DE OBRA (SI HAY FOTOS ADJUNTAS)
+    # =========================================================================
+    fotos_obra = anexos.get("fotos", []) or datos_mtd.get("fotos", [])
+    if fotos_obra:
+        story.extend(_crear_anexo_fotografico_flowables(
+            fotos_obra,
+            expediente,
+            c_primary,
+            c_border,
+            h_section,
+            body_style,
+            bold_style
+        ))
 
     doc.build(story, canvasmaker=NumberedCanvasMTDMurciaOficial)
     return buffer.getvalue()
