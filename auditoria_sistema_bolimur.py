@@ -61,6 +61,7 @@ def ejecutar_auditoria():
         "modulos.db_manager",
         "modulos.auth_manager",
         "modulos.selector_cliente_proyecto",
+        "modulos.radar_normativo",
         "inicio"
     ]
     
@@ -88,6 +89,15 @@ def ejecutar_auditoria():
         
         # Previsión de cargas
         from modulos import prevision_cargas
+
+        # Radar Normativo BOE
+        from modulos import radar_normativo
+        assert len(radar_normativo.NORMAS_MONITORIZADAS) >= 5, "Faltan normas clave en radar_normativo"
+        normas_ids = list(radar_normativo.NORMAS_MONITORIZADAS.keys())
+        assert "BOE-A-2019-5089" in normas_ids, "Falta RD 244/2019 Autoconsumo en radar"
+        assert "BOE-A-2002-18099" in normas_ids, "Falta REBT RD 842/2002 en radar"
+        assert "BOE-A-2014-13679" in normas_ids, "Falta IRVE RD 1053/2014 en radar"
+        print("  ✓ Radar Normativo BOE: 5 normas reglamentarias monitorizadas con API BOE.")
         assert prevision_cargas.get_coef_simultaneidad(1) == 1.0
         assert prevision_cargas.get_coef_simultaneidad(10) == 8.5
         assert prevision_cargas.get_coef_simultaneidad(20) == 15.4

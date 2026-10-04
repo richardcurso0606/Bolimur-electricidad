@@ -87,6 +87,12 @@ except Exception as e:
     fotovoltaica = None
     errores_import["fotovoltaica"] = traceback.format_exc()
 
+try:
+    from modulos import radar_normativo
+except Exception as e:
+    radar_normativo = None
+    errores_import["radar_normativo"] = traceback.format_exc()
+
 
 
 # =========================================================================
@@ -265,6 +271,7 @@ with st.sidebar:
         ("🏠  Menú Principal", "🏠 Menú Principal"),
         ("🤖  Consultor IA REBT", "🤖 Consultor IA REBT"),
         ("☀️  Solar Fotovoltaica", "☀️ Solar Fotovoltaica"),
+        ("🛰️  Radar Normativo BOE", "🛰️ Radar Normativo BOE"),
         ("🏛️  Memoria Técnica (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
         ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
         ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
@@ -331,6 +338,19 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("")
             if st.button("🚀 Tramitar MTD Murcia", key="btn_home_mtd_featured", use_container_width=True):
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                st.rerun()
+
+    # BANNER DESTACADO 4: RADAR NORMATIVO BOE & VIGILANCIA LEGISLATIVA
+    with st.container(border=True):
+        col_rad_txt, col_rad_btn = st.columns([3, 1])
+        with col_rad_txt:
+            st.markdown("### 🛰️ Radar Normativo BOE & Vigilancia Reglamentaria en Tiempo Real")
+            st.write("Conexión en vivo con la **API de Datos Abiertos del Boletín Oficial del Estado (BOE)**. Monitorización continua de reformas en el REBT (RD 842/2002), Autoconsumo Solar (RD 244/2019), IRVE (ITC-BT-52) y CTE DB-HE. Incluye **análisis de impacto reglamentario con IA** para mantener Bolimur siempre 100% actualizado ante cambios normativos.")
+        with col_rad_btn:
+            st.write("")
+            st.write("")
+            if st.button("🛰️ Abrir Radar BOE", key="btn_home_radar_featured", use_container_width=True):
+                st.session_state.menu_activo = "🛰️ Radar Normativo BOE"
                 st.rerun()
 
     c1, c2 = st.columns(2)
@@ -407,6 +427,14 @@ elif "Solar" in seleccion_modulo or "☀️" in seleccion_modulo or "Fotovoltaic
         st.error("Módulo de Solar Fotovoltaica no disponible.")
         if "fotovoltaica" in errores_import:
             st.code(errores_import["fotovoltaica"])
+
+elif "Radar" in seleccion_modulo or "🛰️" in seleccion_modulo or "Normativo" in seleccion_modulo or "BOE" in seleccion_modulo:
+    if radar_normativo:
+        radar_normativo.renderizar()
+    else:
+        st.error("Módulo de Radar Normativo BOE no disponible.")
+        if "radar_normativo" in errores_import:
+            st.code(errores_import["radar_normativo"])
 
 elif "Memoria" in seleccion_modulo or "MTD" in seleccion_modulo or "🏛️" in seleccion_modulo or "Industria" in seleccion_modulo:
     if memoria_tecnica_industria:
