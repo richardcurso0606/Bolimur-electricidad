@@ -222,8 +222,8 @@ def renderizar_pantalla_login():
         
         # 1. Login con Google
         with tab_login_google:
-            st.markdown("##### 🔴 Acceso con Cuenta Google")
-            st.caption("Selecciona tu cuenta de Google para sincronizar tus clientes, presupuestos y expedientes en cualquier dispositivo.")
+            st.markdown("##### 🔴 Elige tu Cuenta de Google para Iniciar Sesión")
+            st.caption("Selecciona tu cuenta con un toque para acceder a tus clientes, cálculos y expedientes asociados.")
             
             tiene_config = bool(google_config.get("client_id") and google_config.get("client_secret"))
             
@@ -238,18 +238,38 @@ def renderizar_pantalla_login():
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z"/>
                             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                         </svg>
-                        Elegir Cuenta de Google
+                        Abrir Selector Oficial de Cuentas de Google
                     </a>
                 </div>
                 """, unsafe_allow_html=True)
-                st.success("🟢 Google OAuth 2.0 Oficial Activo (permite elegir cuenta en pantalla).")
-            else:
-                st.info("💡 **Selector de Cuenta Google:** Introduce o elige la cuenta de Google con la que deseas trabajar para cargar tus clientes asociados:")
-                
-                # Selector y Entrada de Cuenta Google
+                st.markdown("<div style='text-align:center; color:#64748b; font-size:12px; margin: 8px 0;'>— o selecciona una cuenta guardada abajo —</div>", unsafe_allow_html=True)
+
+            # Cuentas Guardadas Disponibles en el Sistema
+            usuarios_guardados = db_manager.listar_todos_usuarios()
+            if usuarios_guardados:
+                st.markdown("###### 👥 Cuentas de Google Registradas (Toca para entrar en 1 clic):")
+                for u in usuarios_guardados:
+                    u_email = u.get("email", "")
+                    u_nom = u.get("nombre_instalador") or u.get("nombre_empresa") or "Instalador"
+                    with st.container(border=True):
+                        col_u1, col_u2 = st.columns([3, 1.3])
+                        with col_u1:
+                            st.markdown(f"**🔴 {u_nom}**  \n`{u_email}`")
+                        with col_u2:
+                            st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
+                            if st.button("👉 Entrar", key=f"btn_quick_login_{u['id']}", type="primary", use_container_width=True):
+                                u_full = db_manager.obtener_usuario_por_id(u["id"])
+                                if u_full:
+                                    u_full["auth_provider"] = "Google"
+                                    st.session_state["usuario_autenticado"] = u_full
+                                    st.success(f"✅ ¡Sesión iniciada como {u_nom} ({u_email})!")
+                                    st.rerun()
+
+            st.markdown("###### ➕ Usar otra cuenta de Google:")
+            with st.container(border=True):
                 col_g1, col_g2 = st.columns([1.2, 1])
                 with col_g1:
-                    google_demo_email = st.text_input("Correo de tu Cuenta Google (*):", placeholder="ejemplo.instalador@gmail.com", key="g_demo_mail")
+                    google_demo_email = st.text_input("Tu Correo de Google (*):", placeholder="ejemplo.instalador@gmail.com", key="g_demo_mail")
                 with col_g2:
                     google_demo_nom = st.text_input("Nombre / Razón Social:", value="Instalador Autorizado", key="g_demo_nom")
                 

@@ -290,6 +290,15 @@ def obtener_usuario_por_id(usuario_id: int) -> Optional[Dict[str, Any]]:
         return dict(row)
     return None
 
+def listar_todos_usuarios() -> List[Dict[str, Any]]:
+    """Devuelve la lista de usuarios registrados para el selector de cuentas"""
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, email, nombre_instalador, nombre_empresa, avatar_url, google_id FROM usuarios ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 # =========================================================================
 # FUNCIONES DE CLIENTES (CRM)
 # =========================================================================
