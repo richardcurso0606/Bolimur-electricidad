@@ -57,3 +57,11 @@ def test_responder_consulta_rebt_con_imagen_offline():
     )
     assert "Diagnóstico Técnico" in resp or "REBT" in resp
     assert "ITC-BT" in resp
+
+def test_responder_consulta_rebt_con_audio_offline():
+    raw_audio_b64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="
+    resp = asistente_ia_rebt.responder_consulta_rebt(
+        consulta="",
+        audio_b64=raw_audio_b64
+    )
+    assert "Voz" in resp or "voz" in resp or "audio" in resp.lower()

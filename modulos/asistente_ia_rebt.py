@@ -262,8 +262,8 @@ def procesar_archivo_camara_o_adjunto(uploaded_file) -> str:
         st.error(f"Error procesando imagen para la IA: {e}")
         return ""
 
-def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b64: str = None) -> str:
-    """Consulta al modelo Google Gemini con el system prompt de Ingeniero Eléctrico e Instalador REBT, con soporte multimodal."""
+def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b64: str = None, audio_b64: str = None, audio_mime: str = "audio/wav") -> str:
+    """Consulta al modelo Google Gemini con el system prompt de Ingeniero Eléctrico e Instalador REBT, con soporte multimodal (texto, imágenes y audio de voz)."""
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     # Construir contenido
@@ -273,10 +273,19 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b
         parts = [{"text": h["content"]}]
         contents.append({"role": role, "parts": parts})
     
-    # Mensaje actual del usuario con imagen opcional
-    prompt_texto = consulta.strip() or "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica."
+    # Mensaje actual del usuario con imagen y/o audio opcionales
+    prompt_texto = consulta.strip()
+    if not prompt_texto:
+        if audio_b64:
+            prompt_texto = "Escucha atentamente este mensaje de voz del instalador eléctrico, atiende su consulta o instrucción y respóndele con rigor según el REBT y criterios de ingeniería eléctrica."
+        elif imagen_b64:
+            prompt_texto = "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica."
+        else:
+            prompt_texto = "Hola, ¿en qué me puedes ayudar hoy con el REBT?"
+
     user_parts = [{"text": prompt_texto}]
     
+    # Adjuntar imagen si existe
     if imagen_b64:
         mime_type, clean_b64 = auditor_ia_rebt._limpiar_b64_imagen(imagen_b64)
         if clean_b64:
@@ -286,6 +295,15 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b
                     "data": clean_b64
                 }
             })
+
+    # Adjuntar audio de voz si existe
+    if audio_b64:
+        user_parts.append({
+            "inlineData": {
+                "mimeType": audio_mime or "audio/wav",
+                "data": audio_b64
+            }
+        })
             
     contents.append({"role": "user", "parts": user_parts})
     
@@ -358,11 +376,19 @@ def responder_consulta_offline_con_imagen(consulta: str, imagen_b64: str = None)
         
     return buscar_respuesta_offline(consulta)
 
-def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: str = None) -> str:
-    """Enruta la consulta a Gemini con soporte multimodal o al motor offline."""
+def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: str = None, audio_b64: str = None, audio_mime: str = "audio/wav") -> str:
+    """Enruta la consulta a Gemini con soporte multimodal (texto, fotos y voz) o al motor offline."""
     key = auditor_ia_rebt.obtener_gemini_api_key()
     if key and len(key) > 10:
-        return consultar_gemini_rebt(consulta, historial or [], key, imagen_b64=imagen_b64)
+        return consultar_gemini_rebt(consulta, historial or [], key, imagen_b64=imagen_b64, audio_b64=audio_b64, audio_mime=audio_mime)
+    if audio_b64:
+        return (
+            "### 🎙️ Mensaje de Voz Recibido\n\n"
+            "Has grabado una consulta de voz para la IA. Para escuchar y comprender audio directamente en tiempo real, "
+            "activa tu clave gratuita de Google Gemini en el panel superior `⚙️ Estado del Motor`.\n\n"
+            "💡 **Truco directo sin clave:** Puedes dictar con tu propia voz utilizando el atajo del teclado de Windows "
+            "presionando **`Tecla Windows + H`** en cualquier momento, o tocando el micrófono de tu teclado en el móvil."
+        )
     return responder_consulta_offline_con_imagen(consulta, imagen_b64)
 
 def render_interfaz_asistente_rebt():
@@ -390,13 +416,46 @@ def render_interfaz_asistente_rebt():
                 st.success("Clave guardada.")
                 st.rerun()
 
-    # Bloque de captura con Cámara o Subida de Archivos
+    # Bloque de captura con Micrófono (Voz), Cámara o Subida de Archivos
     if "ia_chat_imagen_activa" not in st.session_state:
         st.session_state["ia_chat_imagen_activa"] = None
 
-    with st.expander("📷 Adjuntar Imagen / Plano / Documento o Usar la Cámara en Vivo", expanded=bool(st.session_state.get("ia_chat_imagen_activa"))):
-        tab_cam, tab_up = st.tabs(["📸 Tomar Foto con la Cámara", "📁 Subir Archivo (JPG, PNG, PDF)"])
+    with st.expander("🎙️ Instrucciones de Voz, Cámara en Vivo y Documentos", expanded=bool(st.session_state.get("ia_chat_imagen_activa"))):
+        tab_mic, tab_cam, tab_up = st.tabs(["🎙️ Hablar por Micrófono (Voz)", "📸 Tomar Foto con la Cámara", "📁 Subir Archivo (JPG, PNG, PDF)"])
         
+        with tab_mic:
+            st.caption("Graba tu voz para hacer una consulta o darle una instrucción directa a la IA:")
+            audio_pic = st.audio_input("Hablar por micrófono a la IA", key="voice_mic_ia_chat")
+            if audio_pic is not None:
+                st.audio(audio_pic)
+                col_va1, col_va2 = st.columns([1.8, 3])
+                with col_va1:
+                    if st.button("🚀 Enviar Instrucción de Voz a la IA", type="primary", key="btn_send_voice_direct"):
+                        raw_audio = audio_pic.getvalue()
+                        b64_audio = base64.b64encode(raw_audio).decode("utf-8")
+                        mime_aud = audio_pic.type or "audio/wav"
+                        img_actual = st.session_state.get("ia_chat_imagen_activa")
+                        st.session_state["ia_chat_imagen_activa"] = None
+
+                        st.session_state.mensajes_chat_rebt.append({
+                            "role": "user",
+                            "content": "🎙️ [Instrucción de voz enviada por micrófono]",
+                            "audio": raw_audio,
+                            "image": img_actual
+                        })
+                        with st.spinner("Escuchando y analizando instrucción de voz según el REBT y criterios de ingeniería..."):
+                            resp = responder_consulta_rebt(
+                                consulta="",
+                                historial=st.session_state.mensajes_chat_rebt[:-1],
+                                imagen_b64=img_actual,
+                                audio_b64=b64_audio,
+                                audio_mime=mime_aud
+                            )
+                            st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+                        st.rerun()
+                with col_va2:
+                    st.caption("💡 *Tip:* Puedes combinar una foto tomada con la cámara y una nota de voz preguntando sobre ella.")
+
         with tab_cam:
             st.caption("Apunta con la cámara de tu móvil o portátil al cuadro eléctrico, pica de tierra, rotulación o display:")
             cam_pic = st.camera_input("Capturar foto desde el dispositivo", key="cam_input_ia_chat")
@@ -421,7 +480,7 @@ def render_interfaz_asistente_rebt():
                     st.session_state["ia_chat_imagen_activa"] = None
                     st.rerun()
             with col_prev2:
-                st.info("✅ **Imagen adjunta cargada**. Escribe cualquier consulta sobre ella abajo o pulsa el botón directo para una auditoría general:")
+                st.info("✅ **Imagen adjunta cargada**. Escribe tu consulta abajo, habla por el micrófono o pulsa el botón directo para una auditoría general:")
                 if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_analizar_img_directo"):
                     img_actual = st.session_state["ia_chat_imagen_activa"]
                     txt_q = "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica. Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
@@ -492,6 +551,8 @@ def render_interfaz_asistente_rebt():
         for m in st.session_state.mensajes_chat_rebt:
             if m["role"] == "user":
                 with st.chat_message("user", avatar="👷"):
+                    if m.get("audio"):
+                        st.audio(m["audio"])
                     if m.get("image"):
                         st.image(m["image"], caption="📷 Evidencia técnica adjunta", width=320)
                     st.markdown(m["content"])
