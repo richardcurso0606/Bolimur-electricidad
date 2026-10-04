@@ -16,41 +16,38 @@ def renderizar():
         return
 
     usuario_id = usuario["id"]
-    
-    # Modo Empresa / Compartir clientes entre todas las cuentas del instalador (Activado por defecto)
-    if "crm_modo_empresa" not in st.session_state:
-        st.session_state["crm_modo_empresa"] = True
-        
-    modo_empresa = st.session_state["crm_modo_empresa"]
+    user_email = (usuario.get("email") or "").strip().lower()
+    user_nom = usuario.get("nombre_instalador") or usuario.get("nombre_empresa") or "Instalador"
+
     config_nube = db_manager.obtener_config_nube()
     tiene_nube = bool(config_nube.get("url") and config_nube.get("key"))
 
-    # Sincronización inicial automática si hay nube configurada
-    if tiene_nube and "crm_sync_auto_done" not in st.session_state:
-        st.session_state["crm_sync_auto_done"] = True
+    # Sincronización inicial automática de la cuenta si hay nube configurada
+    if tiene_nube and f"crm_sync_done_{usuario_id}" not in st.session_state:
+        st.session_state[f"crm_sync_done_{usuario_id}"] = True
         try:
             db_manager.sincronizar_con_nube(usuario_id)
         except Exception:
             pass
 
-    clientes = db_manager.listar_clientes(usuario_id, modo_empresa=modo_empresa)
-    todos_proyectos = db_manager.listar_proyectos_usuario(usuario_id, modo_empresa=modo_empresa)
+    clientes = db_manager.listar_clientes(usuario_id)
+    todos_proyectos = db_manager.listar_proyectos_usuario(usuario_id)
 
     # Cabecera Principal y Métricas
-    col_t1, col_t2, col_t3, col_t4 = st.columns([2.5, 1, 1, 1.3])
+    col_t1, col_t2, col_t3, col_t4 = st.columns([2.8, 1, 1, 1.2])
     with col_t1:
         st.title("👥 Expedientes de Clientes y Obras")
         if tiene_nube:
-            st.markdown("🟢 **Sincronización en la Nube Activa (Supabase)** — Datos sincronizados 24/7 en PC, Móvil y Tablet.")
+            st.markdown(f"🟢 **Nube Sincronizada (Supabase)** — Base de datos privada de `{user_email}`.")
         else:
-            st.markdown("🏢 **Modo Instalador Multi-Cuenta** — Clientes y proyectos compartidos en todos tus dispositivos.")
+            st.markdown(f"🔒 **Base de Datos Privada e Independiente** — Cuenta: `{user_email}`.")
     with col_t2:
-        st.metric("Clientes Activos", f"{len(clientes)} clientes")
+        st.metric("Tus Clientes", f"{len(clientes)} clientes")
     with col_t3:
-        st.metric("Obras Guardadas", f"{len(todos_proyectos)} proyectos")
+        st.metric("Tus Obras", f"{len(todos_proyectos)} proyectos")
     with col_t4:
         if tiene_nube:
-            if st.button("⚡ Sincronizar Nube", key="btn_sync_top", use_container_width=True, type="primary"):
+            if st.button("⚡ Sincronizar Mi Nube", key="btn_sync_top", use_container_width=True, type="primary"):
                 ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
                 if ok_s:
                     st.success(f"✅ {msg_s}")
@@ -58,13 +55,13 @@ def renderizar():
                 else:
                     st.error(f"❌ {msg_s}")
         else:
-            if st.button("🧹 Limpiar Duplicados", key="btn_limpiar_dup_top", use_container_width=True, help="Si registraste un cliente varias veces por error, este botón unifica sus fichas automáticamente"):
-                num_borrados = db_manager.limpiar_duplicados_clientes(usuario_id, modo_empresa=modo_empresa)
+            if st.button("🧹 Limpiar Duplicados", key="btn_limpiar_dup_top", use_container_width=True, help="Si registraste un cliente varias veces por error en tu cuenta, este botón unifica sus fichas automáticamente"):
+                num_borrados = db_manager.limpiar_duplicados_clientes(usuario_id)
                 if num_borrados > 0:
                     st.success(f"✅ Se han unificado y eliminado {num_borrados} fichas duplicadas.")
                     st.rerun()
                 else:
-                    st.info("No se encontraron clientes duplicados en tu base de datos.")
+                    st.info("No se encontraron clientes duplicados en tu cuenta.")
 
     tab_clientes_lista, tab_nuevo_cliente, tab_todos_proyectos, tab_sincro = st.tabs([
         "📋 Expediente y Ficha del Cliente",
@@ -388,10 +385,11 @@ def renderizar():
                     1. Entra a [supabase.com](https://supabase.com) y crea un proyecto gratuito.
                     2. Ve al menú **SQL Editor** en Supabase, pega el siguiente script y pulsa **Run**:
                     """)
-                    sql_script = """-- Tablas para Bolimur REBT PRO en Supabase Cloud
+                    sql_script = """-- Tablas para Bolimur REBT PRO en Supabase Cloud (Aislamiento por Cuenta Google)
 CREATE TABLE IF NOT EXISTS clientes (
     id BIGINT PRIMARY KEY,
     usuario_id BIGINT,
+    usuario_email TEXT NOT NULL,
     nombre_completo TEXT NOT NULL,
     nif_cif TEXT,
     telefono TEXT,
@@ -414,6 +412,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 CREATE TABLE IF NOT EXISTS proyectos (
     id BIGINT PRIMARY KEY,
     usuario_id BIGINT,
+    usuario_email TEXT NOT NULL,
     cliente_id BIGINT,
     nombre_proyecto TEXT NOT NULL,
     modulo TEXT,
@@ -421,6 +420,10 @@ CREATE TABLE IF NOT EXISTS proyectos (
     resumen_potencia_o_importe TEXT,
     fecha_guardado TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Índices de búsqueda por cuenta de usuario
+CREATE INDEX IF NOT EXISTS idx_clientes_email ON clientes (usuario_email);
+CREATE INDEX IF NOT EXISTS idx_proyectos_email ON proyectos (usuario_email);
 
 -- Desactivar RLS o permitir acceso con anon key para sincronización
 ALTER TABLE clientes DISABLE ROW LEVEL SECURITY;
@@ -431,18 +434,16 @@ ALTER TABLE proyectos DISABLE ROW LEVEL SECURITY;
 
         with col_estado_nube:
             with st.container(border=True):
-                st.markdown("#### 📊 Estado de Persistencia")
-                if tiene_nube:
-                    st.success("🟢 **Nube Activa y Sincronizada**\n\nTodos los clientes y proyectos creados en tu móvil o PC se sincronizan en la nube automáticamente.")
-                else:
-                    st.warning("🟡 **Modo Local Compartido**\n\nTus clientes se guardan en el dispositivo actual y se comparten entre todas tus cuentas Google de Bolimur. Conecta Supabase arriba para sincronización 24/7 en la nube.")
+                st.markdown("#### 🔒 Privacidad y Aislamiento de Cuenta")
+                st.markdown(f"**Cuenta Activa:** `{user_email}`")
+                st.info("🛡️ **Aislamiento Total:** Tus clientes, expedientes y cálculos pertenecen única y exclusivamente a esta cuenta Google. Si otro instalador entra con su cuenta, accederá a su propia base de datos sin ver la tuya.")
 
                 st.markdown("---")
-                st.markdown("#### 🏢 Modo de Visualización:")
-                modo_sel = st.toggle("🏢 Ver Clientes de Todas mis Cuentas de Instalador", value=modo_empresa, key="tgl_modo_empresa_crm")
-                if modo_sel != modo_empresa:
-                    st.session_state["crm_modo_empresa"] = modo_sel
-                    st.rerun()
+                st.markdown("#### 📊 Estado de Persistencia")
+                if tiene_nube:
+                    st.success(f"🟢 **Nube Activa**\n\nLos datos de `{user_email}` se guardan y sincronizan automáticamente en la nube 24/7.")
+                else:
+                    st.warning("🟡 **Modo Local Privado**\n\nTus datos se guardan en este dispositivo bajo tu cuenta privada. Conecta Supabase arriba para sincronización 24/7 en la nube.")
 
         st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">📦 Copia de Seguridad Rápida JSON (Sin Conexión)</h4></div>', unsafe_allow_html=True)
         col_sync1, col_sync2 = st.columns(2)

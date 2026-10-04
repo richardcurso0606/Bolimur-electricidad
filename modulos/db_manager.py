@@ -86,6 +86,7 @@ def inicializar_bd():
     cursor.execute("PRAGMA table_info(clientes)")
     cols_cli_existentes = [row[1] for row in cursor.fetchall()]
     cols_cli_nuevas = [
+        ("usuario_email", "TEXT"),
         ("codigo_postal", "TEXT"),
         ("municipio", "TEXT"),
         ("provincia", "TEXT"),
@@ -105,6 +106,7 @@ def inicializar_bd():
     CREATE TABLE IF NOT EXISTS proyectos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuario_id INTEGER,
+        usuario_email TEXT,
         cliente_id INTEGER,
         nombre_proyecto TEXT NOT NULL,
         modulo TEXT NOT NULL,
@@ -115,6 +117,14 @@ def inicializar_bd():
         FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
     )
     """)
+
+    cursor.execute("PRAGMA table_info(proyectos)")
+    cols_pro_existentes = [row[1] for row in cursor.fetchall()]
+    if "usuario_email" not in cols_pro_existentes:
+        try:
+            cursor.execute("ALTER TABLE proyectos ADD COLUMN usuario_email TEXT")
+        except Exception:
+            pass
     
     conn.commit()
     
@@ -380,8 +390,8 @@ def testear_conexion_nube(url: str, key: str) -> tuple[bool, str]:
     except Exception as ex:
         return False, f"Error al conectar con la Nube: {ex}"
 
-def push_cliente_a_nube(cliente_dict: Dict[str, Any]):
-    """Envía un cliente a la nube Supabase en segundo plano"""
+def push_cliente_a_nube(cliente_dict: Dict[str, Any], user_email: str = ""):
+    """Envía un cliente a la nube Supabase en segundo plano, asociado estrictamente al correo del usuario"""
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -394,8 +404,10 @@ def push_cliente_a_nube(cliente_dict: Dict[str, Any]):
             "Content-Type": "application/json",
             "Prefer": "resolution=merge-duplicates"
         }
-        # Payload limpio
-        payload = [cliente_dict]
+        payload_item = dict(cliente_dict)
+        if user_email:
+            payload_item["usuario_email"] = user_email.strip().lower()
+        payload = [payload_item]
         req = urllib.request.Request(
             f"{url_base}/rest/v1/clientes",
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -407,8 +419,8 @@ def push_cliente_a_nube(cliente_dict: Dict[str, Any]):
     except Exception:
         pass
 
-def push_proyecto_a_nube(proyecto_dict: Dict[str, Any]):
-    """Envía un proyecto a la nube Supabase en segundo plano"""
+def push_proyecto_a_nube(proyecto_dict: Dict[str, Any], user_email: str = ""):
+    """Envía un proyecto a la nube Supabase en segundo plano, asociado estrictamente al correo del usuario"""
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -421,7 +433,10 @@ def push_proyecto_a_nube(proyecto_dict: Dict[str, Any]):
             "Content-Type": "application/json",
             "Prefer": "resolution=merge-duplicates"
         }
-        payload = [proyecto_dict]
+        payload_item = dict(proyecto_dict)
+        if user_email:
+            payload_item["usuario_email"] = user_email.strip().lower()
+        payload = [payload_item]
         req = urllib.request.Request(
             f"{url_base}/rest/v1/proyectos",
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -433,8 +448,8 @@ def push_proyecto_a_nube(proyecto_dict: Dict[str, Any]):
     except Exception:
         pass
 
-def delete_cliente_de_nube(cliente_id: int):
-    """Elimina un cliente de la nube Supabase"""
+def delete_cliente_de_nube(cliente_id: int, user_email: str = ""):
+    """Elimina un cliente de la nube Supabase de la cuenta del usuario"""
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -445,18 +460,17 @@ def delete_cliente_de_nube(cliente_id: int):
             "apikey": key,
             "Authorization": f"Bearer {key}"
         }
-        req = urllib.request.Request(
-            f"{url_base}/rest/v1/clientes?id=eq.{cliente_id}",
-            headers=headers,
-            method="DELETE"
-        )
+        url_del = f"{url_base}/rest/v1/clientes?id=eq.{cliente_id}"
+        if user_email:
+            url_del += f"&usuario_email=eq.{urllib.parse.quote(user_email.strip().lower())}"
+        req = urllib.request.Request(url_del, headers=headers, method="DELETE")
         with urllib.request.urlopen(req, timeout=5):
             pass
     except Exception:
         pass
 
-def delete_proyecto_de_nube(proyecto_id: int):
-    """Elimina un proyecto de la nube Supabase"""
+def delete_proyecto_de_nube(proyecto_id: int, user_email: str = ""):
+    """Elimina un proyecto de la nube Supabase de la cuenta del usuario"""
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -467,11 +481,10 @@ def delete_proyecto_de_nube(proyecto_id: int):
             "apikey": key,
             "Authorization": f"Bearer {key}"
         }
-        req = urllib.request.Request(
-            f"{url_base}/rest/v1/proyectos?id=eq.{proyecto_id}",
-            headers=headers,
-            method="DELETE"
-        )
+        url_del = f"{url_base}/rest/v1/proyectos?id=eq.{proyecto_id}"
+        if user_email:
+            url_del += f"&usuario_email=eq.{urllib.parse.quote(user_email.strip().lower())}"
+        req = urllib.request.Request(url_del, headers=headers, method="DELETE")
         with urllib.request.urlopen(req, timeout=5):
             pass
     except Exception:
@@ -480,12 +493,17 @@ def delete_proyecto_de_nube(proyecto_id: int):
 def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
     """
     Sincroniza bidireccionalmente la base de datos local con la base de datos en la Nube (Supabase)
-    1. Descarga clientes y proyectos creados en otros dispositivos.
-    2. Sube los clientes y proyectos locales.
+    estrictamente para la cuenta del usuario activo (Aislamiento Total por Cuenta de Google).
     """
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return False, "No se ha configurado ninguna base de datos en la nube (Supabase)."
+    
+    usuario = obtener_usuario_por_id(usuario_id)
+    if not usuario or not usuario.get("email"):
+        return False, "No se encontró el usuario activo para sincronizar."
+        
+    user_email = usuario["email"].strip().lower()
     
     try:
         url_base = config["url"].strip().rstrip("/")
@@ -500,20 +518,23 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
         conn = obtener_conexion()
         cursor = conn.cursor()
         
-        # 1. PULL CLIENTES DESDE LA NUBE
+        # 1. PULL CLIENTES DESDE LA NUBE (Solo de esta cuenta Google)
         try:
-            req_cli = urllib.request.Request(f"{url_base}/rest/v1/clientes?select=*", headers=headers)
+            url_pull_cli = f"{url_base}/rest/v1/clientes?usuario_email=eq.{urllib.parse.quote(user_email)}&select=*"
+            req_cli = urllib.request.Request(url_pull_cli, headers=headers)
             with urllib.request.urlopen(req_cli, timeout=8) as resp:
                 nube_clientes = json.loads(resp.read().decode("utf-8"))
                 for nc in nube_clientes:
                     cursor.execute("""
                     INSERT INTO clientes (
-                        id, usuario_id, nombre_completo, nif_cif, telefono, email,
+                        id, usuario_id, usuario_email, nombre_completo, nif_cif, telefono, email,
                         direccion_suministro, localidad, cups, referencia_catastral,
                         tipo_inmueble, notas, codigo_postal, municipio, provincia,
                         distribuidora, potencia_contratada_kw, tension_suministro
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
+                        usuario_id = excluded.usuario_id,
+                        usuario_email = excluded.usuario_email,
                         nombre_completo = excluded.nombre_completo,
                         nif_cif = excluded.nif_cif,
                         telefono = excluded.telefono,
@@ -531,7 +552,7 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
                         potencia_contratada_kw = excluded.potencia_contratada_kw,
                         tension_suministro = excluded.tension_suministro
                     """, (
-                        nc.get("id"), nc.get("usuario_id") or usuario_id, nc.get("nombre_completo", ""),
+                        nc.get("id"), usuario_id, user_email, nc.get("nombre_completo", ""),
                         nc.get("nif_cif", ""), nc.get("telefono", ""), nc.get("email", ""),
                         nc.get("direccion_suministro", ""), nc.get("localidad", ""), nc.get("cups", ""),
                         nc.get("referencia_catastral", ""), nc.get("tipo_inmueble", "Vivienda"),
@@ -542,34 +563,39 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
         except Exception:
             pass
         
-        # 2. PULL PROYECTOS DESDE LA NUBE
+        # 2. PULL PROYECTOS DESDE LA NUBE (Solo de esta cuenta Google)
         try:
-            req_pro = urllib.request.Request(f"{url_base}/rest/v1/proyectos?select=*", headers=headers)
+            url_pull_pro = f"{url_base}/rest/v1/proyectos?usuario_email=eq.{urllib.parse.quote(user_email)}&select=*"
+            req_pro = urllib.request.Request(url_pull_pro, headers=headers)
             with urllib.request.urlopen(req_pro, timeout=8) as resp:
                 nube_proyectos = json.loads(resp.read().decode("utf-8"))
                 for np in nube_proyectos:
                     cursor.execute("""
                     INSERT INTO proyectos (
-                        id, usuario_id, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        id, usuario_id, usuario_email, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
+                        usuario_id = excluded.usuario_id,
+                        usuario_email = excluded.usuario_email,
                         cliente_id = excluded.cliente_id,
                         nombre_proyecto = excluded.nombre_proyecto,
                         modulo = excluded.modulo,
                         datos_json = excluded.datos_json,
                         resumen_potencia_o_importe = excluded.resumen_potencia_o_importe
                     """, (
-                        np.get("id"), np.get("usuario_id") or usuario_id, np.get("cliente_id"),
+                        np.get("id"), usuario_id, user_email, np.get("cliente_id"),
                         np.get("nombre_proyecto", ""), np.get("modulo", ""),
                         np.get("datos_json", "{}"), np.get("resumen_potencia_o_importe", "")
                     ))
         except Exception:
             pass
         
-        # 3. PUSH LOCAL A NUBE
-        cursor.execute("SELECT * FROM clientes")
+        # 3. PUSH LOCAL A NUBE (Solo de este usuario_id)
+        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ?", (usuario_id,))
         local_clientes = [dict(r) for r in cursor.fetchall()]
         if local_clientes:
+            for c in local_clientes:
+                c["usuario_email"] = user_email
             req_push_cli = urllib.request.Request(
                 f"{url_base}/rest/v1/clientes",
                 data=json.dumps(local_clientes, ensure_ascii=False).encode("utf-8"),
@@ -582,9 +608,11 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
             except Exception:
                 pass
                 
-        cursor.execute("SELECT * FROM proyectos")
+        cursor.execute("SELECT * FROM proyectos WHERE usuario_id = ?", (usuario_id,))
         local_proyectos = [dict(r) for r in cursor.fetchall()]
         if local_proyectos:
+            for p in local_proyectos:
+                p["usuario_email"] = user_email
             req_push_pro = urllib.request.Request(
                 f"{url_base}/rest/v1/proyectos",
                 data=json.dumps(local_proyectos, ensure_ascii=False).encode("utf-8"),
@@ -599,60 +627,52 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
                 
         conn.commit()
         conn.close()
-        return True, f"Sincronización completada con éxito: {len(local_clientes)} clientes y {len(local_proyectos)} proyectos en la nube."
+        return True, f"Sincronización completada con éxito para {user_email}: {len(local_clientes)} clientes y {len(local_proyectos)} proyectos."
     except Exception as ex:
         return False, f"Error durante la sincronización con la nube: {ex}"
 
 # =========================================================================
-# FUNCIONES DE CLIENTES (CRM)
+# FUNCIONES DE CLIENTES (CRM) - AISLAMIENTO ESTRICTO POR USUARIO
 # =========================================================================
-def listar_clientes(usuario_id: int, modo_empresa: bool = True) -> List[Dict[str, Any]]:
-    """Devuelve la lista de clientes. Por defecto incluye los clientes compartidos de la empresa."""
+def listar_clientes(usuario_id: int) -> List[Dict[str, Any]]:
+    """Devuelve única y exclusivamente la lista de clientes registrados por este usuario"""
     conn = obtener_conexion()
     cursor = conn.cursor()
-    if modo_empresa:
-        cursor.execute("SELECT * FROM clientes ORDER BY nombre_completo ASC")
-    else:
-        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY nombre_completo ASC", (usuario_id,))
+    cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY nombre_completo ASC", (usuario_id,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def obtener_cliente_por_id(cliente_id: int, usuario_id: Optional[int] = None, modo_empresa: bool = True) -> Optional[Dict[str, Any]]:
+def obtener_cliente_por_id(cliente_id: int, usuario_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Devuelve un cliente específico comprobando la pertenencia al usuario si se especifica"""
     conn = obtener_conexion()
     cursor = conn.cursor()
-    if modo_empresa or usuario_id is None:
-        cursor.execute("SELECT * FROM clientes WHERE id = ?", (cliente_id,))
-    else:
+    if usuario_id is not None:
         cursor.execute("SELECT * FROM clientes WHERE id = ? AND usuario_id = ?", (cliente_id, usuario_id))
+    else:
+        cursor.execute("SELECT * FROM clientes WHERE id = ?", (cliente_id,))
     row = cursor.fetchone()
     conn.close()
     if row:
         return dict(row)
     return None
 
-def buscar_cliente_duplicado(usuario_id: int, nif_cif: str, nombre_completo: str, modo_empresa: bool = True) -> Optional[Dict[str, Any]]:
-    """Comprueba si ya existe un cliente con el mismo NIF o nombre exacto"""
+def buscar_cliente_duplicado(usuario_id: int, nif_cif: str, nombre_completo: str) -> Optional[Dict[str, Any]]:
+    """Comprueba si ya existe un cliente con el mismo NIF o nombre exacto dentro de la cuenta del usuario"""
     conn = obtener_conexion()
     cursor = conn.cursor()
     nif_clean = nif_cif.strip().upper() if nif_cif else ""
     nom_clean = nombre_completo.strip()
     
     if nif_clean:
-        if modo_empresa:
-            cursor.execute("SELECT * FROM clientes WHERE UPPER(nif_cif) = ?", (nif_clean,))
-        else:
-            cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? AND UPPER(nif_cif) = ?", (usuario_id, nif_clean))
+        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? AND UPPER(nif_cif) = ?", (usuario_id, nif_clean))
         row = cursor.fetchone()
         if row:
             conn.close()
             return dict(row)
             
     if nom_clean:
-        if modo_empresa:
-            cursor.execute("SELECT * FROM clientes WHERE LOWER(nombre_completo) = LOWER(?)", (nom_clean,))
-        else:
-            cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? AND LOWER(nombre_completo) = LOWER(?)", (usuario_id, nom_clean))
+        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? AND LOWER(nombre_completo) = LOWER(?)", (usuario_id, nom_clean))
         row = cursor.fetchone()
         if row:
             conn.close()
@@ -662,18 +682,23 @@ def buscar_cliente_duplicado(usuario_id: int, nif_cif: str, nombre_completo: str
     return None
 
 def crear_cliente(usuario_id: int, datos: Dict[str, Any]) -> tuple[bool, int]:
+    """Crea un nuevo cliente asociado estrictamente al usuario_id y a su correo Google"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+    
     conn = obtener_conexion()
     cursor = conn.cursor()
     try:
         cursor.execute("""
         INSERT INTO clientes (
-            usuario_id, nombre_completo, nif_cif, telefono, email,
+            usuario_id, usuario_email, nombre_completo, nif_cif, telefono, email,
             direccion_suministro, localidad, cups, referencia_catastral,
             tipo_inmueble, notas, codigo_postal, municipio, provincia,
             distribuidora, potencia_contratada_kw, tension_suministro
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             usuario_id,
+            user_email,
             datos.get("nombre_completo", "").strip(),
             datos.get("nif_cif", "").strip().upper(),
             datos.get("telefono", "").strip(),
@@ -699,134 +724,99 @@ def crear_cliente(usuario_id: int, datos: Dict[str, Any]) -> tuple[bool, int]:
         
         # Enviar automáticamente a la nube si está configurada
         if cli_nuevo_row:
-            push_cliente_a_nube(dict(cli_nuevo_row))
+            push_cliente_a_nube(dict(cli_nuevo_row), user_email=user_email)
             
         return True, nuevo_id
     except Exception:
         conn.close()
         return False, -1
 
-def actualizar_cliente(cliente_id: int, usuario_id: int, datos: Dict[str, Any], modo_empresa: bool = True) -> bool:
+def actualizar_cliente(cliente_id: int, usuario_id: int, datos: Dict[str, Any]) -> bool:
+    """Actualiza los datos de un cliente del usuario activo"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+    
     conn = obtener_conexion()
     cursor = conn.cursor()
     try:
-        if modo_empresa:
-            cursor.execute("""
-            UPDATE clientes SET
-                nombre_completo = ?,
-                nif_cif = ?,
-                telefono = ?,
-                email = ?,
-                direccion_suministro = ?,
-                localidad = ?,
-                cups = ?,
-                referencia_catastral = ?,
-                tipo_inmueble = ?,
-                notas = ?,
-                codigo_postal = ?,
-                municipio = ?,
-                provincia = ?,
-                distribuidora = ?,
-                potencia_contratada_kw = ?,
-                tension_suministro = ?
-            WHERE id = ?
-            """, (
-                datos.get("nombre_completo", "").strip(),
-                datos.get("nif_cif", "").strip().upper(),
-                datos.get("telefono", "").strip(),
-                datos.get("email", "").strip(),
-                datos.get("direccion_suministro", "").strip(),
-                datos.get("localidad", "").strip(),
-                datos.get("cups", "").strip().upper(),
-                datos.get("referencia_catastral", "").strip().upper(),
-                datos.get("tipo_inmueble", "Vivienda").strip(),
-                datos.get("notas", "").strip(),
-                datos.get("codigo_postal", "").strip(),
-                datos.get("municipio", "").strip(),
-                datos.get("provincia", "Murcia").strip(),
-                datos.get("distribuidora", "i-DE (Iberdrola)").strip(),
-                datos.get("potencia_contratada_kw", "").strip(),
-                datos.get("tension_suministro", "Monofásica 230V").strip(),
-                cliente_id
-            ))
-        else:
-            cursor.execute("""
-            UPDATE clientes SET
-                nombre_completo = ?,
-                nif_cif = ?,
-                telefono = ?,
-                email = ?,
-                direccion_suministro = ?,
-                localidad = ?,
-                cups = ?,
-                referencia_catastral = ?,
-                tipo_inmueble = ?,
-                notas = ?,
-                codigo_postal = ?,
-                municipio = ?,
-                provincia = ?,
-                distribuidora = ?,
-                potencia_contratada_kw = ?,
-                tension_suministro = ?
-            WHERE id = ? AND usuario_id = ?
-            """, (
-                datos.get("nombre_completo", "").strip(),
-                datos.get("nif_cif", "").strip().upper(),
-                datos.get("telefono", "").strip(),
-                datos.get("email", "").strip(),
-                datos.get("direccion_suministro", "").strip(),
-                datos.get("localidad", "").strip(),
-                datos.get("cups", "").strip().upper(),
-                datos.get("referencia_catastral", "").strip().upper(),
-                datos.get("tipo_inmueble", "Vivienda").strip(),
-                datos.get("notas", "").strip(),
-                datos.get("codigo_postal", "").strip(),
-                datos.get("municipio", "").strip(),
-                datos.get("provincia", "Murcia").strip(),
-                datos.get("distribuidora", "i-DE (Iberdrola)").strip(),
-                datos.get("potencia_contratada_kw", "").strip(),
-                datos.get("tension_suministro", "Monofásica 230V").strip(),
-                cliente_id,
-                usuario_id
-            ))
+        cursor.execute("""
+        UPDATE clientes SET
+            nombre_completo = ?,
+            nif_cif = ?,
+            telefono = ?,
+            email = ?,
+            direccion_suministro = ?,
+            localidad = ?,
+            cups = ?,
+            referencia_catastral = ?,
+            tipo_inmueble = ?,
+            notas = ?,
+            codigo_postal = ?,
+            municipio = ?,
+            provincia = ?,
+            distribuidora = ?,
+            potencia_contratada_kw = ?,
+            tension_suministro = ?
+        WHERE id = ? AND usuario_id = ?
+        """, (
+            datos.get("nombre_completo", "").strip(),
+            datos.get("nif_cif", "").strip().upper(),
+            datos.get("telefono", "").strip(),
+            datos.get("email", "").strip(),
+            datos.get("direccion_suministro", "").strip(),
+            datos.get("localidad", "").strip(),
+            datos.get("cups", "").strip().upper(),
+            datos.get("referencia_catastral", "").strip().upper(),
+            datos.get("tipo_inmueble", "Vivienda").strip(),
+            datos.get("notas", "").strip(),
+            datos.get("codigo_postal", "").strip(),
+            datos.get("municipio", "").strip(),
+            datos.get("provincia", "Murcia").strip(),
+            datos.get("distribuidora", "i-DE (Iberdrola)").strip(),
+            datos.get("potencia_contratada_kw", "").strip(),
+            datos.get("tension_suministro", "Monofásica 230V").strip(),
+            cliente_id,
+            usuario_id
+        ))
         conn.commit()
         cursor.execute("SELECT * FROM clientes WHERE id = ?", (cliente_id,))
         cli_up_row = cursor.fetchone()
         conn.close()
         
         if cli_up_row:
-            push_cliente_a_nube(dict(cli_up_row))
+            push_cliente_a_nube(dict(cli_up_row), user_email=user_email)
             
         return True
     except Exception:
         conn.close()
         return False
 
-def eliminar_cliente(cliente_id: int, usuario_id: Optional[int] = None, modo_empresa: bool = True) -> bool:
+def eliminar_cliente(cliente_id: int, usuario_id: int) -> bool:
+    """Elimina un cliente perteneciente a este usuario"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+    
     conn = obtener_conexion()
     cursor = conn.cursor()
     try:
-        if modo_empresa or usuario_id is None:
-            cursor.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
-        else:
-            cursor.execute("DELETE FROM clientes WHERE id = ? AND usuario_id = ?", (cliente_id, usuario_id))
+        cursor.execute("DELETE FROM clientes WHERE id = ? AND usuario_id = ?", (cliente_id, usuario_id))
         conn.commit()
         conn.close()
         
-        delete_cliente_de_nube(cliente_id)
+        delete_cliente_de_nube(cliente_id, user_email=user_email)
         return True
     except Exception:
         conn.close()
         return False
 
-def limpiar_duplicados_clientes(usuario_id: int, modo_empresa: bool = True) -> int:
-    """Busca clientes duplicados por NIF o Nombre, reasigna sus proyectos y elimina los repetidos."""
+def limpiar_duplicados_clientes(usuario_id: int) -> int:
+    """Busca clientes duplicados por NIF o Nombre dentro de la cuenta del usuario, reasigna sus proyectos y elimina los repetidos."""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+    
     conn = obtener_conexion()
     cursor = conn.cursor()
-    if modo_empresa:
-        cursor.execute("SELECT * FROM clientes ORDER BY id ASC")
-    else:
-        cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY id ASC", (usuario_id,))
+    cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY id ASC", (usuario_id,))
     todos = [dict(r) for r in cursor.fetchall()]
     
     agrupados: Dict[str, List[Dict[str, Any]]] = {}
@@ -844,9 +834,9 @@ def limpiar_duplicados_clientes(usuario_id: int, modo_empresa: bool = True) -> i
             principal = lista[0]
             duplicados = lista[1:]
             for dup in duplicados:
-                cursor.execute("UPDATE proyectos SET cliente_id = ? WHERE cliente_id = ?", (principal["id"], dup["id"]))
-                cursor.execute("DELETE FROM clientes WHERE id = ?", (dup["id"],))
-                delete_cliente_de_nube(dup["id"])
+                cursor.execute("UPDATE proyectos SET cliente_id = ? WHERE cliente_id = ? AND usuario_id = ?", (principal["id"], dup["id"], usuario_id))
+                cursor.execute("DELETE FROM clientes WHERE id = ? AND usuario_id = ?", (dup["id"], usuario_id))
+                delete_cliente_de_nube(dup["id"], user_email=user_email)
                 borrados += 1
                 
     conn.commit()
@@ -854,17 +844,21 @@ def limpiar_duplicados_clientes(usuario_id: int, modo_empresa: bool = True) -> i
     return borrados
 
 # =========================================================================
-# FUNCIONES DE PROYECTOS Y CÁLCULOS GUARDADOS
+# FUNCIONES DE PROYECTOS Y CÁLCULOS GUARDADOS - AISLAMIENTO POR USUARIO
 # =========================================================================
 def guardar_proyecto(usuario_id: int, cliente_id: Optional[int], nombre_proyecto: str, modulo: str, datos: Dict[str, Any], resumen: str = "") -> tuple[bool, int]:
+    """Guarda un cálculo o proyecto asociado estrictamente a la cuenta del usuario"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+    
     conn = obtener_conexion()
     cursor = conn.cursor()
     try:
         datos_str = json.dumps(datos, ensure_ascii=False)
         cursor.execute("""
-        INSERT INTO proyectos (usuario_id, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """, (usuario_id, cliente_id, nombre_proyecto.strip(), modulo, datos_str, resumen))
+        INSERT INTO proyectos (usuario_id, usuario_email, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (usuario_id, user_email, cliente_id, nombre_proyecto.strip(), modulo, datos_str, resumen))
         conn.commit()
         p_id = cursor.lastrowid
         cursor.execute("SELECT * FROM proyectos WHERE id = ?", (p_id,))
@@ -872,79 +866,65 @@ def guardar_proyecto(usuario_id: int, cliente_id: Optional[int], nombre_proyecto
         conn.close()
         
         if p_row:
-            push_proyecto_a_nube(dict(p_row))
+            push_proyecto_a_nube(dict(p_row), user_email=user_email)
             
         return True, p_id
     except Exception:
         conn.close()
         return False, -1
 
-def listar_proyectos_usuario(usuario_id: int, modulo: Optional[str] = None, modo_empresa: bool = True) -> List[Dict[str, Any]]:
+def listar_proyectos_usuario(usuario_id: int, modulo: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Devuelve los proyectos pertenecientes únicamente a este usuario"""
     conn = obtener_conexion()
     cursor = conn.cursor()
-    if modo_empresa:
-        if modulo:
-            cursor.execute("""
-            SELECT p.*, c.nombre_completo as cliente_nombre 
-            FROM proyectos p 
-            LEFT JOIN clientes c ON p.cliente_id = c.id 
-            WHERE p.modulo = ? 
-            ORDER BY p.fecha_guardado DESC
-            """, (modulo,))
-        else:
-            cursor.execute("""
-            SELECT p.*, c.nombre_completo as cliente_nombre 
-            FROM proyectos p 
-            LEFT JOIN clientes c ON p.cliente_id = c.id 
-            ORDER BY p.fecha_guardado DESC
-            """)
+    if modulo:
+        cursor.execute("""
+        SELECT p.*, c.nombre_completo as cliente_nombre 
+        FROM proyectos p 
+        LEFT JOIN clientes c ON p.cliente_id = c.id 
+        WHERE p.usuario_id = ? AND p.modulo = ? 
+        ORDER BY p.fecha_guardado DESC
+        """, (usuario_id, modulo))
     else:
-        if modulo:
-            cursor.execute("""
-            SELECT p.*, c.nombre_completo as cliente_nombre 
-            FROM proyectos p 
-            LEFT JOIN clientes c ON p.cliente_id = c.id 
-            WHERE p.usuario_id = ? AND p.modulo = ? 
-            ORDER BY p.fecha_guardado DESC
-            """, (usuario_id, modulo))
-        else:
-            cursor.execute("""
-            SELECT p.*, c.nombre_completo as cliente_nombre 
-            FROM proyectos p 
-            LEFT JOIN clientes c ON p.cliente_id = c.id 
-            WHERE p.usuario_id = ? 
-            ORDER BY p.fecha_guardado DESC
-            """, (usuario_id,))
+        cursor.execute("""
+        SELECT p.*, c.nombre_completo as cliente_nombre 
+        FROM proyectos p 
+        LEFT JOIN clientes c ON p.cliente_id = c.id 
+        WHERE p.usuario_id = ? 
+        ORDER BY p.fecha_guardado DESC
+        """, (usuario_id,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def listar_proyectos_por_cliente(cliente_id: int, usuario_id: Optional[int] = None, modo_empresa: bool = True) -> List[Dict[str, Any]]:
+def listar_proyectos_por_cliente(cliente_id: int, usuario_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Devuelve los proyectos de un cliente verificando pertenencia al usuario"""
     conn = obtener_conexion()
     cursor = conn.cursor()
-    if modo_empresa or usuario_id is None:
-        cursor.execute("""
-        SELECT * FROM proyectos 
-        WHERE cliente_id = ? 
-        ORDER BY fecha_guardado DESC
-        """, (cliente_id,))
-    else:
+    if usuario_id is not None:
         cursor.execute("""
         SELECT * FROM proyectos 
         WHERE cliente_id = ? AND usuario_id = ? 
         ORDER BY fecha_guardado DESC
         """, (cliente_id, usuario_id))
+    else:
+        cursor.execute("""
+        SELECT * FROM proyectos 
+        WHERE cliente_id = ? 
+        ORDER BY fecha_guardado DESC
+        """, (cliente_id,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def cargar_proyecto_por_id(proyecto_id: int, usuario_id: Optional[int] = None, modo_empresa: bool = True) -> Optional[Dict[str, Any]]:
+def cargar_proyecto_por_id(proyecto_id: int, usuario_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Carga un proyecto específico verificando el usuario si se provee"""
     conn = obtener_conexion()
     cursor = conn.cursor()
-    if modo_empresa or usuario_id is None:
-        cursor.execute("SELECT * FROM proyectos WHERE id = ?", (proyecto_id,))
-    else:
+    if usuario_id is not None:
         cursor.execute("SELECT * FROM proyectos WHERE id = ? AND usuario_id = ?", (proyecto_id, usuario_id))
+    else:
+        cursor.execute("SELECT * FROM proyectos WHERE id = ?", (proyecto_id,))
     row = cursor.fetchone()
     conn.close()
     if row:
@@ -956,18 +936,24 @@ def cargar_proyecto_por_id(proyecto_id: int, usuario_id: Optional[int] = None, m
         return res
     return None
 
-def eliminar_proyecto(proyecto_id: int, usuario_id: Optional[int] = None, modo_empresa: bool = True) -> bool:
+def eliminar_proyecto(proyecto_id: int, usuario_id: Optional[int] = None) -> bool:
+    """Elimina un proyecto del usuario activo"""
+    user_email = ""
+    if usuario_id is not None:
+        usuario = obtener_usuario_por_id(usuario_id)
+        user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+        
     conn = obtener_conexion()
     cursor = conn.cursor()
     try:
-        if modo_empresa or usuario_id is None:
-            cursor.execute("DELETE FROM proyectos WHERE id = ?", (proyecto_id,))
-        else:
+        if usuario_id is not None:
             cursor.execute("DELETE FROM proyectos WHERE id = ? AND usuario_id = ?", (proyecto_id, usuario_id))
+        else:
+            cursor.execute("DELETE FROM proyectos WHERE id = ?", (proyecto_id,))
         conn.commit()
         conn.close()
         
-        delete_proyecto_de_nube(proyecto_id)
+        delete_proyecto_de_nube(proyecto_id, user_email=user_email)
         return True
     except Exception:
         conn.close()
@@ -978,11 +964,11 @@ def eliminar_proyecto(proyecto_id: int, usuario_id: Optional[int] = None, modo_e
 # =========================================================================
 def exportar_copia_seguridad_nube(usuario_id: int) -> str:
     usuario = obtener_usuario_por_id(usuario_id)
-    clientes = listar_clientes(usuario_id, modo_empresa=True)
-    proyectos = listar_proyectos_usuario(usuario_id, modo_empresa=True)
+    clientes = listar_clientes(usuario_id)
+    proyectos = listar_proyectos_usuario(usuario_id)
     
     backup_data = {
-        "version": "1.0",
+        "version": "2.0",
         "usuario": usuario,
         "clientes": clientes,
         "proyectos": proyectos
@@ -991,6 +977,9 @@ def exportar_copia_seguridad_nube(usuario_id: int) -> str:
 
 def importar_copia_seguridad_nube(usuario_id: int, json_str: str) -> tuple[bool, str]:
     try:
+        usuario = obtener_usuario_por_id(usuario_id)
+        user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+        
         data = json.loads(json_str)
         clientes_in = data.get("clientes", [])
         proyectos_in = data.get("proyectos", [])
@@ -1003,14 +992,15 @@ def importar_copia_seguridad_nube(usuario_id: int, json_str: str) -> tuple[bool,
             old_id = c.get("id")
             cursor.execute("""
             INSERT INTO clientes (
-                usuario_id, nombre_completo, nif_cif, telefono, email,
+                usuario_id, usuario_email, nombre_completo, nif_cif, telefono, email,
                 direccion_suministro, localidad, cups, referencia_catastral,
                 tipo_inmueble, notas, codigo_postal, municipio, provincia,
                 distribuidora, potencia_contratada_kw, tension_suministro
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 usuario_id,
+                user_email,
                 c.get("nombre_completo", ""),
                 c.get("nif_cif", ""),
                 c.get("telefono", ""),
@@ -1036,15 +1026,15 @@ def importar_copia_seguridad_nube(usuario_id: int, json_str: str) -> tuple[bool,
             c_id_orig = p.get("cliente_id")
             c_id_nuevo = mapa_clientes_antiguos_nuevos.get(c_id_orig, None)
             cursor.execute("""
-            INSERT INTO proyectos (usuario_id, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO proyectos (usuario_id, usuario_email, cliente_id, nombre_proyecto, modulo, datos_json, resumen_potencia_o_importe)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
-                usuario_id, c_id_nuevo, p.get("nombre_proyecto"), p.get("modulo"),
+                usuario_id, user_email, c_id_nuevo, p.get("nombre_proyecto"), p.get("modulo"),
                 p.get("datos_json"), p.get("resumen_potencia_o_importe")
             ))
             
         conn.commit()
         conn.close()
-        return True, f"Se han importado {len(clientes_in)} clientes y {len(proyectos_in)} proyectos correctamente."
+        return True, f"Se han importado {len(clientes_in)} clientes y {len(proyectos_in)} proyectos en tu cuenta privada."
     except Exception as ex:
         return False, f"Error al importar archivo de respaldo: {ex}"
