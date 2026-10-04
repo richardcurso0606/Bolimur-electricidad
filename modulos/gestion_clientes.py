@@ -75,7 +75,17 @@ def renderizar():
     # =========================================================================
     with tab_clientes_lista:
         if not clientes:
-            st.info("ℹ️ Todavía no tienes clientes registrados. Pasa a la pestaña **'➕ Alta de Nuevo Cliente'** para crear tu primera ficha de cliente.")
+            st.info("ℹ️ Todavía no tienes clientes visibles bajo esta cuenta.")
+            with st.container(border=True):
+                st.markdown("##### 🔍 ¿Tenías clientes creados anteriormente?")
+                st.write("Si diste de alta clientes antes de iniciar sesión con tu cuenta de Google (`richardcurso0606@gmail.com`) o en una sesión previa, puedes buscarlos en la base de datos para vincularlos a tu cuenta actual:")
+                if st.button("🔄 Recuperar y Vincular Clientes Anteriores a mi Cuenta", key="btn_recup_clientes_empty", type="primary"):
+                    recup = db_manager.recuperar_todos_clientes_locales(usuario_id)
+                    if recup > 0:
+                        st.success(f"✅ ¡Se han recuperado y vinculado {recup} expedientes a tu cuenta!")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ No se encontraron clientes en el almacenamiento de este servidor. En Streamlit Cloud (`*.streamlit.app`), el servidor web es temporal y reinicia su disco cada vez que se actualiza el código desde GitHub. Para que tus clientes y obras queden guardados **de forma permanente 24/7**, conecta Supabase en la pestaña **'☁️ Sincronización y Base de Datos Nube'**.")
         else:
             # Buscador en tiempo real de clientes
             col_b1, col_b2 = st.columns([2, 3])

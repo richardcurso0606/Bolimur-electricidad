@@ -705,13 +705,53 @@ def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
 # FUNCIONES DE CLIENTES (CRM) - AISLAMIENTO ESTRICTO POR USUARIO
 # =========================================================================
 def listar_clientes(usuario_id: int) -> List[Dict[str, Any]]:
-    """Devuelve única y exclusivamente la lista de clientes registrados por este usuario"""
+    """Devuelve la lista de clientes registrados por este usuario o asociados a su cuenta"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+
     conn = obtener_conexion()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY nombre_completo ASC", (usuario_id,))
+
+    # Auto-asociación inteligente: si existen clientes huérfanos o creados en modo local/invitado (id=1),
+    # y el usuario actual está autenticado con Google u otra cuenta, vincularlos para que nunca se pierdan
+    try:
+        if user_email:
+            cursor.execute("""
+            UPDATE clientes 
+            SET usuario_id = ?, usuario_email = ? 
+            WHERE (usuario_email IS NOT NULL AND LOWER(usuario_email) = LOWER(?))
+               OR (usuario_id = 1 AND (usuario_email IS NULL OR usuario_email = '' OR usuario_email LIKE '%bolimur.local'))
+            """, (usuario_id, user_email, user_email))
+            conn.commit()
+    except Exception:
+        pass
+
+    cursor.execute("""
+    SELECT * FROM clientes 
+    WHERE usuario_id = ? 
+       OR (usuario_email IS NOT NULL AND LOWER(usuario_email) = LOWER(?))
+    ORDER BY nombre_completo ASC
+    """, (usuario_id, user_email))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def recuperar_todos_clientes_locales(usuario_id: int) -> int:
+    """Reasigna absolutamente todos los clientes huérfanos o de sesiones previas al usuario activo"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+    
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) as total FROM clientes WHERE usuario_id != ? OR usuario_id IS NULL", (usuario_id,))
+    total_pendientes = cursor.fetchone()["total"]
+    
+    if total_pendientes > 0:
+        cursor.execute("UPDATE clientes SET usuario_id = ?, usuario_email = ? WHERE usuario_id != ? OR usuario_id IS NULL", (usuario_id, user_email, usuario_id))
+        cursor.execute("UPDATE proyectos SET usuario_id = ?, usuario_email = ? WHERE usuario_id != ? OR usuario_id IS NULL", (usuario_id, user_email, usuario_id))
+        conn.commit()
+    conn.close()
+    return total_pendientes
 
 def obtener_cliente_por_id(cliente_id: int, usuario_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
     """Devuelve un cliente específico comprobando la pertenencia al usuario si se especifica"""
@@ -944,25 +984,42 @@ def guardar_proyecto(usuario_id: int, cliente_id: Optional[int], nombre_proyecto
         return False, -1
 
 def listar_proyectos_usuario(usuario_id: int, modulo: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Devuelve los proyectos pertenecientes únicamente a este usuario"""
+    """Devuelve los proyectos pertenecientes a este usuario o a su cuenta Google"""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+
     conn = obtener_conexion()
     cursor = conn.cursor()
+
+    try:
+        if user_email:
+            cursor.execute("""
+            UPDATE proyectos 
+            SET usuario_id = ?, usuario_email = ? 
+            WHERE (usuario_email IS NOT NULL AND LOWER(usuario_email) = LOWER(?))
+               OR (usuario_id = 1 AND (usuario_email IS NULL OR usuario_email = '' OR usuario_email LIKE '%bolimur.local'))
+            """, (usuario_id, user_email, user_email))
+            conn.commit()
+    except Exception:
+        pass
+
     if modulo:
         cursor.execute("""
         SELECT p.*, c.nombre_completo as cliente_nombre 
         FROM proyectos p 
         LEFT JOIN clientes c ON p.cliente_id = c.id 
-        WHERE p.usuario_id = ? AND p.modulo = ? 
+        WHERE (p.usuario_id = ? OR (p.usuario_email IS NOT NULL AND LOWER(p.usuario_email) = LOWER(?)))
+          AND p.modulo = ? 
         ORDER BY p.fecha_guardado DESC
-        """, (usuario_id, modulo))
+        """, (usuario_id, user_email, modulo))
     else:
         cursor.execute("""
         SELECT p.*, c.nombre_completo as cliente_nombre 
         FROM proyectos p 
         LEFT JOIN clientes c ON p.cliente_id = c.id 
-        WHERE p.usuario_id = ? 
+        WHERE p.usuario_id = ? OR (p.usuario_email IS NOT NULL AND LOWER(p.usuario_email) = LOWER(?))
         ORDER BY p.fecha_guardado DESC
-        """, (usuario_id,))
+        """, (usuario_id, user_email))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
