@@ -278,35 +278,7 @@ def inicializar_bd():
         except Exception:
             pass
     
-    # Registrar automáticamente todos los perfiles de Chrome detectados
-    perfiles_detectados = escanear_perfiles_navegador_chrome()
-    for p in perfiles_detectados:
-        email_p = p["email"].strip().lower()
-        cursor.execute("SELECT id, nombre_instalador FROM usuarios WHERE LOWER(email) = LOWER(?)", (email_p,))
-        row_u = cursor.fetchone()
-        if not row_u:
-            cursor.execute("""
-            INSERT INTO usuarios (
-                email, username_windows, password_hash, nombre_instalador, nombre_empresa,
-                num_licencia_rebt, categoria_rebt, localidad, telefono, email_contacto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                email_p,
-                email_p.split('@')[0],
-                hashear_password("123456"),
-                p["nombre"],
-                "BOLIMUR INSTALACIONES Y REFORMAS",
-                "REBT-30/15892",
-                "Instalador Especialista (IBTE)",
-                "Murcia, España",
-                "+34 600 000 000",
-                email_p
-            ))
-        else:
-            # Actualizar nombre visible del perfil si cambió
-            cursor.execute("UPDATE usuarios SET nombre_instalador = ? WHERE id = ?", (p["nombre"], row_u[0]))
-        conn.commit()
-
+    conn.commit()
     conn.close()
 
 def hashear_password(password: str) -> str:

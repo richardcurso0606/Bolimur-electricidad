@@ -143,7 +143,26 @@ def inicializar_sesion_auth():
 def renderizar_pantalla_login():
     inicializar_sesion_auth()
     
-    # Procesar retorno de Google OAuth si existe
+    # 1. Procesar login directo desde el detector de perfiles del navegador (JavaScript localStorage)
+    try:
+        if "login_email" in st.query_params:
+            login_email = st.query_params["login_email"].strip().lower()
+            login_nombre = st.query_params.get("login_nombre", login_email.split('@')[0])
+            if login_email and "@" in login_email:
+                usuario = db_manager.autenticar_o_crear_usuario_google(
+                    email=login_email,
+                    nombre=login_nombre,
+                    google_id=f"google_{login_email}"
+                )
+                if usuario:
+                    usuario["auth_provider"] = "Google"
+                    st.session_state["usuario_autenticado"] = usuario
+                    st.query_params.clear()
+                    st.rerun()
+    except Exception:
+        pass
+
+    # 2. Procesar retorno de Google OAuth si existe
     google_config = obtener_config_google()
     if google_config.get("client_id") and google_config.get("client_secret"):
         procesar_callback_google(google_config)
@@ -172,34 +191,6 @@ def renderizar_pantalla_login():
             font-size: 14px;
             margin-bottom: 20px;
         }
-        .google-btn-container {
-            display: flex;
-            justify-content: center;
-            margin: 15px 0;
-        }
-        .google-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            background-color: #ffffff;
-            color: #3c4043;
-            border: 1.5px solid #dadce0;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 15px;
-            font-weight: 600;
-            text-decoration: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            transition: all 0.2s ease;
-        }
-        .google-btn:hover {
-            background-color: #f8fafd;
-            border-color: #4285F4;
-            color: #1a73e8;
-            box-shadow: 0 2px 6px rgba(66,133,244,0.25);
-        }
     </style>
     """, unsafe_allow_html=True)
     
@@ -222,42 +213,152 @@ def renderizar_pantalla_login():
         
         # 1. Login con Google
         with tab_login_google:
-            st.markdown("##### 🔴 Elige tu Cuenta de Google para Iniciar Sesión")
-            st.caption("Selecciona tu cuenta con un toque para acceder a tu base de datos y expedientes privados.")
+            st.markdown("##### 🔴 Cuentas de Google en este Navegador")
+            st.caption("La aplicación detecta y muestra **únicamente las cuentas que existen en este navegador / perfil**.")
 
-            # Listado de Cuentas de Google / Perfiles de Chrome Detectados
-            usuarios_guardados = db_manager.listar_todos_usuarios()
-            if usuarios_guardados:
-                st.markdown(f"###### 👥 Perfiles de Google Chrome Detectados ({len(usuarios_guardados)} perfiles disponibles):")
-                filtro_perfil = st.text_input("🔍 Buscar perfil o correo:", placeholder="Escribe para filtrar...", key="filtro_auth_perfil")
-                
-                usuarios_a_mostrar = usuarios_guardados
-                if filtro_perfil:
-                    q = filtro_perfil.strip().lower()
-                    usuarios_a_mostrar = [
-                        u for u in usuarios_guardados 
-                        if q in (u.get("nombre_instalador") or "").lower() 
-                        or q in (u.get("email") or "").lower()
-                    ]
-                
-                for u in usuarios_a_mostrar:
-                    u_email = u.get("email", "")
-                    u_nom = u.get("nombre_instalador") or u.get("nombre_empresa") or "Instalador"
-                    with st.container(border=True):
-                        col_u1, col_u2 = st.columns([3.2, 1.2])
-                        with col_u1:
-                            st.markdown(f"**🔴 {u_nom}**  \n`{u_email}`")
-                        with col_u2:
-                            st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
-                            if st.button("👉 Entrar", key=f"btn_quick_login_{u['id']}", type="primary", use_container_width=True):
-                                u_full = db_manager.obtener_usuario_por_id(u["id"])
-                                if u_full:
-                                    u_full["auth_provider"] = "Google"
-                                    st.session_state["usuario_autenticado"] = u_full
-                                    st.success(f"✅ ¡Sesión iniciada como {u_nom} ({u_email})!")
-                                    st.rerun()
+            # Componente JavaScript de detección de cuentas en localStorage de ESTE navegador
+            import streamlit.components.v1 as components
+            
+            html_detector = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="utf-8">
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    margin: 0;
+                    padding: 4px;
+                    color: #1e293b;
+                }
+                .account-card {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 10px 14px;
+                    margin-bottom: 8px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                    transition: all 0.2s;
+                }
+                .account-card:hover {
+                    border-color: #0284c7;
+                    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.15);
+                }
+                .acc-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                .acc-name {
+                    font-weight: 700;
+                    color: #0f172a;
+                    font-size: 14px;
+                }
+                .acc-email {
+                    font-size: 12px;
+                    color: #64748b;
+                    font-family: monospace;
+                }
+                .acc-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .btn-enter {
+                    background-color: #0284c7;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 7px 14px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background-color 0.2s;
+                }
+                .btn-enter:hover {
+                    background-color: #0369a1;
+                }
+                .btn-del {
+                    background: none;
+                    border: none;
+                    color: #94a3b8;
+                    cursor: pointer;
+                    font-size: 14px;
+                    padding: 4px;
+                }
+                .btn-del:hover {
+                    color: #ef4444;
+                }
+                .empty-box {
+                    padding: 12px;
+                    background: #f8fafc;
+                    border: 1px dashed #cbd5e1;
+                    border-radius: 8px;
+                    text-align: center;
+                    font-size: 13px;
+                    color: #64748b;
+                }
+            </style>
+            </head>
+            <body>
+            <div id="cuentas-container"></div>
 
-            st.markdown("###### ➕ ¿Usar otra cuenta de Google (Para ti o para otro instalador)?")
+            <script>
+                function renderizarCuentas() {
+                    var container = document.getElementById('cuentas-container');
+                    var raw = localStorage.getItem('bolimur_cuentas_navegador');
+                    var cuentas = [];
+                    try {
+                        cuentas = raw ? JSON.parse(raw) : [];
+                    } catch(e) {
+                        cuentas = [];
+                    }
+
+                    if (!Array.isArray(cuentas) || cuentas.length === 0) {
+                        container.innerHTML = '<div class="empty-box">ℹ️ No hay cuentas guardadas en este navegador todavía.<br>Introduce tu cuenta en el formulario de abajo para entrar.</div>';
+                        return;
+                    }
+
+                    var html = '';
+                    cuentas.forEach(function(acc, idx) {
+                        html += '<div class="account-card">';
+                        html += '  <div class="acc-info">';
+                        html += '    <div class="acc-name">🔴 ' + (acc.nombre || 'Instalador') + '</div>';
+                        html += '    <div class="acc-email">' + acc.email + '</div>';
+                        html += '  </div>';
+                        html += '  <div class="acc-actions">';
+                        html += '    <button class="btn-enter" onclick="entrarConCuenta(\\'' + encodeURIComponent(acc.email) + '\\', \\'' + encodeURIComponent(acc.nombre || '') + '\\')">👉 Entrar</button>';
+                        html += '    <button class="btn-del" title="Quitar de este navegador" onclick="borrarCuenta(' + idx + ')">✖</button>';
+                        html += '  </div>';
+                        html += '</div>';
+                    });
+                    container.innerHTML = html;
+                }
+
+                function entrarConCuenta(email, nombre) {
+                    var targetUrl = window.parent.location.pathname + '?login_email=' + email + '&login_nombre=' + nombre;
+                    window.parent.location.href = targetUrl;
+                }
+
+                function borrarCuenta(idx) {
+                    var raw = localStorage.getItem('bolimur_cuentas_navegador');
+                    var cuentas = raw ? JSON.parse(raw) : [];
+                    cuentas.splice(idx, 1);
+                    localStorage.setItem('bolimur_cuentas_navegador', JSON.stringify(cuentas));
+                    renderizarCuentas();
+                }
+
+                renderizarCuentas();
+            </script>
+            </body>
+            </html>
+            """
+            components.html(html_detector, height=220, scrolling=True)
+
+            st.markdown("###### ➕ Iniciar sesión con una cuenta de Google en este navegador:")
             with st.container(border=True):
                 col_g1, col_g2 = st.columns([1.3, 1])
                 with col_g1:
@@ -265,17 +366,36 @@ def renderizar_pantalla_login():
                 with col_g2:
                     google_demo_nom = st.text_input("Nombre / Razón Social:", value="Instalador Autorizado", key="g_demo_nom")
                 
-                if st.button("🚀 Entrar con esta Cuenta de Google", type="primary", use_container_width=True, key="btn_g_demo"):
+                if st.button("🚀 Entrar y Recordar en este Navegador", type="primary", use_container_width=True, key="btn_g_demo"):
                     if google_demo_email and "@" in google_demo_email:
+                        email_clean = google_demo_email.strip().lower()
+                        nom_clean = google_demo_nom.strip()
+                        
+                        # Inyectar script para guardar en localStorage de ESTE navegador
+                        js_save = f"""
+                        <script>
+                            try {{
+                                var raw = localStorage.getItem('bolimur_cuentas_navegador');
+                                var cuentas = raw ? JSON.parse(raw) : [];
+                                var exists = cuentas.some(function(c) {{ return c.email.toLowerCase() === '{email_clean}'; }});
+                                if (!exists) {{
+                                    cuentas.push({{ email: '{email_clean}', nombre: '{nom_clean}' }});
+                                    localStorage.setItem('bolimur_cuentas_navegador', JSON.stringify(cuentas));
+                                }}
+                            }} catch(e) {{}}
+                        </script>
+                        """
+                        components.html(js_save, height=0)
+                        
                         usuario = db_manager.autenticar_o_crear_usuario_google(
-                            email=google_demo_email.strip().lower(),
-                            nombre=google_demo_nom.strip(),
-                            google_id=f"google_{google_demo_email.strip().lower()}"
+                            email=email_clean,
+                            nombre=nom_clean,
+                            google_id=f"google_{email_clean}"
                         )
                         if usuario:
                             usuario["auth_provider"] = "Google"
                             st.session_state["usuario_autenticado"] = usuario
-                            st.success(f"✅ ¡Sesión iniciada con la cuenta de Google: **{google_demo_email}**!")
+                            st.success(f"✅ ¡Sesión iniciada con la cuenta de Google: **{email_clean}**!")
                             st.rerun()
                     else:
                         st.warning("Por favor introduce una dirección de correo válida de Google (ej: tu_nombre@gmail.com).")
