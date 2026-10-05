@@ -113,7 +113,18 @@ except Exception as e:
     radar_normativo = None
     errores_import["radar_normativo"] = traceback.format_exc()
 
+try:
+    from modulos import control_salida
+except Exception as e:
+    control_salida = None
+    errores_import["control_salida"] = traceback.format_exc()
 
+# =========================================================================
+# CONTROL DE SALIDA Y PROTECCIÓN CONTRA CIERRES (TECLA ESCAPE / NAVEGADOR)
+# =========================================================================
+if control_salida:
+    control_salida.inyectar_control_escape()
+    control_salida.procesar_salida_url(auth_manager)
 
 # =========================================================================
 # ESTILOS CSS GLOBALES
@@ -281,10 +292,16 @@ with st.sidebar:
         col_sbtn1, col_sbtn2 = st.columns(2)
         with col_sbtn1:
             if st.button("🔄 Cambiar", key="btn_switch_acc", use_container_width=True, help="Cambiar a otra cuenta de Google o usuario"):
-                auth_manager.cerrar_sesion()
+                if control_salida:
+                    control_salida.mostrar_dialogo_cambiar_cuenta(auth_manager)
+                elif auth_manager:
+                    auth_manager.cerrar_sesion()
         with col_sbtn2:
             if st.button("🚪 Salir", key="btn_logout_side", use_container_width=True, help="Cerrar sesión actual"):
-                auth_manager.cerrar_sesion()
+                if control_salida:
+                    control_salida.mostrar_dialogo_confirmacion_salida(auth_manager)
+                elif auth_manager:
+                    auth_manager.cerrar_sesion()
 
     st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
 
