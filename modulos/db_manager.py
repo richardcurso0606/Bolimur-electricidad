@@ -962,7 +962,7 @@ def actualizar_cliente(cliente_id: int, usuario_id: int, datos: Dict[str, Any]) 
             distribuidora = ?,
             potencia_contratada_kw = ?,
             tension_suministro = ?
-        WHERE id = ? AND usuario_id = ?
+        WHERE id = ? AND (usuario_id = ? OR (usuario_email IS NOT NULL AND LOWER(usuario_email) = LOWER(?)))
         """, (
             datos.get("nombre_completo", "").strip(),
             datos.get("nif_cif", "").strip().upper(),
@@ -981,7 +981,8 @@ def actualizar_cliente(cliente_id: int, usuario_id: int, datos: Dict[str, Any]) 
             datos.get("potencia_contratada_kw", "").strip(),
             datos.get("tension_suministro", "Monofásica 230V").strip(),
             cliente_id,
-            usuario_id
+            usuario_id,
+            user_email
         ))
         conn.commit()
         cursor.execute("SELECT * FROM clientes WHERE id = ?", (cliente_id,))
@@ -1004,7 +1005,7 @@ def eliminar_cliente(cliente_id: int, usuario_id: int) -> bool:
     conn = obtener_conexion()
     cursor = conn.cursor()
     try:
-        cursor.execute("DELETE FROM clientes WHERE id = ? AND usuario_id = ?", (cliente_id, usuario_id))
+        cursor.execute("DELETE FROM clientes WHERE id = ? AND (usuario_id = ? OR (usuario_email IS NOT NULL AND LOWER(usuario_email) = LOWER(?)))", (cliente_id, usuario_id, user_email))
         conn.commit()
         conn.close()
         

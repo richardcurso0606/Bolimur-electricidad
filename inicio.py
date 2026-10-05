@@ -349,35 +349,62 @@ with st.sidebar:
                 elif auth_manager:
                     auth_manager.cerrar_sesion()
 
-    st.markdown("<h4 style='color: #475569; margin-bottom: 5px;'>📂 Navegación</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #334155; margin-bottom: 2px; font-size: 15px;'>📂 Panel de Módulos</h4>", unsafe_allow_html=True)
 
     if 'menu_activo' not in st.session_state:
         st.session_state.menu_activo = "🏠 Menú Principal"
 
-    opciones = [
-        ("🏠  Menú Principal", "🏠 Menú Principal"),
-        ("🤖  Consultor IA REBT", "🤖 Consultor IA REBT"),
-        ("☀️  Solar Fotovoltaica", "☀️ Solar Fotovoltaica"),
-        ("🛰️  Radar Normativo BOE", "🛰️ Radar Normativo BOE"),
-        ("🏛️  Memoria Técnica & Planos (MTD 30)", "🏛️ Memoria Técnica (MTD 30)"),
-        ("👥  Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
-        ("🏡  Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
-        ("🧮  Cálculo Rápido (CDT & Icc)", "🧮 Cálculo Rápido (CDT & Icc)"),
-        ("🏢  Previsión de Cargas (Pt)", "🏢 Previsión de Cargas (Pt)"),
-        ("⚡  Línea General (LGA)", "⚡ Línea General (LGA)"),
-        ("🔌  Derivación Individual (DI)", "🔌 Derivación Individual (DI)"),
-        ("🚗  Línea Recarga (IRVE)", "🚗 Línea Recarga (IRVE)"),
-        ("👤  Perfil del Instalador", "👤 Perfil del Instalador"),
-        ("📚  Tablas REBT", "📚 Tablas REBT")
+    grupos_menu = [
+        {
+            "categoria": "📁 GESTIÓN & EXPEDIENTES",
+            "items": [
+                ("🏠 Menú Principal", "🏠 Menú Principal"),
+                ("👥 Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
+                ("🏛️ Memoria Técnica & Planos (MTD)", "🏛️ Memoria Técnica (MTD 30)"),
+                ("🏡 Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
+            ]
+        },
+        {
+            "categoria": "⚡ CÁLCULOS TÉCNICOS REBT",
+            "items": [
+                ("🧮 Cálculo Rápido (CDT & Icc)", "🧮 Cálculo Rápido (CDT & Icc)"),
+                ("🏢 Previsión de Cargas (Pt)", "🏢 Previsión de Cargas (Pt)"),
+                ("⚡ Línea General (LGA)", "⚡ Línea General (LGA)"),
+                ("🔌 Derivación Individual (DI)", "🔌 Derivación Individual (DI)"),
+                ("🚗 Línea Recarga (IRVE)", "🚗 Línea Recarga (IRVE)"),
+                ("☀️ Solar Fotovoltaica", "☀️ Solar Fotovoltaica"),
+            ]
+        },
+        {
+            "categoria": "🤖 INTELIGENCIA & NORMATIVA",
+            "items": [
+                ("🤖 Consultor IA REBT", "🤖 Consultor IA REBT"),
+                ("🛰️ Radar Normativo BOE", "🛰️ Radar Normativo BOE"),
+                ("📚 Tablas REBT", "📚 Tablas REBT"),
+            ]
+        },
+        {
+            "categoria": "⚙️ CONFIGURACIÓN",
+            "items": [
+                ("👤 Perfil del Instalador", "👤 Perfil del Instalador"),
+            ]
+        }
     ]
 
-    for label, target in opciones:
-        es_activo = (st.session_state.menu_activo == target)
-        btn_type = "primary" if es_activo else "secondary"
-        btn_label = f"▶ {label}" if es_activo else label
-        if st.button(btn_label, key=f"nav_btn_{target}", use_container_width=True, type=btn_type):
-            st.session_state.menu_activo = target
-            st.rerun()
+    for grp in grupos_menu:
+        st.markdown(
+            f"<div style='font-size: 11px; font-weight: 700; color: #0284c7; letter-spacing: 0.05em; "
+            f"margin: 12px 0 5px 2px; text-transform: uppercase; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 2px;'>"
+            f"{grp['categoria']}</div>",
+            unsafe_allow_html=True
+        )
+        for label, target in grp["items"]:
+            es_activo = (st.session_state.menu_activo == target)
+            btn_type = "primary" if es_activo else "secondary"
+            btn_label = f"▶ {label}" if es_activo else label
+            if st.button(btn_label, key=f"nav_btn_{target}", use_container_width=True, type=btn_type):
+                st.session_state.menu_activo = target
+                st.rerun()
 
     seleccion_modulo = st.session_state.menu_activo
 

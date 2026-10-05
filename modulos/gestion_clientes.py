@@ -237,51 +237,76 @@ def renderizar():
 
             df_clientes = pd.DataFrame(filas_tabla)
 
-            # 2. Selector Principal y Acciones Rápidas (Accesible en todo momento)
-            nombres_dict = {
-                c["id"]: f"👤 #{c['id']} — {c['nombre_completo']} | NIF: {c.get('nif_cif', '-')} | 📍 {c.get('localidad') or c.get('municipio') or '-'}"
-                for c in clientes
-            }
+            # =========================================================
+            # 2. TABLA INTERACTIVA DE CLIENTES (CENTRO DE CONTROL)
+            # =========================================================
+            st.markdown(f"#### 📊 Directorio de Clientes y Suministros ({len(clientes_filtrados)})")
+            st.caption("💡 **Haz clic sobre cualquier fila de la tabla** para seleccionarla y ver o editar sus datos inmediatamente.")
+
+            event_tabla = st.dataframe(
+                df_clientes,
+                use_container_width=True,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="crm_grid_dataframe"
+            )
+
+            # Sincronización instantánea al hacer clic en una fila
+            ids_filtrados = [c["id"] for c in clientes_filtrados]
+            if event_tabla and hasattr(event_tabla, "selection") and event_tabla.selection.rows:
+                sel_row_idx = event_tabla.selection.rows[0]
+                if 0 <= sel_row_idx < len(clientes_filtrados):
+                    clicked_cli = clientes_filtrados[sel_row_idx]
+                    clicked_id = clicked_cli["id"]
+                    if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
+                        st.session_state["crm_cliente_seleccionado_id"] = clicked_id
+                        st.session_state["cliente_activo_proyecto"] = clicked_cli
+                        st.rerun()
+
             curr_id = st.session_state.get("crm_cliente_seleccionado_id")
-            if curr_id not in nombres_dict and clientes:
-                curr_id = clientes[0]["id"]
+            if (curr_id not in ids_filtrados) and ids_filtrados:
+                curr_id = ids_filtrados[0]
                 st.session_state["crm_cliente_seleccionado_id"] = curr_id
 
-            curr_idx = list(nombres_dict.keys()).index(curr_id) if curr_id in nombres_dict else 0
             cliente_sel_obj = db_manager.obtener_cliente_por_id(curr_id, usuario_id) if curr_id else None
+            if cliente_sel_obj and st.session_state.get("cliente_activo_proyecto") != cliente_sel_obj:
+                st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
 
-            with st.container(border=True):
-                col_sel_combo, col_sel_btn1, col_sel_btn2, col_sel_btn3 = st.columns([3.0, 1.4, 1.4, 1.0])
-                with col_sel_combo:
-                    def _on_dropdown_change():
-                        nuevo_id = st.session_state["crm_sel_dropdown_sync"]
-                        st.session_state["crm_cliente_seleccionado_id"] = nuevo_id
-                        st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(nuevo_id, usuario_id)
-
-                    st.selectbox(
-                        "👤 Cliente Activo (Selecciona para ver o editar):",
-                        options=list(nombres_dict.keys()),
-                        index=curr_idx,
-                        format_func=lambda x: nombres_dict[x],
-                        key="crm_sel_dropdown_sync",
-                        on_change=_on_dropdown_change
-                    )
-                with col_sel_btn1:
-                    st.write("")
-                    st.write("")
-                    if st.session_state.get("crm_modo_edicion"):
-                        if st.button("❌ Salir Edición", key="btn_toggle_edit_off", use_container_width=True):
-                            st.session_state["crm_modo_edicion"] = False
-                            st.rerun()
-                    else:
-                        if st.button("✏️ Editar Cliente", key="btn_toggle_edit_on", type="primary", use_container_width=True):
-                            st.session_state["crm_modo_edicion"] = True
-                            st.rerun()
-                with col_sel_btn2:
-                    st.write("")
-                    st.write("")
-                    if st.button("📋 Duplicar Ficha", key="btn_dup_crm_cliente_top", use_container_width=True, help="Clona los datos del cliente para un nuevo suministro"):
-                        if cliente_sel_obj:
+            # =========================================================
+            # 3. BARRA CONTEXTUAL DE ACCIONES DE LA FILA SELECCIONADA
+            # =========================================================
+            if cliente_sel_obj:
+                with st.container(border=True):
+                    col_bar_info, col_bar_btn_edit, col_bar_btn_dup, col_bar_btn_del = st.columns([3.2, 1.4, 1.4, 1.0])
+                    with col_bar_info:
+                        tipo_ico = "🏠" if "vivienda" in (cliente_sel_obj.get("tipo_inmueble") or "").lower() else "🏢"
+                        st.markdown(
+                            f"<div style='padding-top: 3px;'>"
+                            f"<span style='font-size: 16px; font-weight: 700; color: #0284c7;'>"
+                            f"📍 Fila Seleccionada: #{cliente_sel_obj['id']} — {cliente_sel_obj['nombre_completo']}</span>"
+                            f"<div style='font-size: 12px; color: #475569; margin-top: 2px;'>"
+                            f"NIF/CIF: <b>{cliente_sel_obj.get('nif_cif') or '-'}</b> | "
+                            f"📞 <b>{cliente_sel_obj.get('telefono') or '-'}</b> | "
+                            f"📍 <b>{cliente_sel_obj.get('localidad') or cliente_sel_obj.get('municipio') or '-'}</b> | "
+                            f"⚡ CUPS: <code>{cliente_sel_obj.get('cups') or '-'}</code> | "
+                            f"Potencia: <b>{cliente_sel_obj.get('potencia_contratada_kw') or '-'} kW</b>"
+                            f"</div></div>",
+                            unsafe_allow_html=True
+                        )
+                    with col_bar_btn_edit:
+                        st.write("")
+                        if st.session_state.get("crm_modo_edicion"):
+                            if st.button("❌ Cerrar Edición", key="btn_toggle_edit_off", use_container_width=True):
+                                st.session_state["crm_modo_edicion"] = False
+                                st.rerun()
+                        else:
+                            if st.button("✏️ Editar Fila", key="btn_toggle_edit_on", type="primary", use_container_width=True, help="Modifica los datos del cliente seleccionado en la tabla"):
+                                st.session_state["crm_modo_edicion"] = True
+                                st.rerun()
+                    with col_bar_btn_dup:
+                        st.write("")
+                        if st.button("📋 Duplicar Ficha", key="btn_dup_crm_cliente_bar", use_container_width=True, help="Clonar datos para un nuevo suministro"):
                             copia_data = dict(cliente_sel_obj)
                             copia_data.pop("id", None)
                             copia_data["nombre_completo"] = f"{cliente_sel_obj['nombre_completo']} (Nuevo Suministro)"
@@ -289,43 +314,40 @@ def renderizar():
                             if ok_dup:
                                 st.session_state["crm_cliente_seleccionado_id"] = nuevo_id
                                 st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(nuevo_id, usuario_id)
-                                st.session_state["crm_sel_dropdown_sync"] = nuevo_id
                                 st.session_state["crm_modo_edicion"] = True
-                                st.session_state["crm_alerta_exito"] = f"✅ Ficha duplicada como '{copia_data['nombre_completo']}'. Modifica la dirección o CUPS a continuación."
+                                st.session_state["crm_alerta_exito"] = f"✅ Ficha duplicada como '{copia_data['nombre_completo']}'. Modifica sus datos a continuación."
                                 st.rerun()
-                with col_sel_btn3:
-                    st.write("")
-                    st.write("")
-                    if st.button("🗑️ Borrar", key="btn_del_crm_top", use_container_width=True):
-                        if cliente_sel_obj:
+                    with col_bar_btn_del:
+                        st.write("")
+                        if st.button("🗑️ Borrar", key="btn_del_crm_bar", use_container_width=True, help="Eliminar este cliente"):
                             st.session_state["confirmar_borrado_cli_id"] = cliente_sel_obj["id"]
                             st.rerun()
 
-            # Confirmación de borrado seguro
-            if cliente_sel_obj and st.session_state.get("confirmar_borrado_cli_id") == cliente_sel_obj["id"]:
-                st.error(f"⚠️ **¿Confirmas que deseas eliminar definitivamente a '{cliente_sel_obj['nombre_completo']}' (ID #{cliente_sel_obj['id']})?**")
-                st.write("Esta acción borrará la ficha técnica y todos los proyectos o cálculos asociados a este cliente tanto en local como en la nube.")
-                cb_t1, cb_t2 = st.columns(2)
-                with cb_t1:
-                    if st.button("🔴 Sí, Eliminar Definitivamente", key="btn_do_del_crm_ok", type="primary", use_container_width=True):
-                        db_manager.eliminar_cliente(cliente_sel_obj["id"], usuario_id)
-                        del st.session_state["confirmar_borrado_cli_id"]
-                        st.session_state["crm_cliente_seleccionado_id"] = None
-                        st.session_state["cliente_activo_proyecto"] = None
-                        st.session_state["crm_modo_edicion"] = False
-                        st.session_state["crm_alerta_exito"] = f"🗑️ Cliente '{cliente_sel_obj['nombre_completo']}' eliminado correctamente."
-                        st.rerun()
-                with cb_t2:
-                    if st.button("🛡️ Cancelar", key="btn_cancel_del_crm_abort", use_container_width=True):
-                        del st.session_state["confirmar_borrado_cli_id"]
-                        st.rerun()
+                # Confirmación de borrado seguro
+                if st.session_state.get("confirmar_borrado_cli_id") == cliente_sel_obj["id"]:
+                    st.error(f"⚠️ **¿Confirmas que deseas eliminar definitivamente a '{cliente_sel_obj['nombre_completo']}' (ID #{cliente_sel_obj['id']})?**")
+                    st.write("Esta acción borrará la ficha técnica y todos los proyectos o cálculos asociados a este cliente tanto en local como en la nube.")
+                    cb_t1, cb_t2 = st.columns(2)
+                    with cb_t1:
+                        if st.button("🔴 Sí, Eliminar Definitivamente", key="btn_do_del_crm_ok", type="primary", use_container_width=True):
+                            db_manager.eliminar_cliente(cliente_sel_obj["id"], usuario_id)
+                            del st.session_state["confirmar_borrado_cli_id"]
+                            st.session_state["crm_cliente_seleccionado_id"] = None
+                            st.session_state["cliente_activo_proyecto"] = None
+                            st.session_state["crm_modo_edicion"] = False
+                            st.session_state["crm_alerta_exito"] = f"🗑️ Cliente '{cliente_sel_obj['nombre_completo']}' eliminado correctamente."
+                            st.rerun()
+                    with cb_t2:
+                        if st.button("🛡️ Cancelar", key="btn_cancel_del_crm_abort", use_container_width=True):
+                            del st.session_state["confirmar_borrado_cli_id"]
+                            st.rerun()
 
             # =========================================================
-            # 3. FORMULARIO DE EDICIÓN DIRECTO (SE MUESTRA ARRIBA SI ESTÁ ACTIVO)
+            # 4. FORMULARIO DE EDICIÓN IN-SITU DE LA FILA SELECCIONADA
             # =========================================================
             if cliente_sel_obj and st.session_state.get("crm_modo_edicion"):
-                st.markdown(f'<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">✏️ Editando Ficha de: #{cliente_sel_obj["id"]} — {cliente_sel_obj["nombre_completo"]}</h4></div>', unsafe_allow_html=True)
-                st.caption("Modifica cualquiera de los datos y pulsa **'💾 Grabar Cambios en este Cliente'** para guardar.")
+                st.markdown(f'<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">✏️ Modificando Fila Seleccionada: #{cliente_sel_obj["id"]} — {cliente_sel_obj["nombre_completo"]}</h4></div>', unsafe_allow_html=True)
+                st.caption("Modifica cualquiera de los datos del cliente y pulsa **'💾 Grabar Cambios en este Cliente'**:")
 
                 with st.form(f"form_edicion_directa_{cliente_sel_obj['id']}"):
                     col_e1, col_e2 = st.columns(2)
@@ -379,7 +401,7 @@ def renderizar():
                     with col_btn_g1:
                         btn_grabar = st.form_submit_button("💾 Grabar Cambios en este Cliente", type="primary", use_container_width=True)
                     with col_btn_g2:
-                        btn_cancel = st.form_submit_button("❌ Cancelar / Salir", use_container_width=True)
+                        btn_cancel = st.form_submit_button("❌ Salir de Edición", use_container_width=True)
 
                     if btn_grabar:
                         if not enom.strip():
@@ -415,70 +437,6 @@ def renderizar():
                         st.session_state["crm_modo_edicion"] = False
                         st.rerun()
 
-            # =========================================================
-            # 4. TABLA INTERACTIVA O TARJETAS (SIN DUPLICACIÓN)
-            # =========================================================
-            col_view_hdr, col_view_opt = st.columns([2.5, 2.0])
-            with col_view_hdr:
-                st.markdown(f"#### 📊 Listado de Clientes Registrados ({len(clientes_filtrados)})")
-            with col_view_opt:
-                vista_formato = st.radio(
-                    "Formato de listado:",
-                    options=["📊 Tabla Completa", "📇 Tarjetas con Botón Editar"],
-                    horizontal=True,
-                    key="crm_vista_formato",
-                    label_visibility="collapsed"
-                )
-
-            if vista_formato == "📊 Tabla Completa":
-                st.caption("💡 Marca la casilla `[✓]` de la fila que desees gestionar o pulsa **'✏️ Editar Cliente'** arriba:")
-                event_tabla = st.dataframe(
-                    df_clientes,
-                    use_container_width=True,
-                    hide_index=True,
-                    on_select="rerun",
-                    selection_mode="single-row",
-                    key="crm_grid_dataframe"
-                )
-
-                # Sincronización precisa si se hace clic en la tabla
-                if event_tabla and hasattr(event_tabla, "selection") and event_tabla.selection.rows:
-                    sel_row_idx = event_tabla.selection.rows[0]
-                    if sel_row_idx < len(clientes_filtrados):
-                        clicked_cli = clientes_filtrados[sel_row_idx]
-                        clicked_id = clicked_cli["id"]
-                        if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
-                            st.session_state["crm_cliente_seleccionado_id"] = clicked_id
-                            st.session_state["cliente_activo_proyecto"] = clicked_cli
-                            st.session_state["crm_sel_dropdown_sync"] = clicked_id
-                            st.rerun()
-            else:
-                # Vista alternativa en Tarjetas (Solo si el usuario la elige explícitamente)
-                st.caption("💡 Haz clic en **[ ✏️ Editar ]** directamente sobre la tarjeta del cliente que desees modificar:")
-                for c in clientes_filtrados:
-                    es_activo = (c["id"] == curr_id)
-                    with st.container(border=True):
-                        col_r1, col_r2, col_r3, col_r4 = st.columns([3.4, 2.4, 1.2, 1.2])
-                        with col_r1:
-                            badge = " 🟢 **[ACTIVO]**" if es_activo else ""
-                            st.markdown(f"**#{c['id']} — {c['nombre_completo']}**{badge}")
-                            st.caption(f"📍 {c.get('localidad') or c.get('municipio') or '-'} | 📞 {c.get('telefono') or '-'} | CUPS: `{c.get('cups') or '-'}`")
-                        with col_r2:
-                            st.markdown(f"NIF/CIF: `{c.get('nif_cif') or '-'}` | Potencia: `{c.get('potencia_contratada_kw') or '-'} kW` | 📁 Obras: {conteo_proyectos_por_cli.get(c['id'], 0)}")
-                        with col_r3:
-                            if st.button("✏️ Editar", key=f"btn_edit_row_{c['id']}", type="primary" if es_activo else "secondary", use_container_width=True):
-                                st.session_state["crm_cliente_seleccionado_id"] = c["id"]
-                                st.session_state["crm_sel_dropdown_sync"] = c["id"]
-                                st.session_state["cliente_activo_proyecto"] = c
-                                st.session_state["crm_modo_edicion"] = True
-                                st.rerun()
-                        with col_r4:
-                            if st.button("👁️ Ver Ficha", key=f"btn_ver_row_{c['id']}", use_container_width=True):
-                                st.session_state["crm_cliente_seleccionado_id"] = c["id"]
-                                st.session_state["crm_sel_dropdown_sync"] = c["id"]
-                                st.session_state["cliente_activo_proyecto"] = c
-                                st.session_state["crm_modo_edicion"] = False
-                                st.rerun()
 
             # =========================================================
             # 5. EXPEDIENTE TÉCNICO 360° (SOLO SI NO ESTÁ EN MODO EDICIÓN)
