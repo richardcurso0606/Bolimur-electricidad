@@ -476,82 +476,83 @@ def renderizar():
                 with st.container(border=True):
                     # Ficha 360° con datos del cliente seleccionado
                     st.markdown(f'<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">👤 Expediente Técnico: #{cliente_sel_obj["id"]} — {cliente_sel_obj["nombre_completo"]}</h4></div>', unsafe_allow_html=True)
-                        col_f1, col_f2, col_f3 = st.columns(3)
-                        with col_f1:
-                            st.markdown("##### 🏷️ Titular y Contacto:")
-                            st.markdown(f"**Nombre / Razón Social:** `{cliente_sel_obj['nombre_completo']}`")
-                            st.markdown(f"**NIF / DNI / CIF:** `{cliente_sel_obj.get('nif_cif') or '-'}`")
-                            st.markdown(f"**Teléfono:** `{cliente_sel_obj.get('telefono') or '-'}`")
-                            st.markdown(f"**Email:** `{cliente_sel_obj.get('email') or '-'}`")
-                            st.markdown(f"**Tipo Inmueble:** `{cliente_sel_obj.get('tipo_inmueble') or 'Vivienda'}`")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    with col_f1:
+                        st.markdown("##### 🏷️ Titular y Contacto:")
+                        st.markdown(f"**Nombre / Razón Social:** `{cliente_sel_obj['nombre_completo']}`")
+                        st.markdown(f"**NIF / DNI / CIF:** `{cliente_sel_obj.get('nif_cif') or '-'}`")
+                        st.markdown(f"**Teléfono:** `{cliente_sel_obj.get('telefono') or '-'}`")
+                        st.markdown(f"**Email:** `{cliente_sel_obj.get('email') or '-'}`")
+                        st.markdown(f"**Tipo Inmueble:** `{cliente_sel_obj.get('tipo_inmueble') or 'Vivienda'}`")
 
-                        with col_f2:
-                            st.markdown("##### ⚡ Punto de Suministro:")
-                            st.markdown(f"**Dirección:** `{cliente_sel_obj.get('direccion_suministro') or '-'}`")
-                            st.markdown(f"**Población / CP:** `{cliente_sel_obj.get('localidad') or cliente_sel_obj.get('municipio') or '-'} ({cliente_sel_obj.get('codigo_postal') or ''})`")
-                            st.markdown(f"**Provincia:** `{cliente_sel_obj.get('provincia') or 'Murcia'}`")
-                            st.markdown(f"**Distribuidora:** `{cliente_sel_obj.get('distribuidora') or 'i-DE (Iberdrola)'}`")
+                    with col_f2:
+                        st.markdown("##### ⚡ Punto de Suministro:")
+                        st.markdown(f"**Dirección:** `{cliente_sel_obj.get('direccion_suministro') or '-'}`")
+                        st.markdown(f"**Población / CP:** `{cliente_sel_obj.get('localidad') or cliente_sel_obj.get('municipio') or '-'} ({cliente_sel_obj.get('codigo_postal') or ''})`")
+                        st.markdown(f"**Provincia:** `{cliente_sel_obj.get('provincia') or 'Murcia'}`")
+                        st.markdown(f"**Distribuidora:** `{cliente_sel_obj.get('distribuidora') or 'i-DE (Iberdrola)'}`")
 
-                        with col_f3:
-                            st.markdown("##### 🏛️ Parámetros REBT:")
-                            st.markdown(f"**Código CUPS:** `{cliente_sel_obj.get('cups') or '-'}`")
-                            st.markdown(f"**Ref. Catastral:** `{cliente_sel_obj.get('referencia_catastral') or '-'}`")
-                            st.markdown(f"**Potencia Contratada:** `{cliente_sel_obj.get('potencia_contratada_kw') or '-'} kW`")
-                            st.markdown(f"**Tensión:** `{cliente_sel_obj.get('tension_suministro') or 'Monofásica 230V'}`")
+                    with col_f3:
+                        st.markdown("##### 🏛️ Parámetros REBT:")
+                        st.markdown(f"**Código CUPS:** `{cliente_sel_obj.get('cups') or '-'}`")
+                        st.markdown(f"**Ref. Catastral:** `{cliente_sel_obj.get('referencia_catastral') or '-'}`")
+                        st.markdown(f"**Potencia Contratada:** `{cliente_sel_obj.get('potencia_contratada_kw') or '-'} kW`")
+                        st.markdown(f"**Tensión:** `{cliente_sel_obj.get('tension_suministro') or 'Monofásica 230V'}`")
 
-                        if cliente_sel_obj.get("notas"):
-                            st.info(f"📝 **Notas y Observaciones de Obra:** {cliente_sel_obj['notas']}")
+                    if cliente_sel_obj.get("notas"):
+                        st.info(f"📝 **Notas y Observaciones de Obra:** {cliente_sel_obj['notas']}")
 
-                        # Botonera de Lanzamiento Directo a Cálculos
-                        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚀 Acciones Rápidas con este Cliente (1 Clic)</h4></div>', unsafe_allow_html=True)
-                        c_act1, c_act2, c_act3, c_act4 = st.columns(4)
-                        with c_act1:
-                            if st.button("🏛️ Iniciar Boletín CIE / MTD", key=f"btn_act_cie_{cliente_sel_obj['id']}", use_container_width=True, type="primary"):
-                                st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
-                                st.session_state["menu_activo"] = "🏛️ Memoria Técnica (MTD 30)"
-                                st.rerun()
-                        with c_act2:
-                            if st.button("🏡 Iniciar Presupuesto", key=f"btn_act_pres_{cliente_sel_obj['id']}", use_container_width=True):
-                                st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
-                                st.session_state["menu_activo"] = "🏡 Presupuesto Vivienda"
-                                st.rerun()
-                        with c_act3:
-                            if st.button("🚗 Iniciar Recarga IRVE", key=f"btn_act_irve_{cliente_sel_obj['id']}", use_container_width=True):
-                                st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
-                                st.session_state["menu_activo"] = "🚗 Línea Recarga (IRVE)"
-                                st.rerun()
-                        with c_act4:
-                            if st.button("🔌 Calcular DI / LGA", key=f"btn_act_di_{cliente_sel_obj['id']}", use_container_width=True):
-                                st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
-                                st.session_state["menu_activo"] = "🔌 Derivación Individual (DI)"
-                                st.rerun()
+                    # Botonera de Lanzamiento Directo a Cálculos
+                    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚀 Acciones Rápidas con este Cliente (1 Clic)</h4></div>', unsafe_allow_html=True)
+                    c_act1, c_act2, c_act3, c_act4 = st.columns(4)
+                    with c_act1:
+                        if st.button("🏛️ Iniciar Boletín CIE / MTD", key=f"btn_act_cie_{cliente_sel_obj['id']}", use_container_width=True, type="primary"):
+                            st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
+                            st.session_state["menu_activo"] = "🏛️ Memoria Técnica (MTD 30)"
+                            st.rerun()
+                    with c_act2:
+                        if st.button("🏡 Iniciar Presupuesto", key=f"btn_act_pres_{cliente_sel_obj['id']}", use_container_width=True):
+                            st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
+                            st.session_state["menu_activo"] = "🏡 Presupuesto Vivienda"
+                            st.rerun()
+                    with c_act3:
+                        if st.button("🚗 Iniciar Recarga IRVE", key=f"btn_act_irve_{cliente_sel_obj['id']}", use_container_width=True):
+                            st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
+                            st.session_state["menu_activo"] = "🚗 Línea Recarga (IRVE)"
+                            st.rerun()
+                    with c_act4:
+                        if st.button("🔌 Calcular DI / LGA", key=f"btn_act_di_{cliente_sel_obj['id']}", use_container_width=True):
+                            st.session_state["cliente_activo_proyecto"] = cliente_sel_obj
+                            st.session_state["menu_activo"] = "🔌 Derivación Individual (DI)"
+                            st.rerun()
 
-                        # Listado de Proyectos del Cliente
-                        st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">📁 Proyectos y Cálculos Guardados de este Cliente</h4></div>', unsafe_allow_html=True)
-                        proyectos_cliente = db_manager.listar_proyectos_por_cliente(cliente_sel_obj["id"], usuario_id)
-                        
-                        if not proyectos_cliente:
-                            st.info("ℹ️ No hay cálculos ni presupuestos guardados todavía para este cliente. Realiza un cálculo en cualquiera de los módulos y guárdalo asociándolo a esta ficha.")
-                        else:
-                            for proj in proyectos_cliente:
-                                with st.container(border=True):
-                                    col_p1, col_p2, col_p3, col_p4 = st.columns([3.5, 2.5, 2, 1.2])
-                                    with col_p1:
-                                        st.markdown(f"**📌 {proj['nombre_proyecto']}**")
-                                        st.caption(f"Módulo: `{proj['modulo']}` | Fecha: {proj.get('fecha_guardado', '')[:16]}")
-                                    with col_p2:
-                                        st.markdown(f"**Resumen Técnico:**  \n{proj.get('resumen_potencia_o_importe', '-')}")
-                                    with col_p3:
-                                        if st.button("🚀 Cargar y Modificar", key=f"btn_load_p_{proj['id']}", type="primary", use_container_width=True):
-                                            datos_p = db_manager.cargar_proyecto_por_id(proj["id"], usuario_id)
-                                            if datos_p:
-                                                cargar_proyecto_en_session(proj["modulo"], datos_p.get("datos", {}), cliente_sel_obj)
-                                                st.session_state.menu_activo = obtener_label_menu_por_modulo(proj["modulo"])
-                                                st.rerun()
-                                    with col_p4:
-                                        if st.button("🗑️ Borrar", key=f"btn_del_p_{proj['id']}", use_container_width=True):
-                                            db_manager.eliminar_proyecto(proj["id"], usuario_id)
+                    # Listado de Proyectos del Cliente
+                    st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">📁 Proyectos y Cálculos Guardados de este Cliente</h4></div>', unsafe_allow_html=True)
+                    proyectos_cliente = db_manager.listar_proyectos_por_cliente(cliente_sel_obj["id"], usuario_id)
+                    
+                    if not proyectos_cliente:
+                        st.info("ℹ️ No hay cálculos ni presupuestos guardados todavía para este cliente. Realiza un cálculo en cualquiera de los módulos y guárdalo asociándolo a esta ficha.")
+                    else:
+                        for proj in proyectos_cliente:
+                            with st.container(border=True):
+                                col_p1, col_p2, col_p3, col_p4 = st.columns([3.5, 2.5, 2, 1.2])
+                                with col_p1:
+                                    st.markdown(f"**📌 {proj['nombre_proyecto']}**")
+                                    st.caption(f"Módulo: `{proj['modulo']}` | Fecha: {proj.get('fecha_guardado', '')[:16]}")
+                                Jimmy = None
+                                with col_p2:
+                                    st.markdown(f"**Resumen Técnico:**  \n{proj.get('resumen_potencia_o_importe', '-')}")
+                                with col_p3:
+                                    if st.button("🚀 Cargar y Modificar", key=f"btn_load_p_{proj['id']}", type="primary", use_container_width=True):
+                                        datos_p = db_manager.cargar_proyecto_por_id(proj["id"], usuario_id)
+                                        if datos_p:
+                                            cargar_proyecto_en_session(proj["modulo"], datos_p.get("datos", {}), cliente_sel_obj)
+                                            st.session_state.menu_activo = obtener_label_menu_por_modulo(proj["modulo"])
                                             st.rerun()
+                                with col_p4:
+                                    if st.button("🗑️ Borrar", key=f"btn_del_p_{proj['id']}", use_container_width=True):
+                                        db_manager.eliminar_proyecto(proj["id"], usuario_id)
+                                        st.rerun()
 
     # =========================================================================
     # TAB 2: ➕ ALTA RÁPIDA DE NUEVO CLIENTE (CON PREVENCIÓN DE DUPLICADOS)
