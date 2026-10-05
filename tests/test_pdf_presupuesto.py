@@ -154,5 +154,42 @@ def test_generar_pdf_presupuesto_completo_capitulos_y_manuales():
     assert len(pdf_bytes) > 8000
     assert pdf_bytes.startswith(b"%PDF")
 
+def test_generar_pdf_unifilar_industria_con_c8_c9_c11_elevada():
+    proyecto_info = {
+        "empresa": "BOLIMUR Instalaciones y Reformas",
+        "proyectista": "Richard Choque",
+        "licencia": "REBT-30/15892",
+        "localidad": "Murcia",
+        "telefono": "600000000",
+        "expediente": "MTD-ELEVADA-01",
+        "fecha": "05/10/2026"
+    }
+    unifilar_data = {
+        "potencia_w": 9200,
+        "iga_amperaje": 40,
+        "grado_electr": "Elevada",
+        "tipo_cable": "H07Z1-K Libre de Halógenos",
+        "tipo_tubo": "Tubo Corrugado ICT M25",
+        "marca_protecciones": "Schneider Acti9",
+        "n_difs": 2,
+        "circuitos": [
+            {"id": "C1", "denominacion": "Alumbrado General", "pia": 10, "dif": "ID 1 (Tipo AC)", "cable_sec": "2x1.5+TT1.5", "tubo_diam": "M20", "long_m": 18.0, "cdt_pct": 1.15, "pot_w": 2300},
+            {"id": "C2", "denominacion": "Tomas de Uso General", "pia": 16, "dif": "ID 1 (Tipo AC)", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 20.0, "cdt_pct": 1.42, "pot_w": 3450},
+            {"id": "C3", "denominacion": "Cocina y Horno", "pia": 25, "dif": "ID 1 (Tipo AC)", "cable_sec": "2x6+TT6", "tubo_diam": "M25", "long_m": 12.0, "cdt_pct": 0.88, "pot_w": 5400},
+            {"id": "C4", "denominacion": "Lavadora / Lavavajillas", "pia": 20, "dif": "ID 1 (Tipo AC)", "cable_sec": "2x4+TT4", "tubo_diam": "M20", "long_m": 15.0, "cdt_pct": 1.10, "pot_w": 3450},
+            {"id": "C5", "denominacion": "Baños y Auxiliares", "pia": 16, "dif": "ID 1 (Tipo AC)", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 14.0, "cdt_pct": 0.98, "pot_w": 3450},
+            {"id": "C8.1", "denominacion": "Calefacción Línea 1", "pia": 25, "dif": "ID 2 (Tipo A SI)", "cable_sec": "2x6+TT6", "tubo_diam": "M25", "long_m": 16.0, "cdt_pct": 1.18, "pot_w": 4500},
+            {"id": "C8.2", "denominacion": "Calefacción Línea 2", "pia": 25, "dif": "ID 2 (Tipo A SI)", "cable_sec": "2x6+TT6", "tubo_diam": "M25", "long_m": 18.0, "cdt_pct": 1.25, "pot_w": 4500},
+            {"id": "C9", "denominacion": "Climatización Inverter", "pia": 25, "dif": "ID 2 (Tipo A SI)", "cable_sec": "2x6+TT6", "tubo_diam": "M25", "long_m": 15.0, "cdt_pct": 1.10, "pot_w": 5750},
+            {"id": "C10", "denominacion": "Secadora Independiente", "pia": 16, "dif": "ID 2 (Tipo A SI)", "cable_sec": "2x2.5+TT2.5", "tubo_diam": "M20", "long_m": 12.0, "cdt_pct": 0.85, "pot_w": 2300},
+            {"id": "C11", "denominacion": "Domótica y Automatización", "pia": 10, "dif": "ID 2 (Tipo A SI)", "cable_sec": "2x1.5+TT1.5", "tubo_diam": "M20", "long_m": 20.0, "cdt_pct": 0.75, "pot_w": 1500}
+        ]
+    }
+    pdf_bytes = pdf_presupuesto.generar_pdf_unifilar_industria(proyecto_info, unifilar_data)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 5000
+    assert pdf_bytes.startswith(b"%PDF")
+
+
 
 

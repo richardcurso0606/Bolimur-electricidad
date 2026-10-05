@@ -137,6 +137,37 @@ def cargar_plantilla_por_tipo(tipo: str):
             {"nombre": "Línea Específica IRVE (Wallbox)", "potencia": 7360, "pia": 32, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
         ]
 
+    elif ("Vivienda" in tipo or "Residencial" in tipo) and any(kw in tipo for kw in ["Elevada", "Clima", "Calefacción", "Domótica"]):
+        st.session_state["mtd_in_pot_inst"] = 9200.0
+        st.session_state["mtd_in_pot_max"] = 9200.0
+        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+        st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
+        st.session_state["mtd_in_di_cable"] = "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
+        st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos (ITC-BT-15)"
+        st.session_state["mtd_in_di_long"] = 18.0
+        st.session_state["mtd_in_di_cdt"] = 0.85
+        st.session_state["mtd_in_grado"] = "Elevada"
+        st.session_state["mtd_in_iga"] = 40
+        st.session_state["mtd_in_curva"] = "Curva C (General)"
+        st.session_state["mtd_in_icn"] = 6.0
+        st.session_state["mtd_in_dif"] = "2 x Diferencial 2P 40A / 30mA (D1: Tipo AC, D2: Tipo A Superinmunizado para Clima e Inverter)"
+        st.session_state["mtd_in_vtp"] = "Permanentes (VTP) + Transitorias Tipo 2 con reconexión"
+        st.session_state["mtd_in_tierra"] = "Conductor PE 1x16 mm² Cu | Picas en anillo Rt ≤ 15 Ω"
+        st.session_state["mtd_in_spl"] = "No aplica"
+        st.session_state["mtd_in_emp_uso"] = "Vivienda Residencial Electrificación Elevada"
+        st.session_state["mtd_circuitos"] = [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora / Lavavajillas / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C8.1 - Calefacción Línea 1", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
+            {"nombre": "C8.2 - Calefacción Línea 2", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 18, "cdt": 1.25, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización Inverter (Tipo A SI)", "potencia": 5750, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            {"nombre": "C11 - Domótica / Automatización y Control", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.75, "norma": "ITC-BT-25"}
+        ]
+
     elif "Vivienda" in tipo or "Residencial" in tipo:
         st.session_state["mtd_in_pot_inst"] = 5750.0
         st.session_state["mtd_in_pot_max"] = 5750.0
@@ -364,6 +395,7 @@ def renderizar():
             opciones_tipo_inst = [
                 "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --",
                 "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
+                "🏡 Vivienda Electrificación Elevada con Clima, Calefacción y Domótica (ITC-BT-25 - 9.200W)",
                 "☀️ Autoconsumo Solar Fotovoltaico (ITC-BT-40 / RD 244/2019)",
                 "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
                 "🏢 Local Comercial / Nave Industrial (ITC-BT-28)",
@@ -670,19 +702,53 @@ def renderizar():
             st.info("ℹ️ No hay circuitos en la lista. Puedes cargarlos con la plantilla técnica superior o añadir circuitos manualmente a continuación.")
 
         with st.expander("➕ Añadir / Modificar Circuito Terminal:", expanded=False):
+            plantillas_circuito_rapido = {
+                "-- Seleccionar Plantilla o Personalizado --": None,
+                "C1 - Alumbrado General (10A - 1.5mm²)": {"nom": "C1 - Alumbrado General", "pot": 2300, "pia": 10, "sec": "2x1.5+TT1.5", "tubo": "M20", "long": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+                "C2 - Tomas de Uso General (16A - 2.5mm²)": {"nom": "C2 - Tomas de Uso General", "pot": 3450, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+                "C3 - Cocina / Horno (25A - 6.0mm²)": {"nom": "C3 - Cocina / Horno", "pot": 5400, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+                "C4 - Lavadora / Termo (20A - 4.0mm²)": {"nom": "C4 - Lavadora / Termo", "pot": 3450, "pia": 20, "sec": "2x4.0+TT4.0", "tubo": "M20", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                "C5 - Baños y Auxiliares (16A - 2.5mm²)": {"nom": "C5 - Baños y Auxiliares", "pot": 3450, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+                "C8.1 - Calefacción Eléctrica Línea 1 (25A - 6.0mm²)": {"nom": "C8.1 - Calefacción Línea 1", "pot": 4500, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
+                "C8.2 - Calefacción Eléctrica Línea 2 (25A - 6.0mm²)": {"nom": "C8.2 - Calefacción Línea 2", "pot": 4500, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 18, "cdt": 1.25, "norma": "ITC-BT-25"},
+                "C9 - Climatización Inverter Conductos (25A - 6.0mm²)": {"nom": "C9 - Climatización Inverter (Tipo A SI)", "pot": 5750, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                "C9 - Climatización Split Individual (16A - 2.5mm²)": {"nom": "C9 - Climatización Split", "pot": 2500, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                "C10 - Secadora Independiente (16A - 2.5mm²)": {"nom": "C10 - Secadora Independiente", "pot": 2300, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+                "C11 - Domótica / Automatización y Control (10A - 1.5mm²)": {"nom": "C11 - Domótica / Control", "pot": 1500, "pia": 10, "sec": "2x1.5+TT1.5", "tubo": "M20", "long": 20, "cdt": 0.75, "norma": "ITC-BT-25"},
+                "C13 - Recarga Vehículo Eléctrico IRVE (32A - 6.0mm²)": {"nom": "C13 - Recarga IRVE (ITC-BT-52)", "pot": 7360, "pia": 32, "sec": "2x6.0+TT6.0", "tubo": "M32", "long": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
+            }
+
+            p_sel = st.selectbox("🎯 Plantilla Rápida de Circuito REBT:", list(plantillas_circuito_rapido.keys()), index=0, key="mtd_circ_preset_sel")
+            if "mtd_ultimo_circ_preset" not in st.session_state:
+                st.session_state["mtd_ultimo_circ_preset"] = "-- Seleccionar Plantilla o Personalizado --"
+            
+            if p_sel != st.session_state["mtd_ultimo_circ_preset"]:
+                st.session_state["mtd_ultimo_circ_preset"] = p_sel
+                if p_sel in plantillas_circuito_rapido and plantillas_circuito_rapido[p_sel]:
+                    p_val = plantillas_circuito_rapido[p_sel]
+                    st.session_state["mtd_in_nc_nom"] = p_val["nom"]
+                    st.session_state["mtd_in_nc_pot"] = p_val["pot"]
+                    st.session_state["mtd_in_nc_pia"] = p_val["pia"]
+                    st.session_state["mtd_in_nc_sec"] = p_val["sec"]
+                    st.session_state["mtd_in_nc_tubo"] = p_val["tubo"]
+                    st.session_state["mtd_in_nc_long"] = p_val["long"]
+                    st.session_state["mtd_in_nc_cdt"] = p_val["cdt"]
+                    st.session_state["mtd_in_nc_norma"] = p_val["norma"]
+                    st.rerun()
+
             col_c1, col_c2, col_c3, col_c4 = st.columns(4)
             with col_c1:
-                nc_nom = st.text_input("Nombre Circuito:", "C13 - Recarga IRVE", key="mtd_in_nc_nom")
-                nc_pot = st.number_input("Potencia (W):", value=7360, step=250, key="mtd_in_nc_pot")
+                nc_nom = st.text_input("Nombre Circuito:", value=st.session_state.get("mtd_in_nc_nom", "C13 - Recarga IRVE"), key="mtd_in_nc_nom")
+                nc_pot = st.number_input("Potencia (W):", value=int(st.session_state.get("mtd_in_nc_pot", 7360)), step=250, key="mtd_in_nc_pot")
             with col_c2:
-                nc_pia = st.number_input("PIA (A):", value=32, step=1, key="mtd_in_nc_pia")
-                nc_sec = st.text_input("Conductor:", "2x6.0+TT6.0", key="mtd_in_nc_sec")
+                nc_pia = st.number_input("PIA (A):", value=int(st.session_state.get("mtd_in_nc_pia", 32)), step=1, key="mtd_in_nc_pia")
+                nc_sec = st.text_input("Conductor:", value=str(st.session_state.get("mtd_in_nc_sec", "2x6.0+TT6.0")), key="mtd_in_nc_sec")
             with col_c3:
-                nc_tubo = st.text_input("Tubo:", "M32", key="mtd_in_nc_tubo")
-                nc_long = st.number_input("Longitud (m):", value=25, step=1, key="mtd_in_nc_long")
+                nc_tubo = st.text_input("Tubo:", value=str(st.session_state.get("mtd_in_nc_tubo", "M32")), key="mtd_in_nc_tubo")
+                nc_long = st.number_input("Longitud (m):", value=int(st.session_state.get("mtd_in_nc_long", 25)), step=1, key="mtd_in_nc_long")
             with col_c4:
-                nc_cdt = st.number_input("ΔV (%):", value=0.86, step=0.05, key="mtd_in_nc_cdt")
-                nc_norma = st.text_input("Norma ITC:", "ITC-BT-52", key="mtd_in_nc_norma")
+                nc_cdt = st.number_input("ΔV (%):", value=float(st.session_state.get("mtd_in_nc_cdt", 0.86)), step=0.05, key="mtd_in_nc_cdt")
+                nc_norma = st.text_input("Norma ITC:", value=str(st.session_state.get("mtd_in_nc_norma", "ITC-BT-52")), key="mtd_in_nc_norma")
                 
             if st.button("➕ Insertar Circuito a la Lista", key="btn_add_circ_mtd"):
                 st.session_state["mtd_circuitos"].append({

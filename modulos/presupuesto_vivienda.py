@@ -752,11 +752,73 @@ def app():
                 help="Tubo PVC estándar: Solución económica para reformas ordinarias. Tubo LH: Tubo ignífugo libre de halógenos."
             )
 
-        desdoblar_c4 = st.checkbox(
-            "⚙️ Desdoblar circuito C4 (Separar Lavadora/Lavavajillas de la línea del Termo en circuitos independientes)", 
-            value=False,
-            help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra y calculando sus cables correctamente."
-        )
+        st.markdown("<div style='margin-top: 14px; margin-bottom: 6px; font-weight: 600; color: #0369a1;'>⚙️ Circuitos Especiales y Desdoblamientos REBT (ITC-BT-25):</div>", unsafe_allow_html=True)
+        
+        c_esp1, c_esp2 = st.columns(2)
+        with c_esp1:
+            desdoblar_c4 = st.checkbox(
+                "⚙️ Desdoblar circuito C4 (Lavadora/Lavavajillas separado de Termo ACS)", 
+                value=False,
+                help="Crea dos líneas dedicadas en cocina: C4-A (Lavado) y C4-B (Termo ACS), añadiendo un PIA extra de 16A."
+            )
+            instalar_c9 = st.checkbox(
+                "❄️ Climatización / Aire Acondicionado (C9)",
+                value=True if ("Elevada" in potencia_prevista_kw or "9.200" in potencia_prevista_kw) else False,
+                help="Añade línea C9 con Diferencial Tipo A Superinmunizado (SI) y cable 6 mm² (o 2.5 mm²)."
+            )
+            if instalar_c9:
+                c9_sub1, c9_sub2 = st.columns(2)
+                with c9_sub1:
+                    tipo_c9 = st.selectbox(
+                        "Tipo de Climatización:",
+                        ["Conductos Inverter Centralizado (25A / 6 mm²)", "Split Individual (16A / 2.5 mm²)", "Multi-Split 2 Zonas (C9.1 y C9.2 - 2x16A)"],
+                        key="sel_tipo_c9"
+                    )
+                with c9_sub2:
+                    pot_c9 = st.number_input("Potencia Clima (W):", min_value=1500, max_value=15000, value=5000, step=500, key="num_pot_c9")
+                st.caption("🛡️ **REBT:** Se prescribe **Interruptor Diferencial Tipo A Superinmunizado (30mA)** para absorber armónicos y corrientes residuales de alta frecuencia del variador Inverter.")
+            else:
+                tipo_c9 = "Conductos Inverter Centralizado (25A / 6 mm²)"
+                pot_c9 = 5000
+
+        with c_esp2:
+            instalar_c8 = st.checkbox(
+                "🔥 Calefacción Eléctrica (C8) con Desdoblamiento Automático",
+                value=False,
+                help="Radiadores o suelo radiante eléctrico. Si supera 5.750 W, el REBT exige desdoblar por ley en C8.1 y C8.2."
+            )
+            desdoblar_c8 = False
+            pot_c8 = 0
+            if instalar_c8:
+                c8_sub1, c8_sub2 = st.columns([1.2, 1.8])
+                with c8_sub1:
+                    pot_c8 = st.number_input("Potencia total calefacción (W):", min_value=1000, max_value=25000, value=6500, step=500, key="num_pot_c8")
+                with c8_sub2:
+                    desdoblar_c8 = (pot_c8 > 5750)
+                    if desdoblar_c8:
+                        p_c8_1 = int(round(pot_c8 / 2))
+                        p_c8_2 = pot_c8 - p_c8_1
+                        st.success(f"⚡ **Desdoblamiento REBT Activado (>5.750W):** Dividido en **C8.1 ({p_c8_1} W)** y **C8.2 ({p_c8_2} W)** con PIAs de 25A y tubos M25 independientes.")
+                    else:
+                        st.info(f"✅ Circuito C8 único ({pot_c8} W ≤ 5.750 W, PIA 25A / 6 mm² Cu).")
+            
+            tipo_domotica = st.selectbox(
+                "🧠 Domótica y Automatización (C11):",
+                [
+                    "Sin Domótica",
+                    "Domótica Inalámbrica (WiFi / Zigbee / Shelly - Micromódulos)",
+                    "Domótica Cableada por Bus (KNX / Centralizada)"
+                ],
+                key="sel_tipo_dom",
+                help="Adapta el presupuesto para cajas profundas de 60 mm y cable de neutro (Inalámbrica) o canalización independiente y cuadro ampliado (KNX)."
+            )
+            if tipo_domotica == "Domótica Inalámbrica (WiFi / Zigbee / Shelly - Micromódulos)":
+                st.info("💡 **Afección en Obra (Inalámbrica):** Se computan **cajas de mecanismo profundas de 60 mm** para albergar micromódulos y **líneas de Neutro azul adicionales** llevadas a todos los interruptores.")
+            elif tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)":
+                st.info("💡 **Afección en Obra (Bus KNX):** Se computa **tubo corrugado M20 independiente para bus de datos** (separado de 230V), **cuadro general ampliado (36/54 módulos DIN)** y fuente de alimentación homologada 30V DC.")
+
+        # Comprobación de Electrificación Básica vs Elevada
+        tiene_circuitos_elevada = instalar_c9 or instalar_c8 or (tipo_domotica != "Sin Domótica")
 
         if "5.750" in potencia_prevista_kw:
             grado_electr = "Básica"
@@ -779,10 +841,31 @@ def app():
             iga_amperaje = 63
             num_circuitos_base = 12
 
-        if desdoblar_c4:
-            num_circuitos_base += 1
+        if tiene_circuitos_elevada:
+            grado_electr = "Elevada"
+            if iga_amperaje < 40:
+                iga_amperaje = 40
+            if "5.750" in potencia_prevista_kw or "7.360" in potencia_prevista_kw:
+                st.warning("⚠️ **Requisito Reglamentario (ITC-BT-25 apdo. 2.2):** Al incorporar aire acondicionado (C9), calefacción (C8) o domótica (C11), la vivienda pasa por ley a **Electrificación Elevada (mínimo 9.200 W / IGA 40 A / DI 16 mm²)**.")
 
-        st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Circuitos mínimos requeridos: **{num_circuitos_base}**")
+        # Conteo exacto de circuitos
+        num_circuitos_base = 5 # C1, C2, C3, C4, C5
+        if desdoblar_c4: 
+            num_circuitos_base += 1 # C4-A y C4-B
+        if instalar_c8:
+            num_circuitos_base += (2 if desdoblar_c8 else 1)
+        if instalar_c9:
+            num_circuitos_base += (2 if "Multi-Split" in tipo_c9 else 1)
+        if grado_electr == "Elevada":
+            num_circuitos_base += 1 # C10 Secadora
+        if tipo_domotica != "Sin Domótica":
+            num_circuitos_base += 1 # C11 Domótica
+
+        # Regla ITC-BT-25: máximo 5 circuitos por interruptor diferencial
+        import math
+        n_difs = max(2 if grado_electr == "Elevada" else 1, math.ceil(num_circuitos_base / 5.0))
+
+        st.info(f"📋 **Configuración REBT:** Electrificación **{grado_electr}** | **IGA Oficial: {iga_amperaje} A** | Total de circuitos: **{num_circuitos_base}** | Interruptores Diferenciales requeridos (máx 5 circ/ID): **{n_difs}**")
 
     # ==========================================
     # SECCIÓN 2: MARCAS, SERIES Y MEMORIA ECONÓMICA
@@ -1331,18 +1414,59 @@ def app():
                 "cable_utp": est_utp
             })
 
+        # Cómputo de tubos y cables adicionales para Climatización C9
+        m_cable_60_c9 = 0.0
+        if instalar_c9:
+            if "Multi-Split" in tipo_c9:
+                global_tubo25_m += 32.0
+                m_cable_60_c9 = 96.0
+            elif "Conductos" in tipo_c9:
+                global_tubo25_m += 16.0
+                m_cable_60_c9 = 48.0
+            else:  # Split individual
+                global_tubo20_m += 14.0
+                global_25_az_m += 14.0
+                global_25_ne_m += 14.0
+                global_25_tt_m += 14.0
+
+        # Cómputo de tubos y cables adicionales para Calefacción C8
+        m_cable_60_c8 = 0.0
+        if instalar_c8:
+            if desdoblar_c8:
+                global_tubo25_m += 36.0  # 2 líneas x 18m
+                m_cable_60_c8 = 108.0   # 36m x 3 hilos 6 mm²
+            else:
+                global_tubo25_m += 18.0  # 1 línea x 18m
+                m_cable_60_c8 = 54.0    # 18m x 3 hilos 6 mm²
+
+        # Cómputo de tubos y cables adicionales para Domótica C11
+        m_bus_knx = 0.0
+        coste_extra_cajas_dom = 0.0
+        if tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)":
+            m_bus_knx = max(24.0, len(estancias_activas) * 12.0)
+            global_tubo20_m += m_bus_knx  # Tubo independiente M20 para el bus de datos
+        elif tipo_domotica == "Domótica Inalámbrica (WiFi / Zigbee / Shelly - Micromódulos)":
+            global_15_az_m += total_puntos_mecanismos * 3.5  # Neutro azul obligatorio en mecanismos
+            coste_extra_cajas_dom = total_puntos_mecanismos * 0.85  # Cajas de 60 mm fondo
+
         # Mano de obra especializada para el Cuadro General CGMP
         # Montaje en envolvente, fijación DIN, peinado de conductores, peines de conexión, rotulación de circuitos y pruebas
-        horas_cuadro = 3.0 if grado_electr == "Elevada" else 2.5
+        horas_cuadro = 3.5 if (grado_electr == "Elevada" or n_difs > 2) else 2.5
+        if tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)":
+            horas_cuadro += 1.5
         coste_mo_cuadro = horas_cuadro * precio_hora
         horas_totales_obra += horas_cuadro
         coste_mano_obra_bruto = horas_totales_obra * precio_hora
         horas_totales_equipo = horas_totales_obra / num_operarios
         dias_estimados = horas_totales_equipo / horas_jornada
 
-        n_difs = 2 if grado_electr == "Elevada" else 1
+        # Surcharges técnicos certificados
+        sobrecoste_dif_si = 45.0 if instalar_c9 else 0.0
+        sobrecoste_fuente_knx = 95.0 if tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)" else 0.0
+        p_caja_final = (p_caja_cuadro * 1.5) if (num_circuitos_base > 10 or tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)") else p_caja_cuadro
+
         n_pias = max(num_circuitos_base, len(estancias_activas))
-        coste_cuadro_neto = p_iga + (n_difs * p_id) + (n_pias * p_pia) + p_caja_cuadro
+        coste_cuadro_neto = p_iga + (n_difs * p_id) + sobrecoste_dif_si + sobrecoste_fuente_knx + (n_pias * p_pia) + p_caja_final + coste_extra_cajas_dom
         venta_cuadro_mat = coste_cuadro_neto * mult_comercial * mult_garantia_mat
         venta_cuadro_mo = coste_mo_cuadro * mult_comercial
         venta_cuadro_neto = venta_cuadro_mat + venta_cuadro_mo
@@ -1493,6 +1617,24 @@ def app():
             ("Cable 2.5 mm² Negro / Marrón", desc_25_ne, prov_25_ne, global_25_ne_m, p_25_ne, rollos_25_ne, ok_25_ne),
             ("Cable 2.5 mm² Tierra (Amarillo/Verde)", desc_25_tt, prov_25_tt, global_25_tt_m, p_25_tt, rollos_25_tt, ok_25_tt),
         ]
+        
+        # Cable 6.0 mm² Cu para Cocina C3, Calefacción C8 y Climatización C9
+        total_cable_60 = 36.0  # Cocina C3 base (12m x 3 hilos)
+        if instalar_c8:
+            total_cable_60 += m_cable_60_c8
+        if instalar_c9:
+            total_cable_60 += m_cable_60_c9
+
+        if total_cable_60 > 0:
+            p_60_val = p_25_az * 2.2
+            rollos_60 = max(1, int((total_cable_60 + 99) / 100))
+            desc_60 = f"{desc_25_az.replace('2.5', '6.0')} (Fuerza C3/C8/C9)"
+            cables_items.append(("Cable 6.0 mm² Fuerza (C3/C8/C9)", desc_60, "Top Cable / General Cable", total_cable_60, p_60_val, rollos_60, True))
+
+        if tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)" and m_bus_knx > 0:
+            rollos_bus = max(1, int((m_bus_knx + 99) / 100))
+            cables_items.append(("Cable Bus KNX TP1 Apantallado (Verde)", "Cable bus certificado KNX 2x2x0.8 mm 4kV", "Schneider / ABB", m_bus_knx, 0.88, rollos_bus, True))
+
         if global_utp_m > 0:
             cables_items.append(("Cable Red UTP Cat.6", desc_utp, prov_utp, global_utp_m, p_utp, max(1, int((global_utp_m + 99)/100)), ok_utp))
 
@@ -1512,15 +1654,19 @@ def app():
                 })
 
         # 3. Cuadro Eléctrico y Protecciones
+        desc_id_final = desc_id
+        if instalar_c9:
+            desc_id_final += " (Incluye 1x ID Tipo A Superinmunizado para Climatización C9)"
+
         categorias_orden_compra["🛡️ 3. Cuadro Eléctrico y Protecciones"].extend([
             {
                 "articulo": "Caja Cuadro de Distribución",
-                "desc_exacta": desc_caja_cuadro,
+                "desc_exacta": f"{desc_caja_cuadro} [Ampliación DIN {num_circuitos_base} elementos]" if num_circuitos_base > 10 else desc_caja_cuadro,
                 "proveedor": prov_caja_cuadro,
                 "cantidad": 1,
                 "unidad": "ud",
-                "precio_unitario": p_caja_cuadro,
-                "subtotal": round(p_caja_cuadro, 2),
+                "precio_unitario": p_caja_final,
+                "subtotal": round(p_caja_final, 2),
                 "en_bd": ok_caja_cuadro,
                 "categoria_bd": "Cuadros y Envolventes",
                 "marca_bd": marca_protecciones
@@ -1538,13 +1684,13 @@ def app():
                 "marca_bd": marca_protecciones
             },
             {
-                "articulo": "Interruptor Diferencial 40A 30mA",
-                "desc_exacta": desc_id,
+                "articulo": f"Interruptores Diferenciales 40A 30mA (x{n_difs})",
+                "desc_exacta": desc_id_final,
                 "proveedor": prov_id,
                 "cantidad": n_difs,
                 "unidad": "ud",
-                "precio_unitario": p_id,
-                "subtotal": round(n_difs * p_id, 2),
+                "precio_unitario": round(p_id + (sobrecoste_dif_si / n_difs), 2),
+                "subtotal": round(n_difs * p_id + sobrecoste_dif_si, 2),
                 "en_bd": ok_id,
                 "categoria_bd": "Protecciones",
                 "marca_bd": marca_protecciones
@@ -1562,6 +1708,20 @@ def app():
                 "marca_bd": marca_protecciones
             }
         ])
+
+        if tipo_domotica == "Domótica Cableada por Bus (KNX / Centralizada)":
+            categorias_orden_compra["🛡️ 3. Cuadro Eléctrico y Protecciones"].append({
+                "articulo": "Fuente Alimentación Bus 30V DC KNX (Carril DIN)",
+                "desc_exacta": "Fuente carril DIN 30V DC / 640mA con bobina de desacoplo integrada",
+                "proveedor": "Schneider / ABB / MeanWell",
+                "cantidad": 1,
+                "unidad": "ud",
+                "precio_unitario": 95.0,
+                "subtotal": 95.0,
+                "en_bd": True,
+                "categoria_bd": "Domótica / Control",
+                "marca_bd": "KNX Standard"
+            })
 
         # 4. Tubos y Canalizaciones
         tubos_items = [
@@ -1852,31 +2012,124 @@ def app():
             "pot_w": 3450
         })
 
-        if grado_electr == "Elevada":
-            circuitos_unifilar.extend([
-                {
-                    "id": "C9",
-                    "denominacion": "Instalación de aire acondicionado / climatización",
+        # Circuito C8 Calefacción Eléctrica (o C8.1 y C8.2 desdoblados)
+        if instalar_c8:
+            if desdoblar_c8:
+                p_c8_1 = int(round(pot_c8 / 2))
+                p_c8_2 = pot_c8 - p_c8_1
+                dif_c8_1 = "ID 2 (30mA)" if n_difs > 1 else "ID 1 (30mA)"
+                dif_c8_2 = f"ID {min(n_difs, 3)} (30mA)" if n_difs > 2 else ("ID 2 (30mA)" if n_difs > 1 else "ID 1 (30mA)")
+                circuitos_unifilar.extend([
+                    {
+                        "id": "C8.1",
+                        "denominacion": "Calefacción Eléctrica - Zona Día (Desdoblado)",
+                        "pia": 25,
+                        "dif": dif_c8_1,
+                        "cable_sec": "2x6 + TT 6 mm² Cu",
+                        "tubo_diam": "M25 (Tubo Corrugado)",
+                        "long_m": 16.0,
+                        "cdt_pct": 0.85,
+                        "pot_w": p_c8_1
+                    },
+                    {
+                        "id": "C8.2",
+                        "denominacion": "Calefacción Eléctrica - Zona Noche (Desdoblado)",
+                        "pia": 25,
+                        "dif": dif_c8_2,
+                        "cable_sec": "2x6 + TT 6 mm² Cu",
+                        "tubo_diam": "M25 (Tubo Corrugado)",
+                        "long_m": 18.0,
+                        "cdt_pct": 0.92,
+                        "pot_w": p_c8_2
+                    }
+                ])
+            else:
+                circuitos_unifilar.append({
+                    "id": "C8",
+                    "denominacion": "Calefacción Eléctrica unificada",
                     "pia": 25,
-                    "dif": "ID 2 (30mA)",
+                    "dif": "ID 2 (30mA)" if n_difs > 1 else "ID 1 (30mA)",
                     "cable_sec": "2x6 + TT 6 mm² Cu",
                     "tubo_diam": "M25 (Tubo Corrugado)",
                     "long_m": 16.0,
-                    "cdt_pct": 1.25,
-                    "pot_w": 5400
-                },
-                {
-                    "id": "C10",
-                    "denominacion": "Instalación de secadora independiente",
-                    "pia": 16,
-                    "dif": "ID 2 (30mA)",
-                    "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
-                    "tubo_diam": "M20 (Tubo Corrugado)",
-                    "long_m": 12.0,
-                    "cdt_pct": 0.88,
-                    "pot_w": 3450
-                }
-            ])
+                    "cdt_pct": 0.95,
+                    "pot_w": pot_c8
+                })
+
+        # Circuito C9 Aire Acondicionado / Climatización Inverter (Diferencial Tipo A SI)
+        if instalar_c9:
+            dif_c9_txt = "ID 2 (Tipo A Superinmunizado 30mA)" if n_difs > 1 else "ID 1 (Tipo A Superinmunizado 30mA)"
+            if "Multi-Split" in tipo_c9:
+                p_c9_1 = int(round(pot_c9 / 2))
+                p_c9_2 = pot_c9 - p_c9_1
+                circuitos_unifilar.extend([
+                    {
+                        "id": "C9.1",
+                        "denominacion": "Climatización Inverter - Zona Día (Tipo A SI)",
+                        "pia": 25,
+                        "dif": dif_c9_txt,
+                        "cable_sec": "2x6 + TT 6 mm² Cu",
+                        "tubo_diam": "M25 (Tubo Corrugado)",
+                        "long_m": 15.0,
+                        "cdt_pct": 1.10,
+                        "pot_w": p_c9_1
+                    },
+                    {
+                        "id": "C9.2",
+                        "denominacion": "Climatización Inverter - Zona Noche (Tipo A SI)",
+                        "pia": 25,
+                        "dif": dif_c9_txt,
+                        "cable_sec": "2x6 + TT 6 mm² Cu",
+                        "tubo_diam": "M25 (Tubo Corrugado)",
+                        "long_m": 18.0,
+                        "cdt_pct": 1.25,
+                        "pot_w": p_c9_2
+                    }
+                ])
+            else:
+                es_split = "Split Individual" in tipo_c9
+                circuitos_unifilar.append({
+                    "id": "C9",
+                    "denominacion": f"Aire Acondicionado / Clima Inverter ({tipo_c9.split('(')[0].strip()})",
+                    "pia": 16 if es_split else 25,
+                    "dif": dif_c9_txt,
+                    "cable_sec": "2x2.5 + TT 2.5 mm² Cu" if es_split else "2x6 + TT 6 mm² Cu",
+                    "tubo_diam": "M20 (Tubo Corrugado)" if es_split else "M25 (Tubo Corrugado)",
+                    "long_m": 16.0,
+                    "cdt_pct": 1.15,
+                    "pot_w": pot_c9
+                })
+
+        # Circuito C10 Secadora independiente (si grado Elevada)
+        if grado_electr == "Elevada":
+            circuitos_unifilar.append({
+                "id": "C10",
+                "denominacion": "Instalación de secadora independiente",
+                "pia": 16,
+                "dif": f"ID {min(n_difs, 2)} (30mA)",
+                "cable_sec": "2x2.5 + TT 2.5 mm² Cu",
+                "tubo_diam": "M20 (Tubo Corrugado)",
+                "long_m": 12.0,
+                "cdt_pct": 0.88,
+                "pot_w": 3450
+            })
+
+        # Circuito C11 Domótica y Automatización (si activado)
+        if tipo_domotica != "Sin Domótica":
+            es_knx = "KNX" in tipo_domotica
+            desc_dom = "Bus KNX / Centralizada" if es_knx else "Domótica Inalámbrica / Micromódulos"
+            dif_dom = f"ID {min(n_difs, 3)} (30mA)" if n_difs > 2 else ("ID 2 (30mA)" if n_difs > 1 else "ID 1 (30mA)")
+            circuitos_unifilar.append({
+                "id": "C11",
+                "denominacion": f"Sistema de Domótica y Automatización ({desc_dom})",
+                "pia": 10,
+                "dif": dif_dom,
+                "cable_sec": "2x1.5 + TT 1.5 mm² Cu (+ Bus apantallado)" if es_knx else "2x1.5 + TT 1.5 mm² Cu (+ Neutro azul)",
+                "tubo_diam": "M20 Independiente (Bus)" if es_knx else "M20 (Tubo Corrugado)",
+                "long_m": 20.0,
+                "cdt_pct": 0.65,
+                "pot_w": 1500
+            })
 
         unifilar_data = {
             "potencia_w": pot_w_val,
