@@ -204,6 +204,14 @@ def renderizar_pantalla_login():
         </div>
         """, unsafe_allow_html=True)
         
+        if st.button("⚡ Entrar Directamente como Richard Choque (BOLIMUR)", type="primary", use_container_width=True, key="btn_quick_richard"):
+            st.session_state.pop("sesion_cerrada_manual", None)
+            usuario = obtener_usuario_actual()
+            st.session_state["usuario_autenticado"] = usuario
+            st.rerun()
+
+        st.markdown("<div style='text-align: center; margin: 10px 0; color: #94a3b8; font-size: 13px;'>— o selecciona otro método de acceso —</div>", unsafe_allow_html=True)
+
         tab_login_google, tab_login_win, tab_login_email, tab_registro = st.tabs([
             "🔴 Google",
             "🪟 Windows",
@@ -354,25 +362,49 @@ def renderizar_pantalla_login():
 
 def cerrar_sesion():
     st.session_state["usuario_autenticado"] = None
+    st.session_state["sesion_cerrada_manual"] = True
     st.rerun()
 
 def obtener_usuario_actual() -> dict:
     inicializar_sesion_auth()
     usuario = st.session_state.get("usuario_autenticado")
     if not usuario:
-        # Fallback de conveniencia: cargar usuario de Windows actual
         db_manager.inicializar_bd()
         win_user = getpass.getuser()
         usuario = db_manager.autenticar_usuario_windows(win_user)
         if not usuario:
-            # Crear perfil automático por defecto
+            # Buscar si ya existe algún usuario en la BD
+            try:
+                conn = db_manager.obtener_conexion()
+                c = conn.cursor()
+                c.execute("SELECT * FROM usuarios LIMIT 1")
+                row = c.fetchone()
+                conn.close()
+                if row:
+                    usuario = dict(row)
+            except Exception:
+                pass
+        if not usuario:
+            # Crear perfil automático oficial por defecto
             db_manager.registrar_nuevo_usuario(
-                email=f"{win_user}@bolimur.local",
+                email="richard@bolimur.es",
                 password="password123",
                 nombre_instalador="Richard Orlando Choque Tejerina",
                 nombre_empresa="BOLIMUR INSTALACIONES Y REFORMAS",
                 username_win=win_user
             )
             usuario = db_manager.autenticar_usuario_windows(win_user)
+            if not usuario:
+                usuario = db_manager.obtener_usuario_por_email("richard@bolimur.es")
+        if not usuario:
+            usuario = {
+                "id": 1,
+                "email": "richard@bolimur.es",
+                "nombre_instalador": "Richard Orlando Choque Tejerina",
+                "nombre_empresa": "BOLIMUR INSTALACIONES Y REFORMAS",
+                "num_licencia_rebt": "REBT-30/15892",
+                "localidad": "Murcia, España",
+                "telefono": "+34 600 000 000"
+            }
         st.session_state["usuario_autenticado"] = usuario
     return usuario

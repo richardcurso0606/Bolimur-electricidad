@@ -222,10 +222,14 @@ st.markdown("""
 # =========================================================================
 if auth_manager:
     auth_manager.inicializar_sesion_auth()
-    usuario_actual = st.session_state.get("usuario_autenticado") or {}
-    if not usuario_actual:
+    # Si el usuario cerró sesión manualmente, mostrar pantalla de login
+    if st.session_state.get("sesion_cerrada_manual"):
         auth_manager.renderizar_pantalla_login()
         st.stop()
+
+    usuario_actual = st.session_state.get("usuario_autenticado")
+    if not usuario_actual:
+        usuario_actual = auth_manager.obtener_usuario_actual()
 else:
     usuario_actual = {
         "id": 1,
