@@ -296,10 +296,69 @@ def inyectar_control_escape():
                 }
             }, true);
             targetDoc.addEventListener('keydown', onKeyDownEscape, true);
+
+            // Escuchar también en el iframe local por si el foco está dentro de un widget
+            try {
+                window.addEventListener('keydown', onKeyDownEscape, true);
+                document.addEventListener('keydown', onKeyDownEscape, true);
+            } catch(e) {}
+
             targetWin.__bolimur_esc_listener_installed = true;
         }
 
-        // 5. Desplazar/desaparecer la barra lateral izquierda al pulsar en la ventana derecha (aplicación)
+        // 5. Interceptar Botón Atrás y Gesto de Deslizar Atrás en Móviles / Tablets (popstate)
+        function instalarControlAtrasMovil() {
+            if (targetWin.__bolimur_popstate_installed) return;
+
+            // Empujar un estado al historial del navegador para capturar el primer toque de Atrás
+            try {
+                targetWin.history.pushState({ bolimur: true }, '', targetWin.location.href);
+            } catch(e) {}
+
+            targetWin.addEventListener('popstate', function(ev) {
+                if (targetWin.__bolimur_allow_exit) {
+                    return; // Si el usuario confirmó salir, permitir navegación
+                }
+
+                // Restaurar el estado en el historial para evitar que el navegador cierre la pestaña o vuelva a la página anterior
+                try {
+                    targetWin.history.pushState({ bolimur: true }, '', targetWin.location.href);
+                } catch(e) {}
+
+                // Si el modal de confirmación ya está visible, cerrarlo (permanecer en la app)
+                if (targetWin.__bolimur_modal_visible) {
+                    if (typeof targetWin.__bolimur_cerrar_modal === 'function') {
+                        targetWin.__bolimur_cerrar_modal();
+                    }
+                    return;
+                }
+
+                // En móvil: si el menú lateral está abierto, cerrarlo primero (comportamiento estándar de app nativa)
+                try {
+                    var sidebar = targetDoc.querySelector('[data-testid="stSidebar"]');
+                    var btnCollapse = targetDoc.querySelector(
+                        '[data-testid="stSidebarCollapseButton"] button, ' +
+                        '[data-testid="stSidebarCollapseButton"], ' +
+                        'button[aria-label="Collapse sidebar"]'
+                    );
+                    if (sidebar && sidebar.getAttribute('aria-expanded') !== 'false' && btnCollapse && targetWin.innerWidth < 992) {
+                        btnCollapse.click();
+                        return;
+                    }
+                } catch(err) {}
+
+                // Si no hay menú lateral abierto, mostrar el aviso modal de confirmación de salida
+                if (typeof targetWin.__bolimur_abrir_modal === 'function') {
+                    targetWin.__bolimur_abrir_modal();
+                }
+            }, false);
+
+            targetWin.__bolimur_popstate_installed = true;
+        }
+
+        instalarControlAtrasMovil();
+
+        // 6. Desplazar/desaparecer la barra lateral izquierda al pulsar en la ventana derecha (aplicación)
         function instalarAutoColapsoSidebar() {
             if (targetWin.__bolimur_sidebar_click_installed) return;
 
