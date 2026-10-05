@@ -25,7 +25,7 @@
     {
       "id": 2,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 1",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -47,7 +47,7 @@
     {
       "id": 3,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 2",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -69,7 +69,7 @@
     {
       "id": 4,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 3",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -91,7 +91,7 @@
     {
       "id": 5,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 4",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -113,7 +113,7 @@
     {
       "id": 6,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 5",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -135,7 +135,7 @@
     {
       "id": 7,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 6",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -157,7 +157,7 @@
     {
       "id": 8,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 7",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -179,7 +179,7 @@
     {
       "id": 9,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 8",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -201,7 +201,7 @@
     {
       "id": 10,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 9",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",
@@ -223,7 +223,7 @@
     {
       "id": 11,
       "usuario_id": 1,
-      "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+      "nombre_completo": "Cliente de Prueba 10",
       "nif_cif": "99887766A",
       "telefono": "+34 600 999 888",
       "email": "cliente.audit@bolimur.es",

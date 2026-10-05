@@ -416,58 +416,69 @@ def renderizar():
                         st.rerun()
 
             # =========================================================
-            # 4. TABLA INTERACTIVA (GRID) Y LISTADO RÁPIDO CON BOTONES
+            # 4. TABLA INTERACTIVA O TARJETAS (SIN DUPLICACIÓN)
             # =========================================================
-            st.markdown(f"#### 📊 Listado de Clientes Registrados ({len(clientes_filtrados)})")
-            st.caption("💡 Para editar cualquier cliente, pulsa directamente su botón **[ ✏️ Editar ]** en la lista de abajo o marca la casilla de la tabla:")
+            col_view_hdr, col_view_opt = st.columns([2.5, 2.0])
+            with col_view_hdr:
+                st.markdown(f"#### 📊 Listado de Clientes Registrados ({len(clientes_filtrados)})")
+            with col_view_opt:
+                vista_formato = st.radio(
+                    "Formato de listado:",
+                    options=["📊 Tabla Completa", "📇 Tarjetas con Botón Editar"],
+                    horizontal=True,
+                    key="crm_vista_formato",
+                    label_visibility="collapsed"
+                )
 
-            event_tabla = st.dataframe(
-                df_clientes,
-                use_container_width=True,
-                hide_index=True,
-                on_select="rerun",
-                selection_mode="single-row",
-                key="crm_grid_dataframe"
-            )
+            if vista_formato == "📊 Tabla Completa":
+                st.caption("💡 Marca la casilla `[✓]` de la fila que desees gestionar o pulsa **'✏️ Editar Cliente'** arriba:")
+                event_tabla = st.dataframe(
+                    df_clientes,
+                    use_container_width=True,
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="crm_grid_dataframe"
+                )
 
-            # Sincronización precisa si se hace clic en la tabla
-            if event_tabla and hasattr(event_tabla, "selection") and event_tabla.selection.rows:
-                sel_row_idx = event_tabla.selection.rows[0]
-                if sel_row_idx < len(clientes_filtrados):
-                    clicked_cli = clientes_filtrados[sel_row_idx]
-                    clicked_id = clicked_cli["id"]
-                    if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
-                        st.session_state["crm_cliente_seleccionado_id"] = clicked_id
-                        st.session_state["cliente_activo_proyecto"] = clicked_cli
-                        st.session_state["crm_sel_dropdown_sync"] = clicked_id
-                        st.rerun()
-
-            # LISTA DE ACCIONES RÁPIDAS (Botones directos para cada cliente)
-            st.markdown("##### ⚡ Fichas Rápidas (Haz clic en [ ✏️ Editar ] sobre el cliente que desees modificar):")
-            for c in clientes_filtrados:
-                es_activo = (c["id"] == curr_id)
-                with st.container(border=True):
-                    col_r1, col_r2, col_r3, col_r4 = st.columns([3.4, 2.4, 1.2, 1.2])
-                    with col_r1:
-                        badge = " 🟢 **[ACTIVO]**" if es_activo else ""
-                        st.markdown(f"**#{c['id']} — {c['nombre_completo']}**{badge}")
-                        st.caption(f"📍 {c.get('localidad') or c.get('municipio') or '-'} | 📞 {c.get('telefono') or '-'} | CUPS: `{c.get('cups') or '-'}`")
-                    with col_r2:
-                        st.markdown(f"NIF/CIF: `{c.get('nif_cif') or '-'}` | Potencia: `{c.get('potencia_contratada_kw') or '-'} kW` | 📁 Obras: {conteo_proyectos_por_cli.get(c['id'], 0)}")
-                    with col_r3:
-                        if st.button("✏️ Editar", key=f"btn_edit_row_{c['id']}", type="primary" if es_activo else "secondary", use_container_width=True):
-                            st.session_state["crm_cliente_seleccionado_id"] = c["id"]
-                            st.session_state["crm_sel_dropdown_sync"] = c["id"]
-                            st.session_state["cliente_activo_proyecto"] = c
-                            st.session_state["crm_modo_edicion"] = True
+                # Sincronización precisa si se hace clic en la tabla
+                if event_tabla and hasattr(event_tabla, "selection") and event_tabla.selection.rows:
+                    sel_row_idx = event_tabla.selection.rows[0]
+                    if sel_row_idx < len(clientes_filtrados):
+                        clicked_cli = clientes_filtrados[sel_row_idx]
+                        clicked_id = clicked_cli["id"]
+                        if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
+                            st.session_state["crm_cliente_seleccionado_id"] = clicked_id
+                            st.session_state["cliente_activo_proyecto"] = clicked_cli
+                            st.session_state["crm_sel_dropdown_sync"] = clicked_id
                             st.rerun()
-                    with col_r4:
-                        if st.button("👁️ Ver Ficha", key=f"btn_ver_row_{c['id']}", use_container_width=True):
-                            st.session_state["crm_cliente_seleccionado_id"] = c["id"]
-                            st.session_state["crm_sel_dropdown_sync"] = c["id"]
-                            st.session_state["cliente_activo_proyecto"] = c
-                            st.session_state["crm_modo_edicion"] = False
-                            st.rerun()
+            else:
+                # Vista alternativa en Tarjetas (Solo si el usuario la elige explícitamente)
+                st.caption("💡 Haz clic en **[ ✏️ Editar ]** directamente sobre la tarjeta del cliente que desees modificar:")
+                for c in clientes_filtrados:
+                    es_activo = (c["id"] == curr_id)
+                    with st.container(border=True):
+                        col_r1, col_r2, col_r3, col_r4 = st.columns([3.4, 2.4, 1.2, 1.2])
+                        with col_r1:
+                            badge = " 🟢 **[ACTIVO]**" if es_activo else ""
+                            st.markdown(f"**#{c['id']} — {c['nombre_completo']}**{badge}")
+                            st.caption(f"📍 {c.get('localidad') or c.get('municipio') or '-'} | 📞 {c.get('telefono') or '-'} | CUPS: `{c.get('cups') or '-'}`")
+                        with col_r2:
+                            st.markdown(f"NIF/CIF: `{c.get('nif_cif') or '-'}` | Potencia: `{c.get('potencia_contratada_kw') or '-'} kW` | 📁 Obras: {conteo_proyectos_por_cli.get(c['id'], 0)}")
+                        with col_r3:
+                            if st.button("✏️ Editar", key=f"btn_edit_row_{c['id']}", type="primary" if es_activo else "secondary", use_container_width=True):
+                                st.session_state["crm_cliente_seleccionado_id"] = c["id"]
+                                st.session_state["crm_sel_dropdown_sync"] = c["id"]
+                                st.session_state["cliente_activo_proyecto"] = c
+                                st.session_state["crm_modo_edicion"] = True
+                                st.rerun()
+                        with col_r4:
+                            if st.button("👁️ Ver Ficha", key=f"btn_ver_row_{c['id']}", use_container_width=True):
+                                st.session_state["crm_cliente_seleccionado_id"] = c["id"]
+                                st.session_state["crm_sel_dropdown_sync"] = c["id"]
+                                st.session_state["cliente_activo_proyecto"] = c
+                                st.session_state["crm_modo_edicion"] = False
+                                st.rerun()
 
             # =========================================================
             # 5. EXPEDIENTE TÉCNICO 360° (SOLO SI NO ESTÁ EN MODO EDICIÓN)
