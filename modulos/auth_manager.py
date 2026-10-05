@@ -204,9 +204,11 @@ def renderizar_pantalla_login():
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("⚡ Entrar Directamente como Richard Choque (BOLIMUR)", type="primary", use_container_width=True, key="btn_quick_richard"):
+        if st.button("⚡ Entrar Directamente con Google como Richard Choque (richardcurs0606@gmail.com)", type="primary", use_container_width=True, key="btn_quick_richard"):
             st.session_state.pop("sesion_cerrada_manual", None)
             usuario = obtener_usuario_actual()
+            usuario["email"] = "richardcurs0606@gmail.com"
+            usuario["auth_provider"] = "Google"
             st.session_state["usuario_autenticado"] = usuario
             st.rerun()
 
@@ -227,14 +229,15 @@ def renderizar_pantalla_login():
             with st.container(border=True):
                 google_demo_email = st.text_input(
                     "Tu Correo de Google (*):",
-                    placeholder="ejemplo.instalador@gmail.com",
+                    value="richardcurs0606@gmail.com",
+                    placeholder="richardcurs0606@gmail.com",
                     key="g_demo_mail"
                 )
                 col_g1, col_g2 = st.columns(2)
                 with col_g1:
-                    google_demo_nom = st.text_input("Nombre / Razón Social:", value="Instalador Autorizado", key="g_demo_nom")
+                    google_demo_nom = st.text_input("Nombre / Razón Social:", value="Richard Orlando Choque Tejerina", key="g_demo_nom")
                 with col_g2:
-                    google_demo_empresa = st.text_input("Empresa Eléctrica (Opcional):", placeholder="Tu Empresa Eléctrica", key="g_demo_emp")
+                    google_demo_empresa = st.text_input("Empresa Eléctrica:", value="BOLIMUR INSTALACIONES Y REFORMAS", key="g_demo_emp")
 
                 if st.button("🚀 Iniciar Sesión con Google", type="primary", use_container_width=True, key="btn_g_demo"):
                     if google_demo_email and "@" in google_demo_email:
@@ -371,7 +374,13 @@ def obtener_usuario_actual() -> dict:
     if not usuario:
         db_manager.inicializar_bd()
         win_user = getpass.getuser()
-        usuario = db_manager.autenticar_usuario_windows(win_user)
+        
+        # 1. Buscar prioritariamente la cuenta configurada
+        usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
+        if not usuario:
+            usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
+        if not usuario:
+            usuario = db_manager.autenticar_usuario_windows(win_user)
         if not usuario:
             # Buscar si ya existe algún usuario en la BD
             try:
@@ -387,24 +396,28 @@ def obtener_usuario_actual() -> dict:
         if not usuario:
             # Crear perfil automático oficial por defecto
             db_manager.registrar_nuevo_usuario(
-                email="richard@bolimur.es",
+                email="richardcurs0606@gmail.com",
                 password="password123",
                 nombre_instalador="Richard Orlando Choque Tejerina",
                 nombre_empresa="BOLIMUR INSTALACIONES Y REFORMAS",
                 username_win=win_user
             )
-            usuario = db_manager.autenticar_usuario_windows(win_user)
-            if not usuario:
-                usuario = db_manager.obtener_usuario_por_email("richard@bolimur.es")
+            usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
         if not usuario:
             usuario = {
                 "id": 1,
-                "email": "richard@bolimur.es",
+                "email": "richardcurs0606@gmail.com",
                 "nombre_instalador": "Richard Orlando Choque Tejerina",
                 "nombre_empresa": "BOLIMUR INSTALACIONES Y REFORMAS",
                 "num_licencia_rebt": "REBT-30/15892",
                 "localidad": "Murcia, España",
                 "telefono": "+34 600 000 000"
             }
+        
+        # Configurar como sesión activa de Google oficial
+        usuario["auth_provider"] = "Google"
+        if not usuario.get("google_id"):
+            usuario["google_id"] = "google_richardcurs0606@gmail.com"
+        usuario["email"] = "richardcurs0606@gmail.com"
         st.session_state["usuario_autenticado"] = usuario
     return usuario

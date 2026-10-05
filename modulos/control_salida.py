@@ -299,9 +299,53 @@ def inyectar_control_escape():
             targetWin.__bolimur_esc_listener_installed = true;
         }
 
-        // También registrar en el contexto iframe local
-        window.addEventListener('keydown', onKeyDownEscape, true);
-        document.addEventListener('keydown', onKeyDownEscape, true);
+        // 5. Desplazar/desaparecer la barra lateral izquierda al pulsar en la ventana derecha (aplicación)
+        function instalarAutoColapsoSidebar() {
+            if (targetWin.__bolimur_sidebar_click_installed) return;
+
+            function onVentanaDerechaClick(e) {
+                try {
+                    var sidebar = targetDoc.querySelector('[data-testid="stSidebar"]');
+                    if (!sidebar) return;
+
+                    // Si el clic fue dentro de la barra lateral, no colapsar (el usuario interactúa con el menú)
+                    if (sidebar.contains(e.target)) {
+                        return;
+                    }
+
+                    // Si el clic fue en el botón de expandir la barra lateral, permitir que se expanda
+                    var btnExpand = targetDoc.querySelector('[data-testid="stExpandSidebarButton"]');
+                    if (btnExpand && (btnExpand.contains(e.target) || btnExpand === e.target)) {
+                        return;
+                    }
+
+                    // Si el clic fue en el modal de confirmación de salida, no colapsar
+                    var modalSalida = targetDoc.getElementById('bolimur-exit-confirm-modal');
+                    if (modalSalida && (modalSalida.contains(e.target) || modalSalida === e.target)) {
+                        return;
+                    }
+
+                    // Si la barra lateral está abierta (existe el botón de colapso en el DOM)
+                    var btnCollapse = targetDoc.querySelector(
+                        '[data-testid="stSidebarCollapseButton"] button, ' +
+                        '[data-testid="stSidebarCollapseButton"], ' +
+                        'button[aria-label="Collapse sidebar"]'
+                    );
+                    if (btnCollapse) {
+                        // El usuario ha pulsado en la ventana derecha para ir a la aplicación:
+                        // Desplazar/ocultar la barra lateral izquierda inmediatamente
+                        btnCollapse.click();
+                    }
+                } catch(err) {
+                    console.error('Error auto-colapso sidebar:', err);
+                }
+            }
+
+            targetDoc.addEventListener('click', onVentanaDerechaClick, false);
+            targetWin.__bolimur_sidebar_click_installed = true;
+        }
+
+        instalarAutoColapsoSidebar();
 
     })();
     </script>

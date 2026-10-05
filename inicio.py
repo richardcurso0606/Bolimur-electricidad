@@ -138,7 +138,9 @@ st.markdown("""
         
         /* Barra Lateral */
         [data-testid="stSidebar"] {
-            background-color: #f8fafc; border-right: 1px solid #e2e8f0;
+            background-color: #f8fafc; 
+            border-right: 1px solid #e2e8f0;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.28s ease !important;
         }
         [data-testid="stSidebar"] button {
             width: 100%;
@@ -157,6 +159,36 @@ st.markdown("""
             color: #0284c7;
             box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
             transform: translateX(2px);
+        }
+
+        /* Botón de expandir menú lateral (cuando está oculto) */
+        [data-testid="stExpandSidebarButton"] button {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            border: 1.5px solid #0369a1 !important;
+            padding: 6px 10px !important;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35) !important;
+            transition: all 0.2s ease !important;
+        }
+        [data-testid="stExpandSidebarButton"] button:hover {
+            background-color: #0369a1 !important;
+            transform: scale(1.06) !important;
+            box-shadow: 0 6px 14px rgba(2, 132, 199, 0.5) !important;
+        }
+        [data-testid="stExpandSidebarButton"] button svg {
+            fill: #ffffff !important;
+            color: #ffffff !important;
+        }
+
+        /* Botón para colapsar menú (dentro del sidebar) */
+        [data-testid="stSidebarCollapseButton"] button {
+            border-radius: 8px !important;
+            transition: all 0.2s ease !important;
+        }
+        [data-testid="stSidebarCollapseButton"] button:hover {
+            background-color: #e0f2fe !important;
+            color: #0284c7 !important;
         }
 
         /* Contenedores con Borde y Sombra */
@@ -244,11 +276,14 @@ if auth_manager:
 else:
     usuario_actual = {
         "id": 1,
+        "email": "richardcurs0606@gmail.com",
         "nombre_instalador": "Richard Orlando Choque Tejerina",
         "nombre_empresa": "BOLIMUR INSTALACIONES Y REFORMAS",
         "num_licencia_rebt": "REBT-30/15892",
         "localidad": "Murcia, España",
-        "telefono": "+34 600 000 000"
+        "telefono": "+34 600 000 000",
+        "auth_provider": "Google",
+        "google_id": "google_richardcurs0606@gmail.com"
     }
 
 # =========================================================================
