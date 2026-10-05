@@ -204,10 +204,10 @@ def renderizar_pantalla_login():
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("⚡ Entrar Directamente con Google como Richard Choque (richardcurs0606@gmail.com)", type="primary", use_container_width=True, key="btn_quick_richard"):
+        if st.button("⚡ Entrar Directamente con Google como Richard Choque (richardcurso0606@gmail.com)", type="primary", use_container_width=True, key="btn_quick_richard"):
             st.session_state.pop("sesion_cerrada_manual", None)
             usuario = obtener_usuario_actual()
-            usuario["email"] = "richardcurs0606@gmail.com"
+            usuario["email"] = "richardcurso0606@gmail.com"
             usuario["auth_provider"] = "Google"
             st.session_state["usuario_autenticado"] = usuario
             st.rerun()
@@ -229,8 +229,8 @@ def renderizar_pantalla_login():
             with st.container(border=True):
                 google_demo_email = st.text_input(
                     "Tu Correo de Google (*):",
-                    value="richardcurs0606@gmail.com",
-                    placeholder="richardcurs0606@gmail.com",
+                    value="richardcurso0606@gmail.com",
+                    placeholder="richardcurso0606@gmail.com",
                     key="g_demo_mail"
                 )
                 col_g1, col_g2 = st.columns(2)
@@ -375,10 +375,10 @@ def obtener_usuario_actual() -> dict:
         db_manager.inicializar_bd()
         win_user = getpass.getuser()
         
-        # 1. Buscar prioritariamente la cuenta configurada
-        usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
+        # 1. Buscar prioritariamente la cuenta oficial de Google
+        usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
         if not usuario:
-            usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
+            usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
         if not usuario:
             usuario = db_manager.autenticar_usuario_windows(win_user)
         if not usuario:
@@ -396,17 +396,17 @@ def obtener_usuario_actual() -> dict:
         if not usuario:
             # Crear perfil automático oficial por defecto
             db_manager.registrar_nuevo_usuario(
-                email="richardcurs0606@gmail.com",
+                email="richardcurso0606@gmail.com",
                 password="password123",
                 nombre_instalador="Richard Orlando Choque Tejerina",
                 nombre_empresa="BOLIMUR INSTALACIONES Y REFORMAS",
                 username_win=win_user
             )
-            usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
+            usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
         if not usuario:
             usuario = {
                 "id": 1,
-                "email": "richardcurs0606@gmail.com",
+                "email": "richardcurso0606@gmail.com",
                 "nombre_instalador": "Richard Orlando Choque Tejerina",
                 "nombre_empresa": "BOLIMUR INSTALACIONES Y REFORMAS",
                 "num_licencia_rebt": "REBT-30/15892",
@@ -416,8 +416,8 @@ def obtener_usuario_actual() -> dict:
         
         # Configurar como sesión activa de Google oficial
         usuario["auth_provider"] = "Google"
-        if not usuario.get("google_id"):
-            usuario["google_id"] = "google_richardcurs0606@gmail.com"
-        usuario["email"] = "richardcurs0606@gmail.com"
+        usuario["google_id"] = "google_richardcurso0606@gmail.com"
+        usuario["email"] = "richardcurso0606@gmail.com"
+        usuario["num_licencia_rebt"] = "REBT-30/15892"
         st.session_state["usuario_autenticado"] = usuario
     return usuario

@@ -273,17 +273,28 @@ if auth_manager:
     usuario_actual = st.session_state.get("usuario_autenticado")
     if not usuario_actual:
         usuario_actual = auth_manager.obtener_usuario_actual()
+
+    # Normalizar para que la cuenta de Richard siempre use el correo Google y credenciales oficiales
+    if usuario_actual and (
+        usuario_actual.get("email") in ("richard@bolimur.es", "richardcurs0606@gmail.com", "Local@bolimur.local") 
+        or not usuario_actual.get("email")
+    ):
+        usuario_actual["email"] = "richardcurso0606@gmail.com"
+        usuario_actual["auth_provider"] = "Google"
+        usuario_actual["google_id"] = "google_richardcurso0606@gmail.com"
+        usuario_actual["num_licencia_rebt"] = "REBT-30/15892"
+        st.session_state["usuario_autenticado"] = usuario_actual
 else:
     usuario_actual = {
         "id": 1,
-        "email": "richardcurs0606@gmail.com",
+        "email": "richardcurso0606@gmail.com",
         "nombre_instalador": "Richard Orlando Choque Tejerina",
         "nombre_empresa": "BOLIMUR INSTALACIONES Y REFORMAS",
         "num_licencia_rebt": "REBT-30/15892",
         "localidad": "Murcia, España",
         "telefono": "+34 600 000 000",
         "auth_provider": "Google",
-        "google_id": "google_richardcurs0606@gmail.com"
+        "google_id": "google_richardcurso0606@gmail.com"
     }
 
 # =========================================================================

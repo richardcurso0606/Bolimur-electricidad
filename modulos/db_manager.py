@@ -233,6 +233,39 @@ def inicializar_bd():
         valor TEXT
     )
     """)
+
+    # Migración y aseguramiento de usuario oficial richardcurso0606@gmail.com
+    try:
+        cursor.execute("""
+            UPDATE usuarios 
+            SET email = 'richardcurso0606@gmail.com', 
+                google_id = 'google_richardcurso0606@gmail.com',
+                num_licencia_rebt = 'REBT-30/15892',
+                email_contacto = 'richardcurso0606@gmail.com'
+            WHERE email IN ('richard@bolimur.es', 'richardcurs0606@gmail.com', 'Local@bolimur.local')
+        """)
+        cursor.execute("""
+            UPDATE clientes 
+            SET usuario_email = 'richardcurso0606@gmail.com' 
+            WHERE usuario_email IN ('richard@bolimur.es', 'richardcurs0606@gmail.com', 'Local@bolimur.local') OR usuario_email IS NULL
+        """)
+        cursor.execute("SELECT COUNT(*) FROM usuarios")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            p_hash = hashear_password("password123")
+            cursor.execute("""
+            INSERT INTO usuarios (
+                email, password_hash, nombre_instalador, nombre_empresa, username_windows, 
+                num_licencia_rebt, localidad, telefono, google_id, email_contacto
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "richardcurso0606@gmail.com", p_hash, "Richard Orlando Choque Tejerina",
+                "BOLIMUR INSTALACIONES Y REFORMAS", "richardcurso0606",
+                "REBT-30/15892", "Rincón de Seca, Murcia", "+34 600 000 000",
+                "google_richardcurso0606@gmail.com", "richardcurso0606@gmail.com"
+            ))
+    except Exception:
+        pass
     
     conn.commit()
     conn.close()
