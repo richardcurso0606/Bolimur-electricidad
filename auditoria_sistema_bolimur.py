@@ -288,30 +288,38 @@ def ejecutar_auditoria():
             users = db_manager.listar_todos_usuarios()
             u_id = users[0]["id"]
         
-        # Crear cliente en CRM
-        cli_datos = {
-            "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
-            "nif_cif": "99887766A",
-            "telefono": "+34 600 999 888",
-            "email": "cliente.audit@bolimur.es",
-            "direccion": "Av. de la Libertad 1",
-            "municipio": "Murcia",
-            "codigo_postal": "30009",
-            "notas": "Cliente creado durante el programa de auditoría"
-        }
-        ok_c, c_id = db_manager.crear_cliente(u_id, cli_datos)
-        assert ok_c or c_id > 0, "No se pudo registrar cliente en la BD"
+        # Crear o recuperar cliente de prueba de auditoría (sin duplicar)
+        cli_existente = db_manager.buscar_cliente_duplicado(u_id, "99887766A", "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL")
+        if cli_existente:
+            c_id = cli_existente["id"]
+        else:
+            cli_datos = {
+                "nombre_completo": "CLIENTE DE PRUEBAS AUDITORIA INTEGRAL",
+                "nif_cif": "99887766A",
+                "telefono": "+34 600 999 888",
+                "email": "cliente.audit@bolimur.es",
+                "direccion": "Av. de la Libertad 1",
+                "municipio": "Murcia",
+                "codigo_postal": "30009",
+                "notas": "Cliente creado durante el programa de auditoría"
+            }
+            ok_c, c_id = db_manager.crear_cliente(u_id, cli_datos)
+            assert ok_c or c_id > 0, "No se pudo registrar cliente en la BD"
         
-        # Guardar proyecto de MTD asociado
-        ok_proy, p_id = db_manager.guardar_proyecto(
-            usuario_id=u_id,
-            cliente_id=c_id,
-            nombre_proyecto="Expediente Auditoría 2026",
-            modulo="Memoria Técnica (MTD 30)",
-            datos={"test_key": "test_val", "mtd_fotos": [{"titulo": "foto1"}]},
-            resumen="5.75 kW | Nueva Instalación"
-        )
-        assert ok_proy, "Error guardando proyecto en la BD"
+        # Guardar o recuperar proyecto de MTD asociado (sin duplicar)
+        proyectos_existentes = db_manager.listar_proyectos_por_cliente(c_id, usuario_id=u_id)
+        if proyectos_existentes:
+            p_id = proyectos_existentes[0]["id"]
+        else:
+            ok_proy, p_id = db_manager.guardar_proyecto(
+                usuario_id=u_id,
+                cliente_id=c_id,
+                nombre_proyecto="Expediente Auditoría 2026",
+                modulo="Memoria Técnica (MTD 30)",
+                datos={"test_key": "test_val", "mtd_fotos": [{"titulo": "foto1"}]},
+                resumen="5.75 kW | Nueva Instalación"
+            )
+            assert ok_proy, "Error guardando proyecto en la BD"
         
         # Recuperar proyectos del cliente
         proyectos = db_manager.listar_proyectos_por_cliente(c_id, usuario_id=u_id)

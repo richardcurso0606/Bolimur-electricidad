@@ -88,7 +88,7 @@ def renderizar():
     # =========================================================================
     # CABECERA PRINCIPAL Y MÉTRICAS
     # =========================================================================
-    col_t1, col_t2, col_t3, col_t4 = st.columns([2.6, 1.1, 1.1, 1.2])
+    col_t1, col_t2, col_t3, col_t4 = st.columns([2.2, 1.0, 1.0, 1.8])
     with col_t1:
         st.title("👥 Expedientes de Clientes y Obras")
         if tiene_nube:
@@ -100,22 +100,24 @@ def renderizar():
     with col_t3:
         st.metric("Tus Obras", f"{len(todos_proyectos)} proyectos")
     with col_t4:
-        if tiene_nube:
-            if st.button("⚡ Sincronizar Mi Nube", key="btn_sync_top", use_container_width=True, type="primary"):
-                ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
-                if ok_s:
-                    st.success(f"✅ {msg_s}")
-                    st.rerun()
-                else:
-                    st.error(f"❌ {msg_s}")
-        else:
-            if st.button("🧹 Limpiar Duplicados", key="btn_limpiar_dup_top", use_container_width=True, help="Unifica clientes duplicados"):
+        c_sync, c_dup = st.columns(2)
+        with c_sync:
+            if tiene_nube:
+                if st.button("⚡ Sincronizar", key="btn_sync_top", use_container_width=True, type="primary"):
+                    ok_s, msg_s = db_manager.sincronizar_con_nube(usuario_id)
+                    if ok_s:
+                        st.session_state["crm_alerta_exito"] = f"✅ {msg_s}"
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {msg_s}")
+        with c_dup:
+            if st.button("🧹 Limpiar Repetidos", key="btn_limpiar_dup_top", use_container_width=True, help="Detecta y unifica fichas y proyectos duplicados"):
                 num_borrados = db_manager.limpiar_duplicados_clientes(usuario_id)
                 if num_borrados > 0:
-                    st.success(f"✅ Se han unificado y eliminado {num_borrados} fichas duplicadas.")
+                    st.session_state["crm_alerta_exito"] = f"✅ Se han unificado y eliminado {num_borrados} fichas duplicadas."
                     st.rerun()
                 else:
-                    st.info("No se encontraron clientes duplicados en tu cuenta.")
+                    st.info("No se encontraron fichas duplicadas en tu cuenta.")
 
     # Notificaciones de acción (si existen)
     if "crm_alerta_exito" in st.session_state:

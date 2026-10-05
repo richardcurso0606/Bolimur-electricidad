@@ -1014,6 +1014,37 @@ def eliminar_cliente(cliente_id: int, usuario_id: int) -> bool:
         conn.close()
         return False
 
+def limpiar_duplicados_proyectos(usuario_id: int) -> int:
+    """Busca proyectos idénticos (mismo cliente, módulo y nombre) del usuario y elimina los repetidos."""
+    usuario = obtener_usuario_por_id(usuario_id)
+    user_email = (usuario.get("email") or "").strip().lower() if usuario else ""
+
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM proyectos WHERE usuario_id = ? ORDER BY id ASC", (usuario_id,))
+    todos = [dict(r) for r in cursor.fetchall()]
+
+    agrupados: Dict[str, List[Dict[str, Any]]] = {}
+    for p in todos:
+        c_id = p.get("cliente_id") or 0
+        mod = (p.get("modulo") or "").strip().lower()
+        nom = (p.get("nombre_proyecto") or "").strip().lower()
+        clave = f"{c_id}_{mod}_{nom}"
+        agrupados.setdefault(clave, []).append(p)
+
+    borrados = 0
+    for clave, lista in agrupados.items():
+        if len(lista) > 1:
+            duplicados = lista[1:]
+            for dup in duplicados:
+                cursor.execute("DELETE FROM proyectos WHERE id = ? AND usuario_id = ?", (dup["id"], usuario_id))
+                delete_proyecto_de_nube(dup["id"], user_email=user_email)
+                borrados += 1
+
+    conn.commit()
+    conn.close()
+    return borrados
+
 def limpiar_duplicados_clientes(usuario_id: int) -> int:
     """Busca clientes duplicados por NIF o Nombre dentro de la cuenta del usuario, reasigna sus proyectos y elimina los repetidos."""
     usuario = obtener_usuario_por_id(usuario_id)
@@ -1046,6 +1077,10 @@ def limpiar_duplicados_clientes(usuario_id: int) -> int:
                 
     conn.commit()
     conn.close()
+
+    # Eliminar también proyectos duplicados resultantes
+    limpiar_duplicados_proyectos(usuario_id)
+
     return borrados
 
 # =========================================================================
