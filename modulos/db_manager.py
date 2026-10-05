@@ -118,107 +118,6 @@ def inicializar_bd():
     )
     """)
 
-
-
-def inicializar_bd():
-    conn = obtener_conexion()
-    cursor = conn.cursor()
-    
-    # Tabla de Usuarios / Instaladores
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE,
-        username_windows TEXT,
-        password_hash TEXT,
-        nombre_instalador TEXT,
-        nombre_empresa TEXT,
-        nif_cif TEXT,
-        num_licencia_rebt TEXT,
-        categoria_rebt TEXT,
-        registro_industrial TEXT,
-        direccion TEXT,
-        localidad TEXT,
-        telefono TEXT,
-        email_contacto TEXT,
-        logo_base64 TEXT,
-        iban TEXT,
-        google_id TEXT,
-        avatar_url TEXT,
-        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-    
-    # Comprobar columnas adicionales si la tabla ya existía
-    cursor.execute("PRAGMA table_info(usuarios)")
-    cols_existentes = [row[1] for row in cursor.fetchall()]
-    if "google_id" not in cols_existentes:
-        try:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN google_id TEXT")
-        except Exception:
-            pass
-    if "avatar_url" not in cols_existentes:
-        try:
-            cursor.execute("ALTER TABLE usuarios ADD COLUMN avatar_url TEXT")
-        except Exception:
-            pass
-    
-    # Tabla de Clientes
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS clientes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        usuario_id INTEGER,
-        nombre_completo TEXT NOT NULL,
-        nif_cif TEXT,
-        telefono TEXT,
-        email TEXT,
-        direccion_suministro TEXT,
-        localidad TEXT,
-        cups TEXT,
-        referencia_catastral TEXT,
-        tipo_inmueble TEXT,
-        notas TEXT,
-        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-    )
-    """)
-    
-    # Comprobar columnas adicionales en tabla clientes
-    cursor.execute("PRAGMA table_info(clientes)")
-    cols_cli_existentes = [row[1] for row in cursor.fetchall()]
-    cols_cli_nuevas = [
-        ("usuario_email", "TEXT"),
-        ("codigo_postal", "TEXT"),
-        ("municipio", "TEXT"),
-        ("provincia", "TEXT"),
-        ("distribuidora", "TEXT"),
-        ("potencia_contratada_kw", "TEXT"),
-        ("tension_suministro", "TEXT")
-    ]
-    for col_nom, col_tipo in cols_cli_nuevas:
-        if col_nom not in cols_cli_existentes:
-            try:
-                cursor.execute(f"ALTER TABLE clientes ADD COLUMN {col_nom} {col_tipo}")
-            except Exception:
-                pass
-
-    # Tabla de Proyectos y Cálculos Guardados por Cliente
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS proyectos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        usuario_id INTEGER,
-        usuario_email TEXT,
-        cliente_id INTEGER,
-        nombre_proyecto TEXT NOT NULL,
-        modulo TEXT NOT NULL,
-        datos_json TEXT NOT NULL,
-        resumen_potencia_o_importe TEXT,
-        fecha_guardado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
-        FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
-    )
-    """)
-
     cursor.execute("PRAGMA table_info(proyectos)")
     cols_pro_existentes = [row[1] for row in cursor.fetchall()]
     if "usuario_email" not in cols_pro_existentes:
@@ -264,6 +163,21 @@ def inicializar_bd():
                 "REBT-30/15892", "Rincón de Seca, Murcia", "+34 600 000 000",
                 "google_richardcurso0606@gmail.com", "richardcurso0606@gmail.com"
             ))
+    except Exception:
+        pass
+
+    # Auto-siembra de clientes y proyectos iniciales si la base de datos está vacía (despliegue Streamlit Cloud)
+    try:
+        cursor.execute("SELECT COUNT(*) FROM clientes")
+        cli_count = cursor.fetchone()[0]
+        if cli_count == 0:
+            from pathlib import Path
+            json_path = Path(__file__).resolve().parent.parent / "datos_iniciales_bolimur.json"
+            if not json_path.exists():
+                json_path = Path("datos_iniciales_bolimur.json")
+            if json_path.exists():
+                conn.commit()
+                importar_copia_seguridad_nube(1, json_path.read_text(encoding="utf-8"))
     except Exception:
         pass
     

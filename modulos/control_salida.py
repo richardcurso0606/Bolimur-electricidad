@@ -16,11 +16,12 @@ def inyectar_control_escape():
     1. Interceptar la tecla Escape a nivel global e impedir cualquier cierre no autorizado.
     2. Mostrar un diálogo modal de confirmación con diseño Bolimur pidiendo confirmación.
     3. Proteger la pestaña con beforeunload ante cierres accidentales.
+    4. Interceptar el botón Atrás y gestos de retroceso en móviles/tablets (popstate).
+    5. Auto-colapsar la barra lateral izquierda al pulsar en el contenido de la derecha.
     """
     codigo_html = """
     <script>
     (function() {
-        // Obtener la ventana principal (parent o top) de Streamlit
         var targetWin = window;
         var targetDoc = document;
         try {
@@ -33,379 +34,274 @@ def inyectar_control_escape():
             targetDoc = document;
         }
 
-        // 1. Protección contra cierre accidental de pestaña/ventana (beforeunload)
-        if (!targetWin.__bolimur_beforeunload_active) {
-            targetWin.__bolimur_allow_exit = false;
-            targetWin.addEventListener('beforeunload', function(e) {
-                if (targetWin.__bolimur_allow_exit) {
-                    return undefined;
-                }
-                var mensaje = '¿Estás seguro de que deseas salir de Bolimur REBT? Es posible que los datos no guardados se pierdan.';
-                e.preventDefault();
-                e.returnValue = mensaje;
-                return mensaje;
-            });
-            targetWin.__bolimur_beforeunload_active = true;
+        // Si ya está inyectado el script persistente en el documento principal, no duplicar
+        if (targetDoc.getElementById('bolimur-guard-core-script')) {
+            return;
         }
 
-        // 2. Intentar bloquear la tecla Escape si el navegador está en pantalla completa
-        try {
-            if (targetDoc.fullscreenElement && targetWin.navigator && targetWin.navigator.keyboard && targetWin.navigator.keyboard.lock) {
-                targetWin.navigator.keyboard.lock(['Escape']);
-            }
-        } catch (err) {}
+        var scriptElem = targetDoc.createElement('script');
+        scriptElem.id = 'bolimur-guard-core-script';
+        scriptElem.textContent = `
+        (function() {
+            var win = window;
+            var doc = document;
 
-        // 3. Crear el Modal de Confirmación en el Documento Principal si no existe
-        var modalId = 'bolimur-exit-confirm-modal';
-        var modalExistente = targetDoc.getElementById(modalId);
-
-        if (!modalExistente) {
-            var modal = targetDoc.createElement('div');
-            modal.id = modalId;
-            modal.style.cssText = [
-                'display: none',
-                'position: fixed',
-                'top: 0',
-                'left: 0',
-                'width: 100vw',
-                'height: 100vh',
-                'background: rgba(15, 23, 42, 0.75)',
-                'backdrop-filter: blur(5px)',
-                '-webkit-backdrop-filter: blur(5px)',
-                'z-index: 2147483647',
-                'align-items: center',
-                'justify-content: center',
-                'font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                'box-sizing: border-box',
-                'opacity: 0',
-                'transition: opacity 0.2s ease-in-out'
-            ].join(' !important;') + ' !important;';
-
-            modal.innerHTML = `
-                <div id="bolimur-modal-box" style="
-                    background: #ffffff !important;
-                    border: 2px solid #0284c7 !important;
-                    border-radius: 16px !important;
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-                    width: 90% !important;
-                    max-width: 490px !important;
-                    padding: 26px 24px !important;
-                    text-align: center !important;
-                    box-sizing: border-box !important;
-                    transform: scale(0.92) !important;
-                    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-                ">
-                    <div style="
-                        width: 58px !important;
-                        height: 58px !important;
-                        background: #fffbeb !important;
-                        border: 2px solid #fde68a !important;
-                        border-radius: 50% !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        margin: 0 auto 16px auto !important;
-                        font-size: 28px !important;
-                    ">
-                        ⚠️
-                    </div>
-
-                    <div style="font-size: 11px !important; font-weight: 700 !important; color: #0284c7 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 6px !important;">
-                        ⚡ Bolimur REBT PRO • Control de Salida
-                    </div>
-
-                    <h3 style="
-                        margin: 0 0 10px 0 !important;
-                        color: #0f172a !important;
-                        font-size: 20px !important;
-                        font-weight: 700 !important;
-                    ">¿Deseas salir de la aplicación?</h3>
-
-                    <p style="
-                        margin: 0 0 22px 0 !important;
-                        color: #475569 !important;
-                        font-size: 14px !important;
-                        line-height: 1.55 !important;
-                    ">
-                        Has pulsado la tecla <strong>Escape</strong>.<br>
-                        Para evitar cierres accidentales o pérdida de cálculos técnicos, debes <strong>confirmar</strong> si realmente deseas salir.
-                    </p>
-
-                    <div style="
-                        display: flex !important;
-                        gap: 12px !important;
-                        justify-content: center !important;
-                    ">
-                        <button id="bolimur-btn-permanecer" type="button" style="
-                            flex: 1.2 !important;
-                            background: #0284c7 !important;
-                            color: #ffffff !important;
-                            border: none !important;
-                            padding: 12px 16px !important;
-                            border-radius: 10px !important;
-                            font-size: 14px !important;
-                            font-weight: 600 !important;
-                            cursor: pointer !important;
-                            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
-                            transition: background 0.15s ease !important;
-                        ">🛡️ Permanecer aquí</button>
-
-                        <button id="bolimur-btn-salir" type="button" style="
-                            flex: 0.9 !important;
-                            background: #fef2f2 !important;
-                            color: #dc2626 !important;
-                            border: 1.5px solid #f87171 !important;
-                            padding: 12px 14px !important;
-                            border-radius: 10px !important;
-                            font-size: 14px !important;
-                            font-weight: 600 !important;
-                            cursor: pointer !important;
-                            transition: background 0.15s ease !important;
-                        ">🚪 Sí, salir</button>
-                    </div>
-
-                    <div style="margin-top: 14px !important; font-size: 12px !important; color: #94a3b8 !important;">
-                        Si pulsas <em>Permanecer</em> o haces clic fuera, seguirás dentro sin perder nada.
-                    </div>
-                </div>
-            `;
-
-            targetDoc.body.appendChild(modal);
-
-            function abrirModal() {
-                modal.style.display = 'flex';
-                setTimeout(function() {
-                    modal.style.opacity = '1';
-                    var card = targetDoc.getElementById('bolimur-modal-box');
-                    if (card) card.style.transform = 'scale(1)';
-                    var btnPermanecer = targetDoc.getElementById('bolimur-btn-permanecer');
-                    if (btnPermanecer) btnPermanecer.focus();
-                }, 10);
-                targetWin.__bolimur_modal_visible = true;
-            }
-
-            function cerrarModal() {
-                modal.style.opacity = '0';
-                var card = targetDoc.getElementById('bolimur-modal-box');
-                if (card) card.style.transform = 'scale(0.92)';
-                setTimeout(function() {
-                    modal.style.display = 'none';
-                }, 200);
-                targetWin.__bolimur_modal_visible = false;
-            }
-
-            targetWin.__bolimur_abrir_modal = abrirModal;
-            targetWin.__bolimur_cerrar_modal = cerrarModal;
-
-            // Botón Permanecer
-            var btnStay = targetDoc.getElementById('bolimur-btn-permanecer');
-            if (btnStay) {
-                btnStay.addEventListener('click', function(ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    cerrarModal();
+            // 1. Protección contra cierre accidental de pestaña/ventana (beforeunload)
+            if (!win.__bolimur_beforeunload_active) {
+                win.__bolimur_allow_exit = false;
+                win.addEventListener('beforeunload', function(e) {
+                    if (win.__bolimur_allow_exit) {
+                        return undefined;
+                    }
+                    var mensaje = '¿Estás seguro de que deseas salir de Bolimur REBT? Es posible que los datos no guardados se pierdan.';
+                    e.preventDefault();
+                    e.returnValue = mensaje;
+                    return mensaje;
                 });
-                btnStay.addEventListener('mouseenter', function() {
-                    btnStay.style.background = '#0369a1';
-                });
-                btnStay.addEventListener('mouseleave', function() {
-                    btnStay.style.background = '#0284c7';
-                });
+                win.__bolimur_beforeunload_active = true;
             }
 
-            // Botón Salir
-            var btnExit = targetDoc.getElementById('bolimur-btn-salir');
-            if (btnExit) {
-                btnExit.addEventListener('click', function(ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    targetWin.__bolimur_allow_exit = true;
-                    cerrarModal();
+            // 2. Crear el Modal de Confirmación en el Documento Principal si no existe
+            var modalId = 'bolimur-exit-confirm-modal';
+            var modal = doc.getElementById(modalId);
 
-                    // 1. Intentar cerrar la ventana del navegador
-                    try {
-                        targetWin.close();
-                    } catch (err) {}
+            if (!modal) {
+                modal = doc.createElement('div');
+                modal.id = modalId;
+                modal.style.cssText = [
+                    'display: none',
+                    'position: fixed',
+                    'top: 0',
+                    'left: 0',
+                    'width: 100vw',
+                    'height: 100vh',
+                    'background: rgba(15, 23, 42, 0.75)',
+                    'backdrop-filter: blur(5px)',
+                    '-webkit-backdrop-filter: blur(5px)',
+                    'z-index: 2147483647',
+                    'align-items: center',
+                    'justify-content: center',
+                    'font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    'box-sizing: border-box',
+                    'opacity: 0',
+                    'transition: opacity 0.2s ease-in-out'
+                ].join(' !important;') + ' !important;';
 
-                    // 2. Si el navegador no permite cerrar la ventana (por seguridad), redirigir o cerrar sesión
+                modal.innerHTML = '<div id="bolimur-modal-box" style="' + [
+                    'background: #ffffff !important',
+                    'border: 2px solid #0284c7 !important',
+                    'border-radius: 16px !important',
+                    'box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important',
+                    'width: 90% !important',
+                    'max-width: 490px !important',
+                    'padding: 26px 24px !important',
+                    'text-align: center !important',
+                    'box-sizing: border-box !important',
+                    'transform: scale(0.92) !important',
+                    'transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important'
+                ].join(';') + '">' +
+                    '<div style="width: 58px !important; height: 58px !important; background: #fffbeb !important; border: 2px solid #fde68a !important; border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 auto 16px auto !important; font-size: 28px !important;">⚠️</div>' +
+                    '<div style="font-size: 11px !important; font-weight: 700 !important; color: #0284c7 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 6px !important;">⚡ Bolimur REBT PRO • Control de Salida</div>' +
+                    '<h3 style="margin: 0 0 10px 0 !important; color: #0f172a !important; font-size: 20px !important; font-weight: 700 !important;">¿Deseas salir de la aplicación?</h3>' +
+                    '<p style="margin: 0 0 22px 0 !important; color: #475569 !important; font-size: 14px !important; line-height: 1.55 !important;">Has pulsado <strong>Escape</strong> o el botón <strong>Atrás</strong>.<br>Para evitar pérdida de cálculos técnicos, debes <strong>confirmar</strong> si realmente deseas salir.</p>' +
+                    '<div style="display: flex !important; gap: 12px !important; justify-content: center !important;">' +
+                        '<button id="bolimur-btn-permanecer" type="button" style="flex: 1.2 !important; background: #0284c7 !important; color: #ffffff !important; border: none !important; padding: 12px 16px !important; border-radius: 10px !important; font-size: 14px !important; font-weight: 600 !important; cursor: pointer !important; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;">🛡️ Permanecer aquí</button>' +
+                        '<button id="bolimur-btn-salir" type="button" style="flex: 0.9 !important; background: #fef2f2 !important; color: #dc2626 !important; border: 1.5px solid #f87171 !important; padding: 12px 14px !important; border-radius: 10px !important; font-size: 14px !important; font-weight: 600 !important; cursor: pointer !important;">🚪 Sí, salir</button>' +
+                    '</div>' +
+                    '<div style="margin-top: 14px !important; font-size: 12px !important; color: #94a3b8 !important;">Si pulsas <em>Permanecer</em> o haces clic fuera, seguirás dentro sin perder nada.</div>' +
+                '</div>';
+
+                doc.body.appendChild(modal);
+
+                function abrirModal() {
+                    modal.style.display = 'flex';
                     setTimeout(function() {
-                        var baseUrl = targetWin.location.pathname || '/';
-                        targetWin.location.href = baseUrl + '?salir=1';
+                        modal.style.opacity = '1';
+                        var card = doc.getElementById('bolimur-modal-box');
+                        if (card) card.style.transform = 'scale(1)';
+                        var btnStay = doc.getElementById('bolimur-btn-permanecer');
+                        if (btnStay) btnStay.focus();
+                    }, 10);
+                    win.__bolimur_modal_visible = true;
+                }
+
+                function cerrarModal() {
+                    modal.style.opacity = '0';
+                    var card = doc.getElementById('bolimur-modal-box');
+                    if (card) card.style.transform = 'scale(0.92)';
+                    setTimeout(function() {
+                        modal.style.display = 'none';
                     }, 200);
-                });
-                btnExit.addEventListener('mouseenter', function() {
-                    btnExit.style.background = '#fee2e2';
-                });
-                btnExit.addEventListener('mouseleave', function() {
-                    btnExit.style.background = '#fef2f2';
+                    win.__bolimur_modal_visible = false;
+                }
+
+                win.__bolimur_abrir_modal = abrirModal;
+                win.__bolimur_cerrar_modal = cerrarModal;
+
+                var btnStay = doc.getElementById('bolimur-btn-permanecer');
+                if (btnStay) {
+                    btnStay.addEventListener('click', function(ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        cerrarModal();
+                    });
+                }
+
+                var btnExit = doc.getElementById('bolimur-btn-salir');
+                if (btnExit) {
+                    btnExit.addEventListener('click', function(ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        win.__bolimur_allow_exit = true;
+                        cerrarModal();
+                        try {
+                            win.close();
+                        } catch (err) {}
+                        setTimeout(function() {
+                            var baseUrl = win.location.pathname || '/';
+                            win.location.href = baseUrl + '?salir=1';
+                        }, 200);
+                    });
+                }
+
+                modal.addEventListener('click', function(ev) {
+                    if (ev.target === modal) {
+                        cerrarModal();
+                    }
                 });
             }
 
-            // Clic fuera del recuadro cierra el modal (permanece en la app)
-            modal.addEventListener('click', function(ev) {
-                if (ev.target === modal) {
-                    cerrarModal();
-                }
-            });
-        }
+            // 3. Interceptor universal de la tecla Escape (Desktop / Tablet)
+            function onKeyDownEscape(e) {
+                var esEscape = (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27 || e.code === 'Escape');
+                if (esEscape) {
+                    if (win.__bolimur_modal_visible) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        if (typeof win.__bolimur_cerrar_modal === 'function') {
+                            win.__bolimur_cerrar_modal();
+                        }
+                        return false;
+                    }
 
-        // 4. Interceptor universal de la tecla Escape
-        function onKeyDownEscape(e) {
-            var esEscape = (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27 || e.code === 'Escape');
-            if (esEscape) {
-                // Si el modal de confirmación ya está visible, pulsar Escape lo cierra (permanecer en la app)
-                if (targetWin.__bolimur_modal_visible) {
+                    try {
+                        var openDropdown = doc.querySelector('div[data-baseweb="popover"], div[role="listbox"], ul[role="listbox"]');
+                        if (openDropdown && openDropdown.offsetParent !== null) {
+                            return;
+                        }
+                    } catch(err) {}
+
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
-                    if (typeof targetWin.__bolimur_cerrar_modal === 'function') {
-                        targetWin.__bolimur_cerrar_modal();
+
+                    if (typeof win.__bolimur_abrir_modal === 'function') {
+                        win.__bolimur_abrir_modal();
                     }
                     return false;
                 }
-
-                // Si hay un desplegable de selección abierto en Streamlit, permitir que Escape lo cierre normalmente
-                try {
-                    var openDropdown = targetDoc.querySelector('div[data-baseweb="popover"], div[role="listbox"], ul[role="listbox"]');
-                    if (openDropdown && openDropdown.offsetParent !== null) {
-                        return; // Dejar que el desplegable se repliegue sin alertar de salida
-                    }
-                } catch(err) {}
-
-                // Detener cualquier acción predeterminada de Escape (cerrar app, salir de pantalla completa, etc.)
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-
-                // Mostrar aviso modal pidiendo confirmación explícita para salir
-                if (typeof targetWin.__bolimur_abrir_modal === 'function') {
-                    targetWin.__bolimur_abrir_modal();
-                }
-                return false;
             }
-        }
 
-        // Instalar listeners con useCapture = true para tener máxima prioridad
-        if (!targetWin.__bolimur_esc_listener_installed) {
-            targetWin.addEventListener('keydown', onKeyDownEscape, true);
-            targetWin.addEventListener('keyup', function(e) {
-                if (e.key === 'Escape' || e.keyCode === 27) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                }
-            }, true);
-            targetDoc.addEventListener('keydown', onKeyDownEscape, true);
+            if (!win.__bolimur_esc_installed) {
+                win.addEventListener('keydown', onKeyDownEscape, true);
+                win.addEventListener('keyup', function(e) {
+                    if (e.key === 'Escape' || e.keyCode === 27) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                    }
+                }, true);
+                doc.addEventListener('keydown', onKeyDownEscape, true);
+                win.__bolimur_esc_installed = true;
+            }
 
-            // Escuchar también en el iframe local por si el foco está dentro de un widget
-            try {
-                window.addEventListener('keydown', onKeyDownEscape, true);
-                document.addEventListener('keydown', onKeyDownEscape, true);
-            } catch(e) {}
-
-            targetWin.__bolimur_esc_listener_installed = true;
-        }
-
-        // 5. Interceptar Botón Atrás y Gesto de Deslizar Atrás en Móviles / Tablets (popstate)
-        function instalarControlAtrasMovil() {
-            if (targetWin.__bolimur_popstate_installed) return;
-
-            // Empujar un estado al historial del navegador para capturar el primer toque de Atrás
-            try {
-                targetWin.history.pushState({ bolimur: true }, '', targetWin.location.href);
-            } catch(e) {}
-
-            targetWin.addEventListener('popstate', function(ev) {
-                if (targetWin.__bolimur_allow_exit) {
-                    return; // Si el usuario confirmó salir, permitir navegación
-                }
-
-                // Restaurar el estado en el historial para evitar que el navegador cierre la pestaña o vuelva a la página anterior
+            // 4. Interceptor permanente para móvil: Botón Atrás y Deslizar Atrás (popstate)
+            function armarHistorial() {
                 try {
-                    targetWin.history.pushState({ bolimur: true }, '', targetWin.location.href);
+                    win.history.pushState({ bolimur: 'active', t: Date.now() }, '', win.location.href);
                 } catch(e) {}
-
-                // Si el modal de confirmación ya está visible, cerrarlo (permanecer en la app)
-                if (targetWin.__bolimur_modal_visible) {
-                    if (typeof targetWin.__bolimur_cerrar_modal === 'function') {
-                        targetWin.__bolimur_cerrar_modal();
-                    }
-                    return;
-                }
-
-                // En móvil: si el menú lateral está abierto, cerrarlo primero (comportamiento estándar de app nativa)
-                try {
-                    var sidebar = targetDoc.querySelector('[data-testid="stSidebar"]');
-                    var btnCollapse = targetDoc.querySelector(
-                        '[data-testid="stSidebarCollapseButton"] button, ' +
-                        '[data-testid="stSidebarCollapseButton"], ' +
-                        'button[aria-label="Collapse sidebar"]'
-                    );
-                    if (sidebar && sidebar.getAttribute('aria-expanded') !== 'false' && btnCollapse && targetWin.innerWidth < 992) {
-                        btnCollapse.click();
-                        return;
-                    }
-                } catch(err) {}
-
-                // Si no hay menú lateral abierto, mostrar el aviso modal de confirmación de salida
-                if (typeof targetWin.__bolimur_abrir_modal === 'function') {
-                    targetWin.__bolimur_abrir_modal();
-                }
-            }, false);
-
-            targetWin.__bolimur_popstate_installed = true;
-        }
-
-        instalarControlAtrasMovil();
-
-        // 6. Desplazar/desaparecer la barra lateral izquierda al pulsar en la ventana derecha (aplicación)
-        function instalarAutoColapsoSidebar() {
-            if (targetWin.__bolimur_sidebar_click_installed) return;
-
-            function onVentanaDerechaClick(e) {
-                try {
-                    var sidebar = targetDoc.querySelector('[data-testid="stSidebar"]');
-                    if (!sidebar) return;
-
-                    // Si el clic fue dentro de la barra lateral, no colapsar (el usuario interactúa con el menú)
-                    if (sidebar.contains(e.target)) {
-                        return;
-                    }
-
-                    // Si el clic fue en el botón de expandir la barra lateral, permitir que se expanda
-                    var btnExpand = targetDoc.querySelector('[data-testid="stExpandSidebarButton"]');
-                    if (btnExpand && (btnExpand.contains(e.target) || btnExpand === e.target)) {
-                        return;
-                    }
-
-                    // Si el clic fue en el modal de confirmación de salida, no colapsar
-                    var modalSalida = targetDoc.getElementById('bolimur-exit-confirm-modal');
-                    if (modalSalida && (modalSalida.contains(e.target) || modalSalida === e.target)) {
-                        return;
-                    }
-
-                    // Si la barra lateral está abierta (existe el botón de colapso en el DOM)
-                    var btnCollapse = targetDoc.querySelector(
-                        '[data-testid="stSidebarCollapseButton"] button, ' +
-                        '[data-testid="stSidebarCollapseButton"], ' +
-                        'button[aria-label="Collapse sidebar"]'
-                    );
-                    if (btnCollapse) {
-                        // El usuario ha pulsado en la ventana derecha para ir a la aplicación:
-                        // Desplazar/ocultar la barra lateral izquierda inmediatamente
-                        btnCollapse.click();
-                    }
-                } catch(err) {
-                    console.error('Error auto-colapso sidebar:', err);
-                }
             }
 
-            targetDoc.addEventListener('click', onVentanaDerechaClick, false);
-            targetWin.__bolimur_sidebar_click_installed = true;
-        }
+            if (!win.__bolimur_popstate_installed) {
+                // Cebar estado inicial en el historial
+                armarHistorial();
 
-        instalarAutoColapsoSidebar();
+                // Re-armar el historial con cualquier interacción táctil o clic
+                doc.addEventListener('touchstart', armarHistorial, { passive: true });
+                doc.addEventListener('click', armarHistorial, { passive: true });
 
+                win.addEventListener('popstate', function(ev) {
+                    if (win.__bolimur_allow_exit) {
+                        return;
+                    }
+
+                    // Re-empujar inmediatamente para bloquear la salida involuntaria
+                    armarHistorial();
+
+                    // Si el modal ya estaba visible, cerrarlo
+                    if (win.__bolimur_modal_visible) {
+                        if (typeof win.__bolimur_cerrar_modal === 'function') {
+                            win.__bolimur_cerrar_modal();
+                        }
+                        return;
+                    }
+
+                    // En móvil: si el menú lateral está abierto, cerrarlo primero
+                    try {
+                        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+                        var btnCollapse = doc.querySelector(
+                            '[data-testid="stSidebarCollapseButton"] button, ' +
+                            '[data-testid="stSidebarCollapseButton"], ' +
+                            'button[aria-label="Collapse sidebar"]'
+                        );
+                        if (sidebar && btnCollapse && win.innerWidth < 992) {
+                            var w = sidebar.offsetWidth || 0;
+                            if (w > 0) {
+                                btnCollapse.click();
+                                return;
+                            }
+                        }
+                    } catch(err) {}
+
+                    // Mostrar modal de confirmación
+                    if (typeof win.__bolimur_abrir_modal === 'function') {
+                        win.__bolimur_abrir_modal();
+                    }
+                }, false);
+
+                win.__bolimur_popstate_installed = true;
+            }
+
+            // 5. Desplazar/colapsar la barra lateral izquierda al pulsar en la ventana derecha
+            if (!win.__bolimur_sidebar_autocollapse) {
+                doc.addEventListener('click', function(e) {
+                    try {
+                        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+                        if (!sidebar) return;
+                        if (sidebar.contains(e.target)) return;
+
+                        var btnExpand = doc.querySelector('[data-testid="stExpandSidebarButton"]');
+                        if (btnExpand && (btnExpand.contains(e.target) || btnExpand === e.target)) return;
+
+                        var mBox = doc.getElementById('bolimur-exit-confirm-modal');
+                        if (mBox && (mBox.contains(e.target) || mBox === e.target)) return;
+
+                        var btnCollapse = doc.querySelector(
+                            '[data-testid="stSidebarCollapseButton"] button, ' +
+                            '[data-testid="stSidebarCollapseButton"], ' +
+                            'button[aria-label="Collapse sidebar"]'
+                        );
+                        if (btnCollapse) {
+                            btnCollapse.click();
+                        }
+                    } catch(err) {}
+                }, false);
+                win.__bolimur_sidebar_autocollapse = true;
+            }
+        })();
+        `;
+        (targetDoc.head || targetDoc.body).appendChild(scriptElem);
     })();
     </script>
     """
