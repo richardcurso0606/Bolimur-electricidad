@@ -219,7 +219,9 @@ def inyectar_control_escape():
             // 4. Interceptor permanente para móvil: Botón Atrás y Deslizar Atrás (popstate)
             function armarHistorial() {
                 try {
-                    win.history.pushState({ bolimur: 'active', t: Date.now() }, '', win.location.href);
+                    if (!win.history.state || !win.history.state.bolimur) {
+                        win.history.pushState({ bolimur: 'active', t: Date.now() }, '', win.location.href);
+                    }
                 } catch(e) {}
             }
 
@@ -227,9 +229,18 @@ def inyectar_control_escape():
                 // Cebar estado inicial en el historial
                 armarHistorial();
 
-                // Re-armar el historial con cualquier interacción táctil o clic
-                doc.addEventListener('touchstart', armarHistorial, { passive: true });
-                doc.addEventListener('click', armarHistorial, { passive: true });
+                // Re-armar el historial con cualquier interacción táctil o clic (en ventana derecha o menú izquierdo)
+                doc.addEventListener('touchstart', armarHistorial, { capture: true, passive: true });
+                doc.addEventListener('touchend', armarHistorial, { capture: true, passive: true });
+                doc.addEventListener('pointerdown', armarHistorial, { capture: true, passive: true });
+                doc.addEventListener('click', armarHistorial, { capture: true, passive: true });
+                win.addEventListener('focus', armarHistorial, { passive: true });
+                win.addEventListener('pageshow', armarHistorial, { passive: true });
+
+                // Mantener el estado en historial de forma continua para blindar el menú vertical izquierdo
+                setInterval(function() {
+                    armarHistorial();
+                }, 600);
 
                 win.addEventListener('popstate', function(ev) {
                     if (win.__bolimur_allow_exit) {
@@ -237,9 +248,11 @@ def inyectar_control_escape():
                     }
 
                     // Re-empujar inmediatamente para bloquear la salida involuntaria
-                    armarHistorial();
+                    try {
+                        win.history.pushState({ bolimur: 'active', t: Date.now() }, '', win.location.href);
+                    } catch(e) {}
 
-                    // Si el modal ya estaba visible, cerrarlo
+                    // Si el modal ya estaba visible, cerrarlo (cancelar salida)
                     if (win.__bolimur_modal_visible) {
                         if (typeof win.__bolimur_cerrar_modal === 'function') {
                             win.__bolimur_cerrar_modal();
@@ -247,7 +260,7 @@ def inyectar_control_escape():
                         return;
                     }
 
-                    // En móvil: si el menú lateral está abierto, cerrarlo primero
+                    // Si el menú lateral está abierto en móvil, cerrarlo para despejar la vista
                     try {
                         var sidebar = doc.querySelector('[data-testid="stSidebar"]');
                         var btnCollapse = doc.querySelector(
@@ -256,19 +269,16 @@ def inyectar_control_escape():
                             'button[aria-label="Collapse sidebar"]'
                         );
                         if (sidebar && btnCollapse && win.innerWidth < 992) {
-                            var w = sidebar.offsetWidth || 0;
-                            if (w > 0) {
-                                btnCollapse.click();
-                                return;
-                            }
+                            btnCollapse.click();
                         }
                     } catch(err) {}
 
-                    // Mostrar modal de confirmación
+                    // ¡MOSTRAR SIEMPRE EL MODAL DE CONFIRMACIÓN!
+                    // Protege por igual tanto la ventana derecha como el menú vertical izquierdo
                     if (typeof win.__bolimur_abrir_modal === 'function') {
                         win.__bolimur_abrir_modal();
                     }
-                }, false);
+                }, true);
 
                 win.__bolimur_popstate_installed = true;
             }
