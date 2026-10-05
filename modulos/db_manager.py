@@ -403,6 +403,22 @@ def actualizar_perfil_instalador(usuario_id: int, datos: Dict[str, Any]) -> bool
         conn.close()
         return False
 
+def obtener_usuario_por_email(email: str) -> Optional[Dict[str, Any]]:
+    """Busca un usuario por su dirección de correo electrónico (case-insensitive)"""
+    if not email:
+        return None
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE LOWER(email) = LOWER(?) LIMIT 1", (email.strip(),))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return dict(row)
+        return None
+    except Exception:
+        return None
+
 def obtener_usuario_por_id(usuario_id: int) -> Optional[Dict[str, Any]]:
     conn = obtener_conexion()
     cursor = conn.cursor()

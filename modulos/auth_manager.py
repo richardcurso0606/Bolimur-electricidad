@@ -372,18 +372,21 @@ def obtener_usuario_actual() -> dict:
     inicializar_sesion_auth()
     usuario = st.session_state.get("usuario_autenticado")
     if not usuario:
-        db_manager.inicializar_bd()
-        win_user = getpass.getuser()
+        win_user = "richardcurso0606"
+        try:
+            win_user = getpass.getuser()
+        except Exception:
+            pass
         
-        # 1. Buscar prioritariamente la cuenta oficial de Google
-        usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
-        if not usuario:
-            usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
-        if not usuario:
-            usuario = db_manager.autenticar_usuario_windows(win_user)
-        if not usuario:
-            # Buscar si ya existe algún usuario en la BD
-            try:
+        try:
+            db_manager.inicializar_bd()
+            # 1. Buscar prioritariamente la cuenta oficial de Google
+            usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
+            if not usuario:
+                usuario = db_manager.obtener_usuario_por_email("richardcurs0606@gmail.com")
+            if not usuario:
+                usuario = db_manager.autenticar_usuario_windows(win_user)
+            if not usuario:
                 conn = db_manager.obtener_conexion()
                 c = conn.cursor()
                 c.execute("SELECT * FROM usuarios LIMIT 1")
@@ -391,18 +394,18 @@ def obtener_usuario_actual() -> dict:
                 conn.close()
                 if row:
                     usuario = dict(row)
-            except Exception:
-                pass
-        if not usuario:
-            # Crear perfil automático oficial por defecto
-            db_manager.registrar_nuevo_usuario(
-                email="richardcurso0606@gmail.com",
-                password="password123",
-                nombre_instalador="Richard Orlando Choque Tejerina",
-                nombre_empresa="BOLIMUR INSTALACIONES Y REFORMAS",
-                username_win=win_user
-            )
-            usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
+            if not usuario:
+                db_manager.registrar_nuevo_usuario(
+                    email="richardcurso0606@gmail.com",
+                    password="password123",
+                    nombre_instalador="Richard Orlando Choque Tejerina",
+                    nombre_empresa="BOLIMUR INSTALACIONES Y REFORMAS",
+                    username_win=win_user
+                )
+                usuario = db_manager.obtener_usuario_por_email("richardcurso0606@gmail.com")
+        except Exception:
+            usuario = None
+
         if not usuario:
             usuario = {
                 "id": 1,
