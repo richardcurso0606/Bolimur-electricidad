@@ -237,9 +237,190 @@ def renderizar():
 
             df_clientes = pd.DataFrame(filas_tabla)
 
-            st.caption(f"📋 **Mostrando {len(clientes_filtrados)} clientes.** Haz clic en el selector o sobre cualquier fila para gestionarlo:")
+            # 2. Selector Principal y Acciones Rápidas (Accesible en todo momento)
+            nombres_dict = {
+                c["id"]: f"👤 #{c['id']} — {c['nombre_completo']} | NIF: {c.get('nif_cif', '-')} | 📍 {c.get('localidad') or c.get('municipio') or '-'}"
+                for c in clientes
+            }
+            curr_id = st.session_state.get("crm_cliente_seleccionado_id")
+            if curr_id not in nombres_dict and clientes:
+                curr_id = clientes[0]["id"]
+                st.session_state["crm_cliente_seleccionado_id"] = curr_id
 
-            # 2. Tabla interactiva
+            curr_idx = list(nombres_dict.keys()).index(curr_id) if curr_id in nombres_dict else 0
+            cliente_sel_obj = db_manager.obtener_cliente_por_id(curr_id, usuario_id) if curr_id else None
+
+            with st.container(border=True):
+                col_sel_combo, col_sel_btn1, col_sel_btn2, col_sel_btn3 = st.columns([3.0, 1.4, 1.4, 1.0])
+                with col_sel_combo:
+                    def _on_dropdown_change():
+                        nuevo_id = st.session_state["crm_sel_dropdown_sync"]
+                        st.session_state["crm_cliente_seleccionado_id"] = nuevo_id
+                        st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(nuevo_id, usuario_id)
+
+                    st.selectbox(
+                        "👤 Cliente Activo (Selecciona para ver o editar):",
+                        options=list(nombres_dict.keys()),
+                        index=curr_idx,
+                        format_func=lambda x: nombres_dict[x],
+                        key="crm_sel_dropdown_sync",
+                        on_change=_on_dropdown_change
+                    )
+                with col_sel_btn1:
+                    st.write("")
+                    st.write("")
+                    if st.session_state.get("crm_modo_edicion"):
+                        if st.button("❌ Salir Edición", key="btn_toggle_edit_off", use_container_width=True):
+                            st.session_state["crm_modo_edicion"] = False
+                            st.rerun()
+                    else:
+                        if st.button("✏️ Editar Cliente", key="btn_toggle_edit_on", type="primary", use_container_width=True):
+                            st.session_state["crm_modo_edicion"] = True
+                            st.rerun()
+                with col_sel_btn2:
+                    st.write("")
+                    st.write("")
+                    if st.button("📋 Duplicar Ficha", key="btn_dup_crm_cliente_top", use_container_width=True, help="Clona los datos del cliente para un nuevo suministro"):
+                        if cliente_sel_obj:
+                            copia_data = dict(cliente_sel_obj)
+                            copia_data.pop("id", None)
+                            copia_data["nombre_completo"] = f"{cliente_sel_obj['nombre_completo']} (Nuevo Suministro)"
+                            ok_dup, nuevo_id = db_manager.crear_cliente(usuario_id, copia_data)
+                            if ok_dup:
+                                st.session_state["crm_cliente_seleccionado_id"] = nuevo_id
+                                st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(nuevo_id, usuario_id)
+                                st.session_state["crm_sel_dropdown_sync"] = nuevo_id
+                                st.session_state["crm_modo_edicion"] = True
+                                st.session_state["crm_alerta_exito"] = f"✅ Ficha duplicada como '{copia_data['nombre_completo']}'. Modifica la dirección o CUPS a continuación."
+                                st.rerun()
+                with col_sel_btn3:
+                    st.write("")
+                    st.write("")
+                    if st.button("🗑️ Borrar", key="btn_del_crm_top", use_container_width=True):
+                        if cliente_sel_obj:
+                            st.session_state["confirmar_borrado_cli_id"] = cliente_sel_obj["id"]
+                            st.rerun()
+
+            # Confirmación de borrado seguro
+            if cliente_sel_obj and st.session_state.get("confirmar_borrado_cli_id") == cliente_sel_obj["id"]:
+                st.error(f"⚠️ **¿Confirmas que deseas eliminar definitivamente a '{cliente_sel_obj['nombre_completo']}' (ID #{cliente_sel_obj['id']})?**")
+                st.write("Esta acción borrará la ficha técnica y todos los proyectos o cálculos asociados a este cliente tanto en local como en la nube.")
+                cb_t1, cb_t2 = st.columns(2)
+                with cb_t1:
+                    if st.button("🔴 Sí, Eliminar Definitivamente", key="btn_do_del_crm_ok", type="primary", use_container_width=True):
+                        db_manager.eliminar_cliente(cliente_sel_obj["id"], usuario_id)
+                        del st.session_state["confirmar_borrado_cli_id"]
+                        st.session_state["crm_cliente_seleccionado_id"] = None
+                        st.session_state["cliente_activo_proyecto"] = None
+                        st.session_state["crm_modo_edicion"] = False
+                        st.session_state["crm_alerta_exito"] = f"🗑️ Cliente '{cliente_sel_obj['nombre_completo']}' eliminado correctamente."
+                        st.rerun()
+                with cb_t2:
+                    if st.button("🛡️ Cancelar", key="btn_cancel_del_crm_abort", use_container_width=True):
+                        del st.session_state["confirmar_borrado_cli_id"]
+                        st.rerun()
+
+            # =========================================================
+            # 3. FORMULARIO DE EDICIÓN DIRECTO (SE MUESTRA ARRIBA SI ESTÁ ACTIVO)
+            # =========================================================
+            if cliente_sel_obj and st.session_state.get("crm_modo_edicion"):
+                st.markdown(f'<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">✏️ Editando Ficha de: #{cliente_sel_obj["id"]} — {cliente_sel_obj["nombre_completo"]}</h4></div>', unsafe_allow_html=True)
+                st.caption("Modifica cualquiera de los datos y pulsa **'💾 Grabar Cambios en este Cliente'** para guardar.")
+
+                with st.form(f"form_edicion_directa_{cliente_sel_obj['id']}"):
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        st.markdown("##### 👤 1. Titular y Contacto:")
+                        enom = st.text_input("Nombre y Apellidos o Razón Social (*):", value=cliente_sel_obj["nombre_completo"], key=f"f_nom_{cliente_sel_obj['id']}")
+                        enif = st.text_input("NIF / DNI / CIF:", value=cliente_sel_obj.get("nif_cif", ""), key=f"f_nif_{cliente_sel_obj['id']}")
+                        etel = st.text_input("Teléfono de Contacto:", value=cliente_sel_obj.get("telefono", ""), key=f"f_tel_{cliente_sel_obj['id']}")
+                        eemail = st.text_input("Email:", value=cliente_sel_obj.get("email", ""), key=f"f_email_{cliente_sel_obj['id']}")
+                        
+                        tipos_inm = ["Vivienda Residencial", "Local Comercial", "Nave Industrial", "Garaje Comunitario / IRVE", "Edificio de Viviendas"]
+                        tipo_act = cliente_sel_obj.get("tipo_inmueble", "Vivienda Residencial")
+                        idx_t = 0
+                        for i, t in enumerate(tipos_inm):
+                            if t.lower() in tipo_act.lower() or tipo_act.lower() in t.lower():
+                                idx_t = i
+                                break
+                        etipo = st.selectbox("Tipo de Inmueble:", tipos_inm, index=idx_t, key=f"f_tipo_{cliente_sel_obj['id']}")
+
+                    with col_e2:
+                        st.markdown("##### 📍 2. Dirección y Suministro:")
+                        edir = st.text_input("Dirección del Suministro:", value=cliente_sel_obj.get("direccion_suministro", ""), key=f"f_dir_{cliente_sel_obj['id']}")
+                        col_c_p1, col_c_p2 = st.columns(2)
+                        with col_c_p1:
+                            ecp = st.text_input("Código Postal:", value=cliente_sel_obj.get("codigo_postal", "30000"), key=f"f_cp_{cliente_sel_obj['id']}")
+                        with col_c_p2:
+                            eloc = st.text_input("Municipio / Población:", value=cliente_sel_obj.get("localidad") or cliente_sel_obj.get("municipio") or "Murcia", key=f"f_loc_{cliente_sel_obj['id']}")
+                        eprov = st.text_input("Provincia:", value=cliente_sel_obj.get("provincia", "Murcia"), key=f"f_prov_{cliente_sel_obj['id']}")
+
+                        st.markdown("##### ⚡ 3. Parámetros Eléctricos REBT:")
+                        ecups = st.text_input("Código CUPS (20-22 caracteres):", value=cliente_sel_obj.get("cups", ""), key=f"f_cups_{cliente_sel_obj['id']}")
+                        col_p_t1, col_p_t2 = st.columns(2)
+                        with col_p_t1:
+                            epot = st.text_input("Potencia (kW):", value=cliente_sel_obj.get("potencia_contratada_kw", "5.75"), key=f"f_pot_{cliente_sel_obj['id']}")
+                        with col_p_t2:
+                            dists = ["i-DE (Iberdrola)", "Endesa e-distribución", "UFD (Naturgy)", "E-Redes (EDP)", "Otras Distribuidoras"]
+                            dist_act = cliente_sel_obj.get("distribuidora", "i-DE (Iberdrola)")
+                            idx_d = 0
+                            for i, d in enumerate(dists):
+                                if d.lower() in dist_act.lower() or dist_act.lower() in d.lower():
+                                    idx_d = i
+                                    break
+                            edist = st.selectbox("Distribuidora:", dists, index=idx_d, key=f"f_dist_{cliente_sel_obj['id']}")
+                        
+                        eref = st.text_input("Referencia Catastral:", value=cliente_sel_obj.get("referencia_catastral", ""), key=f"f_ref_{cliente_sel_obj['id']}")
+
+                    enotas = st.text_area("Observaciones y Notas Técnicas de Obra:", value=cliente_sel_obj.get("notas", ""), key=f"f_notas_{cliente_sel_obj['id']}")
+
+                    # BOTONES DEL FORMULARIO DE EDICIÓN
+                    col_btn_g1, col_btn_g2 = st.columns([2.5, 1])
+                    with col_btn_g1:
+                        btn_grabar = st.form_submit_button("💾 Grabar Cambios en este Cliente", type="primary", use_container_width=True)
+                    with col_btn_g2:
+                        btn_cancel = st.form_submit_button("❌ Cancelar / Salir", use_container_width=True)
+
+                    if btn_grabar:
+                        if not enom.strip():
+                            st.error("El nombre del cliente no puede estar vacío.")
+                        else:
+                            ok_up = db_manager.actualizar_cliente(cliente_sel_obj["id"], usuario_id, {
+                                "nombre_completo": enom.strip(),
+                                "nif_cif": enif.strip().upper(),
+                                "telefono": etel.strip(),
+                                "email": eemail.strip(),
+                                "direccion_suministro": edir.strip(),
+                                "localidad": eloc.strip(),
+                                "codigo_postal": ecp.strip(),
+                                "municipio": eloc.strip(),
+                                "provincia": eprov.strip(),
+                                "cups": ecups.strip().upper(),
+                                "referencia_catastral": eref.strip().upper(),
+                                "distribuidora": edist,
+                                "potencia_contratada_kw": epot.strip(),
+                                "tension_suministro": cliente_sel_obj.get("tension_suministro", "Monofásica 230V"),
+                                "tipo_inmueble": etipo,
+                                "notas": enotas.strip()
+                            })
+                            if ok_up:
+                                st.session_state["crm_modo_edicion"] = False
+                                st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(cliente_sel_obj["id"], usuario_id)
+                                st.session_state["crm_alerta_exito"] = f"✅ ¡Ficha de '{enom}' (ID #{cliente_sel_obj['id']}) grabada y actualizada con éxito!"
+                                st.rerun()
+                            else:
+                                st.error("Error al guardar los cambios en la base de datos.")
+
+                    if btn_cancel:
+                        st.session_state["crm_modo_edicion"] = False
+                        st.rerun()
+
+            # =========================================================
+            # 4. TABLA INTERACTIVA (GRID) Y LISTADO RÁPIDO CON BOTONES
+            # =========================================================
+            st.markdown(f"#### 📊 Listado de Clientes Registrados ({len(clientes_filtrados)})")
+            st.caption("💡 Para editar cualquier cliente, pulsa directamente su botón **[ ✏️ Editar ]** en la lista de abajo o marca la casilla de la tabla:")
+
             event_tabla = st.dataframe(
                 df_clientes,
                 use_container_width=True,
@@ -259,198 +440,42 @@ def renderizar():
                         st.session_state["crm_cliente_seleccionado_id"] = clicked_id
                         st.session_state["cliente_activo_proyecto"] = clicked_cli
                         st.session_state["crm_sel_dropdown_sync"] = clicked_id
-                        st.session_state["crm_modo_edicion"] = False
                         st.rerun()
 
-            # 3. Selector complementario por desplegable sincronizado
-            nombres_dict = {
-                c["id"]: f"👤 {c['nombre_completo']} | NIF: {c.get('nif_cif', '-')} | 📍 {c.get('localidad') or c.get('municipio') or '-'}"
-                for c in clientes
-            }
-            curr_id = st.session_state.get("crm_cliente_seleccionado_id")
-            if curr_id not in nombres_dict and clientes:
-                curr_id = clientes[0]["id"]
-                st.session_state["crm_cliente_seleccionado_id"] = curr_id
-
-            curr_idx = list(nombres_dict.keys()).index(curr_id) if curr_id in nombres_dict else 0
-
-            col_sel_hdr, col_sel_combo = st.columns([1.5, 2.5])
-            with col_sel_hdr:
-                cliente_sel_obj = db_manager.obtener_cliente_por_id(curr_id, usuario_id) if curr_id else None
-                if cliente_sel_obj:
-                    st.markdown(f"#### 👤 Cliente: **{cliente_sel_obj['nombre_completo']}**")
-            with col_sel_combo:
-                def _on_dropdown_change():
-                    nuevo_id = st.session_state["crm_sel_dropdown_sync"]
-                    st.session_state["crm_cliente_seleccionado_id"] = nuevo_id
-                    st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(nuevo_id, usuario_id)
-                    st.session_state["crm_modo_edicion"] = False
-
-                st.selectbox(
-                    "Cambiar cliente seleccionado:",
-                    options=list(nombres_dict.keys()),
-                    index=curr_idx,
-                    format_func=lambda x: nombres_dict[x],
-                    key="crm_sel_dropdown_sync",
-                    on_change=_on_dropdown_change,
-                    label_visibility="collapsed"
-                )
-
-            # =========================================================
-            # 4. PANEL DEL CLIENTE: EDICIÓN IN-SITU O VISTA / BOTONERA
-            # =========================================================
-            cliente_sel_obj = db_manager.obtener_cliente_por_id(st.session_state["crm_cliente_seleccionado_id"], usuario_id) if st.session_state.get("crm_cliente_seleccionado_id") else None
-
-            if cliente_sel_obj:
-                # MODO A: FORMULARIO DE EDICIÓN DIRECTO IN-SITU (SOLO SI PULSÓ EDITAR)
-                if st.session_state.get("crm_modo_edicion"):
-                    st.markdown(f'<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">✏️ Editando Ficha de: {cliente_sel_obj["nombre_completo"]} (ID: #{cliente_sel_obj["id"]})</h4></div>', unsafe_allow_html=True)
-                    st.caption("Modifica cualquiera de los datos y pulsa **'💾 Grabar Cambios en este Cliente'** para guardar.")
-
-                    with st.form(f"form_edicion_directa_{cliente_sel_obj['id']}"):
-                        col_e1, col_e2 = st.columns(2)
-                        with col_e1:
-                            st.markdown("##### 👤 1. Titular y Contacto:")
-                            enom = st.text_input("Nombre y Apellidos o Razón Social (*):", value=cliente_sel_obj["nombre_completo"], key=f"f_nom_{cliente_sel_obj['id']}")
-                            enif = st.text_input("NIF / DNI / CIF:", value=cliente_sel_obj.get("nif_cif", ""), key=f"f_nif_{cliente_sel_obj['id']}")
-                            etel = st.text_input("Teléfono de Contacto:", value=cliente_sel_obj.get("telefono", ""), key=f"f_tel_{cliente_sel_obj['id']}")
-                            eemail = st.text_input("Email:", value=cliente_sel_obj.get("email", ""), key=f"f_email_{cliente_sel_obj['id']}")
-                            
-                            tipos_inm = ["Vivienda Residencial", "Local Comercial", "Nave Industrial", "Garaje Comunitario / IRVE", "Edificio de Viviendas"]
-                            tipo_act = cliente_sel_obj.get("tipo_inmueble", "Vivienda Residencial")
-                            idx_t = 0
-                            for i, t in enumerate(tipos_inm):
-                                if t.lower() in tipo_act.lower() or tipo_act.lower() in t.lower():
-                                    idx_t = i
-                                    break
-                            etipo = st.selectbox("Tipo de Inmueble:", tipos_inm, index=idx_t, key=f"f_tipo_{cliente_sel_obj['id']}")
-
-                        with col_e2:
-                            st.markdown("##### 📍 2. Dirección y Suministro:")
-                            edir = st.text_input("Dirección del Suministro:", value=cliente_sel_obj.get("direccion_suministro", ""), key=f"f_dir_{cliente_sel_obj['id']}")
-                            col_c_p1, col_c_p2 = st.columns(2)
-                            with col_c_p1:
-                                ecp = st.text_input("Código Postal:", value=cliente_sel_obj.get("codigo_postal", "30000"), key=f"f_cp_{cliente_sel_obj['id']}")
-                            with col_c_p2:
-                                eloc = st.text_input("Municipio / Población:", value=cliente_sel_obj.get("localidad") or cliente_sel_obj.get("municipio") or "Murcia", key=f"f_loc_{cliente_sel_obj['id']}")
-                            eprov = st.text_input("Provincia:", value=cliente_sel_obj.get("provincia", "Murcia"), key=f"f_prov_{cliente_sel_obj['id']}")
-
-                            st.markdown("##### ⚡ 3. Parámetros Eléctricos REBT:")
-                            ecups = st.text_input("Código CUPS (20-22 caracteres):", value=cliente_sel_obj.get("cups", ""), key=f"f_cups_{cliente_sel_obj['id']}")
-                            col_p_t1, col_p_t2 = st.columns(2)
-                            with col_p_t1:
-                                epot = st.text_input("Potencia (kW):", value=cliente_sel_obj.get("potencia_contratada_kw", "5.75"), key=f"f_pot_{cliente_sel_obj['id']}")
-                            with col_p_t2:
-                                dists = ["i-DE (Iberdrola)", "Endesa e-distribución", "UFD (Naturgy)", "E-Redes (EDP)", "Otras Distribuidoras"]
-                                dist_act = cliente_sel_obj.get("distribuidora", "i-DE (Iberdrola)")
-                                idx_d = 0
-                                for i, d in enumerate(dists):
-                                    if d.lower() in dist_act.lower() or dist_act.lower() in d.lower():
-                                        idx_d = i
-                                        break
-                                edist = st.selectbox("Distribuidora:", dists, index=idx_d, key=f"f_dist_{cliente_sel_obj['id']}")
-                            
-                            eref = st.text_input("Referencia Catastral:", value=cliente_sel_obj.get("referencia_catastral", ""), key=f"f_ref_{cliente_sel_obj['id']}")
-
-                        enotas = st.text_area("Observaciones y Notas Técnicas de Obra:", value=cliente_sel_obj.get("notas", ""), key=f"f_notas_{cliente_sel_obj['id']}")
-
-                        # BOTONES DEL FORMULARIO DE EDICIÓN
-                        col_btn_g1, col_btn_g2 = st.columns([2.5, 1])
-                        with col_btn_g1:
-                            btn_grabar = st.form_submit_button("💾 Grabar Cambios en este Cliente", type="primary", use_container_width=True)
-                        with col_btn_g2:
-                            btn_cancel = st.form_submit_button("❌ Cancelar Edición", use_container_width=True)
-
-                        if btn_grabar:
-                            if not enom.strip():
-                                st.error("El nombre del cliente no puede estar vacío.")
-                            else:
-                                ok_up = db_manager.actualizar_cliente(cliente_sel_obj["id"], usuario_id, {
-                                    "nombre_completo": enom.strip(),
-                                    "nif_cif": enif.strip().upper(),
-                                    "telefono": etel.strip(),
-                                    "email": eemail.strip(),
-                                    "direccion_suministro": edir.strip(),
-                                    "localidad": eloc.strip(),
-                                    "codigo_postal": ecp.strip(),
-                                    "municipio": eloc.strip(),
-                                    "provincia": eprov.strip(),
-                                    "cups": ecups.strip().upper(),
-                                    "referencia_catastral": eref.strip().upper(),
-                                    "distribuidora": edist,
-                                    "potencia_contratada_kw": epot.strip(),
-                                    "tension_suministro": cliente_sel_obj.get("tension_suministro", "Monofásica 230V"),
-                                    "tipo_inmueble": etipo,
-                                    "notas": enotas.strip()
-                                })
-                                if ok_up:
-                                    st.session_state["crm_modo_edicion"] = False
-                                    st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(cliente_sel_obj["id"], usuario_id)
-                                    st.session_state["crm_alerta_exito"] = f"✅ ¡Ficha de '{enom}' grabada y actualizada con éxito!"
-                                    st.rerun()
-                                else:
-                                    st.error("Error al guardar los cambios en la base de datos.")
-
-                        if btn_cancel:
+            # LISTA DE ACCIONES RÁPIDAS (Botones directos para cada cliente)
+            st.markdown("##### ⚡ Fichas Rápidas (Haz clic en [ ✏️ Editar ] sobre el cliente que desees modificar):")
+            for c in clientes_filtrados:
+                es_activo = (c["id"] == curr_id)
+                with st.container(border=True):
+                    col_r1, col_r2, col_r3, col_r4 = st.columns([3.4, 2.4, 1.2, 1.2])
+                    with col_r1:
+                        badge = " 🟢 **[ACTIVO]**" if es_activo else ""
+                        st.markdown(f"**#{c['id']} — {c['nombre_completo']}**{badge}")
+                        st.caption(f"📍 {c.get('localidad') or c.get('municipio') or '-'} | 📞 {c.get('telefono') or '-'} | CUPS: `{c.get('cups') or '-'}`")
+                    with col_r2:
+                        st.markdown(f"NIF/CIF: `{c.get('nif_cif') or '-'}` | Potencia: `{c.get('potencia_contratada_kw') or '-'} kW` | 📁 Obras: {conteo_proyectos_por_cli.get(c['id'], 0)}")
+                    with col_r3:
+                        if st.button("✏️ Editar", key=f"btn_edit_row_{c['id']}", type="primary" if es_activo else "secondary", use_container_width=True):
+                            st.session_state["crm_cliente_seleccionado_id"] = c["id"]
+                            st.session_state["crm_sel_dropdown_sync"] = c["id"]
+                            st.session_state["cliente_activo_proyecto"] = c
+                            st.session_state["crm_modo_edicion"] = True
+                            st.rerun()
+                    with col_r4:
+                        if st.button("👁️ Ver Ficha", key=f"btn_ver_row_{c['id']}", use_container_width=True):
+                            st.session_state["crm_cliente_seleccionado_id"] = c["id"]
+                            st.session_state["crm_sel_dropdown_sync"] = c["id"]
+                            st.session_state["cliente_activo_proyecto"] = c
                             st.session_state["crm_modo_edicion"] = False
                             st.rerun()
 
-                # MODO B: VISTA NORMAL CON BOTONERA PRINCIPAL DE ACCIÓN
-                else:
-                    with st.container(border=True):
-                        # Fila de botones de acción rápida
-                        c_act1, c_act2, c_act3, c_act4 = st.columns([1.6, 1.5, 1.5, 1.2])
-                        with c_act1:
-                            if st.button("✏️ Editar Cliente", key="btn_activar_edicion_crm", type="primary", use_container_width=True):
-                                st.session_state["crm_modo_edicion"] = True
-                                st.rerun()
-
-                        with c_act2:
-                            if st.button("📋 Duplicar Ficha", key="btn_dup_crm_cliente", use_container_width=True, help="Clona los datos del cliente para un nuevo suministro"):
-                                copia_data = dict(cliente_sel_obj)
-                                copia_data.pop("id", None)
-                                copia_data["nombre_completo"] = f"{cliente_sel_obj['nombre_completo']} (Nuevo Suministro)"
-                                ok_dup, nuevo_id = db_manager.crear_cliente(usuario_id, copia_data)
-                                if ok_dup:
-                                    st.session_state["crm_cliente_seleccionado_id"] = nuevo_id
-                                    st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(nuevo_id, usuario_id)
-                                    st.session_state["crm_sel_dropdown_sync"] = nuevo_id
-                                    st.session_state["crm_modo_edicion"] = True
-                                    st.session_state["crm_alerta_exito"] = f"✅ Ficha duplicada como '{copia_data['nombre_completo']}'. Modifica la dirección o CUPS a continuación."
-                                    st.rerun()
-
-                        with c_act3:
-                            with st.popover("📋 Copiar Resumen", use_container_width=True):
-                                st.markdown("##### 📋 Resumen Listo para Copiar (WhatsApp / Email):")
-                                texto_portapapeles = generar_resumen_portapapeles(cliente_sel_obj)
-                                st.code(texto_portapapeles, language="text")
-                                st.caption("Pulsa el icono de copiar arriba a la derecha.")
-
-                        with c_act4:
-                            if st.button("🗑️ Borrar", key="btn_pedir_borrado_crm", use_container_width=True):
-                                st.session_state["confirmar_borrado_cli_id"] = cliente_sel_obj["id"]
-                                st.rerun()
-
-                        # Confirmación de borrado seguro
-                        if st.session_state.get("confirmar_borrado_cli_id") == cliente_sel_obj["id"]:
-                            st.error(f"⚠️ **¿Confirmas que deseas eliminar definitivamente a '{cliente_sel_obj['nombre_completo']}'?**")
-                            st.write("Esta acción borrará la ficha técnica y todos los proyectos o cálculos asociados a este cliente.")
-                            cb_t1, cb_t2 = st.columns(2)
-                            with cb_t1:
-                                if st.button("🔴 Sí, Eliminar Definitivamente", key="btn_do_del_crm_ok", type="primary", use_container_width=True):
-                                    db_manager.eliminar_cliente(cliente_sel_obj["id"], usuario_id)
-                                    del st.session_state["confirmar_borrado_cli_id"]
-                                    st.session_state["crm_cliente_seleccionado_id"] = None
-                                    st.session_state["cliente_activo_proyecto"] = None
-                                    st.session_state["crm_alerta_exito"] = f"🗑️ Cliente '{cliente_sel_obj['nombre_completo']}' eliminado correctamente."
-                                    st.rerun()
-                            with cb_t2:
-                                if st.button("🛡️ Cancelar", key="btn_cancel_del_crm_abort", use_container_width=True):
-                                    del st.session_state["confirmar_borrado_cli_id"]
-                                    st.rerun()
-
-                        # Ficha 360° con datos del cliente seleccionado
-                        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">👤 Expediente Técnico del Cliente</h4></div>', unsafe_allow_html=True)
+            # =========================================================
+            # 5. EXPEDIENTE TÉCNICO 360° (SOLO SI NO ESTÁ EN MODO EDICIÓN)
+            # =========================================================
+            if cliente_sel_obj and not st.session_state.get("crm_modo_edicion"):
+                with st.container(border=True):
+                    # Ficha 360° con datos del cliente seleccionado
+                    st.markdown(f'<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">👤 Expediente Técnico: #{cliente_sel_obj["id"]} — {cliente_sel_obj["nombre_completo"]}</h4></div>', unsafe_allow_html=True)
                         col_f1, col_f2, col_f3 = st.columns(3)
                         with col_f1:
                             st.markdown("##### 🏷️ Titular y Contacto:")
