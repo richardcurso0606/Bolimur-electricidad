@@ -194,4 +194,80 @@ def test_generar_pdf_mtd_con_tipo_en_blanco():
     assert pdf_bytes.startswith(b"%PDF")
 
 
+def test_crear_drawing_esquema_unifilar_dinamico():
+    """Verifica que el generador de esquema unifilar dinámico maneje circuitos y genere PNG válido."""
+    datos = {
+        "suministro": {
+            "tension": "Trifásico (400 V) - 50 Hz",
+            "di_cable": "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV"
+        },
+        "protecciones": {
+            "iga_amperaje": 40,
+            "iga_icn_ka": 10.0,
+            "iga_curva": "Curva C"
+        },
+        "ensayos": {"rt_ohm": 8.5},
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20"},
+            {"nombre": "C2 - Tomas de Fuerza", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20"},
+            {"nombre": "C3 - Cocina Industrial Trifásica", "potencia": 8000, "pia": 20, "seccion": "4x4.0+TT4.0", "tubo": "M25"},
+            {"nombre": "C4 - Climatización Centralizada", "potencia": 7500, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25"},
+            {"nombre": "C5 - Alumbrado Emergencia", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20"}
+        ]
+    }
+    dwg = pdf_memoria_tecnica.crear_drawing_esquema_unifilar(datos)
+    assert dwg is not None
+    assert dwg.width == 520
+    assert dwg.height == 270
+
+    png_bytes = pdf_memoria_tecnica.generar_png_unifilar(datos)
+    assert png_bytes is not None
+    assert isinstance(png_bytes, bytes)
+    assert len(png_bytes) > 1000
+    # PNG magic bytes
+    assert png_bytes.startswith(b"\x89PNG")
+
+
+def test_generar_pdf_mtd_con_fotos_anexo_v():
+    """Verifica que el reportaje fotográfico (Anexo V) se compile en el PDF oficial sin errores."""
+    import io, base64
+    from PIL import Image
+
+    im = Image.new('RGB', (600, 400), color='forestgreen')
+    bio = io.BytesIO()
+    im.save(bio, format='JPEG')
+    b64_f = "data:image/jpeg;base64," + base64.b64encode(bio.getvalue()).decode('utf-8')
+
+    datos = {
+        "tipo_instalacion": "🍽️ LPC: Bar / Restaurante (ITC-BT-28)",
+        "titular": {"nombre": "Restaurante La Huerta SL"},
+        "emplazamiento": {"direccion": "Plaza de las Flores 3", "municipio": "Murcia"},
+        "instalador": {"empresa": "BOLIMUR", "nombre": "Richard Orlando Choque", "licencia": "REBT-30/15892"},
+        "suministro": {
+            "potencia_instalada_w": 27710.0,
+            "tension": "Trifásico (400 V) - 50 Hz",
+            "di_cable": "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV",
+            "di_tubo": "Tubo M50",
+            "di_long_m": 22.0,
+            "di_cdt_pct": 0.72
+        },
+        "protecciones": {"iga_amperaje": 40},
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Bar", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 0.85},
+            {"nombre": "C7 - Cocina Trifásica", "potencia": 8000, "pia": 20, "seccion": "4x4.0+TT4.0", "tubo": "M25", "longitud": 14, "cdt": 0.72}
+        ],
+        "anexos": {
+            "fotos": [
+                {"titulo": "Cuadro General CGMP montado y rotulado", "data": b64_f},
+                {"titulo": "Punto de Puesta a Tierra Rt = 8.5 Ω", "data": b64_f}
+            ]
+        }
+    }
+    pdf_bytes = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 15000
+    assert pdf_bytes.startswith(b"%PDF")
+
+
+
 

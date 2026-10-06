@@ -127,3 +127,60 @@ def test_generar_docx_con_planos_y_casillas():
     assert "Ampliación" not in c0_txt
 
 
+def test_generar_docx_anexo_iii_iv_v():
+    """Verifica que Anexo III (unifilar dinámico), Anexo IV (cálculos trifásicos) y Anexo V (fotos) se generen correctamente en el Word."""
+    import io, base64, docx
+    from PIL import Image
+
+    # Crear imagen dummy para fotos de Anexo V
+    im = Image.new('RGB', (800, 600), color='forestgreen')
+    bio = io.BytesIO()
+    im.save(bio, format='JPEG')
+    b64_foto = "data:image/jpeg;base64," + base64.b64encode(bio.getvalue()).decode('utf-8')
+
+    datos = {
+        "titular": {"nombre": "TEST TRIFASICO", "nif": "12345678Z"},
+        "suministro": {
+            "tension": "Trifásico (400 V) - 50 Hz",
+            "potencia_instalada_w": 15000.0,
+            "potencia_max_admisible_w": 15000.0,
+            "di_cable": "4x10 mm² Cu + TT 1x10 mm² RZ1-K (AS)",
+            "di_tubo": "Tubo M40",
+            "di_long_m": 25.0,
+            "di_cdt_pct": 0.95
+        },
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado", "potencia": 2000, "pia": 10, "seccion": "1.5", "tubo": "M20", "longitud": 15, "cdt": 1.2},
+            {"nombre": "C2 - Fuerza Trifásica", "potencia": 6000, "pia": 16, "seccion": "4x2.5", "tubo": "M25", "longitud": 20, "cdt": 1.5}
+        ],
+        "anexos": {
+            "fotos": [
+                {"titulo": "Cuadro General Instalado", "data": b64_foto},
+                {"titulo": "Canalización de suelo", "data": b64_foto}
+            ]
+        }
+    }
+
+    docx_bytes = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos)
+    assert isinstance(docx_bytes, bytes)
+    assert docx_bytes.startswith(b"PK")
+
+    doc = docx.Document(io.BytesIO(docx_bytes))
+
+    # Verificar Tabla 12 (Anexo IV Tramos)
+    t12 = doc.tables[12]
+    # Fila 12 debe tener DI A-B
+    txt_di = t12.rows[12].cells[0].text
+    assert "A-B" in txt_di
+    # Fila 12 intensidad DI debe calcularse con sqrt(3)*400: 15000 / (1.73205 * 400) = 21.65 A
+    i_di = t12.rows[12].cells[8].text.strip()
+    assert float(i_di) == pytest.approx(21.65, abs=0.1)
+
+    # Verificar Anexo V (párrafos de fotos)
+    doc_text = "\n".join([p.text for p in doc.paragraphs])
+    assert "ANEXO V: REPORTAJE FOTOGRÁFICO" in doc_text
+    assert "Cuadro General Instalado" in doc_text
+    assert "Canalización de suelo" in doc_text
+
+
+

@@ -32,12 +32,16 @@ MUNICIPIOS_MURCIA_OFICIALES = [
 def procesar_archivo_anexo(uploaded_file) -> str:
     """
     Convierte el archivo subido (imagen o PDF de 1 página exportado de AutoCAD/Cade_Simu)
-    en un string data-URI base64 optimizado para almacenamiento y ReportLab.
+    en un string data-URI base64 optimizado para almacenamiento, visualización y ReportLab.
+    Aplica corrección automática de orientación EXIF para fotos tomadas con teléfonos móviles.
     """
     if uploaded_file is None:
         return ""
     try:
-        raw_bytes = uploaded_file.getvalue()
+        raw_bytes = uploaded_file.getvalue() if hasattr(uploaded_file, "getvalue") else uploaded_file
+        if not raw_bytes:
+            return ""
+
         # Si es un PDF, renderizar primera página a PNG con PyMuPDF
         if raw_bytes.startswith(b"%PDF"):
             try:
@@ -55,10 +59,14 @@ def procesar_archivo_anexo(uploaded_file) -> str:
                 st.error(f"Error procesando archivo PDF: {e_pdf}")
                 return ""
 
-        from PIL import Image as PILImage
+        from PIL import Image as PILImage, ImageOps
         bio_in = io.BytesIO(raw_bytes)
         with PILImage.open(bio_in) as im:
-            if im.mode in ("RGBA", "P"):
+            try:
+                im = ImageOps.exif_transpose(im)
+            except Exception:
+                pass
+            if im.mode != "RGB":
                 im = im.convert("RGB")
             # Redimensionar si es muy grande manteniendo proporciones
             im.thumbnail((1600, 1600), PILImage.Resampling.LANCZOS)
@@ -67,8 +75,9 @@ def procesar_archivo_anexo(uploaded_file) -> str:
             b64_str = base64.b64encode(bio_out.getvalue()).decode("utf-8")
             return f"data:image/jpeg;base64,{b64_str}"
     except Exception as e:
-        st.error(f"Error procesando imagen del plano: {e}")
+        st.error(f"Error procesando imagen del plano o evidencia: {e}")
         return ""
+
 
 # =========================================================================
 # CATÁLOGO OFICIAL DE PLANTILLAS MTD REBT - REGIÓN DE MURCIA (CÓDIGO 30)
@@ -1440,8 +1449,8 @@ def renderizar():
                 unsafe_allow_html=True
             )
 
-        with st.expander("⚡ 📤 SUBIR / GESTIONAR PLANOS RÁPIDAMENTE AQUÍ (Sin buscar pestañas)", expanded=abrir_planos_auto or tiene_emp or tiene_sit or tiene_dist):
-            st.info("💡 **Subida Rápida:** Puedes subir o sustituir tus archivos de plano directamente aquí (PNG, JPG o PDF de 1 página). Se sincronizan automáticamente con el expediente, la pestaña 7 y se incorporan al documento oficial de la Memoria Técnica.")
+        with st.expander("⚡ 📤 SUBIR / GESTIONAR PLANOS Y FOTOS RÁPIDAMENTE AQUÍ (Sin buscar pestañas)", expanded=abrir_planos_auto or tiene_emp or tiene_sit or tiene_dist or (n_fotos > 0)):
+            st.info("💡 **Subida Rápida:** Puedes subir o sustituir tus archivos de plano (PNG, JPG o PDF de 1 página) y fotografías de fin de obra directamente aquí. Se sincronizan automáticamente con el expediente, la pestaña 7 y se incorporan al documento oficial de la Memoria Técnica.")
             
             # Fila 1: Situación y Emplazamiento
             col_qp1, col_qp2 = st.columns(2)
@@ -1535,9 +1544,78 @@ def renderizar():
                     else:
                         st.caption("ℹ️ *Actualmente se genera automáticamente el Esquema Unifilar Vectorial normalizado con los circuitos del cuadro.*")
 
+            # Fila 3: Subida Rápida de Fotos de Obra (Anexo V)
+            st.markdown("<hr style='margin:12px 0; border:0; border-top:1px dashed #cbd5e1;'/>", unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("##### 📸 Anexo V: Fotografías de Fin de Obra y Evidencias REBT (ITC-BT-05)")
+                st.caption("Adjunta fotografías clave de la ejecución (cuadro general montado, pica de tierra, módulo de contadores, display multifunción). Se sincronizan automáticamente con el expediente y la pestaña 7.")
+
+                if "mtd_fotos_obra" not in st.session_state:
+                    st.session_state["mtd_fotos_obra"] = []
+
+                col_qf1, col_qf2 = st.columns([1.5, 2.5])
+                with col_qf1:
+                    tipo_qf = st.selectbox(
+                        "Tipo de Evidencia Fotográfica:",
+                        [
+                            "Cuadro General (CGMP) montado y rotulado",
+                            "Punto de Puesta a Tierra (Pica, Arqueta y Borna)",
+                            "Acometida / CGP / Módulo de Contadores",
+                            "Display Comprobador Multifunción (Medida Rt / PE)",
+                            "Ensayo Disparo Diferencial (Multifunción)",
+                            "Canalizaciones y Tubos empotrados en obra",
+                            "Mecanismos y Cuadro de Mando en Vivienda / Local",
+                            "Otra fotografía de la instalación"
+                        ],
+                        key="sel_quick_foto_sug"
+                    )
+                    tit_qf_custom = st.text_input("Descripción técnica para las fotos:", value=tipo_qf, key="txt_quick_foto_desc")
+                with col_qf2:
+                    k_qf = f"quick_up_fotos_{st.session_state.get('_ver_quick_fotos', 0)}"
+                    up_fotos_quick = st.file_uploader(
+                        "Subir una o varias Fotos (JPG, PNG o WEBP):",
+                        type=["png", "jpg", "jpeg", "webp"],
+                        accept_multiple_files=True,
+                        key=k_qf,
+                        help="Puedes seleccionar varios archivos a la vez desde tu móvil, tablet o PC."
+                    )
+                    if up_fotos_quick:
+                        if st.button(f"➕ Añadir {len(up_fotos_quick)} Foto/s al Expediente", type="primary", use_container_width=True, key="btn_add_quick_fotos"):
+                            for idx_q, f_obj in enumerate(up_fotos_quick):
+                                b64_q = procesar_archivo_anexo(f_obj)
+                                if b64_q:
+                                    sufijo = f" (Foto {idx_q + 1})" if len(up_fotos_quick) > 1 else ""
+                                    st.session_state["mtd_fotos_obra"].append({
+                                        "titulo": f"{tit_qf_custom}{sufijo}",
+                                        "data": b64_q
+                                    })
+                            st.session_state["_ver_quick_fotos"] = st.session_state.get("_ver_quick_fotos", 0) + 1
+                            st.success(f"✅ ¡{len(up_fotos_quick)} fotografía/s incorporada/s al expediente!")
+                            st.rerun()
+
+                # Mini galería interactiva
+                fotos_guardadas = st.session_state.get("mtd_fotos_obra", [])
+                if fotos_guardadas:
+                    st.markdown(f"**📷 Fotografías adjuntadas en este expediente ({len(fotos_guardadas)} foto/s):**")
+                    q_cols = st.columns(min(len(fotos_guardadas), 4))
+                    for q_idx, q_item in enumerate(fotos_guardadas):
+                        with q_cols[q_idx % len(q_cols)]:
+                            with st.container(border=True):
+                                st.image(q_item["data"], caption=q_item.get("titulo", ""), use_container_width=True)
+                                if st.button("🗑️ Quitar", key=f"btn_del_qf_{q_idx}", use_container_width=True):
+                                    st.session_state["mtd_fotos_obra"].pop(q_idx)
+                                    st.rerun()
+
     lbl_tab7 = "🗺️ 7. PLANOS Y UNIFILAR"
-    if tiene_sit or tiene_emp or tiene_dist:
-        lbl_tab7 += " (📎 Con Planos)"
+    elem_adjuntos = []
+    if tiene_sit: elem_adjuntos.append("Situación")
+    if tiene_emp: elem_adjuntos.append("Emplazamiento")
+    if tiene_dist: elem_adjuntos.append("Distribución")
+    if unif_modo == "custom" and tiene_unif: elem_adjuntos.append("Unifilar")
+    if n_fotos > 0: elem_adjuntos.append(f"{n_fotos} fotos")
+    if elem_adjuntos:
+        lbl_tab7 += f" (📎 {', '.join(elem_adjuntos)})"
+
 
     tab_f1, tab_f2, tab_f3, tab_f4, tab_f5, tab_f6, tab_f7 = st.tabs([
         "📍 1. Titular",
@@ -1995,6 +2073,90 @@ def renderizar():
                 st.success(f"✅ ¡Circuito '{nc_nom}' añadido al cuadro con éxito!")
                 st.rerun()
 
+        # =====================================================================
+        # ANEXO IV: DIMENSIONAMIENTO OFICIAL POR TRAMOS Y CÁLCULOS REBT
+        # =====================================================================
+        st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("##### 📐 Anexo IV: Dimensionamiento Oficial por Tramos y Cálculos REBT (DGEAIM Murcia)")
+            st.caption(
+                "Cálculos justificativos reglamentarios por tramos de canalización (RD 842/2002). "
+                r"Comprueba la intensidad de diseño ($I_b$), caída de tensión acumulada ($\Delta V_{DI} + \Delta V_i$) "
+                "y cumplimiento estricto de los límites reglamentarios (ITC-BT-19: ≤1.5% en DI; ITC-BT-25: ≤3% alumbrado y ≤5% fuerza)."
+            )
+
+            tramos_tags = ["C-D", "E-F", "G-H", "I-J", "K-L", "M-N", "O-P", "Q-R", "S-T", "U-V", "W-X", "Y-Z"]
+            es_tri_general = "400" in str(st.session_state.get("mtd_in_tension", "230"))
+            pot_di_val = float(st.session_state.get("mtd_in_pot_inst", 5750.0))
+            long_di_val = float(st.session_state.get("mtd_in_di_long", 15.0))
+            cdt_di_val = float(st.session_state.get("mtd_in_di_cdt", 0.72))
+            ib_di_val = pot_di_val / (1.73205 * 400.0) if es_tri_general else pot_di_val / 230.0
+            cable_di_val = str(st.session_state.get("mtd_in_di_cable", "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV"))
+            m_sec_di = re.search(r'(\d+(?:\.\d+)?)', cable_di_val)
+            sec_di_val = m_sec_di.group(1) if m_sec_di else "10"
+            tubo_di_val = str(st.session_state.get("mtd_in_di_tubo", "Tubo M32"))
+            m_tubo_di = re.search(r'(M\d+)', tubo_di_val)
+            tubo_clean_di = m_tubo_di.group(1) if m_tubo_di else tubo_di_val
+
+            filas_anx4 = []
+            filas_anx4.append({
+                "Tramo": "A-B (DI)",
+                "Designación": "Derivación Individual",
+                "Potencia (W)": f"{pot_di_val:,.0f} W",
+                "Ib (A)": f"{ib_di_val:.1f} A",
+                "Long. (m)": f"{long_di_val:.0f} m",
+                "Sección": f"{sec_di_val} mm² Cu",
+                "ΔV Parcial": f"{cdt_di_val:.2f}%",
+                "ΔV Total": f"{cdt_di_val:.2f}%",
+                "Límite REBT": "≤ 1.50%",
+                "Estado": "✅ Conforme" if cdt_di_val <= 1.50 else "⚠️ Supera límite",
+                "Conductor": "RZ1-K 0.6/1kV (AS)",
+                "Tubo": tubo_clean_di
+            })
+
+            todos_cumplen = (cdt_di_val <= 1.50)
+            for idx_c, c_it in enumerate(st.session_state.get("mtd_circuitos", [])):
+                t_letra = tramos_tags[idx_c] if idx_c < len(tramos_tags) else f"T{idx_c+1}"
+                p_cw = float(c_it.get("potencia", 2300))
+                l_cm = float(c_it.get("longitud", 15))
+                cdt_cp = float(c_it.get("cdt", 1.10))
+                cdt_ctot = cdt_di_val + cdt_cp
+                m_sec_c = re.search(r'(\d+(?:\.\d+)?)', str(c_it.get("seccion", "2.5")))
+                sec_c = m_sec_c.group(1) if m_sec_c else "2.5"
+                tubo_c = str(c_it.get("tubo", "M20"))
+                c_nom = str(c_it.get("nombre", f"C{idx_c+1}"))
+                es_c_tri = ("4x" in str(c_it.get("seccion", "")) or "3P" in c_nom or "trifásic" in c_nom.lower())
+                ib_c = p_cw / (1.73205 * 400.0) if es_c_tri else p_cw / 230.0
+                es_alumbrado = "alumbrado" in c_nom.lower() or "iluminación" in c_nom.lower() or "luz" in c_nom.lower()
+                limite_c = 3.0 if es_alumbrado else 5.0
+                cumple_c = (cdt_ctot <= limite_c)
+                if not cumple_c:
+                    todos_cumplen = False
+
+                filas_anx4.append({
+                    "Tramo": t_letra,
+                    "Designación": c_nom,
+                    "Potencia (W)": f"{p_cw:,.0f} W",
+                    "Ib (A)": f"{ib_c:.1f} A",
+                    "Long. (m)": f"{l_cm:.0f} m",
+                    "Sección": f"{sec_c} mm² Cu",
+                    "ΔV Parcial": f"{cdt_cp:.2f}%",
+                    "ΔV Total": f"{cdt_ctot:.2f}%",
+                    "Límite REBT": f"≤ {limite_c:.1f}%",
+                    "Estado": "✅ Conforme" if cumple_c else "⚠️ Supera límite",
+                    "Conductor": "H07Z1-K 450/750V (AS)",
+                    "Tubo": tubo_c
+                })
+
+            import pandas as pd
+            df_anx4 = pd.DataFrame(filas_anx4)
+            st.dataframe(df_anx4, use_container_width=True, hide_index=True)
+
+            if todos_cumplen:
+                st.success("✅ **TODOS LOS TRAMOS DEL ANEXO IV CUMPLEN CON LA NORMATIVA REBT (ITC-BT-19 e ITC-BT-25).** Secciones e intensidades correctas para emisión oficial.")
+            else:
+                st.warning("⚠️ **ATENCIÓN:** Uno o más circuitos superan la caída de tensión acumulada permitida por el REBT. Aumenta la sección del conductor o reduce la longitud del tramo para subsanarlo.")
+
         col_b_mtd1, col_b_mtd2 = st.columns([1.6, 1])
         with col_b_mtd1:
             if st.button("💰 Generar Presupuesto de Obra desde este Cuadro de Circuitos", type="secondary", use_container_width=True, key="btn_gen_presup_from_mtd"):
@@ -2004,6 +2166,7 @@ def renderizar():
                 st.rerun()
         with col_b_mtd2:
             st.caption("Crea automáticamente un presupuesto con las líneas, PIAs, diferenciales y metros de cable.")
+
 
     # --- TAB 6: PROTOCOLO DE ENSAYOS (ITC-BT-05) ---
     with tab_f6:
@@ -2169,6 +2332,38 @@ def renderizar():
                 else:
                     st.session_state["mtd_unifilar_modo"] = "auto"
                     st.info("ℹ️ Bolimur generará automáticamente el esquema unifilar vectorial con las protecciones IGA, diferenciales y circuitos configurados en las pestañas anteriores.")
+                    col_pru1, col_pru2 = st.columns([1.5, 2])
+                    with col_pru1:
+                        if st.button("👁️ Previsualizar Unifilar Vectorial", key="btn_prev_unif_vec", use_container_width=True):
+                            from modulos import pdf_memoria_tecnica
+                            ctx_mock = {
+                                "suministro": {
+                                    "tension": sum_tension,
+                                    "di_cable": sum_di_cable,
+                                    "di_tubo": sum_di_tubo,
+                                    "di_long_m": sum_di_long,
+                                    "di_cdt_pct": sum_di_cdt
+                                },
+                                "protecciones": {
+                                    "iga_amperaje": prot_iga,
+                                    "iga_curva": prot_curva,
+                                    "iga_icn_ka": prot_icn,
+                                    "diferenciales": prot_dif,
+                                    "sobretensiones": prot_vtp
+                                },
+                                "ensayos": {"rt_ohm": med_rt},
+                                "circuitos": st.session_state.get("mtd_circuitos", [])
+                            }
+                            png_prev = pdf_memoria_tecnica.generar_png_unifilar(ctx_mock)
+                            if png_prev:
+                                st.session_state["_prev_unif_png"] = png_prev
+                    with col_pru2:
+                        if st.session_state.get("_prev_unif_png"):
+                            if st.button("❌ Ocultar Previsualización", key="btn_hide_unif_prev"):
+                                st.session_state.pop("_prev_unif_png", None)
+                                st.rerun()
+                    if st.session_state.get("_prev_unif_png"):
+                        st.image(st.session_state["_prev_unif_png"], caption="Esquema Unifilar Vectorial Oficial (UNE-EN 60617)", use_container_width=True)
 
         st.markdown("---")
         st.markdown("##### 📸 Anexo V: Reportaje Fotográfico de Fin de Obra y Evidencias REBT (ITC-BT-05)")
@@ -2197,32 +2392,55 @@ def renderizar():
             tit_foto_custom = st.text_input("Descripción técnica de la foto:", value=tipo_foto_sugerida, key="txt_desc_foto_in")
         with col_add_f3:
             st.write("")
-            st.caption("Sube la foto abajo:")
+            st.caption("Sube las fotos abajo:")
 
-        up_nueva_foto = st.file_uploader("Subir Fotografía de la Obra (JPG o PNG):", type=["png", "jpg", "jpeg", "webp"], key="uploader_foto_obra_temp")
-        if up_nueva_foto is not None:
+        k_t7_fotos = f"uploader_foto_obra_{st.session_state.get('_ver_tab7_fotos', 0)}"
+        up_nueva_foto = st.file_uploader(
+            "Subir Fotografías de la Obra (JPG, PNG o WEBP):",
+            type=["png", "jpg", "jpeg", "webp"],
+            accept_multiple_files=True,
+            key=k_t7_fotos,
+            help="Puedes seleccionar varias fotos a la vez desde tu móvil, tablet o PC."
+        )
+        if up_nueva_foto:
             col_bf1, col_bf2 = st.columns([1.5, 3])
             with col_bf1:
-                if st.button("➕ Insertar Foto al Reportaje", type="primary", use_container_width=True, key="btn_add_foto_list"):
-                    b64_f = procesar_archivo_anexo(up_nueva_foto)
-                    if b64_f:
-                        st.session_state["mtd_fotos_obra"].append({
-                            "titulo": tit_foto_custom,
-                            "data": b64_f
-                        })
-                        st.success(f"✅ Foto '{tit_foto_custom}' añadida al reportaje.")
-                        st.rerun()
+                if st.button(f"➕ Insertar {len(up_nueva_foto)} Foto/s al Reportaje", type="primary", use_container_width=True, key="btn_add_foto_list"):
+                    for idx_f, f_obj in enumerate(up_nueva_foto):
+                        b64_f = procesar_archivo_anexo(f_obj)
+                        if b64_f:
+                            sufijo = f" (Foto {idx_f + 1})" if len(up_nueva_foto) > 1 else ""
+                            st.session_state["mtd_fotos_obra"].append({
+                                "titulo": f"{tit_foto_custom}{sufijo}",
+                                "data": b64_f
+                            })
+                    st.session_state["_ver_tab7_fotos"] = st.session_state.get("_ver_tab7_fotos", 0) + 1
+                    st.success(f"✅ ¡{len(up_nueva_foto)} fotografía/s añadida/s al reportaje!")
+                    st.rerun()
 
         # Mostrar galería de fotos adjuntadas
         fotos_actuales = st.session_state.get("mtd_fotos_obra", [])
         if fotos_actuales:
-            st.markdown(f"###### 📷 Fotografías registradas en este expediente ({len(fotos_actuales)} foto/s):")
+            col_tit_g, col_del_all = st.columns([3, 1])
+            with col_tit_g:
+                st.markdown(f"###### 📷 Fotografías registradas en este expediente ({len(fotos_actuales)} foto/s):")
+            with col_del_all:
+                if len(fotos_actuales) > 1:
+                    if st.button("🗑️ Vaciar Todas", key="btn_del_all_fotos", use_container_width=True):
+                        st.session_state["mtd_fotos_obra"] = []
+                        st.rerun()
+
             f_cols = st.columns(min(len(fotos_actuales), 3))
             for f_idx, f_item in enumerate(fotos_actuales):
                 c_idx = f_idx % len(f_cols)
                 with f_cols[c_idx]:
                     with st.container(border=True):
-                        st.image(f_item["data"], caption=f_item["titulo"], use_container_width=True)
+                        st.image(f_item["data"], caption=f_item.get("titulo", ""), use_container_width=True)
+                        
+                        # Edición directa del pie de foto
+                        new_tit = st.text_input("Pie explicativo:", value=f_item.get("titulo", ""), key=f"edit_tit_{f_idx}")
+                        if new_tit != f_item.get("titulo", ""):
+                            f_item["titulo"] = new_tit
                         
                         # Mostrar tarjeta de auditoría si ya está auditada
                         if f_item.get("auditoria"):
@@ -2253,6 +2471,7 @@ def renderizar():
                             if st.button("🗑️ Eliminar", key=f"btn_del_foto_{f_idx}", use_container_width=True):
                                 st.session_state["mtd_fotos_obra"].pop(f_idx)
                                 st.rerun()
+
 
     # =========================================================================
     # 3. GUARDAR VINCULADO AL CLIENTE (CRM) Y GENERACIÓN DE DOCUMENTACIÓN OFICIAL

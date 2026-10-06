@@ -450,13 +450,15 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
             r_di.cells[2].text = "100"
             r_di.cells[4].text = f"{pot_inst_kw:.2f}"
             r_di.cells[6].text = f"{di_long:.0f}"
-            r_di.cells[8].text = f"{pot_inst_w / v_nom:.1f}"
+            ib_di = pot_inst_w / (1.73205 * 400.0) if es_trifasico else pot_inst_w / 230.0
+            r_di.cells[8].text = f"{ib_di:.1f}"
             r_di.cells[10].text = f"{di_sec}"
             r_di.cells[12].text = f"{di_cdt:.2f}"
             r_di.cells[15].text = f"{di_cdt:.2f}"
             r_di.cells[16].text = "RZ1-K (AS)"
             r_di.cells[18].text = "0.6/1 kV"
-            r_di.cells[22].text = di_tubo.split()[1] if len(di_tubo.split()) > 1 else "M32"
+            m_tubo = re.search(r'(M\d+)', di_tubo)
+            r_di.cells[22].text = m_tubo.group(1) if m_tubo else "M32"
             r_di.cells[26].text = f"{di_sec}"
             r_di.cells[28].text = f"{di_sec}"
 
@@ -481,7 +483,8 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
                 c_tubo_str = _safe_str(c_item.get("tubo"), "M20")
                 c_cdt_parc = float(c_item.get("cdt") or 1.10)
                 c_cdt_tot = di_cdt + c_cdt_parc
-                c_ib = c_pot_w / 230.0
+                c_trif = ("4x" in str(c_item.get("seccion", "")) or "3P" in str(c_nom) or "trifásic" in c_nom.lower())
+                c_ib = c_pot_w / (1.73205 * 400.0) if c_trif else c_pot_w / 230.0
 
                 r_circ.cells[0].text = f"{c_nom} ({tramo_tag})"
                 r_circ.cells[2].text = "100"
@@ -501,9 +504,9 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
                 for col_k in [2, 4, 6, 8, 10, 12, 15, 16, 18, 22, 26, 28]:
                     r_circ.cells[col_k].text = "-"
 
-    # =========================================================================
+    # =============================================================
     # INSERCIÓN EXACTA DE PLANOS GRÁFICOS EN SUS RESPECTIVOS ANEXOS OFICIALES
-    # =========================================================================
+    # =============================================================
     # Anexo I (a): Plano de Situación en Tabla 8, Fila 27
     if anexos.get("plano_situacion") and len(doc.tables) > 8 and len(doc.tables[8].rows) > 27:
         try:
@@ -526,7 +529,6 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     if anexos.get("plano_distribucion") and len(doc.tables) > 10 and len(doc.tables[10].rows) > 1:
         try:
             c10 = doc.tables[10].rows[1].cells[0]
-            # Limpiar párrafos vacíos redundantes que causaban overflow de página
             for p_extra in c10.paragraphs[5:]:
                 try:
                     p_extra._p.getparent().remove(p_extra._p)
@@ -537,15 +539,63 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
         except Exception:
             pass
 
-    # Anexo III: Esquema Unifilar Personalizado (SOLO si se subió plano propio)
-    # Si no se subió plano propio, se conserva la Tabla 11 original con el esquema oficial de la CARM.
-    if anexos.get("unifilar_modo") == "custom" and anexos.get("plano_unifilar_custom") and len(doc.tables) > 11 and len(doc.tables[11].rows) > 1:
+    # Anexo III: Esquema Unifilar en Tabla 11
+    if len(doc.tables) > 11 and len(doc.tables[11].rows) > 1:
         try:
             c11 = doc.tables[11].rows[1].cells[0]
             p_target = c11.paragraphs[0] if len(c11.paragraphs) > 0 else c11.add_paragraph()
-            _insertar_imagen_en_parrafo(p_target, anexos.get("plano_unifilar_custom"), max_w_in=5.8, max_h_in=5.0)
+            if anexos.get("unifilar_modo") == "custom" and anexos.get("plano_unifilar_custom"):
+                _insertar_imagen_en_parrafo(p_target, anexos.get("plano_unifilar_custom"), max_w_in=5.8, max_h_in=5.0)
+            else:
+                from modulos.pdf_memoria_tecnica import generar_png_unifilar
+                png_unif = generar_png_unifilar(datos_mtd)
+                if png_unif:
+                    _insertar_imagen_en_parrafo(p_target, png_unif, max_w_in=5.8, max_h_in=5.0)
         except Exception:
             pass
+
+    # =============================================================
+    # ANEXO V: REPORTAJE FOTOGRÁFICO DE FIN DE OBRA (ITC-BT-05)
+    # =============================================================
+    fotos_obra = anexos.get("fotos", []) or datos.get("fotos", [])
+    if fotos_obra:
+        try:
+            doc.add_page_break()
+            p_v_tit = doc.add_paragraph()
+            r_v = p_v_tit.add_run("ANEXO V: REPORTAJE FOTOGRÁFICO DE FIN DE OBRA Y EVIDENCIAS TÉCNICAS (ITC-BT-05)")
+            r_v.bold = True
+            r_v.font.size = Pt(12)
+            r_v.font.color.rgb = RGBColor(15, 23, 42)
+            p_v_tit.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+            p_v_sub = doc.add_paragraph()
+            r_vs = p_v_sub.add_run(f"Expediente: {datos.get('expediente', 'EXP-MTD')} | Titular: {titular.get('nombre', '')} | Ubicación: {empl.get('direccion', '')} ({empl.get('municipio', 'Murcia')})")
+            r_vs.font.size = Pt(8.5)
+            r_vs.font.color.rgb = RGBColor(100, 116, 139)
+            p_v_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+            for f_idx, f_item in enumerate(fotos_obra):
+                f_data = f_item.get("data") if isinstance(f_item, dict) else f_item
+                f_tit = f_item.get("titulo", f"Fotografía de obra {f_idx + 1}") if isinstance(f_item, dict) else f"Fotografía {f_idx + 1}"
+
+                p_f_img = doc.add_paragraph()
+                p_f_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                _insertar_imagen_en_parrafo(p_f_img, f_data, max_w_in=5.5, max_h_in=4.2)
+
+                p_f_cap = doc.add_paragraph()
+                p_f_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r_cap = p_f_cap.add_run(f"📷 Foto {f_idx + 1}: {f_tit}")
+                r_cap.bold = True
+                r_cap.font.size = Pt(9)
+                r_cap.font.color.rgb = RGBColor(30, 41, 59)
+
+                if f_idx < len(fotos_obra) - 1 and (f_idx + 1) % 2 == 0:
+                    doc.add_page_break()
+                else:
+                    doc.add_paragraph()
+        except Exception:
+            pass
+
 
     bio_out = io.BytesIO()
     doc.save(bio_out)

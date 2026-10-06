@@ -11,6 +11,7 @@ Comunidad Autónoma de la Región de Murcia (CARM) en sustitución del formato p
 
 import io
 import os
+import re
 import base64
 import datetime
 from reportlab.lib.pagesizes import A4
@@ -22,6 +23,7 @@ from reportlab.graphics.shapes import Drawing, Rect, Line, String, Circle, Group
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
+
 
 
 def _crear_imagen_flowable(img_data, max_w=18.0*cm, max_h=20.0*cm):
@@ -85,7 +87,277 @@ def _crear_imagen_flowable(img_data, max_w=18.0*cm, max_h=20.0*cm):
         return None
 
 
+def _extraer_seccion_fase(seccion_str, default: str = "2.5") -> str:
+    """Extrae la sección nominal en mm² de fase de un string de conductor."""
+    if not seccion_str:
+        return default
+    s = str(seccion_str).strip()
+    s = s.replace("2x", "").replace("3G", "").replace("4x", "").replace("1x", "")
+    if "+" in s:
+        s = s.split("+")[0].strip()
+    m = re.search(r'(\d+(?:\.\d+)?)', s)
+    return m.group(1) if m else default
+
+
+def _extraer_diametro_tubo(tubo_str, default: str = "M20") -> str:
+    """Extrae el calibre normalizado del tubo (ej. M20, M25, M32, M40, M50)."""
+    if not tubo_str:
+        return default
+    m = re.search(r'(M\d+)', str(tubo_str))
+    return m.group(1) if m else str(tubo_str).strip()
+
+
+def crear_drawing_esquema_unifilar(datos_mtd: dict) -> Drawing:
+    """
+    Genera el Drawing vectorial oficial del Esquema Unifilar para Anexo III (RD 842/2002).
+    Genera dinámicamente los circuitos reales de la instalación distribuidos bajo sus diferenciales,
+    con símbolos normalizados UNE-EN 60617 (ICP, IGA, toroide diferencial, PIA y puesta a tierra).
+    """
+    suministro = datos_mtd.get("suministro", {})
+    protecciones = datos_mtd.get("protecciones", {})
+    ensayos = datos_mtd.get("ensayos", {})
+    circuitos_raw = datos_mtd.get("circuitos", [])
+
+    c_primary = colors.HexColor("#0f172a")
+    c_secondary = colors.HexColor("#0369a1")
+    c_green = colors.HexColor("#16a34a")
+    c_text_dark = colors.HexColor("#1e293b")
+
+    dwg_w = 520
+    dwg_h = 270
+    dwg = Drawing(dwg_w, dwg_h)
+
+    # Marco y fondo del cuadro unifilar
+    dwg.add(Rect(0, 0, dwg_w, dwg_h, fillColor=colors.HexColor("#ffffff"), strokeColor=colors.HexColor("#94a3b8"), strokeWidth=0.9, rx=4, ry=4))
+
+    # =============================================================
+    # 1. CABECERA: Tensión de Red + ICP (Interruptor Control de Potencia)
+    # =============================================================
+    xc = 260
+    tension_val = str(suministro.get('tension', '230'))
+    es_trif = ("400" in tension_val or "Trifásic" in tension_val)
+    txt_red = "3N ~ 400 V - 50 Hz" if es_trif else "1N ~ 230 V - 50 Hz"
+
+    dwg.add(String(xc, 262, txt_red, fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_primary, textAnchor="middle"))
+    dwg.add(Circle(xc, 253, 1.5, fillColor=c_primary, strokeColor=c_primary))
+
+    dwg.add(Line(xc, 253, xc, 245, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(Line(xc, 245, xc - 7, 235, strokeColor=c_primary, strokeWidth=1.4))
+    dwg.add(Circle(xc, 245, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(xc, 233, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Line(xc, 233, xc, 226, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(String(xc + 12, 240, "ICP", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_primary))
+
+    # =============================================================
+    # 2. IGA (Interruptor General Automático)
+    # =============================================================
+    iga_cal_val = protecciones.get('iga_amperaje', 40)
+    iga_polos_txt = "4x" if es_trif else "2x"
+    dwg.add(Line(xc, 226, xc - 7, 214, strokeColor=c_primary, strokeWidth=1.4))
+    dwg.add(Circle(xc, 226, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(xc, 212, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Line(xc - 4, 219, xc - 11, 214, strokeColor=c_primary, strokeWidth=1.0))
+    dwg.add(Line(xc - 11, 214, xc - 8, 211, strokeColor=c_primary, strokeWidth=1.0))
+    dwg.add(Rect(xc - 14, 211, 4, 4, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Line(xc, 212, xc, 202, strokeColor=c_primary, strokeWidth=1.3))
+
+    icn_val = float(protecciones.get('iga_icn_ka', 6.0) or 6.0)
+    curva_val = str(protecciones.get('iga_curva', 'Curva C') or 'Curva C')[:7]
+    dwg.add(String(xc + 12, 222, "IGA", fontName="Helvetica-Bold", fontSize=8.5, fillColor=c_primary))
+    dwg.add(String(xc + 12, 213, f"{iga_polos_txt}{iga_cal_val} A", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_secondary))
+    dwg.add(String(xc + 12, 204, f"{icn_val:.0f} kA | {curva_val}", fontName="Helvetica", fontSize=5.8, fillColor=colors.HexColor("#64748b")))
+
+    # =============================================================
+    # 3. DIFERENCIALES Y CIRCUITOS DINÁMICOS
+    # =============================================================
+    circs = list(circuitos_raw) if circuitos_raw else [
+        {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20"},
+        {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20"},
+        {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25"},
+        {"nombre": "C4 - Lavadora / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20"},
+        {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20"}
+    ]
+    circs_draw = circs[:12]
+    n_total = len(circs_draw)
+    n_g1 = max(1, (n_total + 1) // 2)
+    g1 = circs_draw[:n_g1]
+    g2 = circs_draw[n_g1:]
+
+    x_d1 = 135
+    x_d2 = 385
+    y_split = 202
+
+    dwg.add(Line(x_d1, y_split, x_d2, y_split, strokeColor=c_primary, strokeWidth=1.4))
+    dwg.add(Circle(xc, y_split, 1.5, fillColor=c_primary, strokeColor=c_primary))
+
+    dif_amp_sug = 63 if int(iga_cal_val) > 40 else 40
+
+    # DIF 1 (Rama Izquierda)
+    dwg.add(Line(x_d1, y_split, x_d1, 192, strokeColor=c_primary, strokeWidth=1.2))
+    dwg.add(Line(x_d1, 192, x_d1 - 7, 181, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(Circle(x_d1, 192, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(x_d1, 179, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(x_d1 - 16, 186, 5.0, fillColor=colors.HexColor("#f0fdf4"), strokeColor=c_green, strokeWidth=1.2))
+    dwg.add(Line(x_d1 - 16, 181.5, x_d1 - 16, 190.5, strokeColor=c_green, strokeWidth=1.0))
+    dwg.add(Line(x_d1 - 20.5, 186, x_d1 - 11.5, 186, strokeColor=c_green, strokeWidth=1.0))
+    dwg.add(Line(x_d1 - 11, 186, x_d1 - 4, 186, strokeColor=c_green, strokeWidth=0.9))
+    dwg.add(Line(x_d1, 179, x_d1, 166, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(String(x_d1 + 10, 189, "DIF 1", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_green))
+    dwg.add(String(x_d1 + 10, 179, f"{iga_polos_txt}{dif_amp_sug} A", fontName="Helvetica-Bold", fontSize=7.2, fillColor=c_primary))
+    dwg.add(String(x_d1 + 10, 169, "30 mA (A)", fontName="Helvetica-Bold", fontSize=7.0, fillColor=c_primary))
+
+    # DIF 2 (Rama Derecha)
+    dwg.add(Line(x_d2, y_split, x_d2, 192, strokeColor=c_primary, strokeWidth=1.2))
+    dwg.add(Line(x_d2, 192, x_d2 - 7, 181, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(Circle(x_d2, 192, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(x_d2, 179, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(x_d2 - 16, 186, 5.0, fillColor=colors.HexColor("#f0fdf4"), strokeColor=c_green, strokeWidth=1.2))
+    dwg.add(Line(x_d2 - 16, 181.5, x_d2 - 16, 190.5, strokeColor=c_green, strokeWidth=1.0))
+    dwg.add(Line(x_d2 - 20.5, 186, x_d2 - 11.5, 186, strokeColor=c_green, strokeWidth=1.0))
+    dwg.add(Line(x_d2 - 11, 186, x_d2 - 4, 186, strokeColor=c_green, strokeWidth=0.9))
+    dwg.add(Line(x_d2, 179, x_d2, 166, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(String(x_d2 + 10, 189, "DIF 2", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_green))
+    dwg.add(String(x_d2 + 10, 179, f"{iga_polos_txt}{dif_amp_sug} A", fontName="Helvetica-Bold", fontSize=7.2, fillColor=c_primary))
+    dwg.add(String(x_d2 + 10, 169, "30 mA (A)", fontName="Helvetica-Bold", fontSize=7.0, fillColor=c_primary))
+
+    # =============================================================
+    # 4. PEINES HORIZONTALES
+    # =============================================================
+    y_bus = 166
+    dwg.add(Line(18, y_bus, 252, y_bus, strokeColor=c_secondary, strokeWidth=2.2))
+    dwg.add(Circle(x_d1, y_bus, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
+
+    dwg.add(Line(268, y_bus, 502, y_bus, strokeColor=c_secondary, strokeWidth=2.2))
+    dwg.add(Circle(x_d2, y_bus, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
+
+    # =============================================================
+    # 5. RENDERIZADO DINÁMICO DE COLUMNAS DE CIRCUITOS
+    # =============================================================
+    def _dibujar_grupo(grupo, x_min, x_max, start_idx):
+        if not grupo:
+            return
+        m = len(grupo)
+        step = (x_max - x_min) / (m + 1)
+        w_box = max(38, min(50, step - 4))
+
+        for j, c in enumerate(grupo):
+            cx = x_min + (j + 1) * step
+            c_idx = start_idx + j + 1
+
+            c_nom = str(c.get("nombre", f"C{c_idx}"))
+            m_cid = re.search(r'(C\d+(?:\.\d+)?)', c_nom)
+            cid = m_cid.group(1) if m_cid else f"C{c_idx}"
+
+            c_clean = re.sub(r'^[Cc]\d+(?:\.\d+)?\s*[-–:]\s*', '', c_nom).strip()
+            palabras = c_clean.split()
+            if len(palabras) <= 2:
+                nom1 = " ".join(palabras)
+                nom2 = ""
+            else:
+                mid = (len(palabras) + 1) // 2
+                nom1 = " ".join(palabras[:mid])
+                nom2 = " ".join(palabras[mid:])
+            if len(nom1) > 13:
+                nom1 = nom1[:12] + "."
+            if len(nom2) > 13:
+                nom2 = nom2[:12] + "."
+
+            c_sec = str(c.get("seccion", "2x2.5+TT2.5")).strip()
+            es_c_trif = ("4x" in c_sec or "3P" in c_nom or "trifásic" in c_nom.lower())
+            pia_val = c.get("pia", 16)
+            pia_txt = f"{'4x' if es_c_trif else '2x'}{pia_val} A"
+
+            sec_fase = _extraer_seccion_fase(c_sec, default="2.5")
+            sec_txt = f"{'4x' if es_c_trif else '2x'}{sec_fase}+T"
+            tubo_txt = _extraer_diametro_tubo(c.get("tubo", "M20"), default="M20")
+
+            # Bajante
+            dwg.add(Line(cx, y_bus, cx, 155, strokeColor=c_primary, strokeWidth=1.0))
+            dwg.add(Circle(cx, y_bus, 1.2, fillColor=c_secondary, strokeColor=c_secondary))
+
+            # Caja técnica
+            dwg.add(Rect(cx - w_box/2, 118, w_box, 37, fillColor=colors.HexColor("#f8fafc"), strokeColor=colors.HexColor("#cbd5e1"), strokeWidth=0.6, rx=2, ry=2))
+            dwg.add(String(cx, 145, pia_txt, fontName="Helvetica-Bold", fontSize=6.0, fillColor=c_primary, textAnchor="middle"))
+            dwg.add(String(cx, 134, sec_txt, fontName="Helvetica-Bold", fontSize=5.6, fillColor=c_secondary, textAnchor="middle"))
+            dwg.add(String(cx, 123, tubo_txt, fontName="Helvetica", fontSize=5.4, fillColor=colors.HexColor("#64748b"), textAnchor="middle"))
+
+            # Línea al PIA
+            dwg.add(Line(cx, 118, cx, 106, strokeColor=c_primary, strokeWidth=1.0))
+
+            # Símbolo Magnetotérmico PIA
+            dwg.add(Line(cx, 106, cx - 7, 94, strokeColor=c_primary, strokeWidth=1.3))
+            dwg.add(Circle(cx, 106, 1.0, fillColor=c_primary, strokeColor=c_primary))
+            dwg.add(Circle(cx, 92, 1.0, fillColor=c_primary, strokeColor=c_primary))
+            dwg.add(Line(cx - 4, 99, cx - 11, 95, strokeColor=c_primary, strokeWidth=0.9))
+            dwg.add(Line(cx - 11, 95, cx - 8, 92, strokeColor=c_primary, strokeWidth=0.9))
+            dwg.add(Rect(cx - 13, 92, 3.5, 3.5, fillColor=c_primary, strokeColor=c_primary))
+
+            # Salida con trazos oblicuos
+            dwg.add(Line(cx, 92, cx, 68, strokeColor=c_primary, strokeWidth=1.0))
+            dwg.add(Line(cx - 3, 76, cx + 3, 80, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+            dwg.add(Line(cx - 3, 79, cx + 3, 83, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+            dwg.add(Line(cx - 3, 82, cx + 3, 86, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+            if es_c_trif:
+                dwg.add(Line(cx - 3, 85, cx + 3, 89, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+            dwg.add(Circle(cx + 4, 87, 0.7, fillColor=colors.HexColor("#64748b"), strokeColor=colors.HexColor("#64748b")))
+
+            # ID y Denominación
+            dwg.add(String(cx, 55, cid, fontName="Helvetica-Bold", fontSize=8.5, fillColor=c_primary, textAnchor="middle"))
+            dwg.add(String(cx, 44, nom1, fontName="Helvetica-Bold", fontSize=5.8, fillColor=c_text_dark, textAnchor="middle"))
+            if nom2:
+                dwg.add(String(cx, 35, nom2, fontName="Helvetica", fontSize=5.4, fillColor=colors.HexColor("#475569"), textAnchor="middle"))
+
+    _dibujar_grupo(g1, 18, 252, 0)
+    _dibujar_grupo(g2, 268, 502, len(g1))
+
+    # =============================================================
+    # 6. LÍNEA DE PUESTA A TIERRA (PE)
+    # =============================================================
+    dwg.add(Rect(18, 6, 484, 24, fillColor=colors.HexColor("#fef3c7"), strokeColor=colors.HexColor("#d97706"), strokeWidth=0.7, rx=2, ry=2))
+    tx = 35
+    ty = 16
+    dwg.add(Line(tx, ty + 8, tx, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
+    dwg.add(Line(tx - 6, ty, tx + 6, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
+    dwg.add(Line(tx - 4, ty - 2.5, tx + 4, ty - 2.5, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.0))
+    dwg.add(Line(tx - 2, ty - 5, tx + 2, ty - 5, strokeColor=colors.HexColor("#92400e"), strokeWidth=0.8))
+
+    rt_medida = float(ensayos.get('rt_ohm', 11.8) or 11.8)
+    sec_tierra = _extraer_seccion_fase(suministro.get('di_cable', '10'), default="10")
+    dwg.add(String(50, 19, "RED DE TIERRA (PE - ITC-BT-18):", fontName="Helvetica-Bold", fontSize=6.0, fillColor=colors.HexColor("#92400e")))
+    dwg.add(String(50, 10, f"Línea Enlace Cu 1x{sec_tierra} mm² | Picas de tierra 2m | Resistencia Medida: Rt = {rt_medida:.1f} Ω (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
+
+    return dwg
+
+
+def generar_png_unifilar(datos_mtd: dict) -> bytes | None:
+    """
+    Renderiza el Drawing del Esquema Unifilar oficial a bytes de imagen PNG (200 DPI)
+    para su inserción en Word (.docx) o vistas previas gráficas.
+    """
+    try:
+        from reportlab.graphics import renderPDF
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
+        dwg = crear_drawing_esquema_unifilar(datos_mtd)
+        bio_pdf = io.BytesIO()
+        renderPDF.drawToFile(dwg, bio_pdf)
+        pdf_bytes = bio_pdf.getvalue()
+        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        if len(pdf_doc) > 0:
+            pix = pdf_doc[0].get_pixmap(dpi=200)
+            png_bytes = pix.tobytes("png")
+            pdf_doc.close()
+            return png_bytes
+        pdf_doc.close()
+    except Exception as err:
+        print(f"Error generando PNG del unifilar: {err}")
+    return None
+
+
 def _crear_anexo_plano_flowables(titulo_anexo: str, subtitulo_anexo: str, img_data, exped: str, c_primary, c_border, h_section, body_style):
+
     """
     Genera el bloque de página completa oficial para Anexos I(a), I(b) o II:
     Cajetín superior oficial DGEAIM Murcia + Imagen centrada + Pie de referencia de expediente.
@@ -497,7 +769,9 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('LEFTPADDING', (0,0), (-1,-1), 4),
     ]))
 
-    pot_inst_w = float(suministro.get("potencia_instalada_w", 5750.0))
+    pot_inst_w = float(suministro.get("potencia_instalada_w") or 5750.0)
+    tension_str = str(suministro.get("tension") or "230")
+    es_trif = ("400" in tension_str or "trifásic" in tension_str.lower() or "trifasico" in tension_str.lower())
     tipo_tram = datos_mtd.get("tipo_tramitacion", "Nueva Instalación")
     es_nueva = "[ X ] Nueva" if ("Nueva" in tipo_tram and "Temporal" not in tipo_tram and "Obra" not in tipo_tram) else "[  ] Nueva"
     es_temporal = "[ X ] Temporal / Obra" if ("Temporal" in tipo_tram or "Obra" in tipo_tram or "ITC-BT-33" in tipo_tram) else "[  ] Temporal / Obra"
@@ -762,189 +1036,9 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     story.append(t_anx_hdr)
     story.append(HRFlowable(width="100%", thickness=1.0, color=c_primary, spaceBefore=2, spaceAfter=5))
 
-    # Dibujo vectorial del Esquema Unifilar Oficial Jerárquico (Exacto al modelo de curso REBT / DGEAIM Murcia)
-    dwg_w = 520
-    dwg_h = 270
-    dwg = Drawing(dwg_w, dwg_h)
-    
-    # Marco y fondo del cuadro unifilar
-    dwg.add(Rect(0, 0, dwg_w, dwg_h, fillColor=colors.HexColor("#ffffff"), strokeColor=colors.HexColor("#94a3b8"), strokeWidth=0.9, rx=4, ry=4))
-    
-    # =============================================================
-    # 1. CABECERA: Tensión de Red + ICP (Interruptor Control de Potencia)
-    # =============================================================
-    xc = 260
-    tension_val = str(suministro.get('tension', '230'))
-    es_trif = ("400" in tension_val or "Trifásic" in tension_val)
-    txt_red = "3N ~ 400 V - 50 Hz" if es_trif else "1N ~ 230 V - 50 Hz"
-    
-    # Texto de alimentación superior (igual que en los esquemas de Cade_Simu / Industria)
-    dwg.add(String(xc, 262, txt_red, fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_primary, textAnchor="middle"))
-    dwg.add(Circle(xc, 253, 1.5, fillColor=c_primary, strokeColor=c_primary))
-    
-    # Línea vertical hacia ICP / IGA
-    dwg.add(Line(xc, 253, xc, 245, strokeColor=c_primary, strokeWidth=1.3))
-    # Símbolo interruptor de corte ICP
-    dwg.add(Line(xc, 245, xc - 7, 235, strokeColor=c_primary, strokeWidth=1.4))
-    dwg.add(Circle(xc, 245, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    dwg.add(Circle(xc, 233, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    dwg.add(Line(xc, 233, xc, 226, strokeColor=c_primary, strokeWidth=1.3))
-    # Texto ICP
-    dwg.add(String(xc + 12, 240, "ICP", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_primary))
+    # Dibujo vectorial del Esquema Unifilar Oficial Jerárquico (Dinámico según circuitos reales de la instalación)
+    dwg = crear_drawing_esquema_unifilar(datos_mtd)
 
-    # =============================================================
-    # 2. IGA (Interruptor General Automático con Térmico-Magnético)
-    # =============================================================
-    iga_cal_val = protecciones.get('iga_amperaje', 40)
-    iga_polos_txt = "4x" if es_trif else "2x"
-    # Símbolo magnetotérmico con bimetal y disparador magnético según UNE / Cade_Simu
-    dwg.add(Line(xc, 226, xc - 7, 214, strokeColor=c_primary, strokeWidth=1.4))
-    dwg.add(Circle(xc, 226, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    dwg.add(Circle(xc, 212, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    # Disparador térmico (semicírculo/banderola bimetal) y magnético (cruz)
-    dwg.add(Line(xc - 4, 219, xc - 11, 214, strokeColor=c_primary, strokeWidth=1.0))
-    dwg.add(Line(xc - 11, 214, xc - 8, 211, strokeColor=c_primary, strokeWidth=1.0))
-    dwg.add(Rect(xc - 14, 211, 4, 4, fillColor=c_primary, strokeColor=c_primary))
-    # Línea que baja
-    dwg.add(Line(xc, 212, xc, 202, strokeColor=c_primary, strokeWidth=1.3))
-    # Texto IGA
-    dwg.add(String(xc + 12, 222, "IGA", fontName="Helvetica-Bold", fontSize=8.5, fillColor=c_primary))
-    dwg.add(String(xc + 12, 213, f"{iga_polos_txt}{iga_cal_val} A", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_secondary))
-    dwg.add(String(xc + 12, 204, f"{protecciones.get('iga_icn_ka', 6.0):.0f} kA | {protecciones.get('iga_curva', 'Curva C')[:7]}", fontName="Helvetica", fontSize=5.8, fillColor=colors.HexColor("#64748b")))
-
-    # =============================================================
-    # 3. DERIVACIÓN A LOS 2 DIFERENCIALES (Rama Izquierda y Derecha)
-    # =============================================================
-    # Línea horizontal de distribución a diferenciales
-    x_d1 = 135
-    x_d2 = 385
-    y_split = 202
-    dwg.add(Line(x_d1, y_split, x_d2, y_split, strokeColor=c_primary, strokeWidth=1.4))
-    dwg.add(Circle(xc, y_split, 1.5, fillColor=c_primary, strokeColor=c_primary))
-
-    # --- DIFERENCIAL 1 (IZQUIERDA) - Símbolo Normalizado UNE-EN 60617 / Cade_Simu ---
-    dwg.add(Line(x_d1, y_split, x_d1, 192, strokeColor=c_primary, strokeWidth=1.2))
-    # Contacto interruptor
-    dwg.add(Line(x_d1, 192, x_d1 - 7, 181, strokeColor=c_primary, strokeWidth=1.3))
-    dwg.add(Circle(x_d1, 192, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    dwg.add(Circle(x_d1, 179, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    
-    # Símbolo de Toroide Diferencial (círculo con cruz interna según ejercicios del curso)
-    dwg.add(Circle(x_d1 - 16, 186, 5.0, fillColor=colors.HexColor("#f0fdf4"), strokeColor=c_green, strokeWidth=1.2))
-    dwg.add(Line(x_d1 - 16, 181.5, x_d1 - 16, 190.5, strokeColor=c_green, strokeWidth=1.0))
-    dwg.add(Line(x_d1 - 20.5, 186, x_d1 - 11.5, 186, strokeColor=c_green, strokeWidth=1.0))
-    # Enlace mecánico discontinua del toroide al contacto
-    dwg.add(Line(x_d1 - 11, 186, x_d1 - 4, 186, strokeColor=c_green, strokeWidth=0.9))
-    
-    dwg.add(Line(x_d1, 179, x_d1, 166, strokeColor=c_primary, strokeWidth=1.3))
-    # Texto Dif 1
-    dwg.add(String(x_d1 + 10, 189, "DIF 1", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_green))
-    dwg.add(String(x_d1 + 10, 179, f"{iga_polos_txt}40 A", fontName="Helvetica-Bold", fontSize=7.2, fillColor=c_primary))
-    dwg.add(String(x_d1 + 10, 169, "30 mA", fontName="Helvetica-Bold", fontSize=7.0, fillColor=c_primary))
-
-    # --- DIFERENCIAL 2 (DERECHA) - Símbolo Normalizado UNE-EN 60617 / Cade_Simu ---
-    dwg.add(Line(x_d2, y_split, x_d2, 192, strokeColor=c_primary, strokeWidth=1.2))
-    # Contacto interruptor
-    dwg.add(Line(x_d2, 192, x_d2 - 7, 181, strokeColor=c_primary, strokeWidth=1.3))
-    dwg.add(Circle(x_d2, 192, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    dwg.add(Circle(x_d2, 179, 1.2, fillColor=c_primary, strokeColor=c_primary))
-    
-    # Símbolo de Toroide Diferencial (círculo con cruz interna)
-    dwg.add(Circle(x_d2 - 16, 186, 5.0, fillColor=colors.HexColor("#f0fdf4"), strokeColor=c_green, strokeWidth=1.2))
-    dwg.add(Line(x_d2 - 16, 181.5, x_d2 - 16, 190.5, strokeColor=c_green, strokeWidth=1.0))
-    dwg.add(Line(x_d2 - 20.5, 186, x_d2 - 11.5, 186, strokeColor=c_green, strokeWidth=1.0))
-    # Enlace mecánico discontinua del toroide al contacto
-    dwg.add(Line(x_d2 - 11, 186, x_d2 - 4, 186, strokeColor=c_green, strokeWidth=0.9))
-    
-    dwg.add(Line(x_d2, 179, x_d2, 166, strokeColor=c_primary, strokeWidth=1.3))
-    # Texto Dif 2
-    dwg.add(String(x_d2 + 10, 189, "DIF 2", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_green))
-    dwg.add(String(x_d2 + 10, 179, f"{iga_polos_txt}40 A", fontName="Helvetica-Bold", fontSize=7.2, fillColor=c_primary))
-    dwg.add(String(x_d2 + 10, 169, "30 mA", fontName="Helvetica-Bold", fontSize=7.0, fillColor=c_primary))
-
-    # =============================================================
-    # 4. PEINES / BARRAS DE DISTRIBUCIÓN HORIZONTALES
-    # =============================================================
-    y_bus = 166
-    # Barra 1 (Izquierda): para C1, C2, C3, C10
-    dwg.add(Line(18, y_bus, 252, y_bus, strokeColor=c_secondary, strokeWidth=2.2))
-    dwg.add(Circle(x_d1, y_bus, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
-
-    # Barra 2 (Derecha): para C4-1, C4-2, C4-3, C5
-    dwg.add(Line(268, y_bus, 502, y_bus, strokeColor=c_secondary, strokeWidth=2.2))
-    dwg.add(Circle(x_d2, y_bus, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
-
-    # =============================================================
-    # 5. COLUMNAS DE CIRCUITOS INDIVIDUALES (EXACTO AL BOCETO)
-    # =============================================================
-    circs_modelo = [
-        # Rama 1 (Bajo Dif 1)
-        {"cx": 48,  "pia": "2 x 10 A", "sec": "2x1.5+T", "tubo": "Tubo 16", "id": "C1",   "nom1": "Iluminación", "nom2": "general"},
-        {"cx": 108, "pia": "2 x 16 A", "sec": "2x2.5+T", "tubo": "Tubo 20", "id": "C2",   "nom1": "Toma uso",    "nom2": "general"},
-        {"cx": 168, "pia": "2 x 25 A", "sec": "2x6+T",   "tubo": "Tubo 25", "id": "C3",   "nom1": "Cocina y",    "nom2": "horno"},
-        {"cx": 228, "pia": "2 x 16 A", "sec": "2x2.5+T", "tubo": "Tubo 20", "id": "C10",  "nom1": "Secadora",    "nom2": "(o IRVE)"},
-        
-        # Rama 2 (Bajo Dif 2)
-        {"cx": 298, "pia": "2 x 16 A", "sec": "2x2.5+T", "tubo": "Tubo 20", "id": "C4.1", "nom1": "Lavadora",    "nom2": ""},
-        {"cx": 358, "pia": "2 x 16 A", "sec": "2x2.5+T", "tubo": "Tubo 20", "id": "C4.2", "nom1": "Lavavajillas","nom2": ""},
-        {"cx": 418, "pia": "2 x 16 A", "sec": "2x2.5+T", "tubo": "Tubo 20", "id": "C4.3", "nom1": "Termo",       "nom2": "eléctrico"},
-        {"cx": 478, "pia": "2 x 16 A", "sec": "2x2.5+T", "tubo": "Tubo 20", "id": "C5",   "nom1": "Baño y aux.", "nom2": "cocina"}
-    ]
-
-    for c in circs_modelo:
-        cx = c["cx"]
-        
-        # 1. Bajante desde la barra colectora
-        dwg.add(Line(cx, y_bus, cx, 155, strokeColor=c_primary, strokeWidth=1.0))
-        dwg.add(Circle(cx, y_bus, 1.2, fillColor=c_secondary, strokeColor=c_secondary))
-
-        # 2. Caja de Datos Técnicos (Calibre PIA, Sección y Tubo)
-        dwg.add(Rect(cx - 26, 118, 52, 37, fillColor=colors.HexColor("#f8fafc"), strokeColor=colors.HexColor("#cbd5e1"), strokeWidth=0.6, rx=2, ry=2))
-        dwg.add(String(cx, 145, c["pia"], fontName="Helvetica-Bold", fontSize=6.2, fillColor=c_primary, textAnchor="middle"))
-        dwg.add(String(cx, 134, c["sec"], fontName="Helvetica-Bold", fontSize=5.8, fillColor=c_secondary, textAnchor="middle"))
-        dwg.add(String(cx, 123, c["tubo"], fontName="Helvetica", fontSize=5.5, fillColor=colors.HexColor("#64748b"), textAnchor="middle"))
-
-        # 3. Línea hacia el símbolo del PIA
-        dwg.add(Line(cx, 118, cx, 106, strokeColor=c_primary, strokeWidth=1.0))
-
-        # 4. Símbolo Magnetotérmico PIA (con contacto y bimetal/magnético de Cade_Simu)
-        dwg.add(Line(cx, 106, cx - 7, 94, strokeColor=c_primary, strokeWidth=1.3))
-        dwg.add(Circle(cx, 106, 1.0, fillColor=c_primary, strokeColor=c_primary))
-        dwg.add(Circle(cx, 92, 1.0, fillColor=c_primary, strokeColor=c_primary))
-        # Banderola térmica y corte magnético
-        dwg.add(Line(cx - 4, 99, cx - 11, 95, strokeColor=c_primary, strokeWidth=0.9))
-        dwg.add(Line(cx - 11, 95, cx - 8, 92, strokeColor=c_primary, strokeWidth=0.9))
-        dwg.add(Rect(cx - 13, 92, 3.5, 3.5, fillColor=c_primary, strokeColor=c_primary))
-
-        # 5. Salida con Trazos Oblicuos de Conductores (Fase + Neutro + PE según norma)
-        dwg.add(Line(cx, 92, cx, 68, strokeColor=c_primary, strokeWidth=1.0))
-        # Trazos oblicuos de conductores (F, N, PE)
-        dwg.add(Line(cx - 3, 76, cx + 3, 80, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
-        dwg.add(Line(cx - 3, 79, cx + 3, 83, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
-        dwg.add(Line(cx - 3, 82, cx + 3, 86, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
-        dwg.add(Circle(cx + 4, 87, 0.7, fillColor=colors.HexColor("#64748b"), strokeColor=colors.HexColor("#64748b")))
-
-        # 6. Identificador del Circuito (C1, C2, C3...)
-        dwg.add(String(cx, 55, c["id"], fontName="Helvetica-Bold", fontSize=9.0, fillColor=c_primary, textAnchor="middle"))
-
-        # 7. Denominación / Destino del Circuito
-        dwg.add(String(cx, 44, c["nom1"], fontName="Helvetica-Bold", fontSize=6.0, fillColor=c_text_dark, textAnchor="middle"))
-        if c["nom2"]:
-            dwg.add(String(cx, 35, c["nom2"], fontName="Helvetica", fontSize=5.5, fillColor=colors.HexColor("#475569"), textAnchor="middle"))
-
-    # =============================================================
-    # 6. LÍNEA DE PUESTA A TIERRA (PE) CON SÍMBOLO NORMALIZADO (⏚)
-    # =============================================================
-    dwg.add(Rect(18, 6, 484, 24, fillColor=colors.HexColor("#fef3c7"), strokeColor=colors.HexColor("#d97706"), strokeWidth=0.7, rx=2, ry=2))
-    tx = 35
-    ty = 16
-    dwg.add(Line(tx, ty + 8, tx, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
-    dwg.add(Line(tx - 6, ty, tx + 6, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
-    dwg.add(Line(tx - 4, ty - 2.5, tx + 4, ty - 2.5, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.0))
-    dwg.add(Line(tx - 2, ty - 5, tx + 2, ty - 5, strokeColor=colors.HexColor("#92400e"), strokeWidth=0.8))
-    
-    dwg.add(String(50, 19, "RED DE TIERRA (PE - ITC-BT-18):", fontName="Helvetica-Bold", fontSize=6.0, fillColor=colors.HexColor("#92400e")))
-    dwg.add(String(50, 10, "Línea Enlace Cu 1x10 mm² | Picas de tierra 2m | Resistencia Medida: Rt = 11.8 Ω (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
 
     # Tabla explicativa de componentes del unifilar automático
     t_unif_desc = [
@@ -1051,36 +1145,45 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]]
 
     # Derivación Individual
+    di_sec_val = _extraer_seccion_fase(di_cable, default="10")
+    di_tubo_val = _extraer_diametro_tubo(suministro.get('di_tubo', 'Tubo M32'), default="M32")
+    ib_di = pot_inst_w / (1.73205 * 400.0) if es_trif else pot_inst_w / 230.0
+
     t_dim_rows.append([
         Paragraph("<b>Derivación Individual (DI)</b>", bold_style),
         Paragraph(f"{pot_inst_w:,.0f}", body_style),
-        Paragraph(f"{pot_inst_w/230:.1f}", body_style),
+        Paragraph(f"{ib_di:.1f}", body_style),
         Paragraph(f"{di_long:.0f}", body_style),
-        Paragraph("10 Cu", body_style),
-        Paragraph("10 Cu", body_style),
-        Paragraph("10 Cu", body_style),
+        Paragraph(f"{di_sec_val} Cu", body_style),
+        Paragraph(f"{di_sec_val} Cu", body_style),
+        Paragraph(f"{di_sec_val} Cu", body_style),
         Paragraph(f"<b>{di_cdt:.2f}%</b>", body_style),
         Paragraph(f"<b>{di_cdt:.2f}%</b>", body_style),
-        Paragraph("Tubo M32", body_style)
+        Paragraph(f"Tubo {di_tubo_val}", body_style)
     ])
 
     for c in circuitos:
         p_c = float(c.get("potencia", 2300))
         l_c = float(c.get("longitud", 15))
         cdt_c = float(c.get("cdt", 1.0))
-        sec_str = str(c.get("seccion", "2x2.5+TT2.5")).split("+")[0].replace("2x", "").replace("3G", "").replace("4x", "")
+        sec_str = _extraer_seccion_fase(c.get("seccion", "2.5"), default="2.5")
+        tubo_c = _extraer_diametro_tubo(c.get("tubo", "M20"), default="M20")
+        es_c_trif = ("4x" in str(c.get("seccion", "")) or "3P" in str(c.get("nombre", "")) or "trifásic" in str(c.get("nombre", "").lower()))
+        ib_c = p_c / (1.73205 * 400.0) if es_c_trif else p_c / 230.0
+
         t_dim_rows.append([
             Paragraph(str(c.get("nombre", "Circuito")), body_style),
             Paragraph(f"{p_c:,.0f}", body_style),
-            Paragraph(f"{p_c/230:.1f}", body_style),
+            Paragraph(f"{ib_c:.1f}", body_style),
             Paragraph(f"{l_c:.0f}", body_style),
             Paragraph(f"{sec_str} Cu", body_style),
             Paragraph(f"{sec_str} Cu", body_style),
             Paragraph(f"{sec_str} Cu", body_style),
             Paragraph(f"{cdt_c:.2f}%", body_style),
             Paragraph(f"<b>{di_cdt + cdt_c:.2f}%</b>", body_style),
-            Paragraph(str(c.get("tubo", "M20")), body_style)
+            Paragraph(f"Tubo {tubo_c}", body_style)
         ])
+
 
     t_dim = Table(t_dim_rows, colWidths=[4.2*cm, 1.5*cm, 1.2*cm, 1.1*cm, 1.5*cm, 1.4*cm, 1.4*cm, 1.7*cm, 1.6*cm, 2.8*cm])
     t_dim.setStyle(TableStyle([
