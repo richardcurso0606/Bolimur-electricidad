@@ -2936,7 +2936,7 @@ def renderizar():
             es_clonado_word = "Word COM" in formato_pdf_sel
 
             if es_clonado_word and docx_bytes_mtd:
-                cache_key = f"pdf_word_com_{exp_in}"
+                cache_key = f"pdf_word_com_{exp_in}_{hash(docx_bytes_mtd)}"
                 if cache_key in st.session_state:
                     pdf_bytes_mtd = st.session_state[cache_key]
                 else:

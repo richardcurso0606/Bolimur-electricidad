@@ -366,8 +366,9 @@ def _crear_anexo_plano_flowables(titulo_anexo: str, subtitulo_anexo: str, img_da
     flowables.append(PageBreak())
     
     # Encabezado Oficial
-    t_hdr = Table([[Paragraph("MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
+    t_hdr = Table([[Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b>", h_section)]], colWidths=[18.4*cm], style=[
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#e2e8f0")),
+        ('BOX', (0,0), (-1,-1), 1.0, colors.HexColor("#0f172a")),
         ('TOPPADDING', (0,0), (-1,-1), 3),
         ('BOTTOMPADDING', (0,0), (-1,-1), 3),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -417,8 +418,9 @@ def _crear_anexo_fotografico_flowables(fotos: list, exped: str, c_primary, c_bor
         flowables.append(PageBreak())
         
         # Encabezado Oficial
-        t_hdr = Table([[Paragraph("MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN", h_section)]], colWidths=[18.4*cm], style=[
-            ('BACKGROUND', (0,0), (-1,-1), c_primary),
+        t_hdr = Table([[Paragraph("<b>MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b>", h_section)]], colWidths=[18.4*cm], style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#e2e8f0")),
+            ('BOX', (0,0), (-1,-1), 1.0, colors.HexColor("#0f172a")),
             ('TOPPADDING', (0,0), (-1,-1), 3),
             ('BOTTOMPADDING', (0,0), (-1,-1), 3),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
@@ -596,7 +598,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=1.3*cm, rightMargin=1.3*cm,
-        topMargin=1.4*cm, bottomMargin=1.4*cm
+        topMargin=1.0*cm, bottomMargin=1.35*cm
     )
 
     styles = getSampleStyleSheet()
@@ -604,8 +606,11 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     c_primary = colors.HexColor("#0f172a")
     c_secondary = colors.HexColor("#0284c7")
     c_dark_blue = colors.HexColor("#0369a1")
+    c_bg_section = colors.HexColor("#e2e8f0")
     c_bg_head = colors.HexColor("#f1f5f9")
     c_bg_sub = colors.HexColor("#f8fafc")
+    c_border_box = colors.HexColor("#0f172a")
+    c_border_grid = colors.HexColor("#94a3b8")
     c_border = colors.HexColor("#94a3b8")
     c_text_dark = colors.HexColor("#0f172a")
     c_green = colors.HexColor("#15803d")
@@ -618,8 +623,8 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     )
     h_section = ParagraphStyle(
         'SecHead_MTD', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=8.0, leading=10,
-        textColor=colors.white
+        fontName='Helvetica-Bold', fontSize=7.6, leading=9.5,
+        textColor=c_text_dark
     )
     body_style = ParagraphStyle(
         'Body_MTD', parent=styles['Normal'],
@@ -659,8 +664,8 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     logo_carm_p = _obtener_logo_carm_path()
     if logo_carm_p:
         try:
-            story.append(Image(logo_carm_p, width=18.4*cm, height=3.68*cm))
-            story.append(Spacer(1, 2))
+            story.append(Image(logo_carm_p, width=18.4*cm, height=3.0*cm))
+            story.append(Spacer(1, 1.5))
         except Exception:
             pass
 
@@ -668,7 +673,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         [
             Paragraph(
                 "<b>MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b><br/>"
-                f"<font size='7' color='#334155'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> &nbsp;|&nbsp; "
+                f"<font size='7' color='#1e293b'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> &nbsp;|&nbsp; "
                 f"<b>Ref. Expediente:</b> {expediente} &nbsp;|&nbsp; <b>Fecha:</b> {fecha_str}</font>",
                 ParagraphStyle('HdrOficialCarm', parent=body_style, alignment=1, fontSize=8.5, leading=11)
             )
@@ -676,26 +681,23 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]
     t_hdr = Table(header_table_data, colWidths=[18.4*cm])
     t_hdr.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
-        ('BOX', (0,0), (-1,-1), 1.0, c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('BACKGROUND', (0,0), (-1,-1), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('TOPPADDING', (0,0), (-1,-1), 1.8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.8),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
     ]))
     story.append(t_hdr)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 1. DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN
+    # 1. DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    story.append(Table([[Paragraph("DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-
     t_tit_data = [
+        [
+            Paragraph("<b>DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN</b>", h_section),
+            ""
+        ],
         [
             Paragraph(f"<b>Nombre o Razón Social:</b> {titular.get('nombre', 'JOAQUÍN YÁÑEZ ALFONSO')}", body_style),
             Paragraph(f"<b>N.I.F. / C.I.F.:</b> {titular.get('nif', '48000000X')}", body_style)
@@ -711,26 +713,26 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]
     t_tit = Table(t_tit_data, colWidths=[12.0*cm, 6.4*cm])
     t_tit.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub)
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white)
     ]))
     story.append(t_tit)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 2. DATOS IDENTIFICATIVOS DEL REDACTOR DE LA MEMORIA
+    # 2. DATOS IDENTIFICATIVOS DEL REDACTOR DE LA MEMORIA (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    story.append(Table([[Paragraph("DATOS IDENTIFICATIVOS DEL REDACTOR DE LA MEMORIA", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-
     t_red_data = [
+        [
+            Paragraph("<b>DATOS IDENTIFICATIVOS DEL REDACTOR DE LA MEMORIA</b>", h_section),
+            ""
+        ],
         [
             Paragraph("<b>[ X ] MEMORIA REALIZADA POR INSTALADOR HABILITADO EN BAJA TENSIÓN</b>", bold_style),
             Paragraph("<b>[  ] MEMORIA REALIZADA POR TÉCNICO COMPETENTE</b>", small_style)
@@ -750,25 +752,22 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]
     t_red = Table(t_red_data, colWidths=[11.5*cm, 6.9*cm])
     t_red.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub)
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,1), c_bg_sub),
+        ('BACKGROUND', (0,2), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_red)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 3. EMPLAZAMIENTO, ACTIVIDAD Y DATOS TÉCNICOS (ITC-BT-04)
+    # 3. EMPLAZAMIENTO, ACTIVIDAD Y DATOS TÉCNICOS (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    story.append(Table([[Paragraph("EMPLAZAMIENTO, ACTIVIDAD Y DATOS TÉCNICOS DE LA INSTALACIÓN (ITC-BT-04)", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-
     pot_inst_w = float(suministro.get("potencia_instalada_w") or 5750.0)
     tension_str = str(suministro.get("tension") or "230")
     es_trif = ("400" in tension_str or "trifásic" in tension_str.lower() or "trifasico" in tension_str.lower())
@@ -779,6 +778,10 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     es_modificacion = "[ X ] Modificación" if ("Modificación" in tipo_tram or "Reforma" in tipo_tram) else "[  ] Modificación"
 
     t_tecn_data = [
+        [
+            Paragraph("<b>EMPLAZAMIENTO, ACTIVIDAD Y DATOS TÉCNICOS DE LA INSTALACIÓN (ITC-BT-04)</b>", h_section),
+            ""
+        ],
         [
             Paragraph(f"<b>Carácter:</b> {es_nueva}  {es_temporal}  {es_ampliacion}  {es_modificacion}", bold_style),
             Paragraph(f"<b>Régimen:</b> {tipo_tram.replace('🆕 ', '').replace('🏗️ ', '').replace('📈 ', '').replace('🔧 ', '').replace('🔄 ', '').replace('📋 ', '')}", body_style)
@@ -802,30 +805,31 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]
     t_tecn = Table(t_tecn_data, colWidths=[10.5*cm, 7.9*cm])
     t_tecn.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub)
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_tecn)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 4. CAJA GENERAL DE PROTECCIÓN (CGP) / LGA / PUESTA A TIERRA
+    # 4. CAJA GENERAL DE PROTECCIÓN (CGP) / LGA / PUESTA A TIERRA (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    story.append(Table([[Paragraph("CAJA GENERAL DE PROTECCIÓN (CGP), LÍNEA GENERAL (LGA) Y PUESTA A TIERRA", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-
     di_cable = str(suministro.get("di_cable", "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV"))
     di_long = float(suministro.get("di_long_m", 15.0))
     di_cdt = float(suministro.get("di_cdt_pct", 0.75))
 
     t_cgp_data = [
+        [
+            Paragraph("<b>CAJA GENERAL DE PROTECCIÓN (CGP), LÍNEA GENERAL (LGA) Y PUESTA A TIERRA</b>", h_section),
+            "",
+            ""
+        ],
         [
             Paragraph("<b>CAJA GRAL. PROTECCIÓN (*)</b>", bold_style),
             Paragraph("<b>LÍNEA GENERAL DE ALIMENTACIÓN / DI</b>", bold_style),
@@ -839,26 +843,28 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]
     t_cgp = Table(t_cgp_data, colWidths=[5.5*cm, 7.4*cm, 5.5*cm])
     t_cgp.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), c_bg_head),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#cbd5e1")),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('SPAN', (0,0), (2,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,1), c_bg_head),
+        ('BACKGROUND', (0,2), (-1,2), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_cgp)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 5. PREVISIÓN DE CARGAS DEL EDIFICIO / INSTALACIÓN (ITC-BT-10)
+    # 5. PREVISIÓN DE CARGAS EN INSTALACIONES PARA VIVIENDAS Y LOCALES (ITC-BT-10) (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    story.append(Table([[Paragraph("PREVISIÓN DE CARGAS EN INSTALACIONES PARA VIVIENDAS Y LOCALES (ITC-BT-10)", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-
     t_prev_data = [
+        [
+            Paragraph("<b>PREVISIÓN DE CARGAS EN INSTALACIONES PARA VIVIENDAS Y LOCALES (ITC-BT-10)</b>", h_section),
+            "",
+            ""
+        ],
         [
             Paragraph("<b>(A) Previsión en Viviendas / Suministro Individual</b>", bold_style),
             Paragraph("<b>(B) Servicios Generales</b>", bold_style),
@@ -871,39 +877,40 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ],
         [
             Paragraph(f"<b>POTENCIA TOTAL PREVISTA PARA LA INSTALACIÓN (A + B + C):  {pot_inst_w/1000:.2f} kW</b>", ParagraphStyle('PtTot', parent=bold_style, textColor=c_dark_blue)),
-            Paragraph("", body_style),
+            "",
             Paragraph(f"<b>Tensión:</b> {suministro.get('tension', '230 V')}", bold_style)
         ]
     ]
     t_prev = Table(t_prev_data, colWidths=[6.2*cm, 6.0*cm, 6.2*cm])
     t_prev.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), c_bg_head),
-        ('BACKGROUND', (0,2), (-1,2), c_bg_head),
-        ('SPAN', (0,2), (1,2)),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#cbd5e1")),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('SPAN', (0,0), (2,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,1), c_bg_head),
+        ('BACKGROUND', (0,2), (-1,2), colors.white),
+        ('BACKGROUND', (0,3), (-1,3), c_bg_sub),
+        ('SPAN', (0,3), (1,3)),
+        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_prev)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 6. BREVE DESCRIPCIÓN, PRESUPUESTO Y DOCUMENTACIÓN ACOMPAÑADA
+    # 6. BREVE DESCRIPCIÓN, PRESUPUESTO Y DOCUMENTACIÓN ANEXA ADJUNTA (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    story.append(Table([[Paragraph("BREVE DESCRIPCIÓN, PRESUPUESTO Y DOCUMENTACIÓN ANEXA ADJUNTA", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-
     desc_custom = datos_mtd.get("descripcion_instalacion") or datos_mtd.get("breve_descripcion")
     desc_texto = desc_custom if desc_custom else (
         f"Instalación eléctrica de baja tensión para {tipo_instalacion.lower()}, ejecutada con conductores de cobre unipolares no propagadores de la llama y libres de halógenos tipo H07Z1-K / RZ1-K 0.6/1kV bajo tubo protector normalizado. Cuadro CGMP equipado con IGA omnipolar ({protecciones.get('iga_amperaje', 25)}A Curva C, Icn=6kA), protector contra sobretensiones permanentes y transitorias Tipo 2 con bobina de disparo (ITC-BT-23), e interruptor diferencial de alta sensibilidad 30mA Clase A (ITC-BT-24). Circuito exclusivo verificado con protección contra choques eléctricos y conexión a tierra equipotencial."
     )
 
     t_desc_data = [
+        [
+            Paragraph("<b>BREVE DESCRIPCIÓN, PRESUPUESTO Y DOCUMENTACIÓN ANEXA ADJUNTA</b>", h_section),
+            ""
+        ],
         [
             Paragraph(f"<b>Breve Descripción de la Instalación:</b><br/>{desc_texto}", body_style),
             Paragraph("<b>Presupuesto Estimado:</b><br/>"
@@ -920,52 +927,65 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     ]
     t_desc = Table(t_desc_data, colWidths=[11.5*cm, 6.9*cm])
     t_desc.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub)
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
+        ('VALIGN', (0,1), (-1,-1), 'TOP'),
     ]))
     story.append(t_desc)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 2.0))
 
     # -------------------------------------------------------------------------
-    # 7. DECLARACIÓN RESPONSABLE Y FIRMA OFICIAL
+    # 7. DECLARACIÓN RESPONSABLE Y FIRMA OFICIAL (RECUADRO UNIFICADO)
     # -------------------------------------------------------------------------
-    firma_box = [
-        Paragraph(
-            f"El redactor que suscribe <b>DECLARA BAJO SU RESPONSABILIDAD</b> que ha realizado la presente <b>Memoria Técnica de Diseño (MTD)</b> "
-            f"conforme a las prescripciones del <b>Reglamento Electrotécnico para Baja Tensión (Real Decreto 842/2002)</b>, sus Instrucciones Técnicas Complementarias (ITC-BT), "
-            f"y la reglamentación aplicable de la <b>Dirección General de Industria, Energía y Minas de la Región de Murcia</b>.",
-            small_style
-        ),
-        Spacer(1, 3),
-        Table([
-            [
-                Paragraph(
-                    f"En <b>{emplazamiento.get('municipio', 'Murcia')}</b>, a {fecha_str}<br/><br/>"
-                    f"<b>Firma del Instalador Habilitado:</b><br/><br/><br/>"
-                    f"__________________________________________<br/>"
-                    f"<b>{instalador.get('nombre', 'Richard Orlando Choque Tejerina')}</b><br/>"
-                    f"Nº Carnet REBT: <b>{instalador.get('licencia', 'REBT-30/15892')}</b> (Murcia)",
-                    body_style
-                ),
-                Paragraph(
-                    f"<b>Sello de la Empresa Instaladora Habilitada:</b><br/><br/><br/>"
-                    f"__________________________________________<br/>"
-                    f"<b>{instalador.get('empresa', 'BOLIMUR INSTALACIONES Y REFORMAS')}</b><br/>"
-                    f"Reg. Industrial: <b>{instalador.get('registro_rii', 'RII-30/08492')}</b> | C.I.F.: {instalador.get('cif', 'B-73000000')}",
-                    body_style
-                )
-            ]
-        ], colWidths=[9.2*cm, 9.2*cm], style=[
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ])
+    t_firma_data = [
+        [
+            Paragraph(
+                f"El redactor que suscribe <b>DECLARA BAJO SU RESPONSABILIDAD</b> que ha realizado la presente <b>Memoria Técnica de Diseño (MTD)</b> "
+                f"conforme a las prescripciones del <b>Reglamento Electrotécnico para Baja Tensión (Real Decreto 842/2002)</b>, sus Instrucciones Técnicas Complementarias (ITC-BT), "
+                f"y la reglamentación aplicable de la <b>Dirección General de Industria, Energía y Minas de la Región de Murcia</b>.",
+                small_style
+            ),
+            ""
+        ],
+        [
+            Paragraph(
+                f"En <b>{emplazamiento.get('municipio', 'Murcia')}</b>, a {fecha_str}<br/><br/>"
+                f"<b>Firma del Instalador Habilitado:</b><br/><br/><br/>"
+                f"__________________________________________<br/>"
+                f"<b>{instalador.get('nombre', 'Richard Orlando Choque Tejerina')}</b><br/>"
+                f"Nº Carnet REBT: <b>{instalador.get('licencia', 'REBT-30/15892')}</b> (Murcia)",
+                body_style
+            ),
+            Paragraph(
+                f"<b>Sello de la Empresa Instaladora Habilitada:</b><br/><br/><br/>"
+                f"__________________________________________<br/>"
+                f"<b>{instalador.get('empresa', 'BOLIMUR INSTALACIONES Y REFORMAS')}</b><br/>"
+                f"Reg. Industrial: <b>{instalador.get('registro_rii', 'RII-30/08492')}</b> | C.I.F.: {instalador.get('cif', 'B-73000000')}",
+                body_style
+            )
+        ]
     ]
-    story.append(KeepTogether(firma_box))
+    t_firma = Table(t_firma_data, colWidths=[9.2*cm, 9.2*cm])
+    t_firma.setStyle(TableStyle([
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_sub),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.5, c_border_grid),
+        ('LINEBEFORE', (1,1), (1,1), 0.5, c_border_grid),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 1.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(KeepTogether([t_firma]))
 
     # =========================================================================
     # PLANOS OFICIALES ANEXOS I(a), I(b) Y II (SI HAN SIDO ADJUNTADOS)
@@ -1280,8 +1300,11 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     c_primary = colors.HexColor("#0f172a")
     c_secondary = colors.HexColor("#0284c7")
     c_dark_blue = colors.HexColor("#0369a1")
+    c_bg_section = colors.HexColor("#e2e8f0")
     c_bg_head = colors.HexColor("#f1f5f9")
     c_bg_sub = colors.HexColor("#f8fafc")
+    c_border_box = colors.HexColor("#0f172a")
+    c_border_grid = colors.HexColor("#94a3b8")
     c_border = colors.HexColor("#94a3b8")
     c_text_dark = colors.HexColor("#0f172a")
     c_green = colors.HexColor("#15803d")
@@ -1294,8 +1317,8 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     )
     h_section = ParagraphStyle(
         'SecHead_CIE', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=8.5, leading=11,
-        textColor=colors.white
+        fontName='Helvetica-Bold', fontSize=8.0, leading=10,
+        textColor=c_text_dark
     )
     body_style = ParagraphStyle(
         'Body_CIE', parent=styles['Normal'],
@@ -1402,13 +1425,12 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     story.append(t_exp)
     story.append(Spacer(1, 5))
 
-    # BLOQUE 1: DATOS DEL TITULAR
-    story.append(Table([[Paragraph("<b>1. DATOS DEL TITULAR DE LA INSTALACIÓN</b>", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-    ]))
+    # BLOQUE 1: DATOS DEL TITULAR (RECUADRO UNIFICADO)
     t_tit_data = [
+        [
+            Paragraph("<b>1. DATOS DEL TITULAR DE LA INSTALACIÓN</b>", h_section),
+            ""
+        ],
         [
             Paragraph(f"<b>Nombre / Razón Social:</b> {titular.get('nombre', '')}", body_style),
             Paragraph(f"<b>N.I.F. / C.I.F.:</b> {titular.get('nif', '')}", body_style)
@@ -1420,22 +1442,24 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     ]
     t_tit = Table(t_tit_data, colWidths=[11.4*cm, 7.0*cm])
     t_tit.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.0),
     ]))
     story.append(t_tit)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3.5))
 
-    # BLOQUE 2: EMPLAZAMIENTO DEL SUMINISTRO
-    story.append(Table([[Paragraph("<b>2. EMPLAZAMIENTO DEL SUMINISTRO</b>", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-    ]))
+    # BLOQUE 2: EMPLAZAMIENTO DEL SUMINISTRO (RECUADRO UNIFICADO)
     t_emp_data = [
+        [
+            Paragraph("<b>2. EMPLAZAMIENTO DEL SUMINISTRO</b>", h_section),
+            ""
+        ],
         [
             Paragraph(f"<b>Dirección:</b> {empl.get('direccion', '')}", body_style),
             Paragraph(f"<b>C.P. y Municipio:</b> {empl.get('cp', '30001')} - {empl.get('municipio', 'Murcia')}", body_style)
@@ -1447,22 +1471,24 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     ]
     t_emp = Table(t_emp_data, colWidths=[11.4*cm, 7.0*cm])
     t_emp.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.0),
     ]))
     story.append(t_emp)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3.5))
 
-    # BLOQUE 3: EMPRESA INSTALADORA E INSTALADOR HABILITADO
-    story.append(Table([[Paragraph("<b>3. EMPRESA INSTALADORA HABILITADA Y TÉCNICO COMPETENTE</b>", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-    ]))
+    # BLOQUE 3: EMPRESA INSTALADORA E INSTALADOR HABILITADO (RECUADRO UNIFICADO)
     t_ins_data = [
+        [
+            Paragraph("<b>3. EMPRESA INSTALADORA HABILITADA Y TÉCNICO COMPETENTE</b>", h_section),
+            ""
+        ],
         [
             Paragraph(f"<b>Empresa Instaladora:</b> {instalador.get('empresa', 'BOLIMUR INSTALACIONES Y REFORMAS')}", body_style),
             Paragraph(f"<b>C.I.F. Empresa:</b> {instalador.get('cif', 'B-73123456')}", body_style)
@@ -1478,14 +1504,17 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     ]
     t_ins = Table(t_ins_data, colWidths=[11.4*cm, 7.0*cm])
     t_ins.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('SPAN', (0,0), (1,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.0),
     ]))
     story.append(t_ins)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3.5))
 
     # Cálculos dinámicos de conformidad según REBT desde ensayos multifunción
     pe_val = float(ensayos.get("pe_ohm", 0.11))
@@ -1507,16 +1536,15 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     dif_res = "CONFORME" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "NO CONFORME"
     dif_color = "#15803d" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "#dc2626"
 
-    # BLOQUE 4: CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN
-    story.append(Table([[Paragraph("<b>4. CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN ELÉCTRICA</b>", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-    ]))
-    
+    # BLOQUE 4: CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN (RECUADRO UNIFICADO)
     pot_inst_kw = float(suministro.get('potencia_instalada_w', 7360)) / 1000.0
     pot_max_kw = float(suministro.get('potencia_max_admisible_w', 7360)) / 1000.0
     t_tec_data = [
+        [
+            Paragraph("<b>4. CARACTERÍSTICAS TÉCNICAS DE LA INSTALACIÓN ELÉCTRICA</b>", h_section),
+            "",
+            ""
+        ],
         [
             Paragraph(f"<b>Tensión Nominal:</b> {suministro.get('tension', '230 V')}", body_style),
             Paragraph(f"<b>Potencia Prevista / Diseño:</b> <b>{pot_inst_kw:.2f} kW</b>", body_style),
@@ -1540,36 +1568,26 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     ]
     t_tec = Table(t_tec_data, colWidths=[6.4*cm, 6.0*cm, 6.0*cm])
     t_tec.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('SPAN', (0,0), (2,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.0),
     ]))
     story.append(t_tec)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3.5))
 
-    # BLOQUE 5: PROTOCOLO DE VERIFICACIÓN PREVIA (ITC-BT-05)
-    story.append(Table([[Paragraph("<b>5. RESULTADOS DE LAS VERIFICACIONES PREVIAS (ITC-BT-05)</b>", h_section)]], colWidths=[18.4*cm], style=[
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-    ]))
-
-    pe_res = "CONFORME" if pe_val <= 0.50 else "NO CONFORME"
-    pe_color = "#15803d" if pe_val <= 0.50 else "#dc2626"
-
-    aisl_res = "CONFORME" if aisl_val >= 1.0 else "NO CONFORME"
-    aisl_color = "#15803d" if aisl_val >= 1.0 else "#dc2626"
-    aisl_txt = f"{aisl_val:.1f} MΩ" if aisl_val < 100 else "> 100 MΩ"
-
-    rt_res = "CONFORME" if rt_val <= 15.0 else "NO CONFORME"
-    rt_color = "#15803d" if rt_val <= 15.0 else "#dc2626"
-
-    dif_res = "CONFORME" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "NO CONFORME"
-    dif_color = "#15803d" if (dif_ma <= 30.0 and dif_ms <= 300.0) else "#dc2626"
-
+    # BLOQUE 5: PROTOCOLO DE VERIFICACIÓN PREVIA (ITC-BT-05) (RECUADRO UNIFICADO)
     t_ens_data = [
+        [
+            Paragraph("<b>5. RESULTADOS DE LAS VERIFICACIONES PREVIAS (ITC-BT-05)</b>", h_section),
+            "",
+            "",
+            ""
+        ],
         [
             Paragraph("<b>Prueba / Ensayo Reglamentario</b>", bold_style),
             Paragraph("<b>Valor Mínimo / Máximo REBT</b>", bold_style),
@@ -1603,16 +1621,19 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     ]
     t_ens = Table(t_ens_data, colWidths=[7.2*cm, 4.4*cm, 3.8*cm, 3.0*cm])
     t_ens.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), c_bg_head),
-        ('BACKGROUND', (0,1), (-1,-1), c_bg_sub),
-        ('BOX', (0,0), (-1,-1), 0.5, c_border),
-        ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+        ('SPAN', (0,0), (3,0)),
+        ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
+        ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
+        ('BACKGROUND', (0,1), (-1,1), c_bg_head),
+        ('BACKGROUND', (0,2), (-1,-1), colors.white),
+        ('INNERGRID', (0,1), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
         ('TOPPADDING', (0,0), (-1,-1), 2.0),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2.0),
-        ('ALIGN', (1,0), (-1,-1), 'CENTER'),
+        ('ALIGN', (1,1), (-1,-1), 'CENTER'),
     ]))
     story.append(t_ens)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3.5))
 
     # BLOQUE 6: DECLARACIÓN RESPONSABLE Y FIRMA
     dec_txt = (
@@ -1750,17 +1771,19 @@ def generar_pdf_manual_usuario(datos: dict) -> bytes:
     ]
 
     for tit, desc in normas_guia:
-        story.append(Table([[Paragraph(f"<b>{tit}</b>", bold_style)]], colWidths=[18.4*cm], style=[
-            ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
+        t_guia = Table([
+            [Paragraph(f"<b>{tit}</b>", bold_style)],
+            [Paragraph(desc, body_style)]
+        ], colWidths=[18.4*cm])
+        t_guia.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#e2e8f0")),
+            ('BOX', (0,0), (-1,-1), 1.0, colors.HexColor("#0f172a")),
+            ('LINEBELOW', (0,0), (-1,0), 0.8, colors.HexColor("#0f172a")),
+            ('BACKGROUND', (0,1), (-1,-1), colors.white),
             ('TOPPADDING', (0,0), (-1,-1), 2.5),
             ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ]))
-        story.append(Table([[Paragraph(desc, body_style)]], colWidths=[18.4*cm], style=[
-            ('BACKGROUND', (0,0), (-1,-1), c_bg_sub),
-            ('BOX', (0,0), (-1,-1), 0.4, c_border),
-            ('TOPPADDING', (0,0), (-1,-1), 3),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ]))
+        story.append(t_guia)
         story.append(Spacer(1, 4))
 
     # Teléfonos de Asistencia y Contacto de la Empresa

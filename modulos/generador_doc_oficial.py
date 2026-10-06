@@ -629,29 +629,36 @@ def convertir_docx_a_pdf(docx_bytes: bytes) -> bytes | None:
         tmp_dir = tempfile.mkdtemp(prefix="bolimur_carm_")
         tmp_docx = os.path.join(tmp_dir, "mtd_oficial.docx")
         tmp_pdf = os.path.join(tmp_dir, "mtd_oficial.pdf")
+        tmp_ps1 = os.path.join(tmp_dir, "convert.ps1")
 
         with open(tmp_docx, "wb") as f_in:
             f_in.write(docx_bytes)
 
         ps_script = f"""
-$word = New-Object -ComObject Word.Application
-$word.Visible = $false
+$word = $null
 try {{
+    $word = New-Object -ComObject Word.Application
+    $word.Visible = $false
     $doc = $word.Documents.Open('{tmp_docx}')
     $doc.SaveAs([ref]'{tmp_pdf}', [ref]17)
     $doc.Close([ref]0)
 }} finally {{
-    $word.Quit([ref]0)
+    if ($word -ne $null) {{
+        $word.Quit([ref]0)
+    }}
 }}
 """
+        with open(tmp_ps1, "w", encoding="utf-8") as f_ps:
+            f_ps.write(ps_script)
+
         res = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", ps_script],
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tmp_ps1],
             capture_output=True,
             text=True,
-            timeout=25
+            timeout=30
         )
 
-        if res.returncode == 0 and os.path.exists(tmp_pdf) and os.path.getsize(tmp_pdf) > 1000:
+        if os.path.exists(tmp_pdf) and os.path.getsize(tmp_pdf) > 1000:
             with open(tmp_pdf, "rb") as f_out:
                 return f_out.read()
     except Exception:
