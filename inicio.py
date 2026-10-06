@@ -135,6 +135,58 @@ st.markdown("""
         div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
             border: 2px solid #0284c7; border-radius: 8px; background-color: #f8fafc;
         }
+
+        /* Desplegables de Streamlit / BaseWeb Popovers: Ancho amplio y sin recortes de descripciones */
+        div[data-baseweb="popover"],
+        div[data-baseweb="popover"] > div {
+            min-width: 650px !important;
+            max-width: 96vw !important;
+            width: max-content !important;
+            z-index: 999999 !important;
+        }
+
+        div[data-baseweb="popover"] ul[role="listbox"] {
+            min-width: 100% !important;
+            max-width: 96vw !important;
+            max-height: 480px !important;
+            padding: 6px !important;
+        }
+
+        div[data-baseweb="popover"] li[role="option"] {
+            white-space: normal !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            overflow: visible !important;
+            text-overflow: unset !important;
+            padding: 10px 14px !important;
+            font-size: 13.5px !important;
+            line-height: 1.45 !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            border-radius: 6px !important;
+            margin-bottom: 2px !important;
+        }
+
+        div[data-baseweb="popover"] li[role="option"] > div,
+        div[data-baseweb="popover"] li[role="option"] span {
+            white-space: normal !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            overflow: visible !important;
+            text-overflow: unset !important;
+            display: block !important;
+        }
+
+        div[data-baseweb="select"] {
+            width: 100% !important;
+        }
+
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow: visible !important;
+            text-overflow: unset !important;
+        }
         
         /* Barra Lateral */
         [data-testid="stSidebar"] {

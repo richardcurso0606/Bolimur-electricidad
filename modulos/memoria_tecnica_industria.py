@@ -871,8 +871,61 @@ def aplicar_datos_cliente_a_formulario(cli_obj: dict):
 def renderizar():
     st.markdown("""
     <style>
-    div[data-baseweb="select"] { width: 100% !important; }
-    div[data-baseweb="select"] * { white-space: normal !important; word-break: break-word !important; }
+    /* Desplegables BaseWeb Popovers: aseguramos que el menú nunca corte las descripciones */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div {
+        min-width: 650px !important;
+        max-width: 96vw !important;
+        width: max-content !important;
+        z-index: 999999 !important;
+    }
+
+    div[data-baseweb="popover"] ul[role="listbox"] {
+        min-width: 100% !important;
+        max-width: 96vw !important;
+        max-height: 480px !important;
+        padding: 6px !important;
+    }
+
+    div[data-baseweb="popover"] li[role="option"] {
+        white-space: normal !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        padding: 10px 14px !important;
+        font-size: 13.5px !important;
+        line-height: 1.45 !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        border-radius: 6px !important;
+        margin-bottom: 2px !important;
+    }
+
+    div[data-baseweb="popover"] li[role="option"] > div,
+    div[data-baseweb="popover"] li[role="option"] span {
+        white-space: normal !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        display: block !important;
+    }
+
+    div[data-baseweb="select"] {
+        width: 100% !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        min-height: 42px !important;
+    }
+
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
 
     /* Barra de Pestañas (st.tabs) Mejorada y de Alto Contraste */
     div[data-baseweb="tab-list"] {
@@ -948,22 +1001,36 @@ def renderizar():
     # =========================================================================
     st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 1. Expediente, Cliente (CRM) y Gestión de Memorias Guardadas</h4></div>', unsafe_allow_html=True)
     with st.container(border=True):
-        col_t1, col_t1_b, col_t2 = st.columns([1.3, 1.3, 2.4])
+        # --- FILA 1: ELECCIÓN DE PLANTILLA TÉCNICA REGLAMENTARIA Y TRÁMITE ---
+        col_p_sel, col_p_btn, col_tram = st.columns([3.8, 1.4, 2.2])
         
-        with col_t1:
+        with col_p_sel:
             opciones_tipo_inst = OPCIONES_TIPO_INSTALACION
             tipo_actual = st.session_state.get("mtd_tipo_inst_sel", opciones_tipo_inst[0])
-            idx_tipo_def = opciones_tipo_inst.index(tipo_actual) if tipo_actual in opciones_tipo_inst else 0
+            idx_tipo_def = 0
+            if tipo_actual in opciones_tipo_inst:
+                idx_tipo_def = opciones_tipo_inst.index(tipo_actual)
+            else:
+                for i, opt in enumerate(opciones_tipo_inst):
+                    if ("vivienda" in tipo_actual.lower() and "básica" in opt.lower()) or \
+                       ("irve" in tipo_actual.lower() and "garaje" in opt.lower()) or \
+                       ("derivación" in tipo_actual.lower() and "derivación" in opt.lower()) or \
+                       ("lga" in tipo_actual.lower() and "lga" in opt.lower()):
+                        idx_tipo_def = i
+                        break
 
             tipo_inst_sel = st.selectbox(
-                "Tipo de Instalación (REBT):",
+                "📋 Tipo de Instalación y Plantilla Técnica Oficial (REBT):",
                 opciones_tipo_inst,
                 index=idx_tipo_def,
-                key="mtd_tipo_inst_sel"
+                key="mtd_tipo_inst_sel",
+                help="Selecciona una plantilla oficial para autorellenar potencias, IGA, cable de derivación individual y circuitos reglamentarios."
             )
-            
-            lbl_btn_plantilla = "🧹 Limpiar / Poner en Blanco" if (tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel) else "⚡ Cargar Plantilla Seleccionada"
-            if st.button(lbl_btn_plantilla, type="secondary", use_container_width=True):
+
+        with col_p_btn:
+            st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+            lbl_btn_plantilla = "🧹 Limpiar MTD" if (tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel) else "⚡ Cargar Plantilla"
+            if st.button(lbl_btn_plantilla, type="primary" if not tipo_inst_sel.startswith("⚪") else "secondary", use_container_width=True, key="btn_cargar_plantilla_top"):
                 cargar_plantilla_por_tipo(tipo_inst_sel)
                 if tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel:
                     st.success("✅ MTD reiniciada en blanco.")
@@ -971,7 +1038,7 @@ def renderizar():
                     st.success(f"✅ ¡Plantilla técnica auto-rellenada para {tipo_inst_sel.split('(')[0].strip()}!")
                 st.rerun()
 
-        with col_t1_b:
+        with col_tram:
             tipo_tram_sel = st.selectbox(
                 "Carácter de la Instalación / Trámite:",
                 [
@@ -986,12 +1053,17 @@ def renderizar():
                 key="mtd_tipo_tram_sel"
             )
 
-        with col_t2:
+        # Separador visual sutil entre Bloque de Plantilla y Bloque de Cliente CRM
+        st.markdown("<div style='margin-top: 10px; margin-bottom: 12px; border-top: 1px dashed #cbd5e1;'></div>", unsafe_allow_html=True)
+
+        # --- FILA 2: CLIENTE ASIGNADO (CRM) Y MEMORIAS GUARDADAS ---
+        col_c_cli, col_c_mtds = st.columns([1.1, 1.1])
+        cli_obj = {}
+        with col_c_cli:
             clientes = db_manager.listar_clientes(user_auth["id"])
             if not clientes:
                 st.warning("⚠️ No hay clientes registrados en CRM. Puedes crear fichas en el módulo 'Gestión de Clientes'.")
                 cli_sel_id = None
-                cli_obj = {}
             else:
                 nombres_cli = {c["id"]: f"👤 {c['nombre_completo']} - {c.get('nif_cif', '')} ({c.get('localidad', 'Murcia')})" for c in clientes}
                 
@@ -1002,39 +1074,46 @@ def renderizar():
                     if c_act.get("id") in nombres_cli:
                         idx_sel = list(nombres_cli.keys()).index(c_act["id"])
 
-                cli_sel_id = st.selectbox(
-                    "Cliente Asignado (CRM):",
-                    options=list(nombres_cli.keys()),
-                    format_func=lambda x: nombres_cli[x],
-                    index=idx_sel,
-                    key="mtd_sel_cliente_crm"
-                )
-                cli_obj = db_manager.obtener_cliente_por_id(cli_sel_id, user_auth["id"]) or {}
-
-                # Acciones sobre el cliente seleccionado
-                col_c_act1, col_c_act2 = st.columns(2)
-                with col_c_act1:
-                    if st.button("📋 Cargar Datos del Cliente al Formulario", use_container_width=True):
+                col_cli_sel_box, col_cli_btn_box = st.columns([2.4, 1.3])
+                with col_cli_sel_box:
+                    cli_sel_id = st.selectbox(
+                        "Cliente Asignado (CRM):",
+                        options=list(nombres_cli.keys()),
+                        format_func=lambda x: nombres_cli[x],
+                        index=idx_sel,
+                        key="mtd_sel_cliente_crm"
+                    )
+                    cli_obj = db_manager.obtener_cliente_por_id(cli_sel_id, user_auth["id"]) or {}
+                with col_cli_btn_box:
+                    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+                    if st.button("📋 Cargar Cliente", use_container_width=True, help="Volcar datos de contacto y suministro del cliente al formulario"):
                         aplicar_datos_cliente_a_formulario(cli_obj)
                         st.success(f"✅ Datos de {cli_obj.get('nombre_completo')} volcados a la MTD.")
                         st.rerun()
 
-                with col_c_act2:
-                    # Comprobar si este cliente tiene MTDs guardadas
-                    proyectos_mtd_cli = [
-                        p for p in db_manager.listar_proyectos_por_cliente(cli_sel_id, user_auth["id"]) 
-                        if "Memoria" in p.get("modulo", "") or "MTD" in p.get("modulo", "")
-                    ]
-                    if proyectos_mtd_cli:
-                        nombres_projs = {p["id"]: f"📂 {p['nombre_proyecto']} ({p.get('fecha_guardado', '')[:10]})" for p in proyectos_mtd_cli}
+        with col_c_mtds:
+            if 'cli_sel_id' in locals() and cli_sel_id:
+                proyectos_mtd_cli = [
+                    p for p in db_manager.listar_proyectos_por_cliente(cli_sel_id, user_auth["id"]) 
+                    if "Memoria" in p.get("modulo", "") or "MTD" in p.get("modulo", "")
+                ]
+                if proyectos_mtd_cli:
+                    nombres_projs = {p["id"]: f"📂 {p['nombre_proyecto']} ({p.get('fecha_guardado', '')[:10]})" for p in proyectos_mtd_cli}
+                    col_proj_sel_box, col_proj_btn_box = st.columns([2.4, 1.3])
+                    with col_proj_sel_box:
                         sel_p_id = st.selectbox("MTDs Guardadas del Cliente:", options=list(nombres_projs.keys()), format_func=lambda x: nombres_projs[x], key="sel_mtd_p_cli")
-                        if st.button("🚀 Cargar MTD Guardada", use_container_width=True):
+                    with col_proj_btn_box:
+                        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+                        if st.button("🚀 Cargar MTD", use_container_width=True, help="Cargar esta memoria guardada previamente"):
                             p_datos = db_manager.cargar_proyecto_por_id(sel_p_id, user_auth["id"])
                             if p_datos and "datos" in p_datos:
                                 for k, v in p_datos["datos"].items():
                                     st.session_state[k] = v
                                 st.success(f"✅ ¡Memoria '{p_datos.get('nombre_proyecto')}' cargada con éxito!")
                                 st.rerun()
+                else:
+                    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+                    st.caption("ℹ️ *Este cliente no tiene memorias MTD guardadas aún.*")
 
         # Ficha Dinámica de Ayuda Técnica de la Plantilla Seleccionada
         info_sel = obtener_info_plantilla(tipo_inst_sel)
