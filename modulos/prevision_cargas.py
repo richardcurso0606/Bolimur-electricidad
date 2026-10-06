@@ -103,421 +103,457 @@ def renderizar():
         pass
 
     # --- 1. VIVIENDAS ---
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏠 SECCIÓN 1: Previsión de Cargas en Viviendas (P₁ - ITC-BT-10)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        col_viv_top1, col_viv_top2 = st.columns([3, 1])
-        with col_viv_top1:
-            st.caption("Configura los grupos de viviendas según grado de electrificación y tarifa.")
-        with col_viv_top2:
-            if st.button("➕ Añadir Grupo", key="btn_add_viv_grp", use_container_width=True): 
-                st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 5750, "nocturna": False})
-                st.rerun()
+    class _NullContext:
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
 
-        with st.expander("📖 Criterios REBT: Electrificación Básica o Elevada y Tabla ITC-BT-10", expanded=False):
-            st.markdown("""
-            * **Básica (5.750 W):** Necesidades primarias (viviendas habituales estándar).
-            * **Elevada (9.200 W o más):** Superficies > 160 m², calefacción eléctrica o domótica/automatización.
-            """)
-            tabla_k_markdown = """
-| Nº VIVIENDAS (n) | COEFICIENTE K | Nº VIVIENDAS (n) | COEFICIENTE K |
-| :--- | :--- | :--- | :--- |
-| n = 1 | 1,0 | n = 11 | 9,1 |
-| n = 2 | 2,0 | n = 12 | 9,8 |
-| n = 3 | 3,0 | n = 13 | 10,5 |
-| n = 4 | 3,8 | n = 14 | 11,2 |
-| n = 5 | 4,6 | n = 15 | 11,9 |
-| n = 6 | 5,4 | n = 16 | 12,6 |
-| n = 7 | 6,2 | n = 17 | 13,3 |
-| n = 8 | 7,0 | n = 18 | 14,0 |
-| n = 9 | 7,8 | n = 19 | 14,7 |
-| n = 10 | 8,5 | n = 20 | 15,4 |
-            """
-            st.markdown(tabla_k_markdown)
-            st.markdown("*Nota reglamentaria (ITC-BT-10):* Para más de 20 viviendas se aplica la fórmula $K = 15,4 + (n - 20) \\cdot 0,5$.")
+    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
+    with col_nav_info:
+        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
+    with col_nav_mode:
+        modo_vista_pc = st.radio(
+            "Modo de Navegación:",
+            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="modo_vista_pc"
+        )
 
-        pot_total_viviendas = 0
-        viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.grupos_viviendas if not v["nocturna"])
-        k_diurno = get_coef_simultaneidad(max(viviendas_diurnas_qty, 1))
+    if modo_vista_pc.startswith("📑"):
+        tab_pc1, tab_pc2, tab_pc3, tab_pc4, tab_pc5, tab_pc6 = st.tabs([
+            "🏠 1. Viviendas (P₁)",
+            "🏪 2. Locales (P₂)",
+            "💡 3. Servicios Grales (P₃)",
+            "🚗 4. Garajes & IRVE (P₄)",
+            "📊 5. Balance Total (Pt)",
+            "🖨️ 6. Reporte PDF Oficial"
+        ])
+    else:
+        tab_pc1 = _NullContext()
+        tab_pc2 = _NullContext()
+        tab_pc3 = _NullContext()
+        tab_pc4 = _NullContext()
+        tab_pc5 = _NullContext()
+        tab_pc6 = _NullContext()
 
-        opciones_potencia = {
-            "5.750 W (Básica - Estándar)": 5750,
-            "7.360 W (Elevada - Moderada)": 7360,
-            "9.200 W (Elevada - Domótica / Clima)": 9200,
-            "11.500 W (Elevada - Gran Superficie)": 11500,
-            "✏️ Personalizada (Introducir W)": -1
-        }
-        lista_etiquetas = list(opciones_potencia.keys())
-        lista_valores = list(opciones_potencia.values())
+    with tab_pc1:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏠 SECCIÓN 1: Previsión de Cargas en Viviendas (P₁ - ITC-BT-10)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            col_viv_top1, col_viv_top2 = st.columns([3, 1])
+            with col_viv_top1:
+                st.caption("Configura los grupos de viviendas según grado de electrificación y tarifa.")
+            with col_viv_top2:
+                if st.button("➕ Añadir Grupo", key="btn_add_viv_grp", use_container_width=True): 
+                    st.session_state.grupos_viviendas.append({"nombre": f"Grupo {len(st.session_state.grupos_viviendas)+1}", "qty": 2, "pot": 5750, "nocturna": False})
+                    st.rerun()
 
-        for idx, viv in enumerate(st.session_state.grupos_viviendas):
-            with st.container(border=True):
-                st.markdown(f"#### Grupo #{idx+1}: {viv['nombre']}")
+            with st.expander("📖 Criterios REBT: Electrificación Básica o Elevada y Tabla ITC-BT-10", expanded=False):
+                st.markdown("""
+                * **Básica (5.750 W):** Necesidades primarias (viviendas habituales estándar).
+                * **Elevada (9.200 W o más):** Superficies > 160 m², calefacción eléctrica o domótica/automatización.
+                """)
+                tabla_k_markdown = """
+    | Nº VIVIENDAS (n) | COEFICIENTE K | Nº VIVIENDAS (n) | COEFICIENTE K |
+    | :--- | :--- | :--- | :--- |
+    | n = 1 | 1,0 | n = 11 | 9,1 |
+    | n = 2 | 2,0 | n = 12 | 9,8 |
+    | n = 3 | 3,0 | n = 13 | 10,5 |
+    | n = 4 | 3,8 | n = 14 | 11,2 |
+    | n = 5 | 4,6 | n = 15 | 11,9 |
+    | n = 6 | 5,4 | n = 16 | 12,6 |
+    | n = 7 | 6,2 | n = 17 | 13,3 |
+    | n = 8 | 7,0 | n = 18 | 14,0 |
+    | n = 9 | 7,8 | n = 19 | 14,7 |
+    | n = 10 | 8,5 | n = 20 | 15,4 |
+                """
+                st.markdown(tabla_k_markdown)
+                st.markdown("*Nota reglamentaria (ITC-BT-10):* Para más de 20 viviendas se aplica la fórmula $K = 15,4 + (n - 20) \\cdot 0,5$.")
 
-                c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
-                with c1: 
-                    viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
-                with c2: 
-                    viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
+            pot_total_viviendas = 0
+            viviendas_diurnas_qty = sum(v["qty"] for v in st.session_state.grupos_viviendas if not v["nocturna"])
+            k_diurno = get_coef_simultaneidad(max(viviendas_diurnas_qty, 1))
+
+            opciones_potencia = {
+                "5.750 W (Básica - Estándar)": 5750,
+                "7.360 W (Elevada - Moderada)": 7360,
+                "9.200 W (Elevada - Domótica / Clima)": 9200,
+                "11.500 W (Elevada - Gran Superficie)": 11500,
+                "✏️ Personalizada (Introducir W)": -1
+            }
+            lista_etiquetas = list(opciones_potencia.keys())
+            lista_valores = list(opciones_potencia.values())
+
+            for idx, viv in enumerate(st.session_state.grupos_viviendas):
+                with st.container(border=True):
+                    st.markdown(f"#### Grupo #{idx+1}: {viv['nombre']}")
+
+                    c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
+                    with c1: 
+                        viv["nombre"] = st.text_input(f"Descripción #{idx+1}", viv["nombre"], key=f"v_n_{idx}")
+                    with c2: 
+                        viv["qty"] = st.number_input(f"Nº Viv.", min_value=0, value=int(viv["qty"]), key=f"v_q_{idx}")
                 
-                pot_actual = viv["pot"]
-                curr_idx = lista_valores.index(pot_actual) if pot_actual in lista_valores else 4
+                    pot_actual = viv["pot"]
+                    curr_idx = lista_valores.index(pot_actual) if pot_actual in lista_valores else 4
                     
-                with c3: 
-                    sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
-                    if sel_etiqueta.startswith("✏️"):
-                        viv["pot"] = st.number_input(f"Valor personalizado (W)", min_value=0, value=int(pot_actual if pot_actual > 0 else 7000), step=100, key=f"v_custom_{idx}")
-                    else:
-                        viv["pot"] = opciones_potencia[sel_etiqueta]
+                    with c3: 
+                        sel_etiqueta = st.selectbox(f"Pot. Unitaria", lista_etiquetas, index=curr_idx, key=f"v_p_{idx}")
+                        if sel_etiqueta.startswith("✏️"):
+                            viv["pot"] = st.number_input(f"Valor personalizado (W)", min_value=0, value=int(pot_actual if pot_actual > 0 else 7000), step=100, key=f"v_custom_{idx}")
+                        else:
+                            viv["pot"] = opciones_potencia[sel_etiqueta]
                     
-                with c4: 
-                    viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
-                with c5:
-                    st.write(""); st.write("")
-                    if st.button("🗑️", key=f"del_v_{idx}"):
-                        if len(st.session_state.grupos_viviendas) > 1: 
-                            st.session_state.grupos_viviendas.pop(idx)
-                            st.rerun()
+                    with c4: 
+                        viv["nocturna"] = st.checkbox(f"Tarifa Nocturna", value=viv["nocturna"], key=f"v_no_{idx}")
+                    with c5:
+                        st.write(""); st.write("")
+                        if st.button("🗑️", key=f"del_v_{idx}"):
+                            if len(st.session_state.grupos_viviendas) > 1: 
+                                st.session_state.grupos_viviendas.pop(idx)
+                                st.rerun()
 
-                if viv["nocturna"]:
-                    pot_parcial = int(round(viv["qty"] * viv["pot"]))
-                else:
-                    if viviendas_diurnas_qty > 0:
-                        pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_diurno / viviendas_diurnas_qty)))
-                    else:
-                        pot_parcial = 0
-
-                viv["pot_calculada"] = pot_parcial
-                pot_total_viviendas += pot_parcial
-
-                with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
                     if viv["nocturna"]:
-                        st.info(
-                            f"**Desarrollo de Cálculo (Tarifa Nocturna):**\n\n"
-                            f"- Nº de viviendas: **{viv['qty']}**\n"
-                            f"- Potencia unitaria: **{viv['pot']:,} W**\n"
-                            f"- Criterio: Al estar bajo régimen nocturno, computa al 100% de su potencia sin coeficiente de simultaneidad diurno.\n\n"
-                            f"**Fórmula:** P_parcial = Nº Viv. * Pot. Unitaria\n"
-                            f"**Resultado parcial:** **{pot_parcial:,} W**"
-                        )
+                        pot_parcial = int(round(viv["qty"] * viv["pot"]))
                     else:
-                        st.info(
-                            f"**Desarrollo de Cálculo (ITC-BT-10):**\n\n"
-                            f"- Total de viviendas diurnas en el edificio (n): **{viviendas_diurnas_qty}**\n"
-                            f"- Coeficiente de simultaneidad de tabla (K): **{k_diurno}**\n"
-                            f"- Viviendas en este grupo: **{viv['qty']}**\n"
-                            f"- Potencia unitaria: **{viv['pot']:,} W**\n\n"
-                            f"**Fórmula reglamentaria aplicada:**\n"
-                            f"P_parcial = (Nº Viv. grupo * Pot. Unitaria) * (K / n_diurnas)\n\n"
-                            f"**Sustitución numérica:**\n"
-                            f"({viv['qty']} * {viv['pot']:,}) * ({k_diurno} / {viviendas_diurnas_qty}) = **{pot_parcial:,} W**"
-                        )
+                        if viviendas_diurnas_qty > 0:
+                            pot_parcial = int(round(viv["qty"] * viv["pot"] * (k_diurno / viviendas_diurnas_qty)))
+                        else:
+                            pot_parcial = 0
 
-        st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
+                    viv["pot_calculada"] = pot_parcial
+                    pot_total_viviendas += pot_parcial
+
+                    with st.expander(f"🔍 Ver Justificación Analítica: {viv['nombre']} (Parcial: {pot_parcial:,} W)"):
+                        if viv["nocturna"]:
+                            st.info(
+                                f"**Desarrollo de Cálculo (Tarifa Nocturna):**\n\n"
+                                f"- Nº de viviendas: **{viv['qty']}**\n"
+                                f"- Potencia unitaria: **{viv['pot']:,} W**\n"
+                                f"- Criterio: Al estar bajo régimen nocturno, computa al 100% de su potencia sin coeficiente de simultaneidad diurno.\n\n"
+                                f"**Fórmula:** P_parcial = Nº Viv. * Pot. Unitaria\n"
+                                f"**Resultado parcial:** **{pot_parcial:,} W**"
+                            )
+                        else:
+                            st.info(
+                                f"**Desarrollo de Cálculo (ITC-BT-10):**\n\n"
+                                f"- Total de viviendas diurnas en el edificio (n): **{viviendas_diurnas_qty}**\n"
+                                f"- Coeficiente de simultaneidad de tabla (K): **{k_diurno}**\n"
+                                f"- Viviendas en este grupo: **{viv['qty']}**\n"
+                                f"- Potencia unitaria: **{viv['pot']:,} W**\n\n"
+                                f"**Fórmula reglamentaria aplicada:**\n"
+                                f"P_parcial = (Nº Viv. grupo * Pot. Unitaria) * (K / n_diurnas)\n\n"
+                                f"**Sustitución numérica:**\n"
+                                f"({viv['qty']} * {viv['pot']:,}) * ({k_diurno} / {viviendas_diurnas_qty}) = **{pot_parcial:,} W**"
+                            )
+
+            st.markdown(f"### 📌 Subtotal Viviendas ($P_1$): **{pot_total_viviendas:,} W**")
         
-        with st.expander("📖 Ver Justificación, Operación Matemática y Leyenda de Variables ($P_1$)", expanded=False):
-            detalle_grupos = []
-            suma_bruta_diurna = 0
-            for g in st.session_state.grupos_viviendas:
-                if not g["nocturna"]:
-                    parcial_grupo = g["qty"] * g["pot"]
-                    suma_bruta_diurna += parcial_grupo
-                    detalle_grupos.append(f"({g['qty']} viv. * {g['pot']:,} W)")
+            with st.expander("📖 Ver Justificación, Operación Matemática y Leyenda de Variables ($P_1$)", expanded=False):
+                detalle_grupos = []
+                suma_bruta_diurna = 0
+                for g in st.session_state.grupos_viviendas:
+                    if not g["nocturna"]:
+                        parcial_grupo = g["qty"] * g["pot"]
+                        suma_bruta_diurna += parcial_grupo
+                        detalle_grupos.append(f"({g['qty']} viv. * {g['pot']:,} W)")
 
-            formula_str = " + ".join(detalle_grupos) if detalle_grupos else "0"
+                formula_str = " + ".join(detalle_grupos) if detalle_grupos else "0"
 
-            st.info(
-                f"**1. Criterio Normativo (ITC-BT-10):**\n"
-                f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad $K$ correspondiente al número total de viviendas diurnas del edificio ($n = {viviendas_diurnas_qty}$), obteniendo un coeficiente $K = {k_diurno}$.\n\n"
-                f"**2. Leyenda y Definición de Variables:**\n"
-                f"- **P1**: Potencia total prevista para el conjunto de viviendas (W).\n"
-                f"- **n_i**: Número de viviendas de cada grupo con la misma potencia unitaria.\n"
-                f"- **P_u,i**: Potencia unitaria asignada a cada vivienda del grupo (W).\n"
-                f"- **K**: Coeficiente de simultaneidad obtenido de la tabla ITC-BT-10 según el total de viviendas diurnas ($n = {viviendas_diurnas_qty} \\rightarrow K = {k_diurno}$).\n"
-                f"- **n_diurnas**: Número total de viviendas diurnas del edificio ({viviendas_diurnas_qty}).\n"
-                f"- **P_nocturnas**: Potencia de viviendas con tarifa nocturna (computan al 100% sin simultaneidad diurna).\n\n"
-                f"**3. Operación Matemática Detallada:**\n"
-                f"P1 = [ Σ (n_i * P_u,i) ] * (K / n_diurnas) + Σ P_nocturnas\n\n"
-                f"**Sustitución Numérica:**\n"
-                f"P1 = [ {formula_str} ] * ({k_diurno} / {viviendas_diurnas_qty})\n"
-                f"P1 = [ {suma_bruta_diurna:,} W ] * {(k_diurno / viviendas_diurnas_qty if viviendas_diurnas_qty > 0 else 0):.4f}\n"
-                f"**Resultado Final P1 = {pot_total_viviendas:,} W**"
-            )
+                st.info(
+                    f"**1. Criterio Normativo (ITC-BT-10):**\n"
+                    f"La potencia total prevista para el conjunto de viviendas se calcula aplicando el coeficiente de simultaneidad $K$ correspondiente al número total de viviendas diurnas del edificio ($n = {viviendas_diurnas_qty}$), obteniendo un coeficiente $K = {k_diurno}$.\n\n"
+                    f"**2. Leyenda y Definición de Variables:**\n"
+                    f"- **P1**: Potencia total prevista para el conjunto de viviendas (W).\n"
+                    f"- **n_i**: Número de viviendas de cada grupo con la misma potencia unitaria.\n"
+                    f"- **P_u,i**: Potencia unitaria asignada a cada vivienda del grupo (W).\n"
+                    f"- **K**: Coeficiente de simultaneidad obtenido de la tabla ITC-BT-10 según el total de viviendas diurnas ($n = {viviendas_diurnas_qty} \\rightarrow K = {k_diurno}$).\n"
+                    f"- **n_diurnas**: Número total de viviendas diurnas del edificio ({viviendas_diurnas_qty}).\n"
+                    f"- **P_nocturnas**: Potencia de viviendas con tarifa nocturna (computan al 100% sin simultaneidad diurna).\n\n"
+                    f"**3. Operación Matemática Detallada:**\n"
+                    f"P1 = [ Σ (n_i * P_u,i) ] * (K / n_diurnas) + Σ P_nocturnas\n\n"
+                    f"**Sustitución Numérica:**\n"
+                    f"P1 = [ {formula_str} ] * ({k_diurno} / {viviendas_diurnas_qty})\n"
+                    f"P1 = [ {suma_bruta_diurna:,} W ] * {(k_diurno / viviendas_diurnas_qty if viviendas_diurnas_qty > 0 else 0):.4f}\n"
+                    f"**Resultado Final P1 = {pot_total_viviendas:,} W**"
+                )
     
-    # --- 2. LOCALES COMERCIALES ---
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏪 SECCIÓN 2: Locales Comerciales y Oficinas (P₂)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        col_loc_top1, col_loc_top2 = st.columns([3, 1])
-        with col_loc_top1:
-            st.caption("Cálculo a 100 W/m² con mínimo reglamentario de 3.450 W por local.")
-        with col_loc_top2:
-            if st.button("➕ Añadir Local", key="btn_add_loc", use_container_width=True): 
-                st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "qty": 1, "superficie": 100.0})
-                st.rerun()
+    with tab_pc2:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏪 SECCIÓN 2: Locales Comerciales y Oficinas (P₂)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            col_loc_top1, col_loc_top2 = st.columns([3, 1])
+            with col_loc_top1:
+                st.caption("Cálculo a 100 W/m² con mínimo reglamentario de 3.450 W por local.")
+            with col_loc_top2:
+                if st.button("➕ Añadir Local", key="btn_add_loc", use_container_width=True): 
+                    st.session_state.locales.append({"nombre": f"Local {len(st.session_state.locales)+1}", "qty": 1, "superficie": 100.0})
+                    st.rerun()
         
-        pot_total_locales = 0.0
-        for idx, loc in enumerate(st.session_state.locales):
-            with st.container(border=True):
-                c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
-                with c1: loc["nombre"] = st.text_input(f"Local", loc["nombre"], key=f"l_n_{idx}")
-                with c2: loc["superficie"] = st.number_input(f"Sup. m²", value=float(loc.get("superficie", 100.0)), key=f"l_s_{idx}")
-                with c3: loc["qty"] = st.number_input(f"Cantidad", value=int(loc.get("qty", 1)), key=f"l_q_{idx}")
-                with c4:
-                    st.write(""); st.write("")
-                    if st.button("🗑️", key=f"del_l_{idx}"): 
-                        st.session_state.locales.pop(idx); st.rerun()
+            pot_total_locales = 0.0
+            for idx, loc in enumerate(st.session_state.locales):
+                with st.container(border=True):
+                    c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+                    with c1: loc["nombre"] = st.text_input(f"Local", loc["nombre"], key=f"l_n_{idx}")
+                    with c2: loc["superficie"] = st.number_input(f"Sup. m²", value=float(loc.get("superficie", 100.0)), key=f"l_s_{idx}")
+                    with c3: loc["qty"] = st.number_input(f"Cantidad", value=int(loc.get("qty", 1)), key=f"l_q_{idx}")
+                    with c4:
+                        st.write(""); st.write("")
+                        if st.button("🗑️", key=f"del_l_{idx}"): 
+                            st.session_state.locales.pop(idx); st.rerun()
 
-                pot_u = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
-                pot_parcial = pot_u * loc["qty"]
-                pot_total_locales += pot_parcial
+                    pot_u = max(loc["superficie"] * 100.0, 3450.0 if loc["superficie"] > 0 else 0.0)
+                    pot_parcial = pot_u * loc["qty"]
+                    pot_total_locales += pot_parcial
                 
-                with st.expander(f"🔍 Ver Justificación Analítica: {loc['nombre']} (Parcial: {pot_parcial:,.0f} W)"):
-                    st.info(f"""
-                    **Justificación Analítica:**
-                    El REBT exige un mínimo de 100 W/m² con un suelo de 3.450 W por local comercial.
-                    P_local = max(Superficie * 100, 3450) * Cantidad
-                    **Cálculo:** max({loc['superficie']} * 100, 3450) * {loc['qty']} = **{pot_parcial:,.0f} W**
-                    """)
+                    with st.expander(f"🔍 Ver Justificación Analítica: {loc['nombre']} (Parcial: {pot_parcial:,.0f} W)"):
+                        st.info(f"""
+                        **Justificación Analítica:**
+                        El REBT exige un mínimo de 100 W/m² con un suelo de 3.450 W por local comercial.
+                        P_local = max(Superficie * 100, 3450) * Cantidad
+                        **Cálculo:** max({loc['superficie']} * 100, 3450) * {loc['qty']} = **{pot_parcial:,.0f} W**
+                        """)
 
-        st.markdown(f"### 📌 Subtotal Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**")
+            st.markdown(f"### 📌 Subtotal Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**")
 
-    # --- 3. SERVICIOS GENERALES ---
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">💡 SECCIÓN 3: Servicios Generales del Edificio (P₃)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        col_srv_top1, col_srv_top2 = st.columns([3, 1])
-        with col_srv_top1:
-            st.caption("Ascensores, grupos de presión, alumbrado de escaleras y servicios comunes.")
-        with col_srv_top2:
-            if st.button("➕ Añadir Servicio", key="btn_add_srv", use_container_width=True): 
-                st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 0.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1})
-                st.rerun()
+    with tab_pc3:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">💡 SECCIÓN 3: Servicios Generales del Edificio (P₃)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            col_srv_top1, col_srv_top2 = st.columns([3, 1])
+            with col_srv_top1:
+                st.caption("Ascensores, grupos de presión, alumbrado de escaleras y servicios comunes.")
+            with col_srv_top2:
+                if st.button("➕ Añadir Servicio", key="btn_add_srv", use_container_width=True): 
+                    st.session_state.servicios_generales.append({"nombre": "Nuevo Servicio", "potencia": 0.0, "factor": 1.30, "cos_phi": 1.0, "qty": 1})
+                    st.rerun()
         
-        pot_total_servicios = 0.0
+            pot_total_servicios = 0.0
         
-        opciones_factores_k = {
-            "Ascensor / Motores principales (K = 1.30)": 1.30,
-            "Bombas de agua / Presión (K = 1.25)": 1.25,
-            "Alumbrado Fluorescente / Descarga (K = 1.80)": 1.80,
-            "Iluminación incandescente / Estándar (K = 1.00)": 1.00,
-            "✏️ Personalizado (K a medida)": -1
-        }
+            opciones_factores_k = {
+                "Ascensor / Motores principales (K = 1.30)": 1.30,
+                "Bombas de agua / Presión (K = 1.25)": 1.25,
+                "Alumbrado Fluorescente / Descarga (K = 1.80)": 1.80,
+                "Iluminación incandescente / Estándar (K = 1.00)": 1.00,
+                "✏️ Personalizado (K a medida)": -1
+            }
 
-        for idx, serv in enumerate(st.session_state.servicios_generales):
-            with st.container(border=True):
-                st.markdown(f"**Servicio #{idx+1}: {serv['nombre']}**")
-                c1, c2, c3 = st.columns([3, 2, 2])
-                with c1: serv["nombre"] = st.text_input(f"Descripción del Servicio", serv["nombre"], key=f"s_n_{idx}")
-                with c2: serv["potencia"] = st.number_input(f"Potencia unitaria (W)", value=float(serv.get("potencia", 0.0)), key=f"s_p_{idx}")
-                with c3: serv["qty"] = st.number_input(f"Cantidad (Uds.)", value=int(serv.get("qty", 1)), key=f"s_q_{idx}")
+            for idx, serv in enumerate(st.session_state.servicios_generales):
+                with st.container(border=True):
+                    st.markdown(f"**Servicio #{idx+1}: {serv['nombre']}**")
+                    c1, c2, c3 = st.columns([3, 2, 2])
+                    with c1: serv["nombre"] = st.text_input(f"Descripción del Servicio", serv["nombre"], key=f"s_n_{idx}")
+                    with c2: serv["potencia"] = st.number_input(f"Potencia unitaria (W)", value=float(serv.get("potencia", 0.0)), key=f"s_p_{idx}")
+                    with c3: serv["qty"] = st.number_input(f"Cantidad (Uds.)", value=int(serv.get("qty", 1)), key=f"s_q_{idx}")
 
-                c4, c5, c6 = st.columns([3, 2, 1])
-                factor_actual = serv.get("factor", 1.30)
-                lista_k_keys = list(opciones_factores_k.keys())
-                lista_k_vals = list(opciones_factores_k.values())
+                    c4, c5, c6 = st.columns([3, 2, 1])
+                    factor_actual = serv.get("factor", 1.30)
+                    lista_k_keys = list(opciones_factores_k.keys())
+                    lista_k_vals = list(opciones_factores_k.values())
                 
-                if factor_actual in lista_k_vals:
-                    def_opt_idx = lista_k_vals.index(factor_actual)
-                else:
-                    def_opt_idx = 4
-
-                with c4:
-                    sel_opt = st.selectbox(f"Multiplicador (K)", lista_k_keys, index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
-                    if sel_opt.startswith("✏️"):
-                        factor = st.number_input(f"Valor personalizado K", min_value=1.0, max_value=5.0, value=float(factor_actual if factor_actual > 0 else 1.30), step=0.05, key=f"s_custom_k_{idx}")
+                    if factor_actual in lista_k_vals:
+                        def_opt_idx = lista_k_vals.index(factor_actual)
                     else:
-                        factor = opciones_factores_k[sel_opt]
-                    serv["factor"] = factor
-                    
-                with c5:
-                    serv["cos_phi"] = st.number_input(f"Coseno phi (cos φ)", min_value=0.5, max_value=1.0, value=float(serv.get("cos_phi", 1.0)), step=0.05, key=f"s_cos_{idx}")
-                    
-                with c6:
-                    st.write("")
-                    if st.button("🗑️", key=f"del_s_{idx}"): 
-                        st.session_state.servicios_generales.pop(idx); st.rerun()
-                
-                cos_val = serv.get("cos_phi", 1.0)
-                if factor == 1.80 and cos_val < 1.0:
-                    p_parcial = serv["potencia"] * serv["qty"] * factor * cos_val
-                else:
-                    p_parcial = serv["potencia"] * serv["qty"] * factor
+                        def_opt_idx = 4
 
-                pot_total_servicios += p_parcial
+                    with c4:
+                        sel_opt = st.selectbox(f"Multiplicador (K)", lista_k_keys, index=def_opt_idx, key=f"serv_tipo_opt_{idx}")
+                        if sel_opt.startswith("✏️"):
+                            factor = st.number_input(f"Valor personalizado K", min_value=1.0, max_value=5.0, value=float(factor_actual if factor_actual > 0 else 1.30), step=0.05, key=f"s_custom_k_{idx}")
+                        else:
+                            factor = opciones_factores_k[sel_opt]
+                        serv["factor"] = factor
+                    
+                    with c5:
+                        serv["cos_phi"] = st.number_input(f"Coseno phi (cos φ)", min_value=0.5, max_value=1.0, value=float(serv.get("cos_phi", 1.0)), step=0.05, key=f"s_cos_{idx}")
+                    
+                    with c6:
+                        st.write("")
+                        if st.button("🗑️", key=f"del_s_{idx}"): 
+                            st.session_state.servicios_generales.pop(idx); st.rerun()
                 
-                with st.expander(f"🔍 Ver Justificación Analítica (Parcial: {p_parcial:,.2f} W)"):
+                    cos_val = serv.get("cos_phi", 1.0)
+                    if factor == 1.80 and cos_val < 1.0:
+                        p_parcial = serv["potencia"] * serv["qty"] * factor * cos_val
+                    else:
+                        p_parcial = serv["potencia"] * serv["qty"] * factor
+
+                    pot_total_servicios += p_parcial
+                
+                    with st.expander(f"🔍 Ver Justificación Analítica (Parcial: {p_parcial:,.2f} W)"):
+                        st.info(
+                            f"**Expresión reglamentaria:** P_servicio = P_unitaria * Uds. * K * (cos φ)\n\n"
+                            f"**Sustitución numérica:** {serv['potencia']} W * {serv['qty']} ud(s) * {factor}" + (f" * {cos_val}" if factor == 1.80 and cos_val < 1.0 else "") + f"\n\n"
+                            f"**Subtotal del servicio:** **{p_parcial:,.2f} W**"
+                        )
+
+            st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
+
+    with tab_pc4:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 4: Garajes e Infraestructura de Recarga IRVE (P₄ - ITC-BT-52)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            with st.expander("📖 Guía Técnica Detallada: ¿Qué implica elegir cada Esquema IRVE?", expanded=False):
+                st.markdown("""
+                La instrucción **ITC-BT-52** del REBT regula cómo alimentar los puntos de recarga. Dependiendo de si diseñas para una comunidad de vecinos, unifamiliares o locales, debes elegir un esquema u otro. Aquí tienes el detalle técnico de cada uno:
+
+                *   **Esquema 1 (Instalación Colectiva con Subcontadores):**
+                    *   *Cómo funciona:* Se instala un contador general trifásico principal para todo el garaje y, a partir de él, una línea troncal de la que cuelgan subcontadores privados por cada plaza.
+                    *   *Cuándo se usa:* Parkings públicos, edificios de oficinas o bloques de apartamentos en régimen de alquiler gestionados por la propiedad.
+                    *   *Efecto en cálculo:* Toda la potencia prevista de recarga ($P_4$) impacta directamente de forma centralizada en el edificio.
+                
+                *   **Esquema 2 (Contador Individual Exclusivo Nuevo):**
+                    *   *Cómo funciona:* El usuario contrata a la compañía eléctrica un suministro totalmente independiente solo para el punto de recarga. Se coloca un contador exclusivo en el cuarto de contadores y se tira una línea directa hasta la plaza.
+                    *   *Cuándo se usa:* Cuando el garaje está separado o el usuario prefiere tener una factura y contrato de luz totalmente segregados de su vivienda.
+                
+                *   **Esquema 3a (Conexión al contador de la vivienda - El más habitual en bloques):**
+                    *   *Cómo funciona:* La línea de recarga nace conectada directamente en los bornes de salida del contador principal de la vivienda (ubicado en la centralización del edificio) y baja hasta la plaza de garaje asignada.
+                    *   *Cuándo se usa:* Edificios residenciales de pisos. Es el rey indiscutible porque **no requiere un contrato nuevo**, el vecino paga la luz del coche en su factura de casa.
+                    *   *Efecto en cálculo:* Al estar asociado a la Derivación Individual de cada vivienda, optimiza el reparto de cargas y permite el uso de sistemas inteligentes de control (SPL).
+                
+                *   **Esquema 3b (Conexión al Cuadro CGMP en Unifamiliares):**
+                    *   *Cómo funciona:* El circuito del coche sale directamente desde un magnetotérmico dedicado ubicado dentro del Cuadro General de Mando y Protección (CGMP) situado dentro de la propia casa o adosado.
+                    *   *Cuándo se usa:* Viviendas unifamiliares, chalets o adosados con garaje en la misma parcela.
+                
+                *   **Esquema 4 (Conexión a cuadro de local o nave):**
+                    *   *Cómo funciona:* El circuito de recarga se alimenta colgando directamente del cuadro general de distribución de un local comercial, taller o nave industrial.
+                    *   *Cuándo se usa:* Negocios o actividades comerciales que disponen de plazas de parking privadas vinculadas a su actividad.
+
+                ---
+                ### 🛡️ Protecciones Obligatorias y Sistema SPL
+                *   **Protección Diferencial:** Es obligatorio un **Diferencial mínimo Tipo A** (que detecte corrientes continuas suavizadas de hasta 6 mA) o directamente **Tipo B** para evitar que las baterías del coche bloqueen las protecciones.
+                *   **Control Dinámico (SPL):** Si marcas la casilla de control dinámico, el sistema asume que los cargadores le bajarán la potencia al coche automáticamente si la vivienda se acerca a su límite contratado, premiándote reglamentariamente al **reducir el factor de simultaneidad del 10% al 5%**.
+                """)
+        
+            st.markdown("#### ⚙️ Parámetros del Garaje y Puntos de Recarga")
+        
+            g1, g2 = st.columns(2)
+            with g1: 
+                st.session_state.garajes["sup"] = st.number_input("Superficie del Garaje (m²)", value=float(st.session_state.garajes["sup"]), min_value=0.0)
+                st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en el Garaje", value=int(st.session_state.garajes["plazas_irve"]), min_value=0)
+            with g2: 
+                tipo_vent = st.selectbox("Tipo de Ventilación (afecta a la carga base)", ["Forzada (20 W/m²)", "Natural (10 W/m²)"])
+                st.session_state.garajes["spl"] = st.checkbox("✅ Instalar Control Dinámico (SPL) en cargadores", value=st.session_state.garajes["spl"])
+
+            st.markdown("#### 🔌 Selección de Esquema Topológico (ITC-BT-52)")
+        
+            opciones_esquema = [
+                "Esquema 1 (Instalación colectiva con subcontadores)",
+                "Esquema 2 (Contador individual exclusivo nuevo)",
+                "Esquema 3a (Desde centralización de contadores)",
+                "Esquema 3b (Desde cuadro CGMP en vivienda unifamiliar)",
+                "Esquema 4 (Desde cuadro general de local o nave)"
+            ]
+        
+            idx_esq = 2 # Por defecto el 3a
+            for i, opt in enumerate(opciones_esquema):
+                if st.session_state.garajes["esquema_irve"].split(" ")[1] in opt:
+                    idx_esq = i; break
+                
+            seleccion_esq = st.selectbox("Esquema Reglamentario de Conexión", opciones_esquema, index=idx_esq)
+            st.session_state.garajes["esquema_irve"] = seleccion_esq
+
+            # CÁLCULOS INTERNOS IRVE
+            sup_g = st.session_state.garajes["sup"]
+            ratio_vent = 20.0 if "Forzada" in tipo_vent else 10.0
+            p_gar = max(sup_g * ratio_vent, 3450.0 if sup_g > 0 else 0.0)
+        
+            factor_irve_val = 0.05 if st.session_state.garajes["spl"] else 0.10
+            st.session_state.garajes["tipo_irve"] = "5% (Con sistema SPL)" if st.session_state.garajes["spl"] else "10% (Sin sistema SPL)"
+            plazas_calculo = st.session_state.garajes["plazas_irve"] * factor_irve_val
+            p_irve = plazas_calculo * 3680.0
+        
+            pot_total_garaje = p_gar + p_irve
+
+            if sup_g > 0 or st.session_state.garajes["plazas_irve"] > 0:
+                with st.expander(f"🔍 Ver Justificación Analítica Garajes e IRVE (Total: {pot_total_garaje:,.2f} W)"):
                     st.info(
-                        f"**Expresión reglamentaria:** P_servicio = P_unitaria * Uds. * K * (cos φ)\n\n"
-                        f"**Sustitución numérica:** {serv['potencia']} W * {serv['qty']} ud(s) * {factor}" + (f" * {cos_val}" if factor == 1.80 and cos_val < 1.0 else "") + f"\n\n"
-                        f"**Subtotal del servicio:** **{p_parcial:,.2f} W**"
+                        f"**1. Demanda Base del Garaje (Ventilación {tipo_vent}):**\n"
+                        f"P_base = max(Superficie * {ratio_vent} W/m², Mínimo REBT 3.450 W)\n"
+                        f"P_base = {sup_g} m² * {ratio_vent} = **{p_gar:,.0f} W**\n\n"
+                        f"**2. Previsión Vehículo Eléctrico (Cargadores a 3.680 W):**\n"
+                        f"Al configurar la instalación bajo el **{seleccion_esq.split(' ')[0] + ' ' + seleccion_esq.split(' ')[1]}** y "
+                        f"{'**contar con SPL (Control Dinámico)**, el factor de simultaneidad se reduce al **5%**.' if st.session_state.garajes['spl'] else '**NO contar con SPL**, se aplica el factor de simultaneidad por defecto del **10%**.'}\n\n"
+                        f"P_IRVE = Total Plazas * Factor Simultaneidad * Potencia Cargador\n"
+                        f"P_IRVE = {st.session_state.garajes['plazas_irve']} plazas * {int(factor_irve_val*100)}% = {plazas_calculo:.1f} plazas simultáneas * 3.680 W = **{p_irve:,.2f} W**\n\n"
+                        f"**3. Potencia Total Prevista de Garaje ($P_4$):** {p_gar:,.0f} W + {p_irve:,.2f} W = **{pot_total_garaje:,.2f} W**"
                     )
 
-        st.markdown(f"### 📌 Subtotal Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**")
-
-    # --- 4. GARAJES E IRVE ---
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 4: Garajes e Infraestructura de Recarga IRVE (P₄ - ITC-BT-52)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        with st.expander("📖 Guía Técnica Detallada: ¿Qué implica elegir cada Esquema IRVE?", expanded=False):
-            st.markdown("""
-            La instrucción **ITC-BT-52** del REBT regula cómo alimentar los puntos de recarga. Dependiendo de si diseñas para una comunidad de vecinos, unifamiliares o locales, debes elegir un esquema u otro. Aquí tienes el detalle técnico de cada uno:
-
-            *   **Esquema 1 (Instalación Colectiva con Subcontadores):**
-                *   *Cómo funciona:* Se instala un contador general trifásico principal para todo el garaje y, a partir de él, una línea troncal de la que cuelgan subcontadores privados por cada plaza.
-                *   *Cuándo se usa:* Parkings públicos, edificios de oficinas o bloques de apartamentos en régimen de alquiler gestionados por la propiedad.
-                *   *Efecto en cálculo:* Toda la potencia prevista de recarga ($P_4$) impacta directamente de forma centralizada en el edificio.
-                
-            *   **Esquema 2 (Contador Individual Exclusivo Nuevo):**
-                *   *Cómo funciona:* El usuario contrata a la compañía eléctrica un suministro totalmente independiente solo para el punto de recarga. Se coloca un contador exclusivo en el cuarto de contadores y se tira una línea directa hasta la plaza.
-                *   *Cuándo se usa:* Cuando el garaje está separado o el usuario prefiere tener una factura y contrato de luz totalmente segregados de su vivienda.
-                
-            *   **Esquema 3a (Conexión al contador de la vivienda - El más habitual en bloques):**
-                *   *Cómo funciona:* La línea de recarga nace conectada directamente en los bornes de salida del contador principal de la vivienda (ubicado en la centralización del edificio) y baja hasta la plaza de garaje asignada.
-                *   *Cuándo se usa:* Edificios residenciales de pisos. Es el rey indiscutible porque **no requiere un contrato nuevo**, el vecino paga la luz del coche en su factura de casa.
-                *   *Efecto en cálculo:* Al estar asociado a la Derivación Individual de cada vivienda, optimiza el reparto de cargas y permite el uso de sistemas inteligentes de control (SPL).
-                
-            *   **Esquema 3b (Conexión al Cuadro CGMP en Unifamiliares):**
-                *   *Cómo funciona:* El circuito del coche sale directamente desde un magnetotérmico dedicado ubicado dentro del Cuadro General de Mando y Protección (CGMP) situado dentro de la propia casa o adosado.
-                *   *Cuándo se usa:* Viviendas unifamiliares, chalets o adosados con garaje en la misma parcela.
-                
-            *   **Esquema 4 (Conexión a cuadro de local o nave):**
-                *   *Cómo funciona:* El circuito de recarga se alimenta colgando directamente del cuadro general de distribución de un local comercial, taller o nave industrial.
-                *   *Cuándo se usa:* Negocios o actividades comerciales que disponen de plazas de parking privadas vinculadas a su actividad.
-
-            ---
-            ### 🛡️ Protecciones Obligatorias y Sistema SPL
-            *   **Protección Diferencial:** Es obligatorio un **Diferencial mínimo Tipo A** (que detecte corrientes continuas suavizadas de hasta 6 mA) o directamente **Tipo B** para evitar que las baterías del coche bloqueen las protecciones.
-            *   **Control Dinámico (SPL):** Si marcas la casilla de control dinámico, el sistema asume que los cargadores le bajarán la potencia al coche automáticamente si la vivienda se acerca a su límite contratado, premiándote reglamentariamente al **reducir el factor de simultaneidad del 10% al 5%**.
-            """)
-        
-        st.markdown("#### ⚙️ Parámetros del Garaje y Puntos de Recarga")
-        
-        g1, g2 = st.columns(2)
-        with g1: 
-            st.session_state.garajes["sup"] = st.number_input("Superficie del Garaje (m²)", value=float(st.session_state.garajes["sup"]), min_value=0.0)
-            st.session_state.garajes["plazas_irve"] = st.number_input("Nº Plazas Totales en el Garaje", value=int(st.session_state.garajes["plazas_irve"]), min_value=0)
-        with g2: 
-            tipo_vent = st.selectbox("Tipo de Ventilación (afecta a la carga base)", ["Forzada (20 W/m²)", "Natural (10 W/m²)"])
-            st.session_state.garajes["spl"] = st.checkbox("✅ Instalar Control Dinámico (SPL) en cargadores", value=st.session_state.garajes["spl"])
-
-        st.markdown("#### 🔌 Selección de Esquema Topológico (ITC-BT-52)")
-        
-        opciones_esquema = [
-            "Esquema 1 (Instalación colectiva con subcontadores)",
-            "Esquema 2 (Contador individual exclusivo nuevo)",
-            "Esquema 3a (Desde centralización de contadores)",
-            "Esquema 3b (Desde cuadro CGMP en vivienda unifamiliar)",
-            "Esquema 4 (Desde cuadro general de local o nave)"
-        ]
-        
-        idx_esq = 2 # Por defecto el 3a
-        for i, opt in enumerate(opciones_esquema):
-            if st.session_state.garajes["esquema_irve"].split(" ")[1] in opt:
-                idx_esq = i; break
-                
-        seleccion_esq = st.selectbox("Esquema Reglamentario de Conexión", opciones_esquema, index=idx_esq)
-        st.session_state.garajes["esquema_irve"] = seleccion_esq
-
-        # CÁLCULOS INTERNOS IRVE
-        sup_g = st.session_state.garajes["sup"]
-        ratio_vent = 20.0 if "Forzada" in tipo_vent else 10.0
-        p_gar = max(sup_g * ratio_vent, 3450.0 if sup_g > 0 else 0.0)
-        
-        factor_irve_val = 0.05 if st.session_state.garajes["spl"] else 0.10
-        st.session_state.garajes["tipo_irve"] = "5% (Con sistema SPL)" if st.session_state.garajes["spl"] else "10% (Sin sistema SPL)"
-        plazas_calculo = st.session_state.garajes["plazas_irve"] * factor_irve_val
-        p_irve = plazas_calculo * 3680.0
-        
-        pot_total_garaje = p_gar + p_irve
-
-        if sup_g > 0 or st.session_state.garajes["plazas_irve"] > 0:
-            with st.expander(f"🔍 Ver Justificación Analítica Garajes e IRVE (Total: {pot_total_garaje:,.2f} W)"):
-                st.info(
-                    f"**1. Demanda Base del Garaje (Ventilación {tipo_vent}):**\n"
-                    f"P_base = max(Superficie * {ratio_vent} W/m², Mínimo REBT 3.450 W)\n"
-                    f"P_base = {sup_g} m² * {ratio_vent} = **{p_gar:,.0f} W**\n\n"
-                    f"**2. Previsión Vehículo Eléctrico (Cargadores a 3.680 W):**\n"
-                    f"Al configurar la instalación bajo el **{seleccion_esq.split(' ')[0] + ' ' + seleccion_esq.split(' ')[1]}** y "
-                    f"{'**contar con SPL (Control Dinámico)**, el factor de simultaneidad se reduce al **5%**.' if st.session_state.garajes['spl'] else '**NO contar con SPL**, se aplica el factor de simultaneidad por defecto del **10%**.'}\n\n"
-                    f"P_IRVE = Total Plazas * Factor Simultaneidad * Potencia Cargador\n"
-                    f"P_IRVE = {st.session_state.garajes['plazas_irve']} plazas * {int(factor_irve_val*100)}% = {plazas_calculo:.1f} plazas simultáneas * 3.680 W = **{p_irve:,.2f} W**\n\n"
-                    f"**3. Potencia Total Prevista de Garaje ($P_4$):** {p_gar:,.0f} W + {p_irve:,.2f} W = **{pot_total_garaje:,.2f} W**"
-                )
-
-        st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.2f} W**")
+            st.markdown(f"### 📌 Subtotal Garajes y Recarga ($P_4$): **{pot_total_garaje:,.2f} W**")
     
     # --- RESULTADO GLOBAL ---
     pt_total = pot_total_viviendas + pot_total_locales + pot_total_servicios + pot_total_garaje
 
-    st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">🏢 SECCIÓN 5: Balance de Potencia Total Prevista del Edificio (Pt)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.success(f"""
-        ### ✅ POTENCIA TOTAL PREVISTA DEL EDIFICIO ($P_t$): {pt_total:,.2f} W ({pt_total/1000.0:.2f} kW)
+    with tab_pc5:
+        st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">🏢 SECCIÓN 5: Balance de Potencia Total Prevista del Edificio (Pt)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.success(f"""
+            ### ✅ POTENCIA TOTAL PREVISTA DEL EDIFICIO ($P_t$): {pt_total:,.2f} W ({pt_total/1000.0:.2f} kW)
         
-        **Desglose acumulado para la memoria técnica:**
-        * 🏠 Total Viviendas ($P_1$): **{pot_total_viviendas:,} W**
-        * 🏪 Total Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**
-        * 💡 Total Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**
-        * 🚗 Total Garajes e IRVE ($P_4$): **{pot_total_garaje:,.2f} W**
+            **Desglose acumulado para la memoria técnica:**
+            * 🏠 Total Viviendas ($P_1$): **{pot_total_viviendas:,} W**
+            * 🏪 Total Locales Comerciales ($P_2$): **{pot_total_locales:,.0f} W**
+            * 💡 Total Servicios Generales ($P_3$): **{pot_total_servicios:,.2f} W**
+            * 🚗 Total Garajes e IRVE ($P_4$): **{pot_total_garaje:,.2f} W**
         
-        *Valor listo y optimizado para el cálculo inmediato de la Línea General de Alimentación (LGA).*
-        """)
+            *Valor listo y optimizado para el cálculo inmediato de la Línea General de Alimentación (LGA).*
+            """)
 
-        col_t_pt1, col_t_pt2 = st.columns([1.5, 1])
-        with col_t_pt1:
-            if st.button("⚡ Calcular Línea General (LGA) con esta Potencia Total (Pt)", type="primary", use_container_width=True, key="btn_transfer_pt_lga"):
-                st.session_state["lga_in_pot"] = float(pt_total)
-                st.session_state.menu_activo = "⚡ Línea General (LGA)"
-                st.success("✅ ¡Potencia total ($P_t$) traspasada a la LGA! Redirigiendo al cálculo de la LGA...")
-                st.rerun()
-        with col_t_pt2:
-            st.caption("Abre el dimensionado de la Línea General de Alimentación con la potencia simultánea calculada.")
+            col_t_pt1, col_t_pt2 = st.columns([1.5, 1])
+            with col_t_pt1:
+                if st.button("⚡ Calcular Línea General (LGA) con esta Potencia Total (Pt)", type="primary", use_container_width=True, key="btn_transfer_pt_lga"):
+                    st.session_state["lga_in_pot"] = float(pt_total)
+                    st.session_state.menu_activo = "⚡ Línea General (LGA)"
+                    st.success("✅ ¡Potencia total ($P_t$) traspasada a la LGA! Redirigiendo al cálculo de la LGA...")
+                    st.rerun()
+            with col_t_pt2:
+                st.caption("Abre el dimensionado de la Línea General de Alimentación con la potencia simultánea calculada.")
 
-    # =========================================================================
-    # SECCIÓN DE EXPORTACIÓN Y GENERACIÓN DE REPORTE PDF OFICIAL
-    # =========================================================================
-    st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 6: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
-            st.markdown("Personalice los metadatos de la obra para incluirlos en la cabecera del documento PDF:")
+        # =========================================================================
+    with tab_pc6:
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 6: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
+                st.markdown("Personalice los metadatos de la obra para incluirlos en la cabecera del documento PDF:")
             
-            col_m1, col_m2 = st.columns(2)
-            with col_m1:
-                p_nombre = st.text_input("Nombre de la Obra / Edificio", "Edificio Residencial Bolimur", key="pdf_p_nombre")
-                p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Av. Principal nº 123", key="pdf_p_emp")
-            with col_m2:
-                p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="pdf_p_proy")
-                p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-2026-001", key="pdf_p_exp")
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    p_nombre = st.text_input("Nombre de la Obra / Edificio", "Edificio Residencial Bolimur", key="pdf_p_nombre")
+                    p_emplazamiento = st.text_input("Emplazamiento / Dirección", "Av. Principal nº 123", key="pdf_p_emp")
+                with col_m2:
+                    p_proyectista = st.text_input("Técnico / Instalador Autorizado", "Ingeniero Electrónico / Instalador REBT", key="pdf_p_proy")
+                    p_expediente = st.text_input("Nº Expediente / Referencia", "EXP-2026-001", key="pdf_p_exp")
 
-            proyecto_info = {
-                "nombre": p_nombre,
-                "emplazamiento": p_emplazamiento,
-                "proyectista": p_proyectista,
-                "expediente": p_expediente,
-                "fecha": datetime.date.today().strftime("%d/%m/%Y")
-            }
+                proyecto_info = {
+                    "nombre": p_nombre,
+                    "emplazamiento": p_emplazamiento,
+                    "proyectista": p_proyectista,
+                    "expediente": p_expediente,
+                    "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                }
 
-            # Generar PDF en memoria con ReportLab
-            try:
-                pdf_bytes = pdf_prevision.generar_pdf_prevision(
-                    proyecto_info=proyecto_info,
-                    grupos_viviendas=st.session_state.grupos_viviendas,
-                    k_diurno=k_diurno,
-                    viviendas_diurnas_qty=viviendas_diurnas_qty,
-                    pot_total_viviendas=pot_total_viviendas,
-                    locales=st.session_state.locales,
-                    pot_total_locales=pot_total_locales,
-                    servicios_generales=st.session_state.servicios_generales,
-                    pot_total_servicios=pot_total_servicios,
-                    garajes=st.session_state.garajes,
-                    p_gar_base=p_gar,
-                    p_irve=p_irve,
-                    pot_total_garaje=pot_total_garaje,
-                    pt_total=pt_total
-                )
+                # Generar PDF en memoria con ReportLab
+                try:
+                    pdf_bytes = pdf_prevision.generar_pdf_prevision(
+                        proyecto_info=proyecto_info,
+                        grupos_viviendas=st.session_state.grupos_viviendas,
+                        k_diurno=k_diurno,
+                        viviendas_diurnas_qty=viviendas_diurnas_qty,
+                        pot_total_viviendas=pot_total_viviendas,
+                        locales=st.session_state.locales,
+                        pot_total_locales=pot_total_locales,
+                        servicios_generales=st.session_state.servicios_generales,
+                        pot_total_servicios=pot_total_servicios,
+                        garajes=st.session_state.garajes,
+                        p_gar_base=p_gar,
+                        p_irve=p_irve,
+                        pot_total_garaje=pot_total_garaje,
+                        pt_total=pt_total
+                    )
                 
-                from modulos import visor_pdf
-                visor_pdf.mostrar_visor_pdf(
-                    pdf_bytes=pdf_bytes,
-                    nombre_archivo=f"Reporte_Prevision_Cargas_{p_expediente}.pdf",
-                    label_boton="📥 Descargar Reporte PDF Oficial (Técnico)"
-                )
-            except Exception as err:
-                st.error(f"⚠️ Ocurrió un error al generar el archivo PDF: {err}")
+                    from modulos import visor_pdf
+                    visor_pdf.mostrar_visor_pdf(
+                        pdf_bytes=pdf_bytes,
+                        nombre_archivo=f"Reporte_Prevision_Cargas_{p_expediente}.pdf",
+                        label_boton="📥 Descargar Reporte PDF Oficial (Técnico)"
+                    )
+                except Exception as err:
+                    st.error(f"⚠️ Ocurrió un error al generar el archivo PDF: {err}")

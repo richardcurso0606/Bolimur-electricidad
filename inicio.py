@@ -127,32 +127,156 @@ if control_salida:
     control_salida.procesar_salida_url(auth_manager)
 
 # =========================================================================
-# ESTILOS CSS GLOBALES
+# CONFIGURACIÓN DE TEMA: MODO SOLAR (CLARO) / MODO OSCURO (REBT)
 # =========================================================================
-st.markdown("""
+if "tema_modo" not in st.session_state:
+    st.session_state["tema_modo"] = "solar"
+
+tema_es_oscuro = st.session_state.get("tema_modo", "solar") == "oscuro"
+
+# =========================================================================
+# ESTILOS CSS GLOBALES (RESPONSIVOS & DINÁMICOS POR TEMA)
+# =========================================================================
+css_tema_oscuro = """
+    /* --- TEMA OSCURO REBT --- */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {
+        background-color: #0b1120 !important;
+        color: #f1f5f9 !important;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #020617 !important;
+        border-right: 1px solid #1e293b !important;
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stSidebar"] button {
+        background-color: #0f172a !important;
+        border: 1.5px solid #334155 !important;
+        color: #f1f5f9 !important;
+    }
+    [data-testid="stSidebar"] button:hover {
+        border-color: #38bdf8 !important;
+        background-color: #1e293b !important;
+        color: #38bdf8 !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #0f172a !important;
+        border: 2px solid #334155 !important;
+        color: #f1f5f9 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #38bdf8 !important;
+        box-shadow: 0 6px 18px rgba(56, 189, 248, 0.25) !important;
+    }
+    div[data-testid="stExpander"] {
+        background-color: #0f172a !important;
+        border: 2px solid #334155 !important;
+        color: #f1f5f9 !important;
+    }
+    div[data-testid="stExpander"]:hover {
+        border-color: #38bdf8 !important;
+    }
+    .bolimur-card {
+        background-color: #0f172a !important;
+        border: 2px solid #334155 !important;
+        color: #f1f5f9 !important;
+    }
+    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+        background-color: #1e293b !important;
+        border: 2px solid #0284c7 !important;
+        color: #f8fafc !important;
+    }
+    div[data-baseweb="input"] input, div[data-baseweb="textarea"] textarea {
+        color: #f8fafc !important;
+        background-color: transparent !important;
+    }
+    p, span, label, h1, h2, h3, h4, h5, h6, li {
+        color: #f1f5f9 !important;
+    }
+    button[data-baseweb="tab"] {
+        background-color: #0f172a !important;
+        color: #94a3b8 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #0c4a6e !important;
+        color: #38bdf8 !important;
+        border-bottom: 3px solid #38bdf8 !important;
+    }
+    .section-header-blue {
+        background: linear-gradient(90deg, #0c4a6e 0%, #0f172a 100%) !important;
+        border: 2px solid #0284c7 !important;
+        border-left: 8px solid #38bdf8 !important;
+    }
+    .section-header-green {
+        background: linear-gradient(90deg, #064e3b 0%, #0f172a 100%) !important;
+        border: 2px solid #16a34a !important;
+        border-left: 8px solid #22c55e !important;
+    }
+    .section-header-amber {
+        background: linear-gradient(90deg, #451a03 0%, #0f172a 100%) !important;
+        border: 2px solid #d97706 !important;
+        border-left: 8px solid #f59e0b !important;
+    }
+    .section-header-slate {
+        background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%) !important;
+        border: 2px solid #475569 !important;
+        border-left: 8px solid #94a3b8 !important;
+    }
+    div[data-testid="stMetricValue"] {
+        color: #38bdf8 !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #94a3b8 !important;
+    }
+""" if tema_es_oscuro else ""
+
+st.markdown(f"""
     <style>
+        {css_tema_oscuro}
+
+        /* Botón Permanente de Modo Solar / Oscuro (Clonado con precisión de imagen) */
+        .st-key-btn_toggle_tema_top button {{
+            background-color: #111827 !important;
+            border: 1.5px solid #d1d5db !important;
+            border-radius: 6px !important;
+            color: {'#fef08a' if tema_es_oscuro else '#38bdf8'} !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            letter-spacing: 0.5px !important;
+            height: 42px !important;
+            margin-bottom: 12px !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+        }}
+        .st-key-btn_toggle_tema_top button:hover {{
+            border-color: {'#facc15' if tema_es_oscuro else '#38bdf8'} !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.4) !important;
+            transform: translateY(-1px) !important;
+        }}
+
         /* Inputs y Selectores */
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
-            border: 2px solid #0284c7; border-radius: 8px; background-color: #f8fafc;
-        }
+        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {{
+            border: 2px solid #0284c7; border-radius: 8px;
+        }}
 
         /* Desplegables de Streamlit / BaseWeb Popovers: Ancho amplio y sin recortes de descripciones */
         div[data-baseweb="popover"],
-        div[data-baseweb="popover"] > div {
+        div[data-baseweb="popover"] > div {{
             min-width: 650px !important;
             max-width: 96vw !important;
             width: max-content !important;
             z-index: 999999 !important;
-        }
+        }}
 
-        div[data-baseweb="popover"] ul[role="listbox"] {
+        div[data-baseweb="popover"] ul[role="listbox"] {{
             min-width: 100% !important;
             max-width: 96vw !important;
             max-height: 480px !important;
             padding: 6px !important;
-        }
+        }}
 
-        div[data-baseweb="popover"] li[role="option"] {
+        div[data-baseweb="popover"] li[role="option"] {{
             white-space: normal !important;
             word-break: normal !important;
             overflow-wrap: break-word !important;
@@ -164,57 +288,51 @@ st.markdown("""
             border-bottom: 1px solid #f1f5f9 !important;
             border-radius: 6px !important;
             margin-bottom: 2px !important;
-        }
+        }}
 
         div[data-baseweb="popover"] li[role="option"] > div,
-        div[data-baseweb="popover"] li[role="option"] span {
+        div[data-baseweb="popover"] li[role="option"] span {{
             white-space: normal !important;
             word-break: normal !important;
             overflow-wrap: break-word !important;
             overflow: visible !important;
             text-overflow: unset !important;
             display: block !important;
-        }
+        }}
 
-        div[data-baseweb="select"] {
+        div[data-baseweb="select"] {{
             width: 100% !important;
-        }
+        }}
 
         div[data-baseweb="select"] span,
-        div[data-baseweb="select"] div {
+        div[data-baseweb="select"] div {{
             white-space: normal !important;
             word-break: break-word !important;
             overflow: visible !important;
             text-overflow: unset !important;
-        }
+        }}
         
         /* Barra Lateral */
-        [data-testid="stSidebar"] {
-            background-color: #f8fafc; 
-            border-right: 1px solid #e2e8f0;
+        [data-testid="stSidebar"] {{
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.28s ease !important;
-        }
-        [data-testid="stSidebar"] button {
+        }}
+        [data-testid="stSidebar"] button {{
             width: 100%;
             text-align: left;
-            background-color: #ffffff;
-            border: 2px solid #cbd5e1;
             border-radius: 8px;
-            color: #334155;
             font-weight: 500;
             margin-bottom: 6px;
             transition: all 0.2s ease-in-out;
-        }
-        [data-testid="stSidebar"] button:hover {
+        }}
+        [data-testid="stSidebar"] button:hover {{
             border-color: #0284c7;
-            background-color: #f0f9ff;
             color: #0284c7;
             box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
             transform: translateX(2px);
-        }
+        }}
 
         /* Botón de expandir menú lateral (cuando está oculto) */
-        [data-testid="stExpandSidebarButton"] button {
+        [data-testid="stExpandSidebarButton"] button {{
             background-color: #0284c7 !important;
             color: #ffffff !important;
             border-radius: 8px !important;
@@ -222,57 +340,55 @@ st.markdown("""
             padding: 6px 10px !important;
             box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35) !important;
             transition: all 0.2s ease !important;
-        }
-        [data-testid="stExpandSidebarButton"] button:hover {
+        }}
+        [data-testid="stExpandSidebarButton"] button:hover {{
             background-color: #0369a1 !important;
             transform: scale(1.06) !important;
             box-shadow: 0 6px 14px rgba(2, 132, 199, 0.5) !important;
-        }
-        [data-testid="stExpandSidebarButton"] button svg {
+        }}
+        [data-testid="stExpandSidebarButton"] button svg {{
             fill: #ffffff !important;
             color: #ffffff !important;
-        }
+        }}
 
         /* Botón para colapsar menú (dentro del sidebar) */
-        [data-testid="stSidebarCollapseButton"] button {
+        [data-testid="stSidebarCollapseButton"] button {{
             border-radius: 8px !important;
             transition: all 0.2s ease !important;
-        }
-        [data-testid="stSidebarCollapseButton"] button:hover {
+        }}
+        [data-testid="stSidebarCollapseButton"] button:hover {{
             background-color: #e0f2fe !important;
             color: #0284c7 !important;
-        }
+        }}
 
         /* Contenedores con Borde y Sombra Nítidos y Marcados */
-        div[data-testid="stVerticalBlockBorderWrapper"] {
+        div[data-testid="stVerticalBlockBorderWrapper"] {{
             border-radius: 12px !important;
             border: 2px solid #94a3b8 !important;
-            background-color: #ffffff !important;
             box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
             margin-bottom: 16px !important;
             transition: all 0.2s ease;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
             border-color: #0284c7 !important;
             box-shadow: 0 6px 18px rgba(2, 132, 199, 0.16), 0 2px 4px rgba(2, 132, 199, 0.1) !important;
-        }
+        }}
 
         /* Expanders con Borde Nítido y Sombra */
-        div[data-testid="stExpander"] {
+        div[data-testid="stExpander"] {{
             border-radius: 10px !important;
             border: 2px solid #94a3b8 !important;
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
-            background: #ffffff !important;
             margin-bottom: 12px !important;
             transition: all 0.2s ease;
-        }
-        div[data-testid="stExpander"]:hover {
+        }}
+        div[data-testid="stExpander"]:hover {{
             border-color: #0284c7 !important;
             box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
-        }
+        }}
 
         /* Cabeceras de Secciones con Insignia y Borde Integral */
-        .section-header-blue {
+        .section-header-blue {{
             background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 100%);
             border: 2px solid #0284c7;
             border-left: 8px solid #0284c7;
@@ -280,8 +396,8 @@ st.markdown("""
             border-radius: 8px;
             margin: 18px 0 12px 0;
             box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
-        }
-        .section-header-green {
+        }}
+        .section-header-green {{
             background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
             border: 2px solid #16a34a;
             border-left: 8px solid #16a34a;
@@ -289,8 +405,8 @@ st.markdown("""
             border-radius: 8px;
             margin: 18px 0 12px 0;
             box-shadow: 0 3px 8px rgba(22, 163, 74, 0.12);
-        }
-        .section-header-amber {
+        }}
+        .section-header-amber {{
             background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
             border: 2px solid #d97706;
             border-left: 8px solid #d97706;
@@ -298,8 +414,8 @@ st.markdown("""
             border-radius: 8px;
             margin: 18px 0 12px 0;
             box-shadow: 0 3px 8px rgba(217, 119, 6, 0.12);
-        }
-        .section-header-slate {
+        }}
+        .section-header-slate {{
             background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
             border: 2px solid #475569;
             border-left: 8px solid #475569;
@@ -307,31 +423,30 @@ st.markdown("""
             border-radius: 8px;
             margin: 18px 0 12px 0;
             box-shadow: 0 3px 8px rgba(71, 85, 105, 0.12);
-        }
+        }}
 
         /* Tarjeta Genérica Bolimur */
-        .bolimur-card {
-            background: #ffffff;
+        .bolimur-card {{
             border: 2px solid #94a3b8;
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
             margin-bottom: 20px;
-        }
+        }}
 
         /* Estilo de Pestañas (Tabs) */
-        button[data-baseweb="tab"] {
+        button[data-baseweb="tab"] {{
             font-size: 13.5px !important;
             font-weight: 600 !important;
             padding: 9px 16px !important;
             border-radius: 8px 8px 0 0 !important;
             transition: all 0.2s ease !important;
-        }
-        button[data-baseweb="tab"][aria-selected="true"] {
+        }}
+        button[data-baseweb="tab"][aria-selected="true"] {{
             color: #0284c7 !important;
             border-bottom: 3px solid #0284c7 !important;
             background-color: #f0f9ff !important;
-        }
+        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -510,6 +625,29 @@ with st.sidebar:
             pass
 
 # =========================================================================
+# BARRA SUPERIOR PERMANENTE: MODO SOLAR / MODO OSCURO & TÍTULO DE MÓDULO
+# =========================================================================
+es_oscuro = st.session_state.get("tema_modo", "solar") == "oscuro"
+
+col_bar_brand, col_bar_btn = st.columns([3.8, 1.2])
+with col_bar_brand:
+    st.markdown(f"""
+    <div style="background: {'#111827' if es_oscuro else '#1e293b'}; border: 1.5px solid {'#374151' if es_oscuro else '#334155'}; border-radius: 8px; padding: 7px 16px; display: flex; align-items: center; gap: 10px; height: 42px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">
+        <span style="font-size: 15px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px;">⚡ BOLIMUR REBT</span>
+        <span style="color: #64748b;">|</span>
+        <span style="color: #f1f5f9; font-size: 13.5px; font-weight: 600;">{seleccion_modulo}</span>
+    </div>
+    """, unsafe_allow_html=True)
+with col_bar_btn:
+    if es_oscuro:
+        if st.button("☀️ MODO SOLAR", key="btn_toggle_tema_top", use_container_width=True, help="Cambiar a Modo Solar (Claro de alta visibilidad)"):
+            st.session_state["tema_modo"] = "solar"
+            st.rerun()
+    else:
+        if st.button("🌙 MODO OSCURO", key="btn_toggle_tema_top", use_container_width=True, help="Cambiar a Modo Oscuro (Nocturno / Descanso visual)"):
+            st.session_state["tema_modo"] = "oscuro"
+            st.rerun()
+
 # =========================================================================
 # EL ENRUTADOR PRINCIPAL
 # =========================================================================

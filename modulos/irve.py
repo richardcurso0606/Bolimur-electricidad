@@ -363,99 +363,135 @@ def renderizar():
         pass
 
     # =========================================================================
-    # SECCIÓN 1: PARÁMETROS DEL CIRCUITO DE RECARGA Y WALLBOX
-    # =========================================================================
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Selección del Origen de la Línea y Parámetros del Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        # 1. Selector de Esquema en Origen (100% visible, claro y con Esquema 2 por defecto)
-        st.markdown("##### 🔌 1. Elige el Origen de la Línea (Esquema ITC-BT-52):")
-        
-        opciones_esquemas_map = {
-            "Esquema 2": "⭐ ESQUEMA 2: Contador común de la vivienda (Garaje comunitario en mismo edificio) - RECOMENDADO (90% de los casos)",
-            "Esquema 4a": "🏡 ESQUEMA 4a/4b: Directo desde el Cuadro CGMP (Chalets, adosados y viviendas unifamiliares)",
-            "Esquema 3a": "🏢 ESQUEMA 3a: Contador nuevo exclusivo en centralización (El cliente no vive en este edificio o quiere factura separada)",
-            "Esquema 1": "👥 ESQUEMA 1: Colectivo comunitario con contador principal (Parkings nuevos o empresas con gestor CPO)",
-            "Esquema 3b": "🔌 ESQUEMA 3b: Contador exclusivo en exterior / plaza (Parkings al aire libre sin cuarto de contadores)"
-        }
-        
-        # Limpieza de claves obsoletas y forzar Esquema 2 por defecto
-        val_actual = st.session_state.get("irve_esquema_sel_key")
-        if not val_actual or val_actual not in opciones_esquemas_map:
-            st.session_state["irve_esquema_sel_key"] = "Esquema 2"
-            val_actual = "Esquema 2"
+    class _NullContext:
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
 
-        lista_keys = list(opciones_esquemas_map.keys())
-        idx_actual = lista_keys.index(st.session_state["irve_esquema_sel_key"])
-
-        esq_key_sel = st.radio(
-            "Selecciona la situación real de tu cliente en la obra:",
-            options=lista_keys,
-            format_func=lambda k: opciones_esquemas_map[k],
-            index=idx_actual,
-            key="irve_esquema_sel_key"
+    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
+    with col_nav_info:
+        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
+    with col_nav_mode:
+        modo_vista_irve = st.radio(
+            "Modo de Navegación:",
+            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="modo_vista_irve"
         )
+
+    if modo_vista_irve.startswith("📑"):
+        tab_irve1, tab_irve2, tab_irve3, tab_irve4, tab_irve5, tab_irve6 = st.tabs([
+            "🚗 1. Origen & Cargador",
+            "⚡ 2. Memoria & Sección",
+            "📐 3. Esquema Unifilar",
+            "💰 4. Presupuesto Obra",
+            "🤖 5. Asistente IA IRVE",
+            "🏛️ 6. MTD Industria Murcia"
+        ])
+    else:
+        tab_irve1 = _NullContext()
+        tab_irve2 = _NullContext()
+        tab_irve3 = _NullContext()
+        tab_irve4 = _NullContext()
+        tab_irve5 = _NullContext()
+        tab_irve6 = _NullContext()
+
+    with tab_irve1:
+        # SECCIÓN 1: PARÁMETROS DEL CIRCUITO DE RECARGA Y WALLBOX
+        # =========================================================================
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🚗 SECCIÓN 1: Selección del Origen de la Línea y Parámetros del Wallbox (ITC-BT-52)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            # 1. Selector de Esquema en Origen (100% visible, claro y con Esquema 2 por defecto)
+            st.markdown("##### 🔌 1. Elige el Origen de la Línea (Esquema ITC-BT-52):")
         
-        info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
+            opciones_esquemas_map = {
+                "Esquema 2": "⭐ ESQUEMA 2: Contador común de la vivienda (Garaje comunitario en mismo edificio) - RECOMENDADO (90% de los casos)",
+                "Esquema 4a": "🏡 ESQUEMA 4a/4b: Directo desde el Cuadro CGMP (Chalets, adosados y viviendas unifamiliares)",
+                "Esquema 3a": "🏢 ESQUEMA 3a: Contador nuevo exclusivo en centralización (El cliente no vive en este edificio o quiere factura separada)",
+                "Esquema 1": "👥 ESQUEMA 1: Colectivo comunitario con contador principal (Parkings nuevos o empresas con gestor CPO)",
+                "Esquema 3b": "🔌 ESQUEMA 3b: Contador exclusivo en exterior / plaza (Parkings al aire libre sin cuarto de contadores)"
+            }
         
-        # Ficha Explicativa Completa y Siempre Visible del Esquema Seleccionado
-        st.markdown(f"""
-        <div style="background: #f0f9ff; border: 2px solid #0284c7; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap;">
-                <b style="color: #0369a1; font-size: 15px;">📋 FICHA TÉCNICA DEL ORIGEN: {info_esq['nombre'].upper()}</b>
-                <span style="background: #0284c7; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11.5px; font-weight: bold;">
-                    Límite Caída Tensión: {info_esq['limite_cdt']}%
-                </span>
-            </div>
-            <div style="font-size: 13px; color: #1e293b; line-height: 1.5;">
-                <p style="margin: 4px 0;"><b>📍 ¿Dónde conectar los cables en la obra?</b><br/>
-                {info_esq['origen']}.</p>
-                <p style="margin: 4px 0;"><b>💡 ¿Por qué debes elegir este esquema?</b><br/>
-                {info_esq['ventajas']}</p>
-                <p style="margin: 4px 0;"><b>🛡️ Protecciones y Requisitos:</b><br/>
-                {info_esq['requisitos']}</p>
-                <p style="margin: 4px 0; color: #047857;"><b>📜 Permiso Comunidad de Propietarios:</b><br/>
-                {'Conforme al <b>Art. 17.5 de la Ley de Propiedad Horizontal</b>, solo requiere <b>comunicación previa por escrito</b> con 30 días de antelación. <b>¡No requiere votación ni aprobación en junta!</b>' if esq_key_sel == 'Esquema 2' else 'Instalación dentro de la propiedad privada sin trámites comunitarios.' if esq_key_sel == 'Esquema 4a' else 'Requiere solicitud de nuevo punto de suministro (CUPS) a la distribuidora eléctrica.'}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            # Limpieza de claves obsoletas y forzar Esquema 2 por defecto
+            val_actual = st.session_state.get("irve_esquema_sel_key")
+            if not val_actual or val_actual not in opciones_esquemas_map:
+                st.session_state["irve_esquema_sel_key"] = "Esquema 2"
+                val_actual = "Esquema 2"
 
-        st.markdown("##### ⚡ 2. Parámetros Eléctricos del Circuito:")
-        c1_i, c2_i = st.columns([1, 1])
-        with c1_i:
-            irve_pot = st.selectbox(
-                "Potencia del Cargador (Wallbox):",
-                [
-                    "7.360 W (32A - Monofásico Estándar Wallbox)",
-                    "3.680 W (16A - Monofásico Lento)",
-                    "11.000 W (16A - Trifásico)",
-                    "22.000 W (32A - Trifásico Rápido AC)",
-                    "✏️ Personalizada (W)"
-                ],
-                index=0,
-                key="irve_pot_sel"
+            lista_keys = list(opciones_esquemas_map.keys())
+            idx_actual = lista_keys.index(st.session_state["irve_esquema_sel_key"])
+
+            esq_key_sel = st.radio(
+                "Selecciona la situación real de tu cliente en la obra:",
+                options=lista_keys,
+                format_func=lambda k: opciones_esquemas_map[k],
+                index=idx_actual,
+                key="irve_esquema_sel_key"
             )
-            
-            if "Personalizada" in irve_pot:
-                p_cargador_val = st.number_input("Introduce Potencia del Wallbox (W):", value=st.session_state.get("irve_custom_w", 7360.0), step=250.0, key="irve_custom_w")
-            else:
-                p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
+        
+            info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
+        
+            # Ficha Explicativa Completa y Siempre Visible del Esquema Seleccionado
+            st.markdown(f"""
+            <div style="background: #f0f9ff; border: 2px solid #0284c7; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap;">
+                    <b style="color: #0369a1; font-size: 15px;">📋 FICHA TÉCNICA DEL ORIGEN: {info_esq['nombre'].upper()}</b>
+                    <span style="background: #0284c7; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11.5px; font-weight: bold;">
+                        Límite Caída Tensión: {info_esq['limite_cdt']}%
+                    </span>
+                </div>
+                <div style="font-size: 13px; color: #1e293b; line-height: 1.5;">
+                    <p style="margin: 4px 0;"><b>📍 ¿Dónde conectar los cables en la obra?</b><br/>
+                    {info_esq['origen']}.</p>
+                    <p style="margin: 4px 0;"><b>💡 ¿Por qué debes elegir este esquema?</b><br/>
+                    {info_esq['ventajas']}</p>
+                    <p style="margin: 4px 0;"><b>🛡️ Protecciones y Requisitos:</b><br/>
+                    {info_esq['requisitos']}</p>
+                    <p style="margin: 4px 0; color: #047857;"><b>📜 Permiso Comunidad de Propietarios:</b><br/>
+                    {'Conforme al <b>Art. 17.5 de la Ley de Propiedad Horizontal</b>, solo requiere <b>comunicación previa por escrito</b> con 30 días de antelación. <b>¡No requiere votación ni aprobación en junta!</b>' if esq_key_sel == 'Esquema 2' else 'Instalación dentro de la propiedad privada sin trámites comunitarios.' if esq_key_sel == 'Esquema 4a' else 'Requiere solicitud de nuevo punto de suministro (CUPS) a la distribuidora eléctrica.'}</p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            irve_long = st.number_input("Longitud del cable hasta la plaza de garaje (m):", value=st.session_state.get("irve_long", 25.0), min_value=1.0, max_value=500.0, step=1.0, key="irve_long")
-
-        with c2_i:
-            tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red", horizontal=True)
-            irve_mat = st.selectbox("Material Conductor:", ["cobre"], key="irve_mat")
-            irve_aisl = st.selectbox(
-                "Aislamiento del Conductor:",
-                [
-                    "XLPE / EPR (90ºC) - RZ1-K (Cca-s1b,d1,a1 Libre Halógenos)",
-                    "PVC (70ºC)"
-                ],
-                key="irve_aisl"
-            )
-            metodo_irve_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION_IRVE.keys()), index=0, key="irve_met")
+            st.markdown("##### ⚡ 2. Parámetros Eléctricos del Circuito:")
+            c1_i, c2_i = st.columns([1, 1])
+            with c1_i:
+                irve_pot = st.selectbox(
+                    "Potencia del Cargador (Wallbox):",
+                    [
+                        "7.360 W (32A - Monofásico Estándar Wallbox)",
+                        "3.680 W (16A - Monofásico Lento)",
+                        "11.000 W (16A - Trifásico)",
+                        "22.000 W (32A - Trifásico Rápido AC)",
+                        "✏️ Personalizada (W)"
+                    ],
+                    index=0,
+                    key="irve_pot_sel"
+                )
             
-            st.info("⚡ **Sistema de Balanceo Inteligente (SPL):** Recomendado siempre para modular la carga en tiempo real con el consumo de la vivienda sin tener que subir el término de potencia contratada.")
+                if "Personalizada" in irve_pot:
+                    p_cargador_val = st.number_input("Introduce Potencia del Wallbox (W):", value=st.session_state.get("irve_custom_w", 7360.0), step=250.0, key="irve_custom_w")
+                else:
+                    p_cargador_val = float(irve_pot.split(" ")[0].replace(".", ""))
+
+                irve_long = st.number_input("Longitud del cable hasta la plaza de garaje (m):", value=st.session_state.get("irve_long", 25.0), min_value=1.0, max_value=500.0, step=1.0, key="irve_long")
+
+            with c2_i:
+                tipo_red_irve = st.radio("Tipo de Alimentación:", ["Monofásico (230 V)", "Trifásico (400 V)"], key="irve_red", horizontal=True)
+                irve_mat = st.selectbox("Material Conductor:", ["cobre"], key="irve_mat")
+                irve_aisl = st.selectbox(
+                    "Aislamiento del Conductor:",
+                    [
+                        "XLPE / EPR (90ºC) - RZ1-K (Cca-s1b,d1,a1 Libre Halógenos)",
+                        "PVC (70ºC)"
+                    ],
+                    key="irve_aisl"
+                )
+                metodo_irve_key = st.selectbox("Método de Instalación:", list(METODOS_INSTALACION_IRVE.keys()), index=0, key="irve_met")
+            
+                st.info("⚡ **Sistema de Balanceo Inteligente (SPL):** Recomendado siempre para modular la carga en tiempo real con el consumo de la vivienda sin tener que subir el término de potencia contratada.")
 
     # =========================================================================
     # MOTOR DE CÁLCULO REGLAMENTARIO ITC-BT-52
@@ -502,386 +538,386 @@ def renderizar():
     # Dimensionamiento reglamentario de tubo protector libre de halógenos IK08
     tubo_dim_str, tubo_desc = rebt.dimensionar_tubo_irve(s_final_irve, es_trif_irve)
 
-    # =========================================================================
-    # SECCIÓN 2: MEMORIA ANALÍTICA Y RESULTADOS REGLAMENTARIOS
-    # =========================================================================
-    st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">📋 SECCIÓN 2: Memoria Analítica, Protecciones y Sección Óptima</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        if es_trif_irve:
-            f_ib_irve = r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}"
-            s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
-            f_s_irve = r"S = \frac{1 \cdot P \cdot L}{\gamma \cdot \Delta V_{\text{máx}} \cdot V}"
-            s_s_irve = f"S = \\frac{{1 \\cdot {p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_adm_v:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
-        else:
-            f_ib_irve = r"I_b = \frac{P}{V \cdot \cos\varphi}"
-            s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
-            f_s_irve = r"S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V_{\text{máx}} \cdot V}"
-            s_s_irve = f"S = \\frac{{2 \\cdot {p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_adm_v:.2f} \\cdot 230}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
+    with tab_irve2:
+        # SECCIÓN 2: MEMORIA ANALÍTICA Y RESULTADOS REGLAMENTARIOS
+        # =========================================================================
+        st.markdown('<div class="section-header-green"><h4 style="margin:0; color:#15803d;">📋 SECCIÓN 2: Memoria Analítica, Protecciones y Sección Óptima</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            if es_trif_irve:
+                f_ib_irve = r"I_b = \frac{P}{\sqrt{3} \cdot V \cdot \cos\varphi}"
+                s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{\\sqrt{3} \\cdot 400 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
+                f_s_irve = r"S = \frac{1 \cdot P \cdot L}{\gamma \cdot \Delta V_{\text{máx}} \cdot V}"
+                s_s_irve = f"S = \\frac{{1 \\cdot {p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_adm_v:.2f} \\cdot 400}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
+            else:
+                f_ib_irve = r"I_b = \frac{P}{V \cdot \cos\varphi}"
+                s_ib_irve = f"I_b = \\frac{{{p_cargador_val:,.1f} \\text{{ W}}}}{{230 \\text{{ V}} \\cdot 1.0}} = \\mathbf{{{ib_irve:.2f}\\text{{ A}}}}"
+                f_s_irve = r"S = \frac{2 \cdot P \cdot L}{\gamma \cdot \Delta V_{\text{máx}} \cdot V}"
+                s_s_irve = f"S = \\frac{{2 \\cdot {p_cargador_val:,.1f} \\cdot {irve_long}}}{{{gamma_irve} \\cdot {dv_max_adm_v:.2f} \\cdot 230}} = \\mathbf{{{s_cdt_irve:.2f}\\text{{ mm}}^2}}"
 
-        col_irve_res1, col_irve_res2 = st.columns(2)
-        with col_irve_res1:
-            st.info(f"""
-            #### 1. Intensidad de Diseño del Cargador ($I_b$)
+            col_irve_res1, col_irve_res2 = st.columns(2)
+            with col_irve_res1:
+                st.info(f"""
+                #### 1. Intensidad de Diseño del Cargador ($I_b$)
             
-            **Fórmula Reglamentaria:**
-            $${f_ib_irve}$$
+                **Fórmula Reglamentaria:**
+                $${f_ib_irve}$$
             
-            **Sustitución y Resultado:**
-            $${s_ib_irve}$$
-            * Factor de servicio continuo: 100% de la potencia nominal en régimen permanente.
+                **Sustitución y Resultado:**
+                $${s_ib_irve}$$
+                * Factor de servicio continuo: 100% de la potencia nominal en régimen permanente.
+                """)
+
+            with col_irve_res2:
+                st.info(f"""
+                #### 2. Sección Teórica por Caída de Tensión (Línea IRVE)
+            
+                **Fórmula Reglamentaria (límite {dv_pct_limite:.1f}% CDT):**
+                $${f_s_irve}$$
+            
+                **Sustitución y Resultado:**
+                $${s_s_irve}$$
+                * Caída máxima permitida: **{dv_max_adm_v:.2f} V ({dv_pct_limite:.1f}%)**.
+                """)
+
+            # Banner de Protecciones Exigidas
+            st.markdown(f"""
+            <div style="background: #f8fafc; border: 2px solid #0284c7; padding: 18px; border-radius: 8px; color: #0f172a; margin: 15px 0;">
+                <h4 style="margin-top: 0; color: #0284c7; font-size: 16px;">🛡️ Esquema de Protecciones Obligatorias (ITC-BT-52):</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 10px;">
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <b style="color: #0369a1;">1. Magnetotérmico (PIA):</b><br/>
+                        Calibre <b>{in_pi_auto} A (Curva C)</b><br/>
+                        <small style="color: #64748b;">Poder de corte ≥ 6 kA. Protección contra sobrecargas y cortocircuitos.</small>
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <b style="color: #15803d;">2. Diferencial Obligatorio:</b><br/>
+                        <b>Clase A (con 6mA DC)</b> o <b>Clase B</b><br/>
+                        <small style="color: #64748b;">Sensibilidad 30 mA. Detección de fugas en alterna y corriente continua pura.</small>
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <b style="color: #d97706;">3. Sobretensiones (VTP+VSP):</b><br/>
+                        <b>Permanentes + Transitorias Tipo 2</b><br/>
+                        <small style="color: #64748b;">Con bobina de emisión/disparo o rearme automático.</small>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Dictamen Final
+            st.success(f"""
+            ### ✅ SECCIÓN COMERCIAL ÓPTIMA REBT: {s_final_irve:.1f} mm² Cu (RZ1-K 0.6/1kV)
+            * **Esquema de Origen:** {info_esq_actual['nombre']}.
+            * **Caída de tensión real:** **{dv_real_irve_pct:.3f}%** ({dv_real_irve_v:.2f} V), inferior al límite del **{dv_pct_limite:.1f}%**.
+            * **Intensidad máxima admisible del cable ($I_z$):** **{iz_a_irve:.1f} A** $\ge$ Magnetotérmico **{in_pi_auto} A** $\ge$ Intensidad $I_b$ **{ib_irve:.2f} A** *(Verificación térmica 100% OK)*.
+            * **Canalización reglamentaria:** Tubo **{tubo_dim_str}** no propagador de la llama, libre de halógenos y resistencia al impacto **IK08**.
             """)
 
-        with col_irve_res2:
-            st.info(f"""
-            #### 2. Sección Teórica por Caída de Tensión (Línea IRVE)
-            
-            **Fórmula Reglamentaria (límite {dv_pct_limite:.1f}% CDT):**
-            $${f_s_irve}$$
-            
-            **Sustitución y Resultado:**
-            $${s_s_irve}$$
-            * Caída máxima permitida: **{dv_max_adm_v:.2f} V ({dv_pct_limite:.1f}%)**.
-            """)
-
-        # Banner de Protecciones Exigidas
-        st.markdown(f"""
-        <div style="background: #f8fafc; border: 2px solid #0284c7; padding: 18px; border-radius: 8px; color: #0f172a; margin: 15px 0;">
-            <h4 style="margin-top: 0; color: #0284c7; font-size: 16px;">🛡️ Esquema de Protecciones Obligatorias (ITC-BT-52):</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 10px;">
-                <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                    <b style="color: #0369a1;">1. Magnetotérmico (PIA):</b><br/>
-                    Calibre <b>{in_pi_auto} A (Curva C)</b><br/>
-                    <small style="color: #64748b;">Poder de corte ≥ 6 kA. Protección contra sobrecargas y cortocircuitos.</small>
-                </div>
-                <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                    <b style="color: #15803d;">2. Diferencial Obligatorio:</b><br/>
-                    <b>Clase A (con 6mA DC)</b> o <b>Clase B</b><br/>
-                    <small style="color: #64748b;">Sensibilidad 30 mA. Detección de fugas en alterna y corriente continua pura.</small>
-                </div>
-                <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                    <b style="color: #d97706;">3. Sobretensiones (VTP+VSP):</b><br/>
-                    <b>Permanentes + Transitorias Tipo 2</b><br/>
-                    <small style="color: #64748b;">Con bobina de emisión/disparo o rearme automático.</small>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Dictamen Final
-        st.success(f"""
-        ### ✅ SECCIÓN COMERCIAL ÓPTIMA REBT: {s_final_irve:.1f} mm² Cu (RZ1-K 0.6/1kV)
-        * **Esquema de Origen:** {info_esq_actual['nombre']}.
-        * **Caída de tensión real:** **{dv_real_irve_pct:.3f}%** ({dv_real_irve_v:.2f} V), inferior al límite del **{dv_pct_limite:.1f}%**.
-        * **Intensidad máxima admisible del cable ($I_z$):** **{iz_a_irve:.1f} A** $\ge$ Magnetotérmico **{in_pi_auto} A** $\ge$ Intensidad $I_b$ **{ib_irve:.2f} A** *(Verificación térmica 100% OK)*.
-        * **Canalización reglamentaria:** Tubo **{tubo_dim_str}** no propagador de la llama, libre de halógenos y resistencia al impacto **IK08**.
-        """)
-
-        if st.button("🚀 Tramitar esta Recarga IRVE en la Memoria Técnica Oficial (MTD 30 / CIE)", type="primary", use_container_width=True):
-            st.session_state["mtd_in_pot_inst"] = float(p_cargador_val)
-            st.session_state["mtd_in_pot_max"] = float(p_cargador_val)
-            st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz" if es_trif_irve else "Monofásico (230 V) - 50 Hz"
-            st.session_state["mtd_in_origen"] = str(info_esq_actual.get('origen', 'Centralización de Contadores'))
-            st.session_state["mtd_in_di_cable"] = f"{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
-            st.session_state["mtd_in_di_tubo"] = f"Tubo {tubo_dim_str} libre de halógenos (IK08)"
-            st.session_state["mtd_in_di_long"] = float(irve_long)
-            st.session_state["mtd_in_di_cdt"] = float(round(dv_real_irve_pct, 2))
-            st.session_state["mtd_in_grado"] = "Específica IRVE (ITC-BT-52)"
-            st.session_state["mtd_in_iga"] = int(in_pi_auto)
-            st.session_state["mtd_in_curva"] = "Curva C (General)"
-            st.session_state["mtd_in_icn"] = 6.0
-            st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)" if not es_trif_irve else "Diferencial 4P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)"
-            st.session_state["mtd_in_vtp"] = "Permanentes (POP/VTP) + Transitorias Tipo 2 (DPS/VSP) con bobina de disparo"
-            pe_sec = rebt.dimensionar_conductor_pe(s_final_irve)
-            st.session_state["mtd_in_tierra"] = f"Conductor PE 1x{pe_sec:.0f} mm² Cu | Resistencia bucle tierra Rt ≤ 15 Ω"
-            st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real"
-            st.session_state["mtd_in_emp_uso"] = "Garaje Comunitario / Punto de Recarga VE"
-            st.session_state["mtd_circuitos"] = [
-                {"nombre": "Línea Específica IRVE (Wallbox)", "potencia": float(p_cargador_val), "pia": int(in_pi_auto), "seccion": f"{'4x' if es_trif_irve else '2x'}{s_final_irve:.1f}+TT{pe_sec:.0f}", "tubo": tubo_dim_str, "longitud": float(irve_long), "cdt": float(round(dv_real_irve_pct, 2)), "norma": "ITC-BT-52"}
-            ]
-            st.session_state["mtd_tipo_inst_sel"] = "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)"
-            st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
-            st.rerun()
-
-
-    # =========================================================================
-    # SECCIÓN 3: ESQUEMA UNIFILAR GRÁFICO OFICIAL DGEAIM / ITC-BT-52
-    # =========================================================================
-    st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📐 SECCIÓN 3: Esquema Unifilar Gráfico Oficial (ITC-BT-52 / DGEAIM)</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        svg_unifilar = generar_svg_unifilar_irve(
-            esquema_nombre=info_esq_actual['nombre'],
-            pot_w=p_cargador_val,
-            s_final=s_final_irve,
-            in_pi=in_pi_auto,
-            dv_pct=dv_real_irve_pct,
-            tubo_dim=tubo_dim_str,
-            es_trif=es_trif_irve
-        )
-        
-        # Renderizado 100% fiable con HTML component para evitar bloqueos del navegador
-        import streamlit.components.v1 as components_html
-        components_html.html(f"""
-        <div style="width: 100%; display: flex; justify-content: center; align-items: center; overflow-x: auto; background: transparent; padding: 4px;">
-            {svg_unifilar}
-        </div>
-        """, height=270, scrolling=True)
-
-        st.markdown(f"""
-        <div style="margin-top: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
-            <b style="color: #0369a1; font-size: 13px;">📋 Componentes Normalizados del Esquema Unifilar Oficial:</b>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 12px; color: #334155;">
-                <div>
-                    • <b>Origen de Alimentación:</b> {info_esq_actual['origen']}<br/>
-                    • <b>Sensor de Medida / Balanceo:</b> Pinza toroidal CT conectada al Wallbox (SPL)<br/>
-                    • <b>Línea Derivación:</b> Cable <b>{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu (RZ1-K CPR Cca)</b><br/>
-                    • <b>Canalización Protectora:</b> Tubo <b>{tubo_dim_str}</b> libre de halógenos (IK08)
-                </div>
-                <div>
-                    • <b>Protector Sobretensiones:</b> VSP Transitorias Tipo 2 + VTP Permanentes con bobina<br/>
-                    • <b>Interruptor Automático:</b> Magnetotérmico PIA <b>{in_pi_auto} A (Curva C - Icn ≥ 6 kA)</b><br/>
-                    • <b>Interruptor Diferencial:</b> <b>Clase A (con detección DC 6mA según IEC 62955) o Clase B (30 mA)</b><br/>
-                    • <b>Estación de Recarga:</b> Wallbox <b>{p_cargador_val/1000:.2f} kW (Modo 3 con conector Tipo 2 Mennekes)</b>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # =========================================================================
-    # SECCIÓN 4: PRESUPUESTADOR Y ACOPIO DE MATERIALES PARA EL INSTALADOR
-    # =========================================================================
-    st.markdown('<div class="section-header-amber"><h4 style="margin:0; color:#b45309;">💰 SECCIÓN 4: Presupuestador de Obra y Lista de Materiales para el Instalador</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown("""
-        Calcula el coste total de los materiales y mano de obra para presentar una oferta inmediata al cliente.
-        Puedes ajustar precios y cantidades según tus tarifas de compra de distribuidor.
-        """)
-
-        # Lista de materiales por defecto calculada automáticamente
-        long_calc = float(irve_long)
-        tubo_calc = math.ceil(long_calc * 1.1) # 10% margen
-        cable_calc = math.ceil(long_calc * 1.15) # 15% margen
-
-        # Estimación de precios de mercado
-        p_cargador_pvp = 750.0 if p_cargador_val <= 7400 else 1150.0
-        p_cable_m = 2.40 if s_final_irve <= 6 else (3.80 if s_final_irve <= 10 else 5.90)
-        p_tubo_m = 1.80
-        p_cuadro_pvp = 45.0
-        p_pia_pvp = 22.0
-        p_dif_pvp = 75.0
-        p_vtp_pvp = 85.0
-        p_balanceo_pvp = 95.0
-        p_mano_obra_h = 42.0
-        h_estimadas = 6.0 if long_calc <= 30 else 8.0
-        p_boletin_pvp = 140.0
-
-        col_pr1, col_pr2 = st.columns([3, 2])
-        
-        with col_pr1:
-            st.markdown("##### 📦 Materiales y Equipos Principales:")
-            c_wbox = st.number_input("1. Punto de Recarga Wallbox Modo 3 Tipo 2 (€/ud):", value=p_cargador_pvp, step=50.0, key="pres_irve_wbox")
-            c_cable = st.number_input(f"2. Cable RZ1-K 0.6/1kV {s_final_irve}mm² ({cable_calc} m) (€/m):", value=p_cable_m, step=0.20, key="pres_irve_cable")
-            c_tubo = st.number_input(f"3. Tubo {tubo_dim_str} libre halógenos IK08 ({tubo_calc} m) (€/m):", value=p_tubo_m, step=0.20, key="pres_irve_tubo")
-            c_cuadro = st.number_input("4. Cuadro modular IP65 con cerradura garaje (€/ud):", value=p_cuadro_pvp, step=5.0, key="pres_irve_cuadro")
-            c_prot = st.number_input(f"5. Kit Protecciones (PIA {in_pi_auto}A + Dif Tipo A 6mA + Sobretensiones VTP/VSP) (€):", value=p_pia_pvp+p_dif_pvp+p_vtp_pvp, step=10.0, key="pres_irve_prot")
-
-        with col_pr2:
-            st.markdown("##### 🔧 Medición, Mano de Obra y Boletín:")
-            c_bal = st.number_input("6. Sensor / Medidor de Balanceo Dinámico SPL (€/ud):", value=p_balanceo_pvp, step=10.0, key="pres_irve_bal")
-            horas_mo = st.number_input("7. Horas de Montaje e Instalación (h):", value=h_estimadas, step=1.0, key="pres_irve_h_mo")
-            precio_h = st.number_input("8. Precio Mano de Obra (€/h):", value=p_mano_obra_h, step=2.0, key="pres_irve_p_mo")
-            c_cie = st.number_input("9. Tramitación Memoria Técnica y Boletín CIE (€):", value=p_boletin_pvp, step=10.0, key="pres_irve_cie")
-            tipo_iva_sel = st.radio("Tipo de IVA aplicable:", ["21% (General)", "10% (Reforma / Vivienda habitual)"], horizontal=True, key="pres_irve_iva_sel")
-
-        # Cálculo de totales
-        tot_equipos = c_wbox + (c_cable * cable_calc) + (c_tubo * tubo_calc) + c_cuadro + c_prot + c_bal
-        tot_mo = horas_mo * precio_h
-        tot_tram = c_cie
-        subtotal_obra = tot_equipos + tot_mo + tot_tram
-        
-        pct_iva = 0.10 if "10%" in tipo_iva_sel else 0.21
-        iva_total = subtotal_obra * pct_iva
-        total_con_iva = subtotal_obra + iva_total
-
-        # Estimación Subvención Plan MOVES III (70%)
-        subvencion_moves_70 = total_con_iva * 0.70
-        neto_cliente_moves = total_con_iva - subvencion_moves_70
-
-        st.markdown(f"""
-        <div style="background: #f0fdf4; border: 2px solid #16a34a; border-radius: 8px; padding: 16px; margin: 15px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                <div>
-                    <h3 style="color: #15803d; margin: 0;">Presupuesto Total de Instalación: {total_con_iva:,.2f} € (IVA Incluido)</h3>
-                    <p style="color: #334155; margin: 4px 0 0 0; font-size: 13px;">
-                        Base Imponible: <b>{subtotal_obra:,.2f} €</b> | IVA ({int(pct_iva*100)}%): <b>{iva_total:,.2f} €</b>
-                    </p>
-                </div>
-                <div style="background: white; border: 1.5px solid #16a34a; padding: 8px 14px; border-radius: 6px; text-align: right;">
-                    <span style="font-size: 11px; color: #15803d; font-weight: bold;">🌱 AYUDA ESTIMADA PLAN MOVES III (70%):</span><br/>
-                    <b style="font-size: 15px; color: #15803d;">- {subvencion_moves_70:,.2f} €</b><br/>
-                    <small style="color: #475569;">Coste neto para el cliente: <b>{neto_cliente_moves:,.2f} €</b></small>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        lista_materiales_pdf = [
-            {"concepto": f"Punto de Recarga Wallbox Modo 3 Conector Tipo 2 ({p_cargador_val/1000:.2f} kW)", "cantidad": 1, "unidad": "ud", "precio_ud": c_wbox},
-            {"concepto": f"Cable libre de halógenos RZ1-K 0.6/1kV {s_final_irve} mm² (Cca-s1b,d1,a1)", "cantidad": cable_calc, "unidad": "m", "precio_ud": c_cable},
-            {"concepto": f"Tubo protector {tubo_dim_str} libre de halógenos resistencia IK08 con accesorios", "cantidad": tubo_calc, "unidad": "m", "precio_ud": c_tubo},
-            {"concepto": "Cuadro secundario modular estanco IP65 con cerradura para garaje", "cantidad": 1, "unidad": "ud", "precio_ud": c_cuadro},
-            {"concepto": f"Kit de Protecciones ITC-BT-52 (PIA {in_pi_auto}A C + Dif Tipo A 6mA DC + VTP/VSP)", "cantidad": 1, "unidad": "ud", "precio_ud": c_prot},
-            {"concepto": "Módulo de medida y sensor toroidal para Balanceo Dinámico de Carga (SPL)", "cantidad": 1, "unidad": "ud", "precio_ud": c_bal},
-            {"concepto": "Mano de obra cualificada de montaje, tendido de línea y conexionado", "cantidad": horas_mo, "unidad": "h", "precio_ud": precio_h},
-            {"concepto": "Elaboración de Memoria Técnica de Diseño (MTD) y Certificado CIE Oficial", "cantidad": 1, "unidad": "ud", "precio_ud": c_cie}
-        ]
-
-        col_t_irve1, col_t_irve2 = st.columns([1.5, 1])
-        with col_t_irve1:
-            if st.button("📥 Traspasar este circuito IRVE a la Memoria Técnica (MTD)", type="primary", use_container_width=True, key="btn_transfer_irve_mtd"):
-                if "mtd_circuitos" not in st.session_state or not isinstance(st.session_state["mtd_circuitos"], list):
-                    st.session_state["mtd_circuitos"] = []
-                
-                # Eliminar circuito IRVE previo si existiera para no duplicar
-                st.session_state["mtd_circuitos"] = [c for c in st.session_state["mtd_circuitos"] if "IRVE" not in c.get("nombre", "") and "C13" not in c.get("nombre", "")]
-                
-                c_nom_irve = f"C13 - Recarga VE Wallbox ({p_cargador_val/1000:.1f} kW)"
-                st.session_state["mtd_circuitos"].append({
-                    "nombre": c_nom_irve,
-                    "potencia": int(p_cargador_val),
-                    "pia": int(in_pi_auto),
-                    "seccion": f"{'4' if es_trif_irve else '2'}x{s_final_irve:.0f}+TT{s_final_irve:.0f}",
-                    "tubo": f"M{tubo_dim_str}",
-                    "longitud": int(irve_long),
-                    "cdt": float(f"{dv_real_irve_pct:.2f}"),
-                    "norma": "ITC-BT-52"
-                })
-                st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real (SPL)"
+            if st.button("🚀 Tramitar esta Recarga IRVE en la Memoria Técnica Oficial (MTD 30 / CIE)", type="primary", use_container_width=True):
+                st.session_state["mtd_in_pot_inst"] = float(p_cargador_val)
+                st.session_state["mtd_in_pot_max"] = float(p_cargador_val)
+                st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz" if es_trif_irve else "Monofásico (230 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = str(info_esq_actual.get('origen', 'Centralización de Contadores'))
+                st.session_state["mtd_in_di_cable"] = f"{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
+                st.session_state["mtd_in_di_tubo"] = f"Tubo {tubo_dim_str} libre de halógenos (IK08)"
+                st.session_state["mtd_in_di_long"] = float(irve_long)
+                st.session_state["mtd_in_di_cdt"] = float(round(dv_real_irve_pct, 2))
+                st.session_state["mtd_in_grado"] = "Específica IRVE (ITC-BT-52)"
+                st.session_state["mtd_in_iga"] = int(in_pi_auto)
+                st.session_state["mtd_in_curva"] = "Curva C (General)"
+                st.session_state["mtd_in_icn"] = 6.0
+                st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)" if not es_trif_irve else "Diferencial 4P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)"
+                st.session_state["mtd_in_vtp"] = "Permanentes (POP/VTP) + Transitorias Tipo 2 (DPS/VSP) con bobina de disparo"
+                pe_sec = rebt.dimensionar_conductor_pe(s_final_irve)
+                st.session_state["mtd_in_tierra"] = f"Conductor PE 1x{pe_sec:.0f} mm² Cu | Resistencia bucle tierra Rt ≤ 15 Ω"
+                st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real"
+                st.session_state["mtd_in_emp_uso"] = "Garaje Comunitario / Punto de Recarga VE"
+                st.session_state["mtd_circuitos"] = [
+                    {"nombre": "Línea Específica IRVE (Wallbox)", "potencia": float(p_cargador_val), "pia": int(in_pi_auto), "seccion": f"{'4x' if es_trif_irve else '2x'}{s_final_irve:.1f}+TT{pe_sec:.0f}", "tubo": tubo_dim_str, "longitud": float(irve_long), "cdt": float(round(dv_real_irve_pct, 2)), "norma": "ITC-BT-52"}
+                ]
+                st.session_state["mtd_tipo_inst_sel"] = "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)"
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
-                st.success("✅ ¡Punto de Recarga IRVE traspasado a la Memoria Técnica! Redirigiendo...")
                 st.rerun()
-        with col_t_irve2:
-            st.caption("Inserta este circuito IRVE como circuito C13 en la Memoria Técnica General.")
 
-    # =========================================================================
-    # SECCIÓN 5: ASISTENTE IA EXPERTO EN IRVE Y REBT (VOZ Y TEXTO)
-    # =========================================================================
-    ia_asistente_irve.renderizar_asistente_irve()
 
-    # =========================================================================
-    # SECCIÓN 6: GENERACIÓN DE MEMORIA TÉCNICA OFICIAL PARA DGEAIM REGIÓN DE MURCIA
-    # =========================================================================
-    st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🏛️ SECCIÓN 6: Memoria Técnica de Diseño (MTD) Oficial para la DGEAIM Región de Murcia</h4></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown("""
-        <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
-            Este documento genera la <b>Memoria Técnica de Diseño (MTD) Oficial</b> y el <b>Esquema Unifilar Reglamentario</b> conforme al modelo exigido por la <b>Dirección General de Energía y Actividad Industrial y Minera de la Región de Murcia (DGEAIM)</b> para su presentación telemática oficial.
-        </p>
-        """, unsafe_allow_html=True)
+    with tab_irve3:
+        # SECCIÓN 3: ESQUEMA UNIFILAR GRÁFICO OFICIAL DGEAIM / ITC-BT-52
+        # =========================================================================
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📐 SECCIÓN 3: Esquema Unifilar Gráfico Oficial (ITC-BT-52 / DGEAIM)</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            svg_unifilar = generar_svg_unifilar_irve(
+                esquema_nombre=info_esq_actual['nombre'],
+                pot_w=p_cargador_val,
+                s_final=s_final_irve,
+                in_pi=in_pi_auto,
+                dv_pct=dv_real_irve_pct,
+                tubo_dim=tubo_dim_str,
+                es_trif=es_trif_irve
+            )
+        
+            # Renderizado 100% fiable con HTML component para evitar bloqueos del navegador
+            import streamlit.components.v1 as components_html
+            components_html.html(f"""
+            <div style="width: 100%; display: flex; justify-content: center; align-items: center; overflow-x: auto; background: transparent; padding: 4px;">
+                {svg_unifilar}
+            </div>
+            """, height=270, scrolling=True)
 
-        with st.expander("📄 Datos del Emplazamiento en la Región de Murcia y Validación Oficial", expanded=True):
-            user_auth = st.session_state.get("usuario_autenticado", {})
-            nom_inst_def = user_auth.get("nombre_instalador", "Richard Orlando Choque Tejerina")
-            emp_def = user_auth.get("nombre_empresa", "BOLIMUR INSTALACIONES Y REFORMAS")
-            lic_def = user_auth.get("num_licencia_rebt", "REBT-30/15892")
+            st.markdown(f"""
+            <div style="margin-top: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
+                <b style="color: #0369a1; font-size: 13px;">📋 Componentes Normalizados del Esquema Unifilar Oficial:</b>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 12px; color: #334155;">
+                    <div>
+                        • <b>Origen de Alimentación:</b> {info_esq_actual['origen']}<br/>
+                        • <b>Sensor de Medida / Balanceo:</b> Pinza toroidal CT conectada al Wallbox (SPL)<br/>
+                        • <b>Línea Derivación:</b> Cable <b>{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu (RZ1-K CPR Cca)</b><br/>
+                        • <b>Canalización Protectora:</b> Tubo <b>{tubo_dim_str}</b> libre de halógenos (IK08)
+                    </div>
+                    <div>
+                        • <b>Protector Sobretensiones:</b> VSP Transitorias Tipo 2 + VTP Permanentes con bobina<br/>
+                        • <b>Interruptor Automático:</b> Magnetotérmico PIA <b>{in_pi_auto} A (Curva C - Icn ≥ 6 kA)</b><br/>
+                        • <b>Interruptor Diferencial:</b> <b>Clase A (con detección DC 6mA según IEC 62955) o Clase B (30 mA)</b><br/>
+                        • <b>Estación de Recarga:</b> Wallbox <b>{p_cargador_val/1000:.2f} kW (Modo 3 con conector Tipo 2 Mennekes)</b>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            cli_activo = st.session_state.get("cliente_activo_proyecto", {})
-            cli_nom_def = cli_activo.get("nombre_completo", "Propietario / Titular IRVE")
-            cli_nif_def = cli_activo.get("nif_cif", "-")
-            cli_dir_def = cli_activo.get("direccion", "Plaza de Garaje nº 18, C/ Mayor")
-            cli_loc_def = cli_activo.get("localidad", "Murcia (Región de Murcia)")
+    with tab_irve4:
+        # SECCIÓN 4: PRESUPUESTADOR Y ACOPIO DE MATERIALES PARA EL INSTALADOR
+        # =========================================================================
+        st.markdown('<div class="section-header-amber"><h4 style="margin:0; color:#b45309;">💰 SECCIÓN 4: Presupuestador de Obra y Lista de Materiales para el Instalador</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("""
+            Calcula el coste total de los materiales y mano de obra para presentar una oferta inmediata al cliente.
+            Puedes ajustar precios y cantidades según tus tarifas de compra de distribuidor.
+            """)
 
-            col_m1, col_m2 = st.columns(2)
-            with col_m1:
-                p_nombre = st.text_input("Nombre de la Instalación / Proyecto:", "Instalación de Punto de Recarga IRVE", key="irve_pdf_nombre")
-                p_emplazamiento = st.text_input("Dirección del Garaje / Plaza:", cli_dir_def, key="irve_pdf_emp")
-                p_municipio = st.selectbox(
-                    "Municipio de la Región de Murcia:",
-                    [
-                        "Murcia (Capital / Pedanías)", "Cartagena", "Lorca", "Molina de Segura", 
-                        "Alcantarilla", "Torre Pacheco", "Águilas", "Cieza", "Yecla", 
-                        "San Javier", "Mazarrón", "Totana", "Caravaca de la Cruz", "Jumilla",
-                        "San Pedro del Pinatar", "Las Torres de Cotillas", "Alhama de Murcia",
-                        "Archena", "Fuente Álamo", "Santomera", "Puerto Lumbreras", "Abarán",
-                        "Cehegín", "Bullas", "Beniel", "Calasparra", "Fortuna", "Alguazas",
-                        "Moratalla", "Lorquí", "Abanilla", "Blanca", "Librilla", "Pliego",
-                        "Villanueva del Río Segura", "Campos del Río", "Ricote", "Ulea", "Ojós"
-                    ],
-                    index=0,
-                    key="irve_pdf_muni"
-                )
-                p_cliente_nom = st.text_input("Titular / Promotor de la Instalación:", cli_nom_def, key="irve_pdf_cli_nom")
-                p_cliente_nif = st.text_input("NIF / CIF del Titular:", cli_nif_def, key="irve_pdf_cli_nif")
-            with col_m2:
-                p_proyectista = st.text_input("Instalador Autorizado Habilitado:", nom_inst_def, key="irve_pdf_proy")
-                p_licencia = st.text_input("Nº Certificado Cualificación REBT:", lic_def, key="irve_pdf_lic")
-                p_empresa = st.text_input("Empresa Instaladora (RII Murcia):", emp_def, key="irve_pdf_empresa")
-                p_cups = st.text_input("Código CUPS / Ref. Catastral Suministro:", "ES0021000000000000XX", key="irve_pdf_cups")
-                p_expediente = st.text_input("Nº Expediente / Referencia Interna:", "EXP-IRVE-MURCIA-2026", key="irve_pdf_exp")
+            # Lista de materiales por defecto calculada automáticamente
+            long_calc = float(irve_long)
+            tubo_calc = math.ceil(long_calc * 1.1) # 10% margen
+            cable_calc = math.ceil(long_calc * 1.15) # 15% margen
 
-            with st.expander("🧪 Resultados de las Verificaciones Previas Multifunción (ITC-BT-05)", expanded=True):
-                st.caption("Introduce los valores medidos en obra con el comprobador de instalaciones multifunción para el circuito IRVE:")
-                col_i_m1, col_i_m2 = st.columns(2)
-                with col_i_m1:
-                    irve_med_pe = st.number_input("Continuidad Conductor PE (Ω) [Límite ≤ 0.50 Ω]:", value=0.12, step=0.01, format="%.2f", key="irve_med_pe")
-                    irve_med_aisl = st.number_input("Resistencia Aislamiento a 500 Vcc (MΩ) [Límite ≥ 1.0 MΩ]:", value=100.0, step=1.0, format="%.1f", key="irve_med_aisl")
-                with col_i_m2:
-                    irve_med_rt = st.number_input("Resistencia Bucle de Tierra Rt (Ω) [Límite ≤ 15 Ω]:", value=11.4, step=0.1, format="%.1f", key="irve_med_rt")
-                    irve_med_dif_ms = st.number_input("Tiempo Disparo Diferencial (ms) [Límite ≤ 300 ms]:", value=24.0, step=1.0, format="%.1f", key="irve_med_dif_ms")
+            # Estimación de precios de mercado
+            p_cargador_pvp = 750.0 if p_cargador_val <= 7400 else 1150.0
+            p_cable_m = 2.40 if s_final_irve <= 6 else (3.80 if s_final_irve <= 10 else 5.90)
+            p_tubo_m = 1.80
+            p_cuadro_pvp = 45.0
+            p_pia_pvp = 22.0
+            p_dif_pvp = 75.0
+            p_vtp_pvp = 85.0
+            p_balanceo_pvp = 95.0
+            p_mano_obra_h = 42.0
+            h_estimadas = 6.0 if long_calc <= 30 else 8.0
+            p_boletin_pvp = 140.0
 
-            proyecto_info = {
-                "nombre": p_nombre,
-                "emplazamiento": p_emplazamiento,
-                "municipio": p_municipio,
-                "cliente_nombre": p_cliente_nom,
-                "cliente_nif": p_cliente_nif,
-                "cups": p_cups,
-                "proyectista": p_proyectista,
-                "licencia": p_licencia,
-                "empresa": p_empresa,
-                "localidad": f"{p_municipio} (Región de Murcia)",
-                "expediente": p_expediente,
-                "fecha": datetime.date.today().strftime("%d/%m/%Y")
-            }
+            col_pr1, col_pr2 = st.columns([3, 2])
+        
+            with col_pr1:
+                st.markdown("##### 📦 Materiales y Equipos Principales:")
+                c_wbox = st.number_input("1. Punto de Recarga Wallbox Modo 3 Tipo 2 (€/ud):", value=p_cargador_pvp, step=50.0, key="pres_irve_wbox")
+                c_cable = st.number_input(f"2. Cable RZ1-K 0.6/1kV {s_final_irve}mm² ({cable_calc} m) (€/m):", value=p_cable_m, step=0.20, key="pres_irve_cable")
+                c_tubo = st.number_input(f"3. Tubo {tubo_dim_str} libre halógenos IK08 ({tubo_calc} m) (€/m):", value=p_tubo_m, step=0.20, key="pres_irve_tubo")
+                c_cuadro = st.number_input("4. Cuadro modular IP65 con cerradura garaje (€/ud):", value=p_cuadro_pvp, step=5.0, key="pres_irve_cuadro")
+                c_prot = st.number_input(f"5. Kit Protecciones (PIA {in_pi_auto}A + Dif Tipo A 6mA + Sobretensiones VTP/VSP) (€):", value=p_pia_pvp+p_dif_pvp+p_vtp_pvp, step=10.0, key="pres_irve_prot")
 
-            irve_params = {
-                "pot_wallbox": p_cargador_val,
-                "long": irve_long,
-                "mat": irve_mat,
-                "aisl": irve_aisl,
-                "metodo": metodo_irve_key,
-                "esquema": info_esq_actual['nombre'],
-                "red": tipo_red_irve,
-                "es_trifasico": es_trif_irve,
-                "ensayos": {
-                    "pe_ohm": irve_med_pe,
-                    "aisl_mohm": irve_med_aisl,
-                    "rt_ohm": irve_med_rt,
-                    "dif_ms": irve_med_dif_ms
+            with col_pr2:
+                st.markdown("##### 🔧 Medición, Mano de Obra y Boletín:")
+                c_bal = st.number_input("6. Sensor / Medidor de Balanceo Dinámico SPL (€/ud):", value=p_balanceo_pvp, step=10.0, key="pres_irve_bal")
+                horas_mo = st.number_input("7. Horas de Montaje e Instalación (h):", value=h_estimadas, step=1.0, key="pres_irve_h_mo")
+                precio_h = st.number_input("8. Precio Mano de Obra (€/h):", value=p_mano_obra_h, step=2.0, key="pres_irve_p_mo")
+                c_cie = st.number_input("9. Tramitación Memoria Técnica y Boletín CIE (€):", value=p_boletin_pvp, step=10.0, key="pres_irve_cie")
+                tipo_iva_sel = st.radio("Tipo de IVA aplicable:", ["21% (General)", "10% (Reforma / Vivienda habitual)"], horizontal=True, key="pres_irve_iva_sel")
+
+            # Cálculo de totales
+            tot_equipos = c_wbox + (c_cable * cable_calc) + (c_tubo * tubo_calc) + c_cuadro + c_prot + c_bal
+            tot_mo = horas_mo * precio_h
+            tot_tram = c_cie
+            subtotal_obra = tot_equipos + tot_mo + tot_tram
+        
+            pct_iva = 0.10 if "10%" in tipo_iva_sel else 0.21
+            iva_total = subtotal_obra * pct_iva
+            total_con_iva = subtotal_obra + iva_total
+
+            # Estimación Subvención Plan MOVES III (70%)
+            subvencion_moves_70 = total_con_iva * 0.70
+            neto_cliente_moves = total_con_iva - subvencion_moves_70
+
+            st.markdown(f"""
+            <div style="background: #f0fdf4; border: 2px solid #16a34a; border-radius: 8px; padding: 16px; margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <div>
+                        <h3 style="color: #15803d; margin: 0;">Presupuesto Total de Instalación: {total_con_iva:,.2f} € (IVA Incluido)</h3>
+                        <p style="color: #334155; margin: 4px 0 0 0; font-size: 13px;">
+                            Base Imponible: <b>{subtotal_obra:,.2f} €</b> | IVA ({int(pct_iva*100)}%): <b>{iva_total:,.2f} €</b>
+                        </p>
+                    </div>
+                    <div style="background: white; border: 1.5px solid #16a34a; padding: 8px 14px; border-radius: 6px; text-align: right;">
+                        <span style="font-size: 11px; color: #15803d; font-weight: bold;">🌱 AYUDA ESTIMADA PLAN MOVES III (70%):</span><br/>
+                        <b style="font-size: 15px; color: #15803d;">- {subvencion_moves_70:,.2f} €</b><br/>
+                        <small style="color: #475569;">Coste neto para el cliente: <b>{neto_cliente_moves:,.2f} €</b></small>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            lista_materiales_pdf = [
+                {"concepto": f"Punto de Recarga Wallbox Modo 3 Conector Tipo 2 ({p_cargador_val/1000:.2f} kW)", "cantidad": 1, "unidad": "ud", "precio_ud": c_wbox},
+                {"concepto": f"Cable libre de halógenos RZ1-K 0.6/1kV {s_final_irve} mm² (Cca-s1b,d1,a1)", "cantidad": cable_calc, "unidad": "m", "precio_ud": c_cable},
+                {"concepto": f"Tubo protector {tubo_dim_str} libre de halógenos resistencia IK08 con accesorios", "cantidad": tubo_calc, "unidad": "m", "precio_ud": c_tubo},
+                {"concepto": "Cuadro secundario modular estanco IP65 con cerradura para garaje", "cantidad": 1, "unidad": "ud", "precio_ud": c_cuadro},
+                {"concepto": f"Kit de Protecciones ITC-BT-52 (PIA {in_pi_auto}A C + Dif Tipo A 6mA DC + VTP/VSP)", "cantidad": 1, "unidad": "ud", "precio_ud": c_prot},
+                {"concepto": "Módulo de medida y sensor toroidal para Balanceo Dinámico de Carga (SPL)", "cantidad": 1, "unidad": "ud", "precio_ud": c_bal},
+                {"concepto": "Mano de obra cualificada de montaje, tendido de línea y conexionado", "cantidad": horas_mo, "unidad": "h", "precio_ud": precio_h},
+                {"concepto": "Elaboración de Memoria Técnica de Diseño (MTD) y Certificado CIE Oficial", "cantidad": 1, "unidad": "ud", "precio_ud": c_cie}
+            ]
+
+            col_t_irve1, col_t_irve2 = st.columns([1.5, 1])
+            with col_t_irve1:
+                if st.button("📥 Traspasar este circuito IRVE a la Memoria Técnica (MTD)", type="primary", use_container_width=True, key="btn_transfer_irve_mtd"):
+                    if "mtd_circuitos" not in st.session_state or not isinstance(st.session_state["mtd_circuitos"], list):
+                        st.session_state["mtd_circuitos"] = []
+                
+                    # Eliminar circuito IRVE previo si existiera para no duplicar
+                    st.session_state["mtd_circuitos"] = [c for c in st.session_state["mtd_circuitos"] if "IRVE" not in c.get("nombre", "") and "C13" not in c.get("nombre", "")]
+                
+                    c_nom_irve = f"C13 - Recarga VE Wallbox ({p_cargador_val/1000:.1f} kW)"
+                    st.session_state["mtd_circuitos"].append({
+                        "nombre": c_nom_irve,
+                        "potencia": int(p_cargador_val),
+                        "pia": int(in_pi_auto),
+                        "seccion": f"{'4' if es_trif_irve else '2'}x{s_final_irve:.0f}+TT{s_final_irve:.0f}",
+                        "tubo": f"M{tubo_dim_str}",
+                        "longitud": int(irve_long),
+                        "cdt": float(f"{dv_real_irve_pct:.2f}"),
+                        "norma": "ITC-BT-52"
+                    })
+                    st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real (SPL)"
+                    st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
+                    st.success("✅ ¡Punto de Recarga IRVE traspasado a la Memoria Técnica! Redirigiendo...")
+                    st.rerun()
+            with col_t_irve2:
+                st.caption("Inserta este circuito IRVE como circuito C13 en la Memoria Técnica General.")
+
+    with tab_irve5:
+        # SECCIÓN 5: ASISTENTE IA EXPERTO EN IRVE Y REBT (VOZ Y TEXTO)
+        # =========================================================================
+        ia_asistente_irve.renderizar_asistente_irve()
+
+    with tab_irve6:
+        # SECCIÓN 6: GENERACIÓN DE MEMORIA TÉCNICA OFICIAL PARA DGEAIM REGIÓN DE MURCIA
+        # =========================================================================
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🏛️ SECCIÓN 6: Memoria Técnica de Diseño (MTD) Oficial para la DGEAIM Región de Murcia</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("""
+            <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
+                Este documento genera la <b>Memoria Técnica de Diseño (MTD) Oficial</b> y el <b>Esquema Unifilar Reglamentario</b> conforme al modelo exigido por la <b>Dirección General de Energía y Actividad Industrial y Minera de la Región de Murcia (DGEAIM)</b> para su presentación telemática oficial.
+            </p>
+            """, unsafe_allow_html=True)
+
+            with st.expander("📄 Datos del Emplazamiento en la Región de Murcia y Validación Oficial", expanded=True):
+                user_auth = st.session_state.get("usuario_autenticado", {})
+                nom_inst_def = user_auth.get("nombre_instalador", "Richard Orlando Choque Tejerina")
+                emp_def = user_auth.get("nombre_empresa", "BOLIMUR INSTALACIONES Y REFORMAS")
+                lic_def = user_auth.get("num_licencia_rebt", "REBT-30/15892")
+
+                cli_activo = st.session_state.get("cliente_activo_proyecto", {})
+                cli_nom_def = cli_activo.get("nombre_completo", "Propietario / Titular IRVE")
+                cli_nif_def = cli_activo.get("nif_cif", "-")
+                cli_dir_def = cli_activo.get("direccion", "Plaza de Garaje nº 18, C/ Mayor")
+                cli_loc_def = cli_activo.get("localidad", "Murcia (Región de Murcia)")
+
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    p_nombre = st.text_input("Nombre de la Instalación / Proyecto:", "Instalación de Punto de Recarga IRVE", key="irve_pdf_nombre")
+                    p_emplazamiento = st.text_input("Dirección del Garaje / Plaza:", cli_dir_def, key="irve_pdf_emp")
+                    p_municipio = st.selectbox(
+                        "Municipio de la Región de Murcia:",
+                        [
+                            "Murcia (Capital / Pedanías)", "Cartagena", "Lorca", "Molina de Segura", 
+                            "Alcantarilla", "Torre Pacheco", "Águilas", "Cieza", "Yecla", 
+                            "San Javier", "Mazarrón", "Totana", "Caravaca de la Cruz", "Jumilla",
+                            "San Pedro del Pinatar", "Las Torres de Cotillas", "Alhama de Murcia",
+                            "Archena", "Fuente Álamo", "Santomera", "Puerto Lumbreras", "Abarán",
+                            "Cehegín", "Bullas", "Beniel", "Calasparra", "Fortuna", "Alguazas",
+                            "Moratalla", "Lorquí", "Abanilla", "Blanca", "Librilla", "Pliego",
+                            "Villanueva del Río Segura", "Campos del Río", "Ricote", "Ulea", "Ojós"
+                        ],
+                        index=0,
+                        key="irve_pdf_muni"
+                    )
+                    p_cliente_nom = st.text_input("Titular / Promotor de la Instalación:", cli_nom_def, key="irve_pdf_cli_nom")
+                    p_cliente_nif = st.text_input("NIF / CIF del Titular:", cli_nif_def, key="irve_pdf_cli_nif")
+                with col_m2:
+                    p_proyectista = st.text_input("Instalador Autorizado Habilitado:", nom_inst_def, key="irve_pdf_proy")
+                    p_licencia = st.text_input("Nº Certificado Cualificación REBT:", lic_def, key="irve_pdf_lic")
+                    p_empresa = st.text_input("Empresa Instaladora (RII Murcia):", emp_def, key="irve_pdf_empresa")
+                    p_cups = st.text_input("Código CUPS / Ref. Catastral Suministro:", "ES0021000000000000XX", key="irve_pdf_cups")
+                    p_expediente = st.text_input("Nº Expediente / Referencia Interna:", "EXP-IRVE-MURCIA-2026", key="irve_pdf_exp")
+
+                with st.expander("🧪 Resultados de las Verificaciones Previas Multifunción (ITC-BT-05)", expanded=True):
+                    st.caption("Introduce los valores medidos en obra con el comprobador de instalaciones multifunción para el circuito IRVE:")
+                    col_i_m1, col_i_m2 = st.columns(2)
+                    with col_i_m1:
+                        irve_med_pe = st.number_input("Continuidad Conductor PE (Ω) [Límite ≤ 0.50 Ω]:", value=0.12, step=0.01, format="%.2f", key="irve_med_pe")
+                        irve_med_aisl = st.number_input("Resistencia Aislamiento a 500 Vcc (MΩ) [Límite ≥ 1.0 MΩ]:", value=100.0, step=1.0, format="%.1f", key="irve_med_aisl")
+                    with col_i_m2:
+                        irve_med_rt = st.number_input("Resistencia Bucle de Tierra Rt (Ω) [Límite ≤ 15 Ω]:", value=11.4, step=0.1, format="%.1f", key="irve_med_rt")
+                        irve_med_dif_ms = st.number_input("Tiempo Disparo Diferencial (ms) [Límite ≤ 300 ms]:", value=24.0, step=1.0, format="%.1f", key="irve_med_dif_ms")
+
+                proyecto_info = {
+                    "nombre": p_nombre,
+                    "emplazamiento": p_emplazamiento,
+                    "municipio": p_municipio,
+                    "cliente_nombre": p_cliente_nom,
+                    "cliente_nif": p_cliente_nif,
+                    "cups": p_cups,
+                    "proyectista": p_proyectista,
+                    "licencia": p_licencia,
+                    "empresa": p_empresa,
+                    "localidad": f"{p_municipio} (Región de Murcia)",
+                    "expediente": p_expediente,
+                    "fecha": datetime.date.today().strftime("%d/%m/%Y")
                 }
-            }
 
-            irve_results = {
-                "ib": ib_irve,
-                "dv_max_adm_pct": dv_pct_limite,
-                "dv_max_adm_v": dv_max_adm_v,
-                "s_cdt": s_cdt_irve,
-                "s_final": s_final_irve,
-                "in_pi": in_pi_auto,
-                "iz_adm": iz_a_irve,
-                "dv_real_v": dv_real_irve_v,
-                "dv_real_pct": dv_real_irve_pct,
-                "tubo_irve": tubo_dim_str,
-                "gamma": gamma_irve
-            }
+                irve_params = {
+                    "pot_wallbox": p_cargador_val,
+                    "long": irve_long,
+                    "mat": irve_mat,
+                    "aisl": irve_aisl,
+                    "metodo": metodo_irve_key,
+                    "esquema": info_esq_actual['nombre'],
+                    "red": tipo_red_irve,
+                    "es_trifasico": es_trif_irve,
+                    "ensayos": {
+                        "pe_ohm": irve_med_pe,
+                        "aisl_mohm": irve_med_aisl,
+                        "rt_ohm": irve_med_rt,
+                        "dif_ms": irve_med_dif_ms
+                    }
+                }
 
-            try:
-                pdf_bytes_irve = pdf_irve.generar_pdf_irve(proyecto_info, irve_params, irve_results, lista_materiales_pdf)
-                from modulos import visor_pdf
-                visor_pdf.mostrar_visor_pdf(
-                    pdf_bytes=pdf_bytes_irve,
-                    nombre_archivo=f"MTD_IRVE_DGEAIM_Murcia_{p_expediente}.pdf",
-                    label_boton="📥 Descargar Documento Oficial MTD para DGEAIM Murcia (PDF)"
-                )
-            except Exception as err:
-                st.error(f"⚠️ Ocurrió un error al generar la Memoria Técnica Oficial: {err}")
+                irve_results = {
+                    "ib": ib_irve,
+                    "dv_max_adm_pct": dv_pct_limite,
+                    "dv_max_adm_v": dv_max_adm_v,
+                    "s_cdt": s_cdt_irve,
+                    "s_final": s_final_irve,
+                    "in_pi": in_pi_auto,
+                    "iz_adm": iz_a_irve,
+                    "dv_real_v": dv_real_irve_v,
+                    "dv_real_pct": dv_real_irve_pct,
+                    "tubo_irve": tubo_dim_str,
+                    "gamma": gamma_irve
+                }
+
+                try:
+                    pdf_bytes_irve = pdf_irve.generar_pdf_irve(proyecto_info, irve_params, irve_results, lista_materiales_pdf)
+                    from modulos import visor_pdf
+                    visor_pdf.mostrar_visor_pdf(
+                        pdf_bytes=pdf_bytes_irve,
+                        nombre_archivo=f"MTD_IRVE_DGEAIM_Murcia_{p_expediente}.pdf",
+                        label_boton="📥 Descargar Documento Oficial MTD para DGEAIM Murcia (PDF)"
+                    )
+                except Exception as err:
+                    st.error(f"⚠️ Ocurrió un error al generar la Memoria Técnica Oficial: {err}")
 
