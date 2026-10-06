@@ -458,6 +458,114 @@ css_tema_oscuro = """
         fill: none !important;
     }
 
+    /* =========================================================================
+       CÍRCULOS DE RADIO BUTTON (MODO OSCURO - MÁXIMA NITIDEZ Y CONTRASTE)
+       ========================================================================= */
+    div[data-testid="stRadio"] [role="radiogroup"] label,
+    div[data-testid="stRadioOption"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        cursor: pointer !important;
+        gap: 10px !important;
+        margin-bottom: 6px !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stRadio"] [role="radiogroup"] label:hover,
+    div[data-testid="stRadioOption"]:hover {
+        background-color: rgba(56, 189, 248, 0.12) !important;
+    }
+
+    /* Círculo Exterior del Radio Button en Modo Oscuro - Borde Celeste Eléctrico y Fondo Oscuro */
+    div[data-testid="stRadio"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadio"] div.e1mpz0hj4,
+    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4,
+    div[data-testid="stRadio"] [role="radiogroup"] label > span + div,
+    div[data-testid="stRadio"] [role="radiogroup"] label div:first-of-type,
+    div[data-testid="stRadioOption"] div:first-of-type,
+    div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        border: 2.5px solid #38bdf8 !important;
+        border-radius: 50% !important;
+        background-color: #0f172a !important;
+        background: #0f172a !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Interior del círculo no seleccionado en Modo Oscuro */
+    div[data-testid="stRadio"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadioOption"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] div.e1mpz0hj5,
+    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj5 {
+        background-color: #0f172a !important;
+        background: #0f172a !important;
+        border-radius: 50% !important;
+        transition: all 0.2s ease !important;
+    }
+
+    /* Hover en el círculo del Radio Button */
+    div[data-testid="stRadio"] label:hover [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"]:hover [class*="e1mpz0hj4"] {
+        border-color: #7dd3fc !important;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.6) !important;
+        transform: scale(1.08) !important;
+    }
+
+    /* Círculo Seleccionado en Modo Oscuro */
+    div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj4"],
+    div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"],
+    div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) div:first-of-type,
+    div[data-testid="stRadio"] div[aria-checked="true"] > div:first-child,
+    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {
+        background-color: #0284c7 !important;
+        background: #0284c7 !important;
+        border-color: #38bdf8 !important;
+        border-width: 2.5px !important;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.75) !important;
+    }
+
+    /* Punto central blanco cuando está seleccionado */
+    div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] div[aria-checked="true"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div > div {
+        width: 9px !important;
+        height: 9px !important;
+        min-width: 9px !important;
+        min-height: 9px !important;
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border-radius: 50% !important;
+        box-shadow: 0 0 8px #ffffff !important;
+        display: block !important;
+    }
+
+    /* Texto de Radio Button en Modo Oscuro */
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span,
+    div[data-testid="stRadioOption"] p,
+    div[data-testid="stRadioOption"] span {
+        color: #f8fafc !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        letter-spacing: 0.2px !important;
+    }
+
     /* MENÚS DESPLEGABLES Y POPOVERS - MODO OSCURO */
     div[data-baseweb="popover"],
     div[data-baseweb="popover"] > div,
@@ -964,6 +1072,115 @@ css_tema_solar = """
         font-weight: 700 !important;
         font-size: 15px !important;
     }
+
+    /* =========================================================================
+       CÍRCULOS DE RADIO BUTTON (MODO SOLAR / DÍA - MÁXIMA NITIDEZ Y CONTRASTE)
+       ========================================================================= */
+    div[data-testid="stRadio"] [role="radiogroup"] label,
+    div[data-testid="stRadioOption"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        cursor: pointer !important;
+        gap: 10px !important;
+        margin-bottom: 6px !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stRadio"] [role="radiogroup"] label:hover,
+    div[data-testid="stRadioOption"]:hover {
+        background-color: rgba(2, 132, 199, 0.08) !important;
+    }
+
+    /* Círculo Exterior del Radio Button en Modo Solar - Reposo con Borde Azul 2.5px y Fondo Slate-200 */
+    div[data-testid="stRadio"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadio"] div.e1mpz0hj4,
+    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4,
+    div[data-testid="stRadio"] [role="radiogroup"] label > span + div,
+    div[data-testid="stRadio"] [role="radiogroup"] label div:first-of-type,
+    div[data-testid="stRadioOption"] div:first-of-type,
+    div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 50% !important;
+        background-color: #e2e8f0 !important;
+        background: #e2e8f0 !important;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Interior del círculo no seleccionado en Modo Solar */
+    div[data-testid="stRadio"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadioOption"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] div.e1mpz0hj5,
+    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj5 {
+        background-color: #e2e8f0 !important;
+        background: #e2e8f0 !important;
+        border-radius: 50% !important;
+        transition: all 0.2s ease !important;
+    }
+
+    /* Hover en el círculo del Radio Button en Modo Solar */
+    div[data-testid="stRadio"] label:hover [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"]:hover [class*="e1mpz0hj4"] {
+        border-color: #0369a1 !important;
+        background-color: #bae6fd !important;
+        background: #bae6fd !important;
+        transform: scale(1.08) !important;
+    }
+
+    /* Círculo Seleccionado en Modo Solar - Azul Océano Sólido */
+    div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj4"],
+    div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj4"],
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"],
+    div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) div:first-of-type,
+    div[data-testid="stRadio"] div[aria-checked="true"] > div:first-child,
+    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {
+        background-color: #0284c7 !important;
+        background: #0284c7 !important;
+        border-color: #0284c7 !important;
+        border-width: 2.5px !important;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5) !important;
+    }
+
+    /* Punto central blanco cuando está seleccionado en Modo Solar */
+    div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] div[aria-checked="true"] [class*="e1mpz0hj5"],
+    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div > div {
+        width: 9px !important;
+        height: 9px !important;
+        min-width: 9px !important;
+        min-height: 9px !important;
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border-radius: 50% !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+        display: block !important;
+    }
+
+    /* Texto de Radio Button en Modo Solar */
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span,
+    div[data-testid="stRadioOption"] p,
+    div[data-testid="stRadioOption"] span {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        letter-spacing: 0.2px !important;
+    }
 """ if not tema_es_oscuro else ""
 
 container_bg_global = "#0f172a" if tema_es_oscuro else "#ffffff"
@@ -1290,7 +1507,8 @@ st.markdown(f"""
            FIGURAS Y CÍRCULOS DE TILDE (RADIO BUTTONS Y CHECKBOXES DE ALTA NITIDEZ)
            ========================================================================= */
         /* Círculos de Radio Button */
-        div[data-testid="stRadio"] [role="radiogroup"] label {{
+        div[data-testid="stRadio"] [role="radiogroup"] label,
+        div[data-testid="stRadioOption"] {{
             display: inline-flex !important;
             align-items: center !important;
             cursor: pointer !important;
@@ -1300,17 +1518,20 @@ st.markdown(f"""
             border-radius: 6px !important;
             transition: all 0.15s ease !important;
         }}
-        div[data-testid="stRadio"] [role="radiogroup"] label:hover {{
+        div[data-testid="stRadio"] [role="radiogroup"] label:hover,
+        div[data-testid="stRadioOption"]:hover {{
             background-color: {'rgba(56, 189, 248, 0.12)' if tema_es_oscuro else 'rgba(2, 132, 199, 0.08)'} !important;
         }}
-        div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) {{
-            background-color: {'rgba(56, 189, 248, 0.15)' if tema_es_oscuro else 'rgba(2, 132, 199, 0.09)'} !important;
-        }}
+
         /* Círculo Exterior del Radio Button */
-        div[data-testid="stRadio"] [role="radiogroup"] label > div:first-child,
-        div[data-testid="stRadioOption"] > div:first-child,
-        div[class*="e1mpz0hj4"],
-        .st-emotion-cache-e1mpz0hj4 {{
+        div[data-testid="stRadio"] [class*="e1mpz0hj4"],
+        div[data-testid="stRadioOption"] [class*="e1mpz0hj4"],
+        div[data-testid="stRadio"] div.e1mpz0hj4,
+        div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4,
+        div[data-testid="stRadio"] [role="radiogroup"] label > span + div,
+        div[data-testid="stRadio"] [role="radiogroup"] label div:first-of-type,
+        div[data-testid="stRadioOption"] div:first-of-type,
+        div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child {{
             width: 22px !important;
             height: 22px !important;
             min-width: 22px !important;
@@ -1318,34 +1539,72 @@ st.markdown(f"""
             border: 2.5px solid {radio_border_global} !important;
             border-radius: 50% !important;
             background-color: {radio_bg_global} !important;
-            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.35)' if tema_es_oscuro else '0 2px 5px rgba(2, 132, 199, 0.2)'} !important;
+            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.35)' if tema_es_oscuro else '0 1px 4px rgba(2, 132, 199, 0.25)'} !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
             transition: all 0.2s ease !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
         }}
-        div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) > div:first-child {{
-            border-color: {'#38bdf8' if tema_es_oscuro else '#0284c7'} !important;
-            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.6)' if tema_es_oscuro else '0 2px 8px rgba(2, 132, 199, 0.35)'} !important;
-        }}
-        /* Punto Interior del Radio Button Seleccionado */
-        div[class*="e1mpz0hj5"],
-        .st-emotion-cache-e1mpz0hj5 {{
-            width: 10px !important;
-            height: 10px !important;
-            min-width: 10px !important;
-            min-height: 10px !important;
+
+        /* Interior del Círculo no seleccionado */
+        div[data-testid="stRadio"] [class*="e1mpz0hj5"],
+        div[data-testid="stRadioOption"] [class*="e1mpz0hj5"],
+        div[data-testid="stRadio"] div.e1mpz0hj5,
+        div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj5 {{
+            background-color: {radio_bg_global} !important;
             border-radius: 50% !important;
-            background-color: {radio_dot_global} !important;
-            box-shadow: {'0 0 8px #38bdf8' if tema_es_oscuro else 'none'} !important;
+            transition: all 0.2s ease !important;
         }}
+
+        /* Hover en el Círculo */
+        div[data-testid="stRadio"] label:hover [class*="e1mpz0hj4"],
+        div[data-testid="stRadioOption"]:hover [class*="e1mpz0hj4"] {{
+            border-color: {'#7dd3fc' if tema_es_oscuro else '#0369a1'} !important;
+            transform: scale(1.08) !important;
+            box-shadow: {'0 0 14px rgba(56, 189, 248, 0.6)' if tema_es_oscuro else '0 2px 6px rgba(2, 132, 199, 0.35)'} !important;
+        }}
+
+        /* Círculo Exterior Seleccionado */
+        div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj4"],
+        div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj4"],
+        div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj4"],
+        div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"],
+        div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) div:first-of-type,
+        div[data-testid="stRadio"] div[aria-checked="true"] > div:first-child,
+        div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {{
+            background-color: {'#0284c7' if tema_es_oscuro else '#0284c7'} !important;
+            border-color: {'#38bdf8' if tema_es_oscuro else '#0284c7'} !important;
+            border-width: 2.5px !important;
+            box-shadow: {'0 0 14px rgba(56, 189, 248, 0.75)' if tema_es_oscuro else '0 2px 8px rgba(2, 132, 199, 0.5)'} !important;
+        }}
+
+        /* Punto Interior del Radio Button Seleccionado (Blanco Nítido de 9px) */
+        div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj5"],
+        div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj5"],
+        div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj5"],
+        div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"],
+        div[data-testid="stRadio"] div[aria-checked="true"] [class*="e1mpz0hj5"],
+        div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div > div {{
+            width: 9px !important;
+            height: 9px !important;
+            min-width: 9px !important;
+            min-height: 9px !important;
+            border-radius: 50% !important;
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            box-shadow: {'0 0 8px #ffffff' if tema_es_oscuro else '0 1px 3px rgba(0, 0, 0, 0.35)'} !important;
+            display: block !important;
+        }}
+
         /* Texto de Opción de Radio Button */
         div[data-testid="stRadio"] [role="radiogroup"] label p,
         div[data-testid="stRadio"] [role="radiogroup"] label span,
         div[data-testid="stRadioOption"] p,
         div[data-testid="stRadioOption"] span {{
             font-size: 15px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             color: {container_text_global} !important;
             letter-spacing: 0.2px !important;
         }}

@@ -102,7 +102,6 @@ def renderizar():
         </table>
         </div>
         """, unsafe_allow_html=True)
-        """, unsafe_allow_html=True)
     
     try:
         from modulos import selector_cliente_proyecto

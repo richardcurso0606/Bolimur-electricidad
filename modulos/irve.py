@@ -846,12 +846,16 @@ def renderizar():
             """, unsafe_allow_html=True)
 
             with st.expander("📄 Datos del Emplazamiento en la Región de Murcia y Validación Oficial", expanded=True):
-                user_auth = st.session_state.get("usuario_autenticado", {})
+                user_auth = st.session_state.get("usuario_autenticado")
+                if not isinstance(user_auth, dict):
+                    user_auth = {}
                 nom_inst_def = user_auth.get("nombre_instalador", "Richard Orlando Choque Tejerina")
                 emp_def = user_auth.get("nombre_empresa", "BOLIMUR INSTALACIONES Y REFORMAS")
                 lic_def = user_auth.get("num_licencia_rebt", "REBT-30/15892")
 
-                cli_activo = st.session_state.get("cliente_activo_proyecto", {})
+                cli_activo = st.session_state.get("cliente_activo_proyecto")
+                if not isinstance(cli_activo, dict):
+                    cli_activo = {}
                 cli_nom_def = cli_activo.get("nombre_completo", "Propietario / Titular IRVE")
                 cli_nif_def = cli_activo.get("nif_cif", "-")
                 cli_dir_def = cli_activo.get("direccion", "Plaza de Garaje nº 18, C/ Mayor")
