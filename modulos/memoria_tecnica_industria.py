@@ -1262,9 +1262,10 @@ def renderizar():
 
     # Asistente de Decisión y Calculadora de Potencia para Locales Comerciales
     with st.expander("🧮 Asistente de Decisión y Calculadora de Potencia para Locales (ITC-BT-10.3.3 / ITC-BT-28)", expanded=False):
-        st.markdown(
-            "Herramienta interactiva para ayudar al instalador a determinar la potencia de diseño reglamentaria, "
-            "comprobar si requiere Proyecto o MTD, y seleccionar la plantilla idónea para cualquier local en la Región de Murcia."
+        st.info(
+            "💡 **¿Cuándo se debe utilizar esta calculadora?**\n\n"
+            "* **En Viviendas:** **NO hace falta usarla.** Las viviendas se rigen por valores reglamentarios fijos: **Básica (5.750 W)** o **Elevada (9.200 W)** según ITC-BT-10.\n"
+            "* **En Locales Comerciales, Oficinas, Bares y Clínicas:** **SÍ se debe utilizar.** El REBT (ITC-BT-10.3.3) prohíbe fijar potencias arbitrarias y obliga a justificar un mínimo de **100 W/m² de superficie útil**, más la climatización y maquinaria prevista."
         )
         tab_calc_loc, tab_guia_loc = st.tabs(["📊 Calculadora de Potencia para Locales", "📖 Guía de Selección para el Instalador"])
 
@@ -1272,9 +1273,9 @@ def renderizar():
             col_cl1, col_cl2 = st.columns([1.1, 1.9])
             with col_cl1:
                 st.markdown("###### 📏 Datos de Partida del Inmueble:")
-                sup_calc = st.number_input("Superficie útil del local (m²):", min_value=5.0, max_value=5000.0, value=80.0, step=5.0, key="in_calc_sup_loc")
-                clima_calc = st.number_input("Potencia estimada Climatización / Frío (W):", min_value=0.0, max_value=60000.0, value=6000.0, step=500.0, key="in_calc_clima_loc")
-                maq_calc = st.number_input("Potencia Maquinaria / Cocina / Hornos (W):", min_value=0.0, max_value=100000.0, value=4000.0, step=500.0, key="in_calc_maq_loc")
+                sup_calc = st.number_input("Superficie útil del local (m²):", min_value=5.0, max_value=5000.0, value=80.0, step=5.0, key="in_calc_sup_loc", help="Superficie útil computable según planos o catastro.")
+                clima_calc = st.number_input("Potencia estimada Climatización / Frío (W):", min_value=0.0, max_value=60000.0, value=2000.0, step=500.0, key="in_calc_clima_loc", help="Potencia eléctrica de los splits o bomba de calor.")
+                maq_calc = st.number_input("Potencia Maquinaria / Cocina / Hornos (W):", min_value=0.0, max_value=100000.0, value=0.0, step=500.0, key="in_calc_maq_loc", help="Dejar en 0 W para tiendas u oficinas corrientes sin maquinaria industrial.")
                 act_calc = st.selectbox(
                     "Tipo de Actividad y Afluencia de Público:",
                     [
@@ -1285,6 +1286,15 @@ def renderizar():
                     ],
                     key="in_calc_act_loc"
                 )
+                pref_red = st.selectbox(
+                    "Previsión de Suministro (Tensión):",
+                    [
+                        "🔄 Automático (Según potencia calculada)",
+                        "⚡ Preferir Monofásico (230 V) - Tienda / Despacho estándar (IGA 40A - 9.2 kW)",
+                        "🔌 Preferir Trifásico (400 V) - Para maquinaria o clima trifásico (IGA 25A - 17.3 kW)"
+                    ],
+                    key="in_calc_pref_red"
+                )
 
             with col_cl2:
                 st.markdown("###### ⚡ Cálculo Reglamentario y Recomendación:")
@@ -1294,27 +1304,108 @@ def renderizar():
                 es_gym = "Gimnasio" in act_calc
                 es_lpc = es_bar or es_acad or es_gym
 
+                # Factores de simultaneidad según tipo de actividad
                 if es_bar:
-                    pot_calc_total = base_minima * 0.7 + clima_calc + maq_calc * 0.8
-                    plantilla_rec = "🍽️ LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA obligatoria)"
+                    coef_clima = 1.0
+                    coef_maq = 0.8
+                    pot_calc_total = base_minima * 0.7 + clima_calc * coef_clima + maq_calc * coef_maq
                 elif es_gym:
-                    pot_calc_total = base_minima * 0.8 + clima_calc + maq_calc
-                    plantilla_rec = "🏋️ LPC: Gimnasio / Polideportivo con Duchas (20.780 W - 400V - IGA 32A Tri - OCA)"
+                    coef_clima = 0.9
+                    coef_maq = 0.9
+                    pot_calc_total = base_minima * 0.8 + clima_calc * coef_clima + maq_calc * coef_maq
                 elif es_acad:
-                    pot_calc_total = base_minima + clima_calc * 0.8 + maq_calc * 0.7
-                    plantilla_rec = "🎓 LPC: Academia / Clínica / Centro de Enseñanza (>50 pers. - 17.320 W - 400V - OCA)"
+                    coef_clima = 0.8
+                    coef_maq = 0.7
+                    pot_calc_total = base_minima + clima_calc * coef_clima + maq_calc * coef_maq
                 else:
-                    pot_calc_total = base_minima + clima_calc * 0.8 + maq_calc * 0.7
-                    if pot_calc_total <= 9200.0 and maq_calc < 3000:
-                        plantilla_rec = "🏢 Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)"
+                    coef_clima = 0.8
+                    coef_maq = 0.7
+                    pot_calc_total = base_minima + clima_calc * coef_clima + maq_calc * coef_maq
+
+                # Decisión de tensión y plantilla recomendada
+                if "Preferir Monofásico" in pref_red:
+                    tension_sug = "Monofásica (230 V)"
+                    sub_tens = "Hasta 9.200 W (IGA 40A)"
+                    plantilla_rec = "🏢 Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)"
+                    pot_final_plantilla = 9200.0
+                elif "Preferir Trifásico" in pref_red:
+                    tension_sug = "Trifásica (400 V)"
+                    sub_tens = "17.320 W (IGA 25A Tri)"
+                    if es_bar:
+                        plantilla_rec = "🍽️ LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA obligatoria)"
+                        pot_final_plantilla = 27710.0
+                    elif es_gym:
+                        plantilla_rec = "🏋️ LPC: Gimnasio / Polideportivo con Duchas (20.780 W - 400V - IGA 32A Tri - OCA)"
+                        pot_final_plantilla = 20780.0
                     else:
                         plantilla_rec = "🏢 Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)"
+                        pot_final_plantilla = 17320.0
+                else:
+                    # Automático
+                    if es_bar:
+                        tension_sug = "Trifásica (400 V)"
+                        sub_tens = "Cocina industrial (IGA 40A Tri)"
+                        plantilla_rec = "🍽️ LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA obligatoria)"
+                        pot_final_plantilla = 27710.0
+                    elif es_gym:
+                        tension_sug = "Trifásica (400 V)"
+                        sub_tens = "Duchas y clima (IGA 32A Tri)"
+                        plantilla_rec = "🏋️ LPC: Gimnasio / Polideportivo con Duchas (20.780 W - 400V - IGA 32A Tri - OCA)"
+                        pot_final_plantilla = 20780.0
+                    elif es_acad:
+                        tension_sug = "Trifásica (400 V)" if pot_calc_total > 9200.0 else "Monofásica (230 V)"
+                        sub_tens = "Pública Concurrencia"
+                        plantilla_rec = "🎓 LPC: Academia / Clínica / Centro de Enseñanza (>50 pers. - 17.320 W - 400V - OCA)"
+                        pot_final_plantilla = 17320.0
+                    else:
+                        if pot_calc_total <= 9600.0 and maq_calc < 2000.0:
+                            tension_sug = "Monofásica (230 V)"
+                            sub_tens = "Apto monofásica (IGA 40A)"
+                            plantilla_rec = "🏢 Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)"
+                            pot_final_plantilla = 9200.0
+                        else:
+                            tension_sug = "Trifásica (400 V)"
+                            sub_tens = "Clima o cargas elevadas"
+                            plantilla_rec = "🏢 Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)"
+                            pot_final_plantilla = 17320.0
 
-                col_mc1, col_mc2, col_mc3 = st.columns(3)
-                col_mc1.metric("Base Mínima Legal", f"{base_minima:,.0f} W", help="ITC-BT-10.3.3: 100 W/m² con mínimo de 3.450 W")
-                col_mc2.metric("Potencia Simultánea", f"{pot_calc_total:,.0f} W", f"{pot_calc_total/1000.0:.2f} kW")
-                tension_sug = "Trifásica (400 V)" if pot_calc_total > 9200.0 or es_lpc else "Monofásica (230 V)"
-                col_mc3.metric("Tensión Sugerida", tension_sug)
+                bg_tens = "#eff6ff" if "Monofásica" in tension_sug else "#fef3c7"
+                border_tens = "#0284c7" if "Monofásica" in tension_sug else "#d97706"
+                color_tens = "#0369a1" if "Monofásica" in tension_sug else "#b45309"
+                color_tens_lbl = "#0284c7" if "Monofásica" in tension_sug else "#92400e"
+
+                # Tarjetas métricas limpias y responsivas sin truncado de texto
+                st.markdown(
+                    f"""
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                        <div style="flex:1; min-width:130px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; text-align:center;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Base Legal Mínima</div>
+                            <div style="font-size:18px; font-weight:800; color:#0f172a; margin:3px 0;">{base_minima:,.0f} W</div>
+                            <div style="font-size:10.5px; color:#64748b;">100 W/m² (ITC-BT-10)</div>
+                        </div>
+                        <div style="flex:1; min-width:130px; background:#f0fdf4; border:1px solid #16a34a; border-radius:8px; padding:8px 10px; text-align:center;">
+                            <div style="font-size:11px; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:0.5px;">Potencia Simultánea</div>
+                            <div style="font-size:18px; font-weight:800; color:#16a34a; margin:3px 0;">{pot_calc_total:,.0f} W</div>
+                            <div style="font-size:10.5px; color:#15803d;"><b>{pot_calc_total/1000.0:.2f} kW</b></div>
+                        </div>
+                        <div style="flex:1; min-width:130px; background:{bg_tens}; border:1px solid {border_tens}; border-radius:8px; padding:8px 10px; text-align:center;">
+                            <div style="font-size:11px; font-weight:700; color:{color_tens_lbl}; text-transform:uppercase; letter-spacing:0.5px;">Tensión Sugerida</div>
+                            <div style="font-size:16px; font-weight:800; color:{color_tens}; margin:3px 0;">{tension_sug}</div>
+                            <div style="font-size:10.5px; color:{color_tens_lbl};">{sub_tens}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # Desglose matemático explicativo
+                with st.container(border=True):
+                    st.caption(
+                        f"📊 **Desglose de cálculo REBT:** Base obligatoria ({sup_calc:.0f} m² × 100 W/m² = **{base_minima:,.0f} W**) + "
+                        f"Climatización ({clima_calc:,.0f} W × {coef_clima:.1f} = **{clima_calc * coef_clima:,.0f} W**) + "
+                        f"Maquinaria ({maq_calc:,.0f} W × {coef_maq:.1f} = **{maq_calc * coef_maq:,.0f} W**) = "
+                        f"**{pot_calc_total:,.0f} W simultáneos**."
+                    )
 
                 st.markdown(f"**🎯 Plantilla Recomendada:** `{plantilla_rec}`")
 
@@ -1329,10 +1420,10 @@ def renderizar():
                 if st.button("⚡ Cargar Plantilla Calculada en la MTD", key="btn_cargar_calc_loc", type="primary"):
                     st.session_state["_mtd_cargar_plantilla_pendiente"] = plantilla_rec
                     st.session_state["_mtd_cargar_datos_pendientes"] = {
-                        "mtd_in_pot_inst": float(round(pot_calc_total, 0)),
-                        "mtd_in_pot_max": float(max(st.session_state.get("mtd_in_pot_max", pot_calc_total), pot_calc_total))
+                        "mtd_in_pot_inst": float(round(pot_final_plantilla, 0)),
+                        "mtd_in_pot_max": float(max(st.session_state.get("mtd_in_pot_max", pot_final_plantilla), pot_final_plantilla))
                     }
-                    st.session_state["_mtd_msg_exito_carga"] = f"✅ ¡Plantilla cargada con {pot_calc_total:,.0f} W calculados!"
+                    st.session_state["_mtd_msg_exito_carga"] = f"✅ ¡Plantilla cargada con {pot_final_plantilla:,.0f} W y circuitos adaptados!"
                     st.rerun()
 
         with tab_guia_loc:
