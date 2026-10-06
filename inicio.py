@@ -218,29 +218,78 @@ css_tema_oscuro = """
         box-shadow: 0 6px 16px rgba(2, 132, 199, 0.6) !important;
     }
 
-    /* CONTENEDORES CON BORDE Y TARJETAS */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
+    /* CONTENEDORES CON BORDE, PESTAÑAS Y TARJETAS EN MODO OSCURO (ENCERRADOS CON LÍNEA GRUESA) */
+    div[data-testid="stTabPanel"],
+    div[role="tabpanel"],
+    div[data-testid="stTabContent"] {
         background-color: #0f172a !important;
-        border: 2px solid #334155 !important;
-        color: #f1f5f9 !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 14px !important;
+        padding: 24px 20px !important;
+        margin-top: 14px !important;
+        margin-bottom: 24px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(2, 132, 199, 0.2) !important;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div[data-testid="stTabPanel"] div[data-testid="stTabPanel"],
+    div[role="tabpanel"] div[role="tabpanel"] {
+        border: 2px solid #38bdf8 !important;
+        background-color: #1e293b !important;
+        border-radius: 10px !important;
+        padding: 16px !important;
+        margin-top: 8px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stVerticalBlockBorderWrapper"] > div,
+    div.ep3ma5o3,
+    div[class*="ep3ma5o3"],
+    div.e1wbhg7m1,
+    div[class*="e1wbhg7m1"],
+    div[data-testid="stVerticalBlock"] > div[style*="border"],
+    div:has(> [data-testid="stVerticalBlock"]):has([style*="border"]) {
+        background-color: #0f172a !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 12px !important;
+        color: #f1f5f9 !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+        margin-bottom: 16px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div[class*="ep3ma5o3"]:hover,
+    div[class*="e1wbhg7m1"]:hover {
         border-color: #38bdf8 !important;
         box-shadow: 0 6px 18px rgba(56, 189, 248, 0.25) !important;
     }
+    div[data-testid="stTabPanel"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stTabPanel"] div.ep3ma5o3,
+    div[data-testid="stTabPanel"] div[class*="ep3ma5o3"],
+    div[role="tabpanel"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div[role="tabpanel"] div.ep3ma5o3,
+    div[role="tabpanel"] div[class*="ep3ma5o3"] {
+        border: 2px solid #38bdf8 !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+    }
     div[data-testid="stExpander"] {
         background-color: #0f172a !important;
-        border: 2px solid #334155 !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 10px !important;
         color: #f1f5f9 !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+        margin-bottom: 14px !important;
+    }
+    div[data-testid="stExpander"] > details {
+        background-color: #0f172a !important;
     }
     div[data-testid="stExpander"]:hover {
         border-color: #38bdf8 !important;
     }
     .bolimur-card {
         background-color: #0f172a !important;
-        border: 2px solid #334155 !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 12px !important;
         color: #f1f5f9 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
     }
 
     /* INPUTS, SELECTORES, NUMBER INPUTS Y ÁREAS DE TEXTO */
@@ -463,23 +512,39 @@ css_tema_oscuro = """
     }
     .section-header-blue {
         background: linear-gradient(90deg, #0c4a6e 0%, #0f172a 100%) !important;
-        border: 2px solid #0284c7 !important;
-        border-left: 8px solid #38bdf8 !important;
+        border: 2.5px solid #0284c7 !important;
+        border-left: 10px solid #38bdf8 !important;
+        padding: 14px 20px !important;
+        border-radius: 10px !important;
+        margin: 14px 0 14px 0 !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
     .section-header-green {
         background: linear-gradient(90deg, #064e3b 0%, #0f172a 100%) !important;
-        border: 2px solid #16a34a !important;
-        border-left: 8px solid #22c55e !important;
+        border: 2.5px solid #16a34a !important;
+        border-left: 10px solid #22c55e !important;
+        padding: 14px 20px !important;
+        border-radius: 10px !important;
+        margin: 14px 0 14px 0 !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
     .section-header-amber {
         background: linear-gradient(90deg, #451a03 0%, #0f172a 100%) !important;
-        border: 2px solid #d97706 !important;
-        border-left: 8px solid #f59e0b !important;
+        border: 2.5px solid #d97706 !important;
+        border-left: 10px solid #f59e0b !important;
+        padding: 14px 20px !important;
+        border-radius: 10px !important;
+        margin: 14px 0 14px 0 !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
     .section-header-slate {
         background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%) !important;
-        border: 2px solid #475569 !important;
-        border-left: 8px solid #94a3b8 !important;
+        border: 2.5px solid #475569 !important;
+        border-left: 10px solid #94a3b8 !important;
+        padding: 14px 20px !important;
+        border-radius: 10px !important;
+        margin: 14px 0 14px 0 !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
     div[data-testid="stMetricValue"] {
         color: #38bdf8 !important;
@@ -695,83 +760,130 @@ st.markdown(f"""
             fill: #ffffff !important;
         }}
 
-        /* Contenedores con Borde y Sombra Nítidos y Marcados */
-        div[data-testid="stVerticalBlockBorderWrapper"] {{
-            border-radius: 12px !important;
-            border: 2px solid #94a3b8 !important;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
-            margin-bottom: 16px !important;
-            transition: all 0.2s ease;
+        /* Contenedores con Borde, Pestañas y Tarjetas (Línea Gruesa de Sección en Modo Solar) */
+        div[data-testid="stTabPanel"],
+        div[role="tabpanel"],
+        div[data-testid="stTabContent"] {{
+            border: 2.5px solid #0284c7 !important;
+            border-radius: 14px !important;
+            padding: 24px 20px !important;
+            margin-top: 14px !important;
+            margin-bottom: 24px !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 4px 18px rgba(2, 132, 199, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04) !important;
         }}
-        div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
-            border-color: #0284c7 !important;
-            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.16), 0 2px 4px rgba(2, 132, 199, 0.1) !important;
+        div[data-testid="stTabPanel"] div[data-testid="stTabPanel"],
+        div[role="tabpanel"] div[role="tabpanel"] {{
+            border: 2px solid #38bdf8 !important;
+            background-color: #f8fafc !important;
+            border-radius: 10px !important;
+            padding: 16px !important;
+            margin-top: 8px !important;
+            margin-bottom: 12px !important;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.08) !important;
+        }}
+
+        /* Contenedores con Borde y Sombra Nítidos y Marcados */
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stVerticalBlockBorderWrapper"] > div,
+        div.ep3ma5o3,
+        div[class*="ep3ma5o3"],
+        div.e1wbhg7m1,
+        div[class*="e1wbhg7m1"],
+        div[data-testid="stVerticalBlock"] > div[style*="border"],
+        div:has(> [data-testid="stVerticalBlock"]):has([style*="border"]) {{
+            border-radius: 12px !important;
+            border: 2.5px solid #0284c7 !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 4px 16px rgba(2, 132, 199, 0.12), 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 16px !important;
+            transition: all 0.2s ease !important;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div[class*="ep3ma5o3"]:hover,
+        div[class*="e1wbhg7m1"]:hover {{
+            border-color: #0369a1 !important;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.2) !important;
+        }}
+
+        /* Si el contenedor está dentro de una pestaña que ya tiene marco exterior */
+        div[data-testid="stTabPanel"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stTabPanel"] div.ep3ma5o3,
+        div[data-testid="stTabPanel"] div[class*="ep3ma5o3"],
+        div[role="tabpanel"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div[role="tabpanel"] div.ep3ma5o3,
+        div[role="tabpanel"] div[class*="ep3ma5o3"] {{
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 2px 10px rgba(2, 132, 199, 0.08) !important;
         }}
 
         /* Expanders con Borde Nítido y Sombra */
         div[data-testid="stExpander"] {{
             border-radius: 10px !important;
-            border: 2px solid #94a3b8 !important;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
-            margin-bottom: 12px !important;
-            transition: all 0.2s ease;
+            border: 2.5px solid #0284c7 !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 2px 10px rgba(2, 132, 199, 0.08) !important;
+            margin-bottom: 14px !important;
+            transition: all 0.2s ease !important;
         }}
         div[data-testid="stExpander"]:hover {{
-            border-color: #0284c7 !important;
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
+            border-color: #0369a1 !important;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.16) !important;
         }}
 
         /* Cabeceras de Secciones con Insignia y Borde Integral */
         .section-header-blue {{
             background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 100%);
-            border: 2px solid #0284c7;
-            border-left: 8px solid #0284c7;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin: 18px 0 12px 0;
-            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
+            border: 2.5px solid #0284c7 !important;
+            border-left: 10px solid #0284c7 !important;
+            padding: 14px 20px !important;
+            border-radius: 10px !important;
+            margin: 14px 0 14px 0 !important;
+            box-shadow: 0 3px 10px rgba(2, 132, 199, 0.15) !important;
         }}
         .section-header-green {{
             background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
-            border: 2px solid #16a34a;
-            border-left: 8px solid #16a34a;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin: 18px 0 12px 0;
-            box-shadow: 0 3px 8px rgba(22, 163, 74, 0.12);
+            border: 2.5px solid #16a34a !important;
+            border-left: 10px solid #16a34a !important;
+            padding: 14px 20px !important;
+            border-radius: 10px !important;
+            margin: 14px 0 14px 0 !important;
+            box-shadow: 0 3px 10px rgba(22, 163, 74, 0.15) !important;
         }}
         .section-header-amber {{
             background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
-            border: 2px solid #d97706;
-            border-left: 8px solid #d97706;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin: 18px 0 12px 0;
-            box-shadow: 0 3px 8px rgba(217, 119, 6, 0.12);
+            border: 2.5px solid #d97706 !important;
+            border-left: 10px solid #d97706 !important;
+            padding: 14px 20px !important;
+            border-radius: 10px !important;
+            margin: 14px 0 14px 0 !important;
+            box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15) !important;
         }}
         .section-header-slate {{
             background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
-            border: 2px solid #475569;
-            border-left: 8px solid #475569;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin: 18px 0 12px 0;
-            box-shadow: 0 3px 8px rgba(71, 85, 105, 0.12);
+            border: 2.5px solid #475569 !important;
+            border-left: 10px solid #475569 !important;
+            padding: 14px 20px !important;
+            border-radius: 10px !important;
+            margin: 14px 0 14px 0 !important;
+            box-shadow: 0 3px 10px rgba(71, 85, 105, 0.15) !important;
         }}
 
         /* Tarjeta Genérica Bolimur */
         .bolimur-card {{
-            border: 2px solid #94a3b8;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-            margin-bottom: 20px;
+            border: 2.5px solid #0284c7 !important;
+            border-radius: 12px !important;
+            padding: 20px !important;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12) !important;
+            margin-bottom: 20px !important;
         }}
 
         /* Estilo de Pestañas (Tabs) Sin Desbordamiento ni Recortes */
         div[data-baseweb="tab-list"] {{
             flex-wrap: wrap !important;
             gap: 6px !important;
+            border-bottom: 2.5px solid #0284c7 !important;
+            padding-bottom: 4px !important;
         }}
         div[data-baseweb="tab-border"] {{
             display: none !important;
@@ -779,15 +891,44 @@ st.markdown(f"""
         button[data-baseweb="tab"] {{
             font-size: 13.5px !important;
             font-weight: 600 !important;
-            padding: 8px 14px !important;
+            padding: 9px 16px !important;
             border-radius: 8px 8px 0 0 !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-bottom: none !important;
+            background-color: #f8fafc !important;
+            color: #334155 !important;
             transition: all 0.2s ease !important;
             white-space: nowrap !important;
         }}
-        button[data-baseweb="tab"][aria-selected="true"] {{
+        button[data-baseweb="tab"] p,
+        button[data-baseweb="tab"] span,
+        button[data-baseweb="tab"] div {{
+            color: #334155 !important;
+            font-weight: 600 !important;
+        }}
+        button[data-baseweb="tab"]:hover {{
+            background-color: #e0f2fe !important;
             color: #0284c7 !important;
-            border-bottom: 3px solid #0284c7 !important;
-            background-color: #f0f9ff !important;
+            border-color: #0284c7 !important;
+        }}
+        button[data-baseweb="tab"]:hover p,
+        button[data-baseweb="tab"]:hover span,
+        button[data-baseweb="tab"]:hover div {{
+            color: #0284c7 !important;
+        }}
+        button[data-baseweb="tab"][aria-selected="true"] {{
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+            border: 2px solid #0284c7 !important;
+            border-bottom: none !important;
+            font-weight: 700 !important;
+            box-shadow: 0 -2px 8px rgba(2, 132, 199, 0.2) !important;
+        }}
+        button[data-baseweb="tab"][aria-selected="true"] p,
+        button[data-baseweb="tab"][aria-selected="true"] span,
+        button[data-baseweb="tab"][aria-selected="true"] div {{
+            color: #ffffff !important;
+            font-weight: 700 !important;
         }}
         div[data-baseweb="tab-list"] ~ button,
         button[aria-label="Previous tab"],

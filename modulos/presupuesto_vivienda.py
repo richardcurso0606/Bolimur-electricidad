@@ -242,7 +242,7 @@ def app():
 
     es_oscuro_pres = st.session_state.get("tema_modo", "solar") == "oscuro"
     container_bg = "#0f172a" if es_oscuro_pres else "#ffffff"
-    container_border = "#334155" if es_oscuro_pres else "#94a3b8"
+    container_border = "#0284c7"
     tab_active_bg = "#0c4a6e" if es_oscuro_pres else "#f0f9ff"
     tab_active_color = "#38bdf8" if es_oscuro_pres else "#0284c7"
 
@@ -256,36 +256,81 @@ def app():
 
     st.markdown(f"""
         <style>
-            /* Contenedores con Borde y Sombra Nítidos y Marcados */
-            div[data-testid="stVerticalBlockBorderWrapper"] {{
-                border-radius: 12px !important;
-                border: 2px solid {container_border} !important;
+            /* Pestaña / Panel de Sección con Marco Grueso (Línea Marcada) */
+            div[data-testid="stTabPanel"],
+            div[role="tabpanel"],
+            div[data-testid="stTabContent"] {{
+                border: 2.5px solid {container_border} !important;
+                border-radius: 14px !important;
+                padding: 24px 20px !important;
+                margin-top: 14px !important;
+                margin-bottom: 24px !important;
                 background-color: {container_bg} !important;
-                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
-                margin-bottom: 16px !important;
-                transition: all 0.2s ease;
+                box-shadow: 0 4px 18px rgba(2, 132, 199, 0.12) !important;
             }}
-            div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
-                border-color: #0284c7 !important;
-                box-shadow: 0 6px 18px rgba(2, 132, 199, 0.16) !important;
+            div[data-testid="stTabPanel"] div[data-testid="stTabPanel"],
+            div[role="tabpanel"] div[role="tabpanel"] {{
+                border: 2px solid #38bdf8 !important;
+                background-color: {'#1e293b' if es_oscuro_pres else '#f8fafc'} !important;
+                border-radius: 10px !important;
+                padding: 16px !important;
+                margin-top: 8px !important;
+                margin-bottom: 12px !important;
+                box-shadow: 0 2px 10px rgba(56, 189, 248, 0.08) !important;
+            }}
+
+            /* Contenedores con Borde y Sombra Nítidos y Marcados */
+            div[data-testid="stVerticalBlockBorderWrapper"],
+            div[data-testid="stVerticalBlockBorderWrapper"] > div,
+            div.ep3ma5o3,
+            div[class*="ep3ma5o3"],
+            div.e1wbhg7m1,
+            div[class*="e1wbhg7m1"],
+            div[data-testid="stVerticalBlock"] > div[style*="border"],
+            div:has(> [data-testid="stVerticalBlock"]):has([style*="border"]) {{
+                border-radius: 12px !important;
+                border: 2.5px solid {container_border} !important;
+                background-color: {container_bg} !important;
+                box-shadow: 0 4px 16px rgba(2, 132, 199, 0.12) !important;
+                margin-bottom: 16px !important;
+                transition: all 0.2s ease !important;
+            }}
+            div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+            div[class*="ep3ma5o3"]:hover,
+            div[class*="e1wbhg7m1"]:hover {{
+                border-color: #0369a1 !important;
+                box-shadow: 0 6px 20px rgba(2, 132, 199, 0.2) !important;
+            }}
+
+            /* Si el contenedor está dentro de una pestaña que ya tiene marco exterior */
+            div[data-testid="stTabPanel"] div[data-testid="stVerticalBlockBorderWrapper"],
+            div[data-testid="stTabPanel"] div.ep3ma5o3,
+            div[data-testid="stTabPanel"] div[class*="ep3ma5o3"],
+            div[role="tabpanel"] div[data-testid="stVerticalBlockBorderWrapper"],
+            div[role="tabpanel"] div.ep3ma5o3,
+            div[role="tabpanel"] div[class*="ep3ma5o3"] {{
+                border: 2px solid #38bdf8 !important;
+                box-shadow: 0 2px 10px rgba(2, 132, 199, 0.08) !important;
             }}
 
             /* Expanders con Borde Nítido y Sombra */
             div[data-testid="stExpander"] {{
                 border-radius: 10px !important;
-                border: 2px solid {container_border} !important;
-                box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+                border: 2.5px solid {container_border} !important;
+                box-shadow: 0 2px 10px rgba(2, 132, 199, 0.08) !important;
                 background: {container_bg} !important;
                 margin-bottom: 12px !important;
             }}
             div[data-testid="stExpander"]:hover {{
-                border-color: #0284c7 !important;
+                border-color: #0369a1 !important;
             }}
 
             /* Estilo de Pestañas (Tabs) Sin Desbordamiento ni Recortes */
             div[data-baseweb="tab-list"] {{
                 flex-wrap: wrap !important;
                 gap: 6px !important;
+                border-bottom: 2.5px solid #0284c7 !important;
+                padding-bottom: 4px !important;
             }}
             div[data-baseweb="tab-border"] {{
                 display: none !important;
@@ -293,21 +338,45 @@ def app():
             button[data-baseweb="tab"] {{
                 font-size: 13.5px !important;
                 font-weight: 600 !important;
-                padding: 8px 14px !important;
+                padding: 9px 16px !important;
                 border-radius: 8px 8px 0 0 !important;
+                border: 1.5px solid {'#334155' if es_oscuro_pres else '#cbd5e1'} !important;
+                border-bottom: none !important;
+                background-color: {'#0f172a' if es_oscuro_pres else '#f8fafc'} !important;
+                color: {'#94a3b8' if es_oscuro_pres else '#334155'} !important;
                 transition: all 0.2s ease !important;
                 white-space: nowrap !important;
             }}
+            button[data-baseweb="tab"] p,
+            button[data-baseweb="tab"] span,
+            button[data-baseweb="tab"] div {{
+                color: {'#94a3b8' if es_oscuro_pres else '#334155'} !important;
+                font-weight: 600 !important;
+            }}
+            button[data-baseweb="tab"]:hover {{
+                background-color: {'#1e293b' if es_oscuro_pres else '#e0f2fe'} !important;
+                color: #0284c7 !important;
+                border-color: #0284c7 !important;
+            }}
             button[data-baseweb="tab"][aria-selected="true"] {{
-                color: {tab_active_color} !important;
-                border-bottom: 3px solid #0284c7 !important;
-                background-color: {tab_active_bg} !important;
+                color: #ffffff !important;
+                background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+                border: 2px solid #0284c7 !important;
+                border-bottom: none !important;
+                font-weight: 700 !important;
+                box-shadow: 0 -2px 8px rgba(2, 132, 199, 0.2) !important;
+            }}
+            button[data-baseweb="tab"][aria-selected="true"] p,
+            button[data-baseweb="tab"][aria-selected="true"] span,
+            button[data-baseweb="tab"][aria-selected="true"] div {{
+                color: #ffffff !important;
+                font-weight: 700 !important;
             }}
             div[data-baseweb="tab-list"] ~ button,
             button[aria-label="Previous tab"],
             button[aria-label="Next tab"] {{
                 background-color: {container_bg} !important;
-                color: {tab_active_color} !important;
+                color: #0284c7 !important;
                 border: 1.5px solid #0284c7 !important;
                 border-radius: 6px !important;
                 box-shadow: none !important;
