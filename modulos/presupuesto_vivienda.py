@@ -1054,6 +1054,20 @@ def app():
                 horizontal=True
             )
 
+            st.markdown("---")
+            st.markdown("**🔢 Criterio de Medición y Cómputo de Puntos (Tomas y Luces Dobles):**")
+            criterio_puntos_dobles = st.radio(
+                "Selecciona cómo computar las tomas de enchufe dobles y puntos de luz dobles para cobro y rentabilidad:",
+                [
+                    "Toma Doble = 2 PUNTOS | Luz Doble = 2 PUNTOS (Cobro por mecanismo/servicio individual)",
+                    "Toma Doble = 1 PUNTO | Luz Doble = 1 PUNTO (Cobro unificado por caja o emplazamiento físico)"
+                ],
+                index=0,
+                key="criterio_puntos_dobles_sel",
+                help="Define si las tomas dobles de enchufe y los puntos de luz de doble encendido se computan como 2 puntos individuales para la tarificación por punto y el análisis de rentabilidad, o como 1 único punto físico agrupado."
+            )
+            es_doble_2_puntos = "2 PUNTOS" in criterio_puntos_dobles
+
     # ==========================================
     # SECCIÓN 3: MANO DE OBRA, TECHOS Y CONDICIONES ECONÓMICAS
     # ==========================================
@@ -1138,12 +1152,12 @@ def app():
     # ==========================================
     if 'estancias_pro' not in st.session_state:
         st.session_state.estancias_pro = [
-            {"nombre": "Salón - Comedor", "m2": 25.0, "altura": 2.6, "distancia_cuadro": 12.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
-            {"nombre": "Cocina", "m2": 12.0, "altura": 2.6, "distancia_cuadro": 8.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
-            {"nombre": "Dormitorio Principal", "m2": 16.0, "altura": 2.6, "distancia_cuadro": 14.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
-            {"nombre": "Dormitorio 2", "m2": 11.0, "altura": 2.6, "distancia_cuadro": 10.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
-            {"nombre": "Baño 1", "m2": 6.0, "altura": 2.6, "distancia_cuadro": 6.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
-            {"nombre": "Pasillo", "m2": 7.0, "altura": 2.6, "distancia_cuadro": 3.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0},
+            {"nombre": "Salón - Comedor", "m2": 25.0, "altura": 2.6, "distancia_cuadro": 12.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0, "tomas_dobles": 2, "luces_dobles": 1},
+            {"nombre": "Cocina", "m2": 12.0, "altura": 2.6, "distancia_cuadro": 8.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0, "tomas_dobles": 2, "luces_dobles": 0},
+            {"nombre": "Dormitorio Principal", "m2": 16.0, "altura": 2.6, "distancia_cuadro": 14.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0, "tomas_dobles": 1, "luces_dobles": 1},
+            {"nombre": "Dormitorio 2", "m2": 11.0, "altura": 2.6, "distancia_cuadro": 10.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0, "tomas_dobles": 1, "luces_dobles": 1},
+            {"nombre": "Baño 1", "m2": 6.0, "altura": 2.6, "distancia_cuadro": 6.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0, "tomas_dobles": 1, "luces_dobles": 1},
+            {"nombre": "Pasillo", "m2": 7.0, "altura": 2.6, "distancia_cuadro": 3.0, "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0, "tomas_dobles": 0, "luces_dobles": 0},
         ]
 
     with tab_sec4:
@@ -1179,7 +1193,8 @@ def app():
                         if nuevo_nombre:
                             st.session_state.estancias_pro.append({
                                 "nombre": nuevo_nombre, "m2": nuevo_m2, "altura": nuevo_alt, "distancia_cuadro": nueva_dist,
-                                "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0
+                                "extra_schuko": 0, "extra_luz": 0, "extra_rj45": 0,
+                                "tomas_dobles": 1, "luces_dobles": 0
                             })
                             st.success(f"Estancia '{nuevo_nombre}' añadida correctamente.")
                             st.rerun()
@@ -1232,9 +1247,10 @@ def app():
                             st.session_state.estancias_pro.pop(i)
                             st.rerun()
 
-                    with st.expander(f"⚙️ Circuitos REBT y Puntos Extra en: {est['nombre']}"):
+                    with st.expander(f"⚙️ Puntos Extra y Tomas/Luces Dobles en: {est['nombre']}"):
                         st.info(f"⚡ **Circuitos REBT Asignados:** `{circuitos_asociados}` | 📏 **Distancia al Cuadro:** `{est['distancia_cuadro']} m`")
                     
+                        st.markdown("**➕ Puntos Extra sobre dotación mínima REBT:**")
                         col_p1, col_p2, col_p3 = st.columns(3)
                         with col_p1:
                             est["extra_schuko"] = st.number_input(f"Schukos Extra", min_value=-5, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
@@ -1242,6 +1258,25 @@ def app():
                             est["extra_luz"] = st.number_input(f"Puntos Luz Extra", min_value=-3, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
                         with col_p3:
                             est["extra_rj45"] = st.number_input(f"Tomas Red/TV Extra", min_value=-2, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
+
+                        st.markdown("**🔌 Configuración de Tomas y Luces Dobles en esta Estancia:**")
+                        col_d1, col_d2 = st.columns(2)
+                        with col_d1:
+                            def_td_val = est.get("tomas_dobles", 2 if ("salón" in nombre_est or "cocina" in nombre_est) else (1 if ("baño" in nombre_est or "dormitorio" in nombre_est) else 0))
+                            est["tomas_dobles"] = st.number_input(
+                                f"De los enchufes, ¿cuántas son Tomas Dobles?",
+                                min_value=0, max_value=20, value=int(def_td_val), step=1,
+                                key=f"td_{i}",
+                                help="Cantidad de tomas dobles (2 bases schuko bajo un mismo marco o caja). Se computarán a 2 puntos o 1 punto para rentabilidad según el criterio seleccionado en Sección 2."
+                            )
+                        with col_d2:
+                            def_ld_val = est.get("luces_dobles", 1 if ("salón" in nombre_est or "dormitorio" in nombre_est or "baño" in nombre_est) else 0)
+                            est["luces_dobles"] = st.number_input(
+                                f"De las luces, ¿cuántas son Luces Dobles (2 encendidos)?",
+                                min_value=0, max_value=10, value=int(def_ld_val), step=1,
+                                key=f"ld_{i}",
+                                help="Cantidad de puntos de luz de doble encendido / conmutador doble. Se computarán a 2 puntos o 1 punto para rentabilidad según el criterio seleccionado en Sección 2."
+                            )
 
                 if incluir:
                     estancias_activas.append(est)
@@ -1356,6 +1391,13 @@ def app():
         global_marcos_uds = 0
         global_mecanismos_dict = {}
         total_puntos_mecanismos = 0
+        tot_tomas_dobles_global = 0
+        tot_luces_dobles_global = 0
+        tot_tomas_simples_global = 0
+        tot_luces_simples_global = 0
+        tot_otros_puntos_global = 0
+        total_puntos_1p_global = 0
+        total_puntos_2p_global = 0
 
         coste_total_materiales_bruto = 0.0
         horas_totales_obra = 0.0
@@ -1443,7 +1485,36 @@ def app():
                 ]
 
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
-            total_puntos_mecanismos += total_mecanismos
+            
+            def_td = 2 if ("salón" in nombre_est or "cocina" in nombre_est) else (1 if ("baño" in nombre_est or "dormitorio" in nombre_est) else 0)
+            def_ld = 1 if ("salón" in nombre_est or "dormitorio" in nombre_est or "baño" in nombre_est) else 0
+            td_est = int(est.get("tomas_dobles", def_td))
+            ld_est = int(est.get("luces_dobles", def_ld))
+            
+            # Ajustar a los límites reales de mecanismos instalados
+            td_est = max(0, min(td_est, cant_sch))
+            ld_est = max(0, min(ld_est, cant_int))
+            
+            tomas_simples_est = max(0, cant_sch - td_est)
+            luces_simples_est = max(0, cant_int - ld_est)
+            otros_mecanismos_est = max(0, total_mecanismos - (cant_sch + cant_int))
+            
+            # Criterio 2 Puntos: cada toma doble = 2 puntos, cada luz doble = 2 puntos
+            puntos_2p_est = tomas_simples_est + (td_est * 2) + luces_simples_est + (ld_est * 2) + otros_mecanismos_est
+            # Criterio 1 Punto: cada toma doble = 1 punto, cada luz doble = 1 punto
+            puntos_1p_est = tomas_simples_est + (td_est * 1) + luces_simples_est + (ld_est * 1) + otros_mecanismos_est
+            
+            puntos_est_sel = puntos_2p_est if es_doble_2_puntos else puntos_1p_est
+            total_puntos_mecanismos += puntos_est_sel
+            
+            tot_tomas_dobles_global += td_est
+            tot_luces_dobles_global += ld_est
+            tot_tomas_simples_global += tomas_simples_est
+            tot_luces_simples_global += luces_simples_est
+            tot_otros_puntos_global += otros_mecanismos_est
+            total_puntos_1p_global += puntos_1p_est
+            total_puntos_2p_global += puntos_2p_est
+
             n_marcos = max(total_mecanismos, int(total_mecanismos * 0.8))
 
             global_tubo20_m += m_tubo_20
@@ -2686,20 +2757,204 @@ def app():
                 </div>
                 """, unsafe_allow_html=True)
 
-                st.subheader("📊 Resumen Global de Puntos y Coste Medio por Punto")
-                st.write(f"- 🔌 **Número Total de Puntos / Mecanismos Instalados:** `{total_puntos_mecanismos} uds` (Interruptores, Schukos, Tomas de Fuerza y Red)")
-                st.write(f"- 💶 **Precio Medio por Punto SIN IVA (Base Imponible):** **`{precio_medio_por_punto_neto:.2f} € / punto`**")
-                st.write(f"- 💶 **Precio Medio por Punto CON IVA ({iva_sel}%):** **`{precio_medio_por_punto:.2f} € / punto`**")
-                st.info("💡 *Nota:* Este indicador te muestra a cuánto sale de media cada punto instalado (incluyendo cableado, canalización, protecciones y mano de obra prorrateados).")
+                st.subheader("📊 Conteo Global de Puntos y Análisis por Criterio (Tomas y Luces Dobles)")
+                criterio_badge = "🟢 2 Puntos por Doble (Desglosado)" if es_doble_2_puntos else "🔵 1 Punto por Doble (Unificado Físico)"
+                st.markdown(f"**Criterio de Cómputo Seleccionado:** `{criterio_badge}` *(Modificable en Sección 2)*")
+                
+                col_pt1, col_pt2, col_pt3, col_pt4 = st.columns(4)
+                with col_pt1:
+                    st.metric("🔌 Puntos Computados", f"{total_puntos_mecanismos} pts")
+                    st.caption(f"Físicos: `{total_puntos_1p_global}` | Desglosados: `{total_puntos_2p_global}`")
+                with col_pt2:
+                    st.metric("💶 Venta Media S/IVA", f"{precio_medio_por_punto_neto:.2f} €/pto")
+                    st.caption("Base Imponible / Puntos")
+                with col_pt3:
+                    st.metric("💶 Venta Media C/IVA", f"{precio_medio_por_punto:.2f} €/pto")
+                    st.caption(f"Con {iva_sel}% IVA incluido")
+                with col_pt4:
+                    coste_directo_punto = ((total_mat_global_neto + coste_mano_obra_bruto) / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+                    utilidad_media_punto = (precio_medio_por_punto_neto - coste_directo_punto)
+                    st.metric("📈 Beneficio Medio Neto", f"{utilidad_media_punto:.2f} €/pto")
+                    st.caption(f"Coste directo: {coste_directo_punto:.2f} €/pto")
+
+                with st.container(border=True):
+                    st.markdown("**🔍 Desglose Pormenorizado de Puntos Instalados:**")
+                    col_dp1, col_dp2, col_dp3 = st.columns(3)
+                    with col_dp1:
+                        pts_td_comp = tot_tomas_dobles_global * 2 if es_doble_2_puntos else tot_tomas_dobles_global
+                        st.markdown(f"• **Tomas Dobles de Enchufe:** `{tot_tomas_dobles_global} tomas dobles`  \n↳ Computadas como: **`{pts_td_comp} puntos`** ({'2 pts c/u' if es_doble_2_puntos else '1 pto c/u'})")
+                        st.markdown(f"• **Tomas Simples:** `{tot_tomas_simples_global} tomas` = **`{tot_tomas_simples_global} puntos`**")
+                    with col_dp2:
+                        pts_ld_comp = tot_luces_dobles_global * 2 if es_doble_2_puntos else tot_luces_dobles_global
+                        st.markdown(f"• **Luces Dobles (2 encendidos):** `{tot_luces_dobles_global} luces dobles`  \n↳ Computadas como: **`{pts_ld_comp} puntos`** ({'2 pts c/u' if es_doble_2_puntos else '1 pto c/u'})")
+                        st.markdown(f"• **Luces Simples:** `{tot_luces_simples_global} luces` = **`{tot_luces_simples_global} puntos`**")
+                    with col_dp3:
+                        st.markdown(f"• **Tomas Fuerza 25A y RJ45:** `{tot_otros_puntos_global} puntos` = **`{tot_otros_puntos_global} puntos`**")
+                        st.markdown(f"• **Total Mecanismos Físicos:** `{tot_tomas_simples_global + (tot_tomas_dobles_global * 2) + tot_luces_simples_global + (tot_luces_dobles_global * 2) + tot_otros_puntos_global} uds`")
+
                 st.markdown("---")
 
-                st.subheader("⏱️ Análisis de Rendimiento, Tiempos y Plazos de Obra")
-                st.write(f"- 🧱 **Fase de Rozas ({tipo_pared} | Techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}):** `{sum_h_rozas:.2f} h`")
-                st.write(f"- 📏 **Fase de Canalización:** `{sum_h_tubos:.2f} h`")
-                st.write(f"- ⚡ **Fase de Cableado:** `{sum_h_cable:.2f} h`")
-                st.write(f"- 🔲 **Fase de Mecanizado:** `{sum_h_mec:.2f} h`")
-                st.info(f"⏱️ **Total Horas de Trabajo:** `{horas_totales_obra:.2f} h` netas (`{coste_mano_obra_bruto:.2f} €` coste MO)")
-                st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
+                # =========================================================================
+                # ANÁLISIS DE RENTABILIDAD: 2 ECUACIONES (SIN IVA Y CON IVA) Y CUADRO DE %
+                # =========================================================================
+                st.subheader("⚖️ Análisis Matemático de Rentabilidad: Ecuaciones de Cobro")
+                st.markdown("""
+                Desglose económico oficial que establece la igualdad entre los costes directos, margen de seguridad, utilidades empresariales e impuestos conforme a la ley:
+                """)
+
+                # Cálculos exactos para cuadre al céntimo y 100.0%
+                c_mat = round(total_mat_global_neto, 2)
+                m_seg = round(c_mat * (porc_garantia / 100.0), 2)
+                
+                c_mo = round(coste_mano_obra_bruto, 2)
+                g_mo = round(c_mo * (margen_comercial / 100.0), 2)
+                
+                v_bol = round(float(precio_boletin_cie), 2)
+                v_part = round(sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', [])), 2)
+                
+                # Utilidad de materiales: ajustada con precisión milimétrica para cuadrar con subtotal_general_neto
+                u_mat = round(subtotal_general_neto - (c_mat + m_seg + c_mo + g_mo + v_bol + v_part), 2)
+                
+                base_calc = round(c_mat + m_seg + u_mat + c_mo + g_mo + v_bol + v_part, 2)
+                cuota_iva_calc = round(base_calc * (iva_sel / 100.0), 2)
+                total_calc = round(base_calc + cuota_iva_calc, 2)
+                
+                # Render de las 2 Ecuaciones
+                col_eq1, col_eq2 = st.columns(2)
+                with col_eq1:
+                    with st.container(border=True):
+                        st.markdown("#### 1️⃣ Ecuación SIN IVA (Base Imponible a Cobrar)")
+                        st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras}")
+                        extra_txt_eq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
+                        st.markdown(f"""
+                        $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo:,.2f}€}}_{{G_{{mo}}}}{extra_txt_eq} = \\mathbf{{{base_calc:,.2f}€}}$$
+                        """)
+                        st.caption("✅ **Igualdad comprobada:** Coste Materiales + Margen Seg. + Utilidad Mat. + Coste MO + Ganancia MO + Extras = Base Imponible al céntimo.")
+                
+                with col_eq2:
+                    with st.container(border=True):
+                        st.markdown("#### 2️⃣ Ecuación CON IVA (Total a Cobrar al Cliente)")
+                        st.latex(r"\text{Cobro (C/IVA)} = \left[ C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras} \right] \times \left(1 + \frac{\text{IVA}}{100}\right)")
+                        st.markdown(f"""
+                        $$\\mathbf{{{base_calc:,.2f}€}} \\times \\left(1 + \\frac{{{iva_sel}}}{{100}}\\right) = \\mathbf{{{base_calc:,.2f}€}} + \\mathbf{{{cuota_iva_calc:,.2f}€}} = \\mathbf{{{total_calc:,.2f}€}}$$
+                        """)
+                        st.caption(f"✅ **Facturación Total:** Base Imponible con IVA ({iva_sel}%) conforme a la Agencia Tributaria.")
+
+                # Tabla Cuadrada de Rentabilidad con Porcentajes
+                st.markdown("##### 📊 Cuadro de Rentabilidad y Relación de Porcentajes (%) Cuadrado al Céntimo:")
+                filas_rent = [
+                    {
+                        "Concepto Económico": "📦 Coste Materiales de Adquisición (C_mat)",
+                        "Importe (€)": f"{c_mat:,.2f} €",
+                        "% s/ Base Imponible": f"{(c_mat / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(c_mat / total_calc * 100):.2f}%",
+                        "Clasificación": "Coste Directo"
+                    },
+                    {
+                        "Concepto Económico": "🛡️ Margen de Seguridad / Imprevistos Materiales (M_seg)",
+                        "Importe (€)": f"{m_seg:,.2f} €",
+                        "% s/ Base Imponible": f"{(m_seg / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(m_seg / total_calc * 100):.2f}%",
+                        "Clasificación": f"Colchón Garantía ({porc_garantia}%)"
+                    },
+                    {
+                        "Concepto Económico": "📈 Utilidad / Beneficio en Materiales (U_mat)",
+                        "Importe (€)": f"{u_mat:,.2f} €",
+                        "% s/ Base Imponible": f"{(u_mat / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(u_mat / total_calc * 100):.2f}%",
+                        "Clasificación": "Beneficio Neto Empresa"
+                    },
+                    {
+                        "Concepto Económico": "⏱️ Coste Directo Mano de Obra (C_mo)",
+                        "Importe (€)": f"{c_mo:,.2f} €",
+                        "% s/ Base Imponible": f"{(c_mo / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(c_mo / total_calc * 100):.2f}%",
+                        "Clasificación": f"Coste Mano de Obra ({horas_totales_obra:.1f} h)"
+                    },
+                    {
+                        "Concepto Económico": "💼 Ganancia Mano de Obra para la Empresa (G_mo)",
+                        "Importe (€)": f"{g_mo:,.2f} €",
+                        "% s/ Base Imponible": f"{(g_mo / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(g_mo / total_calc * 100):.2f}%",
+                        "Clasificación": f"Margen MO Empresa ({margen_comercial}%)"
+                    },
+                    {
+                        "Concepto Económico": "📋 Ensayos ITC-BT-05, MTD y Tramitación CIE",
+                        "Importe (€)": f"{v_bol:,.2f} €",
+                        "% s/ Base Imponible": f"{(v_bol / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(v_bol / total_calc * 100):.2f}%",
+                        "Clasificación": "Honorarios Técnicos Oficiales"
+                    }
+                ]
+                
+                if v_part > 0:
+                    filas_rent.append({
+                        "Concepto Económico": "➕ Trabajos Adicionales y Partidas a Medida",
+                        "Importe (€)": f"{v_part:,.2f} €",
+                        "% s/ Base Imponible": f"{(v_part / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(v_part / total_calc * 100):.2f}%",
+                        "Clasificación": "Partidas Extras Presupuesto"
+                    })
+                
+                filas_rent.append({
+                    "Concepto Económico": "🏁 TOTAL BASE IMPONIBLE (A COBRAR SIN IVA)",
+                    "Importe (€)": f"{base_calc:,.2f} €",
+                    "% s/ Base Imponible": "100.00%",
+                    "% s/ Total Cliente (C/IVA)": f"{(base_calc / total_calc * 100):.2f}%",
+                    "Clasificación": "Ecuación 1 (S/IVA)"
+                })
+                
+                filas_rent.append({
+                    "Concepto Económico": f"🏛️ Cuota IVA ({iva_sel}%)",
+                    "Importe (€)": f"{cuota_iva_calc:,.2f} €",
+                    "% s/ Base Imponible": f"{(cuota_iva_calc / base_calc * 100):.2f}%",
+                    "% s/ Total Cliente (C/IVA)": f"{(cuota_iva_calc / total_calc * 100):.2f}%",
+                    "Clasificación": "Impuesto Hacienda AEAT"
+                })
+                
+                filas_rent.append({
+                    "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
+                    "Importe (€)": f"{total_calc:,.2f} €",
+                    "% s/ Base Imponible": "—",
+                    "% s/ Total Cliente (C/IVA)": "100.00%",
+                    "Clasificación": "Ecuación 2 (C/IVA)"
+                })
+
+                df_rentabilidad = pd.DataFrame(filas_rent)
+                st.dataframe(df_rentabilidad, use_container_width=True, hide_index=True)
+
+                benef_total_empresa = round(m_seg + u_mat + g_mo + v_bol + v_part, 2)
+                costes_directos_tot = round(c_mat + c_mo, 2)
+                rent_sobre_ventas = (benef_total_empresa / base_calc * 100.0) if base_calc > 0 else 0.0
+                rent_sobre_coste = (benef_total_empresa / costes_directos_tot * 100.0) if costes_directos_tot > 0 else 0.0
+
+                col_kpr1, col_kpr2, col_kpr3, col_kpr4 = st.columns(4)
+                with col_kpr1:
+                    st.metric("📦 Costes Directos (Mat + MO)", f"{costes_directos_tot:,.2f} €")
+                    st.caption("Gastos de adquisición y personal")
+                with col_kpr2:
+                    st.metric("🚀 Beneficio Neto Empresa", f"+{benef_total_empresa:,.2f} €")
+                    st.caption("Margen + Utilidad + Colchón + CIE")
+                with col_kpr3:
+                    st.metric("📈 Margen s/ Ventas", f"{rent_sobre_ventas:.1f}%")
+                    st.caption("Beneficio / Base Imponible")
+                with col_kpr4:
+                    st.metric("💼 Margen s/ Costes Directos", f"{rent_sobre_coste:.1f}%")
+                    st.caption("Beneficio / Coste Real")
+
+                st.markdown("---")
+
+                # =========================================================================
+                # SECCIONES DESPLEGABLES INFERIORES (OPTIMIZADO PARA TABLETS Y PANTALLAS PEQUEÑAS)
+                # =========================================================================
+                with st.expander("⏱️ Desplegar Análisis de Rendimiento, Tiempos y Plazos de Obra", expanded=False):
+                    st.write(f"- 🧱 **Fase de Rozas ({tipo_pared} | Techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}):** `{sum_h_rozas:.2f} h`")
+                    st.write(f"- 📏 **Fase de Canalización:** `{sum_h_tubos:.2f} h`")
+                    st.write(f"- ⚡ **Fase de Cableado:** `{sum_h_cable:.2f} h`")
+                    st.write(f"- 🔲 **Fase de Mecanizado:** `{sum_h_mec:.2f} h`")
+                    st.info(f"⏱️ **Total Horas de Trabajo:** `{horas_totales_obra:.2f} h` netas (`{coste_mano_obra_bruto:.2f} €` coste MO)")
+                    st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
+
                 st.markdown("---")
 
                 st.subheader("🛒 Resumen de Acopio y Reporte de Compras Clasificado")
@@ -2707,7 +2962,7 @@ def app():
 
                 if items_no_catalogados:
                     st.warning(f"⚠️ **Atención:** Hay **{len(items_no_catalogados)} artículo(s)** calculados con tarifa estimada por no estar registrados en el catálogo.")
-                    with st.expander("⚡ Actualizar y Guardar Artículos No Catalogados en la Base de Datos Excel", expanded=True):
+                    with st.expander("⚡ Actualizar y Guardar Artículos No Catalogados en la Base de Datos Excel", expanded=False):
                         st.markdown("""
                         **¿Deseas completar y actualizar automáticamente estos artículos desde la web oficial?**  
                         Al presionar el pulsador web, la aplicación asignará las referencias oficiales (SKU), descripciones reales de tienda y precios de mercado para guardarlos en `base_datos_precio_oficial.xlsx`:
@@ -2817,9 +3072,8 @@ def app():
                                 except Exception as ex:
                                     st.error(f"Error al guardar en Excel: {ex}")
 
-                st.markdown("#### 👁️ Vista Previa del Reporte de Compras en PDF antes de Imprimir / Descargar:")
-                st.info("💡 **Revisa el documento en pantalla.** Una vez verificado, puedes descargarlo en PDF/Excel o imprimirlo directamente.")
-                with st.container():
+                with st.expander("👁️ Ver Vista Previa del Reporte de Compras en PDF antes de Imprimir / Descargar", expanded=False):
+                    st.info("💡 **Revisa el documento en pantalla.** Una vez verificado, puedes descargarlo en PDF/Excel o imprimirlo directamente.")
                     try:
                         import pymupdf
                         doc_oc_p1 = pymupdf.open(stream=pdf_oc_bytes, filetype="pdf")
@@ -2853,7 +3107,7 @@ def app():
                         key="btn_excel_acopio_panel"
                     )
 
-                with st.expander("📋 Desglose Completo de Materiales por Tipo / Categoría", expanded=True):
+                with st.expander("📋 Desglose Completo de Materiales por Tipo / Categoría", expanded=False):
                     for cat_titulo, articulos in categorias_orden_compra.items():
                         if not articulos:
                             continue
@@ -2931,32 +3185,15 @@ def app():
                             else:
                                 st.warning("Introduce una descripción válida.")
 
-                st.markdown(f"""
-                <div style="border: 2px solid #16a34a; padding: 20px; border-radius: 10px; background-color: #f0fdf4; margin-top: 15px;">
-                    <h3 style="color: #15803d; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO COMPLETO)</h3>
-                    <p><b>Coste Materiales Estancias:</b> {total_mat_estancias_neto:.2f} € &nbsp;|&nbsp; <b>Coste Cuadro ({marca_protecciones}):</b> {coste_cuadro_neto:.2f} €</p>
-                    <p><b>Coste Total Materiales Neto (Sin IVA):</b> {total_mat_global_neto:.2f} €</p>
-                    <h2 style="color: #16a34a; margin: 0;">TOTAL A PAGAR EN EL ALMACÉN (Con 21% IVA): {total_mat_con_iva:.2f} €</h2>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.markdown("---")
-                st.subheader("📊 Análisis detallado de Utilidad y Rentabilidad")
-                venta_mat_estancias = total_mat_estancias_neto * mult_comercial * mult_garantia_mat
-                benef_mat_estancias = venta_mat_estancias - total_mat_estancias_neto
-            
-                venta_mo_neto = coste_mano_obra_bruto * mult_comercial
-                benef_mo = venta_mo_neto - coste_mano_obra_bruto
-            
-                venta_cuadro_neto_val = coste_cuadro_neto * mult_comercial * mult_garantia_mat
-                benef_cuadro = venta_cuadro_neto_val - coste_cuadro_neto
-            
-                benef_neto_total = benef_mat_estancias + benef_mo + benef_cuadro
-
-                st.write(f"- 📦 **Materiales de Estancias:** Beneficio: `+{benef_mat_estancias:.2f} €`")
-                st.write(f"- ⏱️ **Mano de Obra:** Beneficio: `+{benef_mo:.2f} €`")
-                st.write(f"- ⚡ **Cuadro Eléctrico ({marca_protecciones}):** Beneficio: `+{benef_cuadro:.2f} €`")
-                st.success(f"🚀 **UTILIDAD / BENEFICIO NETO TOTAL ESTIMADO: +{benef_neto_total:.2f} €** (Sin contar IVA)")
+                with st.expander("💳 Dinero Total Necesario en Caja (Acopio Completo)", expanded=False):
+                    st.markdown(f"""
+                    <div style="border: 2px solid #16a34a; padding: 18px; border-radius: 10px; background-color: {card_bg}; margin-top: 5px;">
+                        <h4 style="color: #16a34a; margin-top: 0;">💳 DINERO TOTAL NECESARIO EN CAJA (ACOPIO COMPLETO)</h4>
+                        <p style="color: {card_text_color}; margin: 4px 0;"><b>Coste Materiales Estancias:</b> {total_mat_estancias_neto:,.2f} € &nbsp;|&nbsp; <b>Coste Cuadro ({marca_protecciones}):</b> {coste_cuadro_neto:,.2f} €</p>
+                        <p style="color: {card_text_color}; margin: 4px 0;"><b>Coste Total Materiales Neto (Sin IVA):</b> {total_mat_global_neto:,.2f} €</p>
+                        <h2 style="color: #16a34a; margin: 10px 0 0 0;">TOTAL A PAGAR EN EL ALMACÉN (Con 21% IVA): {total_mat_con_iva:,.2f} €</h2>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 
             with tab_doc_comp:

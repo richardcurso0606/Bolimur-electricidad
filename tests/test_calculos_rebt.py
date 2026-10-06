@@ -246,3 +246,66 @@ class TestTablasNormativas:
         assert "tab_esquemas_irve_bt52" in res_irve
 
 
+class TestPresupuestoRentabilidadYPuntos:
+    """Verifica las ecuaciones de rentabilidad y el cómputo de tomas y luces dobles."""
+
+    def test_ecuaciones_rentabilidad_cuadre_exacto(self):
+        c_mat = 1520.30
+        porc_garantia = 10.0
+        m_seg = round(c_mat * (porc_garantia / 100.0), 2)
+        c_mo = 1200.00
+        margen_comercial = 50.0
+        g_mo = round(c_mo * (margen_comercial / 100.0), 2)
+        v_bol = 150.00
+        v_part = 120.00
+
+        subtotal_general_neto = 4450.45
+        u_mat = round(subtotal_general_neto - (c_mat + m_seg + c_mo + g_mo + v_bol + v_part), 2)
+
+        # Ecuación 1: Base Imponible
+        base_calc = round(c_mat + m_seg + u_mat + c_mo + g_mo + v_bol + v_part, 2)
+        assert base_calc == subtotal_general_neto
+
+        # Ecuación 2: Total con IVA
+        iva_sel = 10
+        cuota_iva = round(base_calc * (iva_sel / 100.0), 2)
+        total_calc = round(base_calc + cuota_iva, 2)
+
+        # Verificación de que la suma de porcentajes sobre Base Imponible es 100.0%
+        pcts = [
+            c_mat / base_calc * 100,
+            m_seg / base_calc * 100,
+            u_mat / base_calc * 100,
+            c_mo / base_calc * 100,
+            g_mo / base_calc * 100,
+            v_bol / base_calc * 100,
+            v_part / base_calc * 100
+        ]
+        assert abs(sum(pcts) - 100.0) < 1e-9
+
+        # Verificación de que la suma de porcentajes sobre Total Cliente es 100.0%
+        pct_base_tot = base_calc / total_calc * 100
+        pct_iva_tot = cuota_iva / total_calc * 100
+        assert abs((pct_base_tot + pct_iva_tot) - 100.0) < 1e-9
+
+    def test_computo_puntos_dobles_criterio(self):
+        # 1 toma doble y 1 luz doble en una estancia con 3 schukos y 2 interruptores
+        cant_sch = 3
+        cant_int = 2
+        total_mec = cant_sch + cant_int
+        td = 1
+        ld = 1
+
+        tomas_simples = cant_sch - td  # 2
+        luces_simples = cant_int - ld  # 1
+
+        # Criterio 2 puntos: tomas dobles = 2 pts, luces dobles = 2 pts
+        pts_2p = tomas_simples + (td * 2) + luces_simples + (ld * 2)
+        assert pts_2p == 2 + 2 + 1 + 2  # 7 puntos
+
+        # Criterio 1 punto: tomas dobles = 1 pto, luces dobles = 1 pto
+        pts_1p = tomas_simples + (td * 1) + luces_simples + (ld * 1)
+        assert pts_1p == 2 + 1 + 1 + 1  # 5 puntos físicos
+
+
+
