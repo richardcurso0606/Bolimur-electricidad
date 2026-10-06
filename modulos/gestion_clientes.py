@@ -253,7 +253,6 @@ def renderizar():
                 curr_id = ids_filtrados[0]
                 st.session_state["crm_cliente_seleccionado_id"] = curr_id
 
-            default_row_idx = ids_filtrados.index(curr_id) if (curr_id in ids_filtrados) else 0
 
             event_tabla = st.dataframe(
                 df_clientes,
@@ -261,7 +260,6 @@ def renderizar():
                 hide_index=True,
                 on_select="rerun",
                 selection_mode=["single-row", "single-cell"],
-                selection_default={"rows": [default_row_idx]} if ids_filtrados else None,
                 key="crm_grid_dataframe"
             )
 
