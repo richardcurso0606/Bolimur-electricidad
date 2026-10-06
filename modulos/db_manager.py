@@ -531,8 +531,7 @@ def testear_conexion_nube(url: str, key: str) -> tuple[bool, str]:
     except Exception as ex:
         return False, f"Error al conectar con la Nube: {ex}"
 
-def push_cliente_a_nube(cliente_dict: Dict[str, Any], user_email: str = ""):
-    """Envía un cliente a la nube Supabase en segundo plano, asociado estrictamente al correo del usuario"""
+def _do_push_cliente(cliente_dict: Dict[str, Any], user_email: str = ""):
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -555,13 +554,18 @@ def push_cliente_a_nube(cliente_dict: Dict[str, Any], user_email: str = ""):
             headers=headers,
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5):
+        with urllib.request.urlopen(req, timeout=8):
             pass
     except Exception:
         pass
 
-def push_proyecto_a_nube(proyecto_dict: Dict[str, Any], user_email: str = ""):
-    """Envía un proyecto a la nube Supabase en segundo plano, asociado estrictamente al correo del usuario"""
+def push_cliente_a_nube(cliente_dict: Dict[str, Any], user_email: str = ""):
+    """Envía un cliente a la nube Supabase en segundo plano sin bloquear la interfaz"""
+    import threading
+    t = threading.Thread(target=_do_push_cliente, args=(cliente_dict, user_email), daemon=True)
+    t.start()
+
+def _do_push_proyecto(proyecto_dict: Dict[str, Any], user_email: str = ""):
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -577,6 +581,24 @@ def push_proyecto_a_nube(proyecto_dict: Dict[str, Any], user_email: str = ""):
         payload_item = dict(proyecto_dict)
         if user_email:
             payload_item["usuario_email"] = user_email.strip().lower()
+
+        # Si datos_json contiene imágenes base64 muy pesadas (>500KB), aligeramos la réplica
+        # enviada a la nube para no superar el límite de payload HTTP (413) de Supabase REST.
+        # En la base de datos local SQLite se conserva el 100% íntegro en máxima resolución.
+        raw_datos = payload_item.get("datos_json", "")
+        if isinstance(raw_datos, str) and len(raw_datos) > 500_000:
+            try:
+                parsed = json.loads(raw_datos)
+                if isinstance(parsed, dict):
+                    for img_k in ["mtd_plano_situacion", "mtd_plano_emplazamiento", "mtd_plano_distribucion", "mtd_plano_unifilar_custom"]:
+                        if img_k in parsed and isinstance(parsed[img_k], str) and len(parsed[img_k]) > 10_000:
+                            parsed[img_k] = "[GUARDADO_LOCAL_ALTA_CALIDAD]"
+                    if "mtd_fotos_obra" in parsed and isinstance(parsed["mtd_fotos_obra"], list):
+                        parsed["mtd_fotos_obra"] = [f"[FOTO_OBRA_{idx+1}_GUARDADA_LOCAL]" for idx in range(len(parsed["mtd_fotos_obra"]))]
+                    payload_item["datos_json"] = json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                pass
+
         payload = [payload_item]
         req = urllib.request.Request(
             f"{url_base}/rest/v1/proyectos",
@@ -584,13 +606,18 @@ def push_proyecto_a_nube(proyecto_dict: Dict[str, Any], user_email: str = ""):
             headers=headers,
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5):
+        with urllib.request.urlopen(req, timeout=8):
             pass
     except Exception:
         pass
 
-def delete_cliente_de_nube(cliente_id: int, user_email: str = ""):
-    """Elimina un cliente de la nube Supabase de la cuenta del usuario"""
+def push_proyecto_a_nube(proyecto_dict: Dict[str, Any], user_email: str = ""):
+    """Envía un proyecto a la nube Supabase en segundo plano sin bloquear la interfaz"""
+    import threading
+    t = threading.Thread(target=_do_push_proyecto, args=(proyecto_dict, user_email), daemon=True)
+    t.start()
+
+def _do_delete_cliente_de_nube(cliente_id: int, user_email: str = ""):
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -610,8 +637,13 @@ def delete_cliente_de_nube(cliente_id: int, user_email: str = ""):
     except Exception:
         pass
 
-def delete_proyecto_de_nube(proyecto_id: int, user_email: str = ""):
-    """Elimina un proyecto de la nube Supabase de la cuenta del usuario"""
+def delete_cliente_de_nube(cliente_id: int, user_email: str = ""):
+    """Elimina un cliente de la nube Supabase en segundo plano"""
+    import threading
+    t = threading.Thread(target=_do_delete_cliente_de_nube, args=(cliente_id, user_email), daemon=True)
+    t.start()
+
+def _do_delete_proyecto_de_nube(proyecto_id: int, user_email: str = ""):
     config = obtener_config_nube()
     if not config.get("url") or not config.get("key"):
         return
@@ -630,6 +662,12 @@ def delete_proyecto_de_nube(proyecto_id: int, user_email: str = ""):
             pass
     except Exception:
         pass
+
+def delete_proyecto_de_nube(proyecto_id: int, user_email: str = ""):
+    """Elimina un proyecto de la nube Supabase en segundo plano"""
+    import threading
+    t = threading.Thread(target=_do_delete_proyecto_de_nube, args=(proyecto_id, user_email), daemon=True)
+    t.start()
 
 def sincronizar_con_nube(usuario_id: int) -> tuple[bool, str]:
     """

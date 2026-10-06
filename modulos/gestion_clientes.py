@@ -439,6 +439,9 @@ def renderizar():
                                 st.session_state["crm_modo_edicion"] = False
                                 st.session_state["cliente_activo_proyecto"] = db_manager.obtener_cliente_por_id(cliente_sel_obj["id"], usuario_id)
                                 st.session_state["crm_alerta_exito"] = f"✅ ¡Ficha de '{enom}' (ID #{cliente_sel_obj['id']}) grabada y actualizada con éxito!"
+                                st.session_state["menu_activo"] = "👥 Gestión de Clientes (CRM)"
+                                st.query_params["modulo"] = "👥 Gestión de Clientes (CRM)"
+                                st.toast(f"✅ Ficha grabada con éxito: {enom}", icon="💾")
                                 st.rerun()
                             else:
                                 st.error("Error al guardar los cambios en la base de datos.")
@@ -587,6 +590,9 @@ def renderizar():
                             })
                             st.session_state["crm_cliente_seleccionado_id"] = dup["id"]
                             st.session_state["cliente_activo_proyecto"] = dup
+                            st.session_state["menu_activo"] = "👥 Gestión de Clientes (CRM)"
+                            st.query_params["modulo"] = "👥 Gestión de Clientes (CRM)"
+                            st.toast(f"✅ Ficha actualizada: {n_nom}", icon="💾")
                             st.rerun()
                         else:
                             ok_c, nuevo_c_id = db_manager.crear_cliente(usuario_id, {
@@ -599,6 +605,9 @@ def renderizar():
                             if ok_c:
                                 st.session_state["crm_cliente_seleccionado_id"] = nuevo_c_id
                                 st.session_state["crm_alerta_exito"] = f"✨ ¡Cliente '{n_nom}' registrado y grabado correctamente con ID #{nuevo_c_id}!"
+                                st.session_state["menu_activo"] = "👥 Gestión de Clientes (CRM)"
+                                st.query_params["modulo"] = "👥 Gestión de Clientes (CRM)"
+                                st.toast(f"✨ ¡Cliente registrado con éxito: {n_nom}!", icon="👤")
                                 st.rerun()
                             else:
                                 st.error("Error al registrar cliente en la base de datos.")

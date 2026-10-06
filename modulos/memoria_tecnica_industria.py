@@ -2716,66 +2716,99 @@ def renderizar():
             st.write("")
             st.write("")
             if st.button("💾 Guardar en Ficha de Cliente", type="primary", use_container_width=True):
-                if not cli_sel_id:
-                    st.error("Debes seleccionar un cliente del CRM arriba para asociar la memoria técnica.")
-                else:
-                    datos_guardar = {
-                        "mtd_tipo_inst_sel": tipo_inst_sel,
-                        "mtd_tipo_tram_sel": tipo_tram_sel,
-                        "mtd_in_tit_nom": tit_nombre,
-                        "mtd_in_tit_nif": tit_nif,
-                        "mtd_in_tit_tel": tit_tel,
-                        "mtd_in_tit_email": tit_email,
-                        "mtd_in_emp_dir": emp_dir,
-                        "mtd_in_emp_cp": emp_cp,
-                        "mtd_in_emp_muni": emp_muni,
-                        "mtd_in_emp_cups": emp_cups,
-                        "mtd_in_emp_uso": emp_uso,
-                        "mtd_in_pot_inst": sum_pot_inst,
-                        "mtd_in_pot_max": sum_pot_max,
-                        "mtd_in_tension": sum_tension,
-                        "mtd_in_origen": sum_origen,
-                        "mtd_in_di_cable": sum_di_cable,
-                        "mtd_in_di_tubo": sum_di_tubo,
-                        "mtd_in_di_long": sum_di_long,
-                        "mtd_in_di_cdt": sum_di_cdt,
-                        "mtd_in_grado": sum_grado,
-                        "mtd_in_iga": prot_iga,
-                        "mtd_in_curva": prot_curva,
-                        "mtd_in_icn": prot_icn,
-                        "mtd_in_dif": prot_dif,
-                        "mtd_in_vtp": prot_vtp,
-                        "mtd_in_tierra": prot_tierra,
-                        "mtd_in_spl": prot_spl,
-                        "mtd_in_desc_instalacion": st.session_state.get("mtd_in_desc_instalacion", ""),
-                        "mtd_circuitos": st.session_state.get("mtd_circuitos", []),
-                        "mtd_in_med_pe": med_pe,
-                        "mtd_in_med_aisl": med_aisl,
-                        "mtd_in_med_rt": med_rt,
-                        "mtd_in_med_dif_ma": med_dif_ma,
-                        "mtd_in_med_dif_ms": med_dif_ms,
-                        "mtd_plano_situacion": st.session_state.get("mtd_plano_situacion", ""),
-                        "mtd_plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
-                        "mtd_plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
-                        "mtd_unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
-                        "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", ""),
-                        "mtd_auditoria_unifilar": st.session_state.get("mtd_auditoria_unifilar", {}),
-                        "mtd_fotos_obra": st.session_state.get("mtd_fotos_obra", [])
-                    }
-                    resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"
-                    ok, p_id = db_manager.guardar_proyecto(
-                        usuario_id=user_auth["id"],
-                        cliente_id=cli_sel_id,
-                        nombre_proyecto=nom_proy_mtd,
-                        modulo="Memoria Técnica (MTD 30)",
-                        datos=datos_guardar,
-                        resumen=resumen_txt
-                    )
-                    if ok:
-                        st.success(f"✅ ¡Memoria Técnica '{nom_proy_mtd}' guardada exitosamente en la ficha de {cli_obj.get('nombre_completo', 'Cliente')}!")
-                        st.rerun()
+                # Si el usuario no seleccionó previamente un cliente del CRM en el Bloque 1,
+                # buscamos o creamos la ficha automáticamente a partir del Titular para que NUNCA falle el guardado.
+                cli_id_final = cli_sel_id
+                nombre_cli_final = cli_obj.get("nombre_completo", "") if cli_obj else ""
+
+                if not cli_id_final:
+                    nom_tit_limpio = (tit_nombre or "").strip() or f"Cliente {nom_proy_mtd}".strip()
+                    nif_tit_limpio = (tit_nif or "").strip().upper()
+                    
+                    dup = db_manager.buscar_cliente_duplicado(user_auth["id"], nif_tit_limpio, nom_tit_limpio)
+                    if dup:
+                        cli_id_final = dup["id"]
+                        nombre_cli_final = dup.get("nombre_completo", nom_tit_limpio)
+                        st.session_state["cliente_activo_proyecto"] = dup
                     else:
-                        st.error("Error al guardar la memoria técnica en la base de datos.")
+                        ok_cli, nuevo_c_id = db_manager.crear_cliente(user_auth["id"], {
+                            "nombre_completo": nom_tit_limpio,
+                            "nif_cif": nif_tit_limpio,
+                            "telefono": (tit_tel or "").strip(),
+                            "email": (tit_email or "").strip(),
+                            "direccion_suministro": (emp_dir or "").strip(),
+                            "codigo_postal": (emp_cp or "30000").strip(),
+                            "localidad": (emp_muni or "Murcia").strip(),
+                            "municipio": (emp_muni or "Murcia").strip(),
+                            "provincia": "Murcia",
+                            "cups": (emp_cups or "").strip().upper(),
+                            "tipo_inmueble": (emp_uso or "Instalación Eléctrica").strip(),
+                            "notas": f"Ficha autogenerada desde Memoria Técnica MTD '{nom_proy_mtd}'"
+                        })
+                        if ok_cli and nuevo_c_id > 0:
+                            cli_id_final = nuevo_c_id
+                            nombre_cli_final = nom_tit_limpio
+                            st.session_state["cliente_activo_proyecto"] = {"id": nuevo_c_id, "nombre_completo": nom_tit_limpio}
+
+                datos_guardar = {
+                    "mtd_tipo_inst_sel": tipo_inst_sel,
+                    "mtd_tipo_tram_sel": tipo_tram_sel,
+                    "mtd_in_tit_nom": tit_nombre,
+                    "mtd_in_tit_nif": tit_nif,
+                    "mtd_in_tit_tel": tit_tel,
+                    "mtd_in_tit_email": tit_email,
+                    "mtd_in_emp_dir": emp_dir,
+                    "mtd_in_emp_cp": emp_cp,
+                    "mtd_in_emp_muni": emp_muni,
+                    "mtd_in_emp_cups": emp_cups,
+                    "mtd_in_emp_uso": emp_uso,
+                    "mtd_in_pot_inst": sum_pot_inst,
+                    "mtd_in_pot_max": sum_pot_max,
+                    "mtd_in_tension": sum_tension,
+                    "mtd_in_origen": sum_origen,
+                    "mtd_in_di_cable": sum_di_cable,
+                    "mtd_in_di_tubo": sum_di_tubo,
+                    "mtd_in_di_long": sum_di_long,
+                    "mtd_in_di_cdt": sum_di_cdt,
+                    "mtd_in_grado": sum_grado,
+                    "mtd_in_iga": prot_iga,
+                    "mtd_in_curva": prot_curva,
+                    "mtd_in_icn": prot_icn,
+                    "mtd_in_dif": prot_dif,
+                    "mtd_in_vtp": prot_vtp,
+                    "mtd_in_tierra": prot_tierra,
+                    "mtd_in_spl": prot_spl,
+                    "mtd_in_desc_instalacion": st.session_state.get("mtd_in_desc_instalacion", ""),
+                    "mtd_circuitos": st.session_state.get("mtd_circuitos", []),
+                    "mtd_in_med_pe": med_pe,
+                    "mtd_in_med_aisl": med_aisl,
+                    "mtd_in_med_rt": med_rt,
+                    "mtd_in_med_dif_ma": med_dif_ma,
+                    "mtd_in_med_dif_ms": med_dif_ms,
+                    "mtd_plano_situacion": st.session_state.get("mtd_plano_situacion", ""),
+                    "mtd_plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
+                    "mtd_plano_distribucion": st.session_state.get("mtd_plano_distribucion", ""),
+                    "mtd_unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
+                    "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", ""),
+                    "mtd_auditoria_unifilar": st.session_state.get("mtd_auditoria_unifilar", {}),
+                    "mtd_fotos_obra": st.session_state.get("mtd_fotos_obra", [])
+                }
+                resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"
+                ok, p_id = db_manager.guardar_proyecto(
+                    usuario_id=user_auth["id"],
+                    cliente_id=cli_id_final,
+                    nombre_proyecto=nom_proy_mtd,
+                    modulo="Memoria Técnica (MTD 30)",
+                    datos=datos_guardar,
+                    resumen=resumen_txt
+                )
+                if ok:
+                    nombre_destino = nombre_cli_final or (tit_nombre.strip() if tit_nombre else "Cliente")
+                    st.toast(f"✅ ¡Memoria Técnica grabada con éxito! (Expediente #{p_id})", icon="💾")
+                    st.success(f"✅ ¡Memoria Técnica '{nom_proy_mtd}' grabada y archivada exitosamente en la ficha de **{nombre_destino}** (Expediente #{p_id})!")
+                    st.balloons()
+                else:
+                    st.error("Error al guardar la memoria técnica en la base de datos.")
 
         st.divider()
 

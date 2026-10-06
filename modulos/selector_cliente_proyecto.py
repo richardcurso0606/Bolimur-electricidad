@@ -65,9 +65,12 @@ def renderizar_barra_cliente_proyecto(modulo_nombre: str, datos_actuales: dict, 
                     if ok:
                         st.session_state["proyecto_cargado_nombre"] = nom_proy_in
                         if c_id_save:
-                            st.success(f"✅ ¡Guardado y asignado a la ficha del cliente!")
+                            st.toast(f"✅ ¡Cálculo grabado en ficha de cliente! (ID #{p_id})", icon="💾")
+                            st.success(f"✅ ¡Guardado y asignado a la ficha del cliente! (Expediente #{p_id})")
                         else:
-                            st.success(f"✅ ¡Cálculo '{nom_proy_in}' guardado como independiente!")
+                            st.toast(f"✅ ¡Cálculo '{nom_proy_in}' grabado con éxito! (ID #{p_id})", icon="💾")
+                            st.success(f"✅ ¡Cálculo '{nom_proy_in}' guardado como independiente! (Expediente #{p_id})")
+                        st.balloons()
                     else:
                         st.error("Error al guardar el cálculo.")
                 else:

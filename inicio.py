@@ -403,8 +403,25 @@ with st.sidebar:
 
     st.markdown("<h4 style='color: #334155; margin-bottom: 2px; font-size: 15px;'>📂 Panel de Módulos</h4>", unsafe_allow_html=True)
 
+    # Sincronización bidireccional con st.query_params:
+    # Si la sesión de Streamlit se reconecta, recarga o guarda datos, mantenemos el módulo activo exacto
+    mod_url = st.query_params.get("modulo")
+    if mod_url and ("menu_activo" not in st.session_state or st.session_state.menu_activo == "🏠 Menú Principal"):
+        st.session_state.menu_activo = mod_url
+
     if 'menu_activo' not in st.session_state:
         st.session_state.menu_activo = "🏠 Menú Principal"
+
+    def navegar_a_modulo(modulo_destino: str):
+        st.session_state.menu_activo = modulo_destino
+        if modulo_destino and modulo_destino != "🏠 Menú Principal":
+            st.query_params["modulo"] = modulo_destino
+        elif "modulo" in st.query_params:
+            try:
+                del st.query_params["modulo"]
+            except Exception:
+                pass
+        st.rerun()
 
     grupos_menu = [
         {
@@ -455,10 +472,19 @@ with st.sidebar:
             btn_type = "primary" if es_activo else "secondary"
             btn_label = f"▶ {label}" if es_activo else label
             if st.button(btn_label, key=f"nav_btn_{target}", use_container_width=True, type=btn_type):
-                st.session_state.menu_activo = target
-                st.rerun()
+                navegar_a_modulo(target)
 
     seleccion_modulo = st.session_state.menu_activo
+
+    # Garantizar que el parámetro de URL refleje siempre el módulo activo actual
+    if seleccion_modulo and seleccion_modulo != "🏠 Menú Principal":
+        if st.query_params.get("modulo") != seleccion_modulo:
+            st.query_params["modulo"] = seleccion_modulo
+    elif seleccion_modulo == "🏠 Menú Principal" and "modulo" in st.query_params:
+        try:
+            del st.query_params["modulo"]
+        except Exception:
+            pass
 
 # =========================================================================
 # =========================================================================
@@ -480,8 +506,7 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("")
             st.write("")
             if st.button("💬 Consultar a la IA", key="btn_home_ia_consultor", type="primary", use_container_width=True):
-                st.session_state.menu_activo = "🤖 Consultor IA REBT"
-                st.rerun()
+                navegar_a_modulo("🤖 Consultor IA REBT")
 
     # BANNER DESTACADO 2: SOLAR FOTOVOLTAICA
     with st.container(border=True):
@@ -493,8 +518,7 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("")
             st.write("")
             if st.button("☀️ Abrir Fotovoltaica", key="btn_home_pv_featured", use_container_width=True):
-                st.session_state.menu_activo = "☀️ Solar Fotovoltaica"
-                st.rerun()
+                navegar_a_modulo("☀️ Solar Fotovoltaica")
 
     # BANNER DESTACADO 3: MTD INDUSTRIA MURCIA & PLANOS
     with st.container(border=True):
@@ -506,8 +530,7 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("")
             st.write("")
             if st.button("🚀 Tramitar MTD & Planos", key="btn_home_mtd_featured", use_container_width=True):
-                st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
-                st.rerun()
+                navegar_a_modulo("🏛️ Memoria Técnica (MTD 30)")
 
     # BANNER DESTACADO 4: RADAR NORMATIVO BOE & VIGILANCIA LEGISLATIVA
     with st.container(border=True):
@@ -519,8 +542,7 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("")
             st.write("")
             if st.button("🛰️ Abrir Radar BOE", key="btn_home_radar_featured", use_container_width=True):
-                st.session_state.menu_activo = "🛰️ Radar Normativo BOE"
-                st.rerun()
+                navegar_a_modulo("🛰️ Radar Normativo BOE")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -528,58 +550,50 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.subheader("👥 Gestión de Clientes (CRM) y Proyectos")
             st.write("Administra las fichas de tus clientes, datos del suministro, CUPS y asocia proyectos para recuperarlos en 1 clic.")
             if st.button("Abrir Gestión de Clientes", key="btn_home_crm", use_container_width=True):
-                st.session_state.menu_activo = "👥 Gestión de Clientes (CRM)"
-                st.rerun()
+                navegar_a_modulo("👥 Gestión de Clientes (CRM)")
 
         with st.container(border=True):
             st.subheader("🏡 Presupuesto de Vivienda y Materiales")
             st.write("Inspector REBT ITC-BT-25, metraje de rozas, canalizaciones, cableado y mecanismos. Exportación de presupuestos y acopio.")
             if st.button("Abrir Presupuestos", key="btn_home_pres", use_container_width=True):
-                st.session_state.menu_activo = "🏡 Presupuesto Vivienda"
-                st.rerun()
+                navegar_a_modulo("🏡 Presupuesto Vivienda")
 
         with st.container(border=True):
             st.subheader("🧮 Cálculo Rápido (CDT & Icc)")
             st.write("Dimensionamiento de circuitos por caída de tensión y comprobación térmica ($I_z$). Comprobación de cortocircuito y disparo magnético.")
             if st.button("Abrir Cálculo Rápido", key="btn_home_cr", use_container_width=True):
-                st.session_state.menu_activo = "🧮 Cálculo Rápido (CDT & Icc)"
-                st.rerun()
+                navegar_a_modulo("🧮 Cálculo Rápido (CDT & Icc)")
 
         with st.container(border=True):
             st.subheader("🏢 Previsión de Cargas (Pt)")
             st.write("Cálculo analítico de la potencia total del edificio conforme a ITC-BT-10. Viviendas, locales, servicios generales y garajes.")
             if st.button("Abrir Previsión de Cargas", key="btn_home_pc", use_container_width=True):
-                st.session_state.menu_activo = "🏢 Previsión de Cargas (Pt)"
-                st.rerun()
+                navegar_a_modulo("🏢 Previsión de Cargas (Pt)")
 
     with c2:
         with st.container(border=True):
             st.subheader("⚡ Línea General de Alimentación (LGA)")
             st.write("Cálculo reglamentario de la LGA según ITC-BT-14. Soporta Cobre y Aluminio, contadores concentrados o parciales y tubos normalizados.")
             if st.button("Abrir LGA", key="btn_home_lga", use_container_width=True):
-                st.session_state.menu_activo = "⚡ Línea General (LGA)"
-                st.rerun()
+                navegar_a_modulo("⚡ Línea General (LGA)")
 
         with st.container(border=True):
             st.subheader("🔌 Derivación Individual (DI)")
             st.write("Dimensionamiento según ITC-BT-15 para enlaces a vivienda. Verificación de IGA Curva C y tubos normalizados (mínimo Ø 32 mm).")
             if st.button("Abrir Derivación Individual", key="btn_home_di", use_container_width=True):
-                st.session_state.menu_activo = "🔌 Derivación Individual (DI)"
-                st.rerun()
+                navegar_a_modulo("🔌 Derivación Individual (DI)")
 
         with st.container(border=True):
             st.subheader("🚗 Línea Recarga Vehículo Eléctrico (IRVE)")
             st.write("Circuitos terminales según ITC-BT-52. Esquemas 1, 2, 3a, 3b y 4, cálculo al 1% de caída de tensión y protecciones diferenciales Tipo A/B.")
             if st.button("Abrir Módulo IRVE", key="btn_home_irve", use_container_width=True):
-                st.session_state.menu_activo = "🚗 Línea Recarga (IRVE)"
-                st.rerun()
+                navegar_a_modulo("🚗 Línea Recarga (IRVE)")
 
         with st.container(border=True):
             st.subheader("👤 Perfil del Instalador y Logotipo")
             st.write("Configura tus datos fiscales, número de carnet REBT, logotipo corporativo y copias de seguridad en la nube.")
             if st.button("Abrir Perfil del Instalador", key="btn_home_prof", use_container_width=True):
-                st.session_state.menu_activo = "👤 Perfil del Instalador"
-                st.rerun()
+                navegar_a_modulo("👤 Perfil del Instalador")
 
 elif "Consultor IA" in seleccion_modulo or "🤖" in seleccion_modulo:
     if asistente_ia_rebt:

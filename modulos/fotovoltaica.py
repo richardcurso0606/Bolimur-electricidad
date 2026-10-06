@@ -598,7 +598,9 @@ def _renderizar_modo_aislada(user_auth, cliente_sel):
                         resumen=f"{res_ais['potencia_pico_instalada_kw']} kWp Solar | Bat {res_ais['energia_total_bateria_kwh']} kWh ({res_ais['capacidad_total_ah']:.0f}Ah @ {v_bat:.0f}V) | Inv {res_ais['inversor_nominal_w']:.0f}W"
                     )
                     if ok_db:
+                        st.toast(f"✅ ¡Proyecto Aislado '{nom_proy_ais}' grabado con éxito! (ID #{proy_id})", icon="☀️")
                         st.success(f"✅ ¡Proyecto Fotovoltaico Aislado '{nom_proy_ais}' guardado con éxito! (ID: {proy_id})")
+                        st.balloons()
                     else:
                         st.error("Error al guardar en base de datos.")
         with col_ba2:
@@ -1097,7 +1099,9 @@ def renderizar():
                         resumen=f"{pot_pico_total_kw} kWp DC | {pot_inv_kw} kW AC | {res_eco['prod_anual_kwh']:,.0f} kWh/año"
                     )
                     if ok_db:
+                        st.toast(f"✅ ¡Proyecto fotovoltaico '{nombre_proyecto_fv}' grabado con éxito! (ID #{proy_id})", icon="☀️")
                         st.success(f"✅ ¡Proyecto fotovoltaico '{nombre_proyecto_fv}' guardado con éxito en CRM! (ID: {proy_id})")
+                        st.balloons()
                     else:
                         st.error("Error al guardar en la base de datos.")
                 else:

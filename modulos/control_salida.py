@@ -237,11 +237,6 @@ def inyectar_control_escape():
                 win.addEventListener('focus', armarHistorial, { passive: true });
                 win.addEventListener('pageshow', armarHistorial, { passive: true });
 
-                // Mantener el estado en historial de forma continua para blindar el menú vertical izquierdo
-                setInterval(function() {
-                    armarHistorial();
-                }, 600);
-
                 win.addEventListener('popstate', function(ev) {
                     if (win.__bolimur_allow_exit) {
                         return;
