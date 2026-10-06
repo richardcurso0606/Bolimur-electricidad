@@ -243,71 +243,94 @@ st.markdown("""
             color: #0284c7 !important;
         }
 
-        /* Contenedores con Borde y Sombra */
+        /* Contenedores con Borde y Sombra Nítidos y Marcados */
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-radius: 12px !important;
-            border: 1.5px solid #e2e8f0 !important;
+            border: 2px solid #94a3b8 !important;
             background-color: #ffffff !important;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
             margin-bottom: 16px !important;
             transition: all 0.2s ease;
         }
         div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-            border-color: #cbd5e1 !important;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.06) !important;
+            border-color: #0284c7 !important;
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.16), 0 2px 4px rgba(2, 132, 199, 0.1) !important;
         }
 
-        /* Expanders con Sombra */
+        /* Expanders con Borde Nítido y Sombra */
         div[data-testid="stExpander"] {
             border-radius: 10px !important;
-            border: 1.5px solid #e2e8f0 !important;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
-            background: white !important;
+            border: 2px solid #94a3b8 !important;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+            background: #ffffff !important;
             margin-bottom: 12px !important;
+            transition: all 0.2s ease;
+        }
+        div[data-testid="stExpander"]:hover {
+            border-color: #0284c7 !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
         }
 
-        /* Cabeceras de Secciones con Insignia */
+        /* Cabeceras de Secciones con Insignia y Borde Integral */
         .section-header-blue {
             background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 100%);
-            border-left: 5px solid #0284c7;
-            padding: 10px 16px;
-            border-radius: 6px;
+            border: 2px solid #0284c7;
+            border-left: 8px solid #0284c7;
+            padding: 12px 18px;
+            border-radius: 8px;
             margin: 18px 0 12px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
         }
         .section-header-green {
             background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
-            border-left: 5px solid #16a34a;
-            padding: 10px 16px;
-            border-radius: 6px;
+            border: 2px solid #16a34a;
+            border-left: 8px solid #16a34a;
+            padding: 12px 18px;
+            border-radius: 8px;
             margin: 18px 0 12px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            box-shadow: 0 3px 8px rgba(22, 163, 74, 0.12);
         }
         .section-header-amber {
             background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
-            border-left: 5px solid #d97706;
-            padding: 10px 16px;
-            border-radius: 6px;
+            border: 2px solid #d97706;
+            border-left: 8px solid #d97706;
+            padding: 12px 18px;
+            border-radius: 8px;
             margin: 18px 0 12px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            box-shadow: 0 3px 8px rgba(217, 119, 6, 0.12);
         }
         .section-header-slate {
             background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
-            border-left: 5px solid #475569;
-            padding: 10px 16px;
-            border-radius: 6px;
+            border: 2px solid #475569;
+            border-left: 8px solid #475569;
+            padding: 12px 18px;
+            border-radius: 8px;
             margin: 18px 0 12px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            box-shadow: 0 3px 8px rgba(71, 85, 105, 0.12);
         }
 
         /* Tarjeta Genérica Bolimur */
         .bolimur-card {
             background: #ffffff;
-            border: 1.5px solid #e2e8f0;
+            border: 2px solid #94a3b8;
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
             margin-bottom: 20px;
+        }
+
+        /* Estilo de Pestañas (Tabs) */
+        button[data-baseweb="tab"] {
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            padding: 9px 16px !important;
+            border-radius: 8px 8px 0 0 !important;
+            transition: all 0.2s ease !important;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #0284c7 !important;
+            border-bottom: 3px solid #0284c7 !important;
+            background-color: #f0f9ff !important;
         }
     </style>
 """, unsafe_allow_html=True)
