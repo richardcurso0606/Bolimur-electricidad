@@ -163,3 +163,68 @@ def test_auditor_ia_con_contexto_publica_concurrencia():
     criterios = [c["criterio"] for c in res["comprobaciones"]]
     assert any("Halógenos" in c or "AS" in c for c in criterios)
     assert any("OCA" in c for c in criterios)
+
+def test_procesar_archivo_anexo_imagenes_y_pdf():
+    import io
+    from PIL import Image
+    import pymupdf
+
+    # 1. Probar con imagen PNG
+    bio_img = io.BytesIO()
+    img = Image.new("RGB", (100, 100), color="blue")
+    img.save(bio_img, format="PNG")
+    bio_img.seek(0)
+
+    class DummyUpload:
+        def __init__(self, buf, name="plano.png"):
+            self.buf = buf
+            self.name = name
+            self.size = len(buf.getvalue())
+        def getvalue(self):
+            return self.buf.getvalue()
+
+    u_img = DummyUpload(bio_img, "plano.png")
+    res_img = mtd.procesar_archivo_anexo(u_img)
+    assert res_img.startswith("data:image/jpeg;base64,")
+
+    # 2. Probar con PDF
+    doc = pymupdf.open()
+    page = doc.new_page(width=200, height=200)
+    page.draw_rect([20, 20, 180, 180], color=(1, 0, 0), fill=(0, 1, 0))
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    bio_pdf = io.BytesIO(pdf_bytes)
+    u_pdf = DummyUpload(bio_pdf, "plano.pdf")
+    res_pdf = mtd.procesar_archivo_anexo(u_pdf)
+    assert res_pdf.startswith("data:image/jpeg;base64,")
+
+def test_generacion_oficial_con_todos_los_planos():
+    from modulos import generador_doc_oficial, pdf_memoria_tecnica
+
+    dummy_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+
+    datos = {
+        "expediente": "EXP-TEST-PLANOS",
+        "titular": {"nombre": "Titular Test", "nif": "12345678Z", "direccion": "C/ Mayor", "municipio": "Murcia", "cp": "30001", "cups": "ES0021", "uso": "Vivienda"},
+        "instalador": {"empresa": "BOLIMUR", "cif": "B12345678", "rii": "RII-30/08492", "tecnico": "Richard", "nif_tecnico": "12345678Z", "carnet": "REBT-30/15892", "categoria": "Especialista", "tel": "600000000", "email": "test@test.com"},
+        "suministro": {"origen": "DI", "di_cable": "2x16 mm²", "di_tubo": "Tubo M40", "di_longitud": 15, "di_cdt": 0.85, "potencia_inst": 9200, "potencia_max": 9200, "tension": "Monofásico 230V", "grado_electrif": "Elevada"},
+        "protecciones": {"iga_amperaje": 40, "iga_curva": "Curva C", "iga_icn_ka": 6.0, "diferenciales": "40A 30mA", "sobretensiones": "VTP", "puesta_a_tierra": "10 ohm"},
+        "ensayos": {"pe_ohm": 0.1, "aisl_mohm": 100, "rt_ohm": 10, "dif_ma": 22, "dif_ms": 25},
+        "circuitos": [{"nombre": "C1", "potencia": 2300, "pia": 10, "seccion": "2x1.5", "tubo": "M20", "longitud": 15, "cdt": 1.0}],
+        "anexos": {
+            "plano_situacion": dummy_b64,
+            "plano_emplazamiento": dummy_b64,
+            "plano_distribucion": dummy_b64,
+            "unifilar_modo": "custom",
+            "plano_unifilar_custom": dummy_b64,
+            "fotos": []
+        }
+    }
+
+    docx_res = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos)
+    assert docx_res is not None and len(docx_res) > 1000
+
+    pdf_res = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos)
+    assert pdf_res is not None and len(pdf_res) > 1000
+

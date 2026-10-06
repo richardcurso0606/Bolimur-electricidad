@@ -7,6 +7,7 @@ y el guardado/recuperación persistente vinculado a las fichas de clientes en el
 """
 
 import streamlit as st
+import os
 import datetime
 import math
 import json
@@ -40,7 +41,10 @@ def procesar_archivo_anexo(uploaded_file) -> str:
         # Si es un PDF, renderizar primera página a PNG con PyMuPDF
         if raw_bytes.startswith(b"%PDF"):
             try:
-                import fitz
+                try:
+                    import pymupdf as fitz
+                except ImportError:
+                    import fitz
                 pdf_doc = fitz.open(stream=raw_bytes, filetype="pdf")
                 if len(pdf_doc) > 0:
                     page = pdf_doc[0]
@@ -1285,68 +1289,85 @@ def renderizar():
         st.markdown("#### 🗺️ Gestor Gráfico de Planos Oficiales y Esquema Unifilar")
         st.caption("Visualiza el estado de los documentos gráficos requeridos por Industria (DGEAIM Murcia). Puedes adjuntarlos aquí en el desplegable o en la pestaña **7. 🗺️ PLANOS Y UNIFILAR**:")
 
-        badge_sit = '<span style="color:#16a34a; font-weight:bold; font-size:12.5px;">✅ Adjuntado</span>' if tiene_sit else '<span style="color:#64748b; font-size:12.5px;">⚪ Sin adjuntar</span>'
-        badge_emp = '<span style="color:#16a34a; font-weight:bold; font-size:12.5px;">✅ Adjuntado</span>' if tiene_emp else '<span style="color:#64748b; font-size:12.5px;">⚪ Sin adjuntar</span>'
+        badge_sit = '<span style="color:#16a34a; font-weight:bold; font-size:12px;">✅ Adjuntado</span>' if tiene_sit else '<span style="color:#64748b; font-size:12px;">⚪ Sin adjuntar</span>'
+        badge_emp = '<span style="color:#16a34a; font-weight:bold; font-size:12px;">✅ Adjuntado</span>' if tiene_emp else '<span style="color:#64748b; font-size:12px;">⚪ Sin adjuntar</span>'
+        badge_dist = '<span style="color:#16a34a; font-weight:bold; font-size:12px;">✅ Adjuntado</span>' if tiene_dist else '<span style="color:#64748b; font-size:12px;">⚪ Sin adjuntar</span>'
         if unif_modo == 'auto':
-            badge_unif = '<span style="color:#0284c7; font-weight:bold; font-size:12.5px;">⚙️ Vectorial Auto</span>'
-        elif tiene_unif:
-            badge_unif = '<span style="color:#16a34a; font-weight:bold; font-size:12.5px;">📁 Plano Propio</span>'
+            badge_unif = '<span style="color:#0284c7; font-weight:bold; font-size:12px;">⚙️ Vectorial Auto</span>'
+        elif bool(st.session_state.get("mtd_plano_unifilar_custom")):
+            badge_unif = '<span style="color:#16a34a; font-weight:bold; font-size:12px;">📁 Plano Propio</span>'
         else:
-            badge_unif = '<span style="color:#ef4444; font-weight:bold; font-size:12.5px;">⚠️ Falta archivo</span>'
+            badge_unif = '<span style="color:#ef4444; font-weight:bold; font-size:12px;">⚠️ Falta archivo</span>'
 
         bg_sit = '#f0fdf4' if tiene_sit else '#f8fafc'
         border_sit = '#16a34a' if tiene_sit else '#cbd5e1'
         bg_emp = '#f0fdf4' if tiene_emp else '#f8fafc'
         border_emp = '#16a34a' if tiene_emp else '#cbd5e1'
+        bg_dist = '#f0fdf4' if tiene_dist else '#f8fafc'
+        border_dist = '#16a34a' if tiene_dist else '#cbd5e1'
+        bg_unif = '#f0fdf4' if (unif_modo == 'custom' and bool(st.session_state.get("mtd_plano_unifilar_custom"))) else ('#f0f9ff' if unif_modo == 'auto' else '#f8fafc')
+        border_unif = '#16a34a' if (unif_modo == 'custom' and bool(st.session_state.get("mtd_plano_unifilar_custom"))) else ('#0284c7' if unif_modo == 'auto' else '#cbd5e1')
         bg_fotos = '#f0fdf4' if n_fotos > 0 else '#f8fafc'
         border_fotos = '#16a34a' if n_fotos > 0 else '#cbd5e1'
 
-        cp1, cp2, cp3, cp4 = st.columns(4)
+        cp1, cp2, cp3, cp4, cp5 = st.columns(5)
         with cp1:
             st.markdown(
-                f"<div style='border:1px solid {border_sit}; background:{bg_sit}; padding:10px 12px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO I (a)</div>"
-                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>🗺️ Situación</div>"
+                f"<div style='border:1px solid {border_sit}; background:{bg_sit}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO I (a)</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>🗺️ Situación</div>"
                 f"{badge_sit}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp2:
             st.markdown(
-                f"<div style='border:1px solid {border_emp}; background:{bg_emp}; padding:10px 12px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO I (b)</div>"
-                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>📍 Emplazamiento</div>"
+                f"<div style='border:1px solid {border_emp}; background:{bg_emp}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO I (b)</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>📍 Emplazamiento</div>"
                 f"{badge_emp}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp3:
             st.markdown(
-                f"<div style='border:1px solid #0284c7; background:#f0f9ff; padding:10px 12px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO III</div>"
-                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>⚡ Unifilar</div>"
-                f"{badge_unif}"
+                f"<div style='border:1px solid {border_dist}; background:{bg_dist}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO II</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>📐 Distribución</div>"
+                f"{badge_dist}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp4:
             st.markdown(
-                f"<div style='border:1px solid {border_fotos}; background:{bg_fotos}; padding:10px 12px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:11px; font-weight:bold; color:#64748b;'>ANEXO V</div>"
-                f"<div style='font-size:14px; font-weight:bold; margin:3px 0;'>📸 Fotos Obra</div>"
-                f"<span style='color:#334155; font-weight:bold; font-size:12.5px;'>{n_fotos} fotos</span>"
+                f"<div style='border:1px solid {border_unif}; background:{bg_unif}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO III</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>⚡ Unifilar</div>"
+                f"{badge_unif}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        with cp5:
+            st.markdown(
+                f"<div style='border:1px solid {border_fotos}; background:{bg_fotos}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO V</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>📸 Fotos Obra</div>"
+                f"<span style='color:#334155; font-weight:bold; font-size:12px;'>{n_fotos} fotos</span>"
                 f"</div>",
                 unsafe_allow_html=True
             )
 
-        with st.expander("⚡ 📤 SUBIR / GESTIONAR PLANOS RÁPIDAMENTE AQUÍ (Sin buscar pestañas)", expanded=abrir_planos_auto):
-            st.info("💡 **Subida Rápida:** Puedes subir o sustituir tus archivos de plano directamente aquí. Se guardan y sincronizan automáticamente con el expediente y la pestaña 7.")
+        with st.expander("⚡ 📤 SUBIR / GESTIONAR PLANOS RÁPIDAMENTE AQUÍ (Sin buscar pestañas)", expanded=abrir_planos_auto or tiene_emp or tiene_sit or tiene_dist):
+            st.info("💡 **Subida Rápida:** Puedes subir o sustituir tus archivos de plano directamente aquí (PNG, JPG o PDF de 1 página). Se sincronizan automáticamente con el expediente, la pestaña 7 y se incorporan al documento oficial de la Memoria Técnica.")
+            
+            # Fila 1: Situación y Emplazamiento
             col_qp1, col_qp2 = st.columns(2)
             with col_qp1:
                 with st.container(border=True):
-                    st.markdown("##### 🗺️ Plano de Situación (Callejero / Municipio)")
+                    st.markdown("##### 🗺️ Anexo I (a): Plano de Situación")
                     st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
-                    up_sit_quick = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="quick_up_sit")
+                    k_sit = f"quick_up_sit_{st.session_state.get('_ver_up_sit', 0)}"
+                    up_sit_quick = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_sit)
                     if up_sit_quick is not None:
                         f_id = f"{up_sit_quick.name}_{up_sit_quick.size}"
                         if st.session_state.get("_last_quick_sit_id") != f_id:
@@ -1359,13 +1380,15 @@ def renderizar():
                         if st.button("🗑️ Quitar Situación", key="btn_del_sit_quick"):
                             st.session_state.pop("mtd_plano_situacion", None)
                             st.session_state.pop("_last_quick_sit_id", None)
+                            st.session_state["_ver_up_sit"] = st.session_state.get("_ver_up_sit", 0) + 1
                             st.rerun()
 
             with col_qp2:
                 with st.container(border=True):
-                    st.markdown("##### 📍 Plano de Emplazamiento (Catastro)")
+                    st.markdown("##### 📍 Anexo I (b): Plano de Emplazamiento")
                     st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
-                    up_emp_quick = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="quick_up_emp")
+                    k_emp = f"quick_up_emp_{st.session_state.get('_ver_up_emp', 0)}"
+                    up_emp_quick = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_emp)
                     if up_emp_quick is not None:
                         f_id_e = f"{up_emp_quick.name}_{up_emp_quick.size}"
                         if st.session_state.get("_last_quick_emp_id") != f_id_e:
@@ -1378,7 +1401,56 @@ def renderizar():
                         if st.button("🗑️ Quitar Emplazamiento", key="btn_del_emp_quick"):
                             st.session_state.pop("mtd_plano_emplazamiento", None)
                             st.session_state.pop("_last_quick_emp_id", None)
+                            st.session_state["_ver_up_emp"] = st.session_state.get("_ver_up_emp", 0) + 1
                             st.rerun()
+
+            # Fila 2: Distribución en Planta y Unifilar Personalizado
+            col_qp3, col_qp4 = st.columns(2)
+            with col_qp3:
+                with st.container(border=True):
+                    st.markdown("##### 📐 Anexo II: Plano en Planta de Distribución en B.T.")
+                    st.caption("Plano en planta con tomas de corriente, alumbrado y cuadro eléctrico (AutoCAD / Arquitectónico).")
+                    k_dist = f"quick_up_dist_{st.session_state.get('_ver_up_dist', 0)}"
+                    up_dist_quick = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_dist)
+                    if up_dist_quick is not None:
+                        f_id_d = f"{up_dist_quick.name}_{up_dist_quick.size}"
+                        if st.session_state.get("_last_quick_dist_id") != f_id_d:
+                            b64_dq = procesar_archivo_anexo(up_dist_quick)
+                            if b64_dq:
+                                st.session_state["mtd_plano_distribucion"] = b64_dq
+                                st.session_state["_last_quick_dist_id"] = f_id_d
+                    if st.session_state.get("mtd_plano_distribucion"):
+                        st.image(st.session_state["mtd_plano_distribucion"], caption="Plano de Distribución Cargado", use_container_width=True)
+                        if st.button("🗑️ Quitar Distribución", key="btn_del_dist_quick"):
+                            st.session_state.pop("mtd_plano_distribucion", None)
+                            st.session_state.pop("_last_quick_dist_id", None)
+                            st.session_state["_ver_up_dist"] = st.session_state.get("_ver_up_dist", 0) + 1
+                            st.rerun()
+
+            with col_qp4:
+                with st.container(border=True):
+                    st.markdown("##### ⚡ Anexo III: Esquema Unifilar Personalizado")
+                    st.caption("Si tienes tu propio plano unifilar de AutoCAD o Cade_Simu, súbelo aquí para reemplazar el esquema vectorial automático.")
+                    k_unif = f"quick_up_unif_{st.session_state.get('_ver_up_unif', 0)}"
+                    up_unif_quick = st.file_uploader("Subir tu Esquema Unifilar Propio (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_unif)
+                    if up_unif_quick is not None:
+                        f_id_u = f"{up_unif_quick.name}_{up_unif_quick.size}"
+                        if st.session_state.get("_last_quick_unif_id") != f_id_u:
+                            b64_uq = procesar_archivo_anexo(up_unif_quick)
+                            if b64_uq:
+                                st.session_state["mtd_plano_unifilar_custom"] = b64_uq
+                                st.session_state["mtd_unifilar_modo"] = "custom"
+                                st.session_state["_last_quick_unif_id"] = f_id_u
+                    if st.session_state.get("mtd_plano_unifilar_custom"):
+                        st.image(st.session_state["mtd_plano_unifilar_custom"], caption="Esquema Unifilar Propio Cargado", use_container_width=True)
+                        if st.button("🗑️ Quitar Unifilar Propio (Usar Vectorial Auto)", key="btn_del_unif_quick"):
+                            st.session_state.pop("mtd_plano_unifilar_custom", None)
+                            st.session_state["mtd_unifilar_modo"] = "auto"
+                            st.session_state.pop("_last_quick_unif_id", None)
+                            st.session_state["_ver_up_unif"] = st.session_state.get("_ver_up_unif", 0) + 1
+                            st.rerun()
+                    else:
+                        st.caption("ℹ️ *Actualmente se genera automáticamente el Esquema Unifilar Vectorial normalizado con los circuitos del cuadro.*")
 
     lbl_tab7 = "🗺️ 7. PLANOS Y UNIFILAR"
     if tiene_sit or tiene_emp or tiene_dist:
@@ -1885,7 +1957,8 @@ def renderizar():
             with st.container(border=True):
                 st.markdown("###### 🗺️ Anexo I (a): Plano de Situación")
                 st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
-                up_sit = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_sit")
+                k_t7_sit = f"up_mtd_sit_{st.session_state.get('_ver_tab7_sit', 0)}"
+                up_sit = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_t7_sit)
                 if up_sit is not None:
                     f_id_s = f"{up_sit.name}_{up_sit.size}"
                     if st.session_state.get("_last_tab7_sit_id") != f_id_s:
@@ -1899,12 +1972,14 @@ def renderizar():
                     if st.button("🗑️ Quitar Plano de Situación", key="btn_del_sit"):
                         st.session_state.pop("mtd_plano_situacion", None)
                         st.session_state.pop("_last_tab7_sit_id", None)
+                        st.session_state["_ver_tab7_sit"] = st.session_state.get("_ver_tab7_sit", 0) + 1
                         st.rerun()
 
             with st.container(border=True):
                 st.markdown("###### 📐 Anexo II: Plano en Planta de Distribución en B.T.")
                 st.caption("Plano en planta de la vivienda, local o nave con tomas, alumbrado y cuadro (AutoCAD / Plano arquitectónico).")
-                up_dist = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_dist")
+                k_t7_dist = f"up_mtd_dist_{st.session_state.get('_ver_tab7_dist', 0)}"
+                up_dist = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_t7_dist)
                 if up_dist is not None:
                     f_id_d = f"{up_dist.name}_{up_dist.size}"
                     if st.session_state.get("_last_tab7_dist_id") != f_id_d:
@@ -1918,13 +1993,15 @@ def renderizar():
                     if st.button("🗑️ Quitar Plano de Distribución", key="btn_del_dist"):
                         st.session_state.pop("mtd_plano_distribucion", None)
                         st.session_state.pop("_last_tab7_dist_id", None)
+                        st.session_state["_ver_tab7_dist"] = st.session_state.get("_ver_tab7_dist", 0) + 1
                         st.rerun()
 
         with col_anx2:
             with st.container(border=True):
                 st.markdown("###### 📍 Anexo I (b): Plano de Emplazamiento (Catastro)")
                 st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
-                up_emp = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_emp")
+                k_t7_emp = f"up_mtd_emp_{st.session_state.get('_ver_tab7_emp', 0)}"
+                up_emp = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_t7_emp)
                 if up_emp is not None:
                     f_id_e = f"{up_emp.name}_{up_emp.size}"
                     if st.session_state.get("_last_tab7_emp_id") != f_id_e:
@@ -1938,6 +2015,7 @@ def renderizar():
                     if st.button("🗑️ Quitar Plano de Emplazamiento", key="btn_del_emp"):
                         st.session_state.pop("mtd_plano_emplazamiento", None)
                         st.session_state.pop("_last_tab7_emp_id", None)
+                        st.session_state["_ver_tab7_emp"] = st.session_state.get("_ver_tab7_emp", 0) + 1
                         st.rerun()
 
             with st.container(border=True):
@@ -1959,7 +2037,8 @@ def renderizar():
                 if "Adjuntar mi Propio" in sel_modo_unif:
                     st.session_state["mtd_unifilar_modo"] = "custom"
                     st.markdown("<div style='background:#fef3c7; border:1px solid #f59e0b; padding:8px 12px; border-radius:6px; margin:8px 0; font-size:13px;'>📁 <b>Modo Plano Propio Activado:</b> Selecciona abajo tu imagen o PDF del unifilar para reemplazar el esquema estándar.</div>", unsafe_allow_html=True)
-                    up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_unif_custom")
+                    k_t7_unif = f"up_mtd_unif_custom_{st.session_state.get('_ver_tab7_unif', 0)}"
+                    up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_t7_unif)
                     if up_unif is not None:
                         f_id_u = f"{up_unif.name}_{up_unif.size}"
                         if st.session_state.get("_last_tab7_unif_id") != f_id_u:
@@ -1999,7 +2078,10 @@ def renderizar():
                         with col_u2:
                             if st.button("🗑️ Quitar Unifilar Propio", key="btn_del_unif", use_container_width=True):
                                 st.session_state.pop("mtd_plano_unifilar_custom", None)
+                                st.session_state.pop("_last_tab7_unif_id", None)
                                 st.session_state.pop("mtd_auditoria_unifilar", None)
+                                st.session_state["mtd_unifilar_modo"] = "auto"
+                                st.session_state["_ver_tab7_unif"] = st.session_state.get("_ver_tab7_unif", 0) + 1
                                 st.rerun()
                 else:
                     st.session_state["mtd_unifilar_modo"] = "auto"
