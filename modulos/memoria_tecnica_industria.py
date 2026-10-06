@@ -651,30 +651,199 @@ def renderizar():
     # --- TAB 3: SUMINISTRO Y POTENCIAS ---
     with tab_f3:
         st.markdown("##### ⚡ Bloque III: Suministro, Potencia de Cálculo y Derivación Individual:")
+
+        with st.expander("📘 Guía Técnica Oficial: ¿De dónde sacar cada dato para Industria (DGEAIM Murcia)?", expanded=False):
+            st.markdown(r"""
+            **Fuentes oficiales y normativa técnica (DGEAIM Murcia - REBT RD 842/2002):**
+            * **Potencia de Diseño / Prevista (W):**
+              - *Vivienda Básica (ITC-BT-10):* **5.750 W** (suministro monofásico estándar sin aire ni calefacción acumulada).
+              - *Vivienda Elevada (ITC-BT-10):* **9.200 W** (*Valor oficial del modelo DGEAIM Murcia adjunto*). Obligatoria si superficie > 160 m², o si dispone de aire acondicionado (C9), calefacción eléctrica (C8), secadora (C10) o domótica (C11).
+              - *IRVE Punto de Recarga (ITC-BT-52):* **7.360 W** (Modo 3 - 32A monofásico) o 11 kW / 22 kW trifásico.
+              - *Local Comercial / Oficinas:* Mínimo **100 W/m²** de superficie útil (con un mínimo de 3.450 W a 230 V).
+            * **Potencia Máxima Admisible (W):**
+              - Es la potencia límite que soporta térmicamente la Derivación Individual (DI) y el IGA según la ITC-BT-19. Para cable de 10 mm² con IGA 25A es **5.750 W** (admite hasta 11.500 W térmicos). Para cable de 16 mm² con IGA 40A es **9.200 W** (admite hasta 14.490 W térmicos). En el CIE se consigna esta potencia máxima.
+            * **Tensión Nominal y Fases:**
+              - Monofásico 230 V (Fase + Neutro) o Trifásico 400 V (3 Fases + Neutro). Se obtiene de la factura de electricidad de la comercializadora o del contrato técnico con la distribuidora (i-DE Redes Eléctricas Inteligentes en la Región de Murcia).
+            * **Origen del Suministro:**
+              - *Vivienda unifamiliar / Chalet:* "Caja de Protección y Medida (CPM) en valla de cerramiento / fachada exterior (ITC-BT-13)".
+              - *Piso / Edificio residencial:* "Centralización de Contadores en planta baja / sótano (ITC-BT-16)".
+              - *Local comercial:* "Módulo de medida individual en fachada o CPM".
+            * **Conductor de la Derivación Individual (DI):**
+              - Exigido por ITC-BT-15: Cables unipolares no propagadores de la llama, de reducida emisión de humos y libres de halógenos (AS), clase de reacción al fuego Cca-s1b,d1,a1 (ej. `RZ1-K (AS) 0.6/1 kV`).
+              - Sección fase y neutro: Mínimo **10 mm² Cu** (viviendas básicas) o **16 mm² Cu** (viviendas elevadas, como en el modelo oficial de Murcia). Conductor de protección (tierra PE): misma sección que la fase.
+            * **Tubo Protector:**
+              - ITC-BT-15 Tabla 1: Diámetro exterior mínimo **M32** para cables de 10 mm², y **M40** para cables de 16 mm².
+            * **Longitud y Caída de Tensión (ΔV%):**
+              - Longitud: Metros reales medidos desde el contador hasta el cuadro CGMP.
+              - Límite reglamentario: Máximo **1.5%** para contadores totalmente centralizados, o **0.5%** si es contador individual adosado (CPM).
+            """)
+
+        # Botones de Carga Rápida Automática de Suministro
+        st.caption("⚡ **Plantillas Automáticas de Suministro Oficial (1 Clic):**")
+        col_ps1, col_ps2, col_ps3, col_ps4 = st.columns(4)
+        with col_ps1:
+            if st.button("🏠 Básica (5.750 W)", use_container_width=True, help="Vivienda Básica 230V"):
+                st.session_state["mtd_in_pot_inst"] = 5750.0
+                st.session_state["mtd_in_pot_max"] = 5750.0
+                st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
+                st.session_state["mtd_in_di_cable"] = "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (AS)"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos (ITC-BT-15)"
+                st.session_state["mtd_in_di_long"] = 15.0
+                st.session_state["mtd_in_di_cdt"] = 0.72
+                st.session_state["mtd_in_grado"] = "Básica"
+                st.success("✅ Parámetros de Vivienda Básica cargados.")
+                st.rerun()
+        with col_ps2:
+            if st.button("🏡 Elevada (9.200 W Murcia)", use_container_width=True, help="Vivienda Elevada DGEAIM Murcia"):
+                st.session_state["mtd_in_pot_inst"] = 9200.0
+                st.session_state["mtd_in_pot_max"] = 9200.0
+                st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
+                st.session_state["mtd_in_di_cable"] = "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (AS)"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos (ITC-BT-15)"
+                st.session_state["mtd_in_di_long"] = 18.0
+                st.session_state["mtd_in_di_cdt"] = 0.85
+                st.session_state["mtd_in_grado"] = "Elevada"
+                st.success("✅ Parámetros de Vivienda Elevada (Modelo DGEAIM Murcia) cargados.")
+                st.rerun()
+        with col_ps3:
+            if st.button("🚗 IRVE 32A (7.360 W)", use_container_width=True, help="Recarga VE ITC-BT-52"):
+                st.session_state["mtd_in_pot_inst"] = 7360.0
+                st.session_state["mtd_in_pot_max"] = 7360.0
+                st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Centralización de Contadores (Esquema 2 ITC-BT-52)"
+                st.session_state["mtd_in_di_cable"] = "3G6 mm² Cu RZ1-K 0.6/1kV (AS)"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos (IK08)"
+                st.session_state["mtd_in_di_long"] = 25.0
+                st.session_state["mtd_in_di_cdt"] = 0.86
+                st.session_state["mtd_in_grado"] = "Específica IRVE (ITC-BT-52)"
+                st.success("✅ Parámetros de Recarga IRVE cargados.")
+                st.rerun()
+        with col_ps4:
+            if st.button("🏢 Comercial (14.490 W 400V)", use_container_width=True, help="Trifásico 400V"):
+                st.session_state["mtd_in_pot_inst"] = 14490.0
+                st.session_state["mtd_in_pot_max"] = 14490.0
+                st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Módulo de Medida / CPM en Fachada"
+                st.session_state["mtd_in_di_cable"] = "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (AS)"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos"
+                st.session_state["mtd_in_di_long"] = 20.0
+                st.session_state["mtd_in_di_cdt"] = 0.62
+                st.session_state["mtd_in_grado"] = "Comercial / Servicios"
+                st.success("✅ Parámetros de Suministro Trifásico cargados.")
+                st.rerun()
+
         col_s1, col_s2 = st.columns(2)
         with col_s1:
-            sum_pot_inst = st.number_input("Potencia de Diseño / Prevista (W):", value=float(st.session_state.get("mtd_in_pot_inst", 0.0)), step=250.0, key="mtd_in_pot_inst")
-            sum_pot_max = st.number_input("Potencia Máxima Admisible de la Línea (W):", value=float(st.session_state.get("mtd_in_pot_max", 0.0)), step=250.0, key="mtd_in_pot_max")
+            sum_pot_inst = st.number_input("Potencia de Diseño / Prevista (W):", value=float(st.session_state.get("mtd_in_pot_inst", 5750.0)), step=250.0, key="mtd_in_pot_inst")
+            sum_pot_max = st.number_input("Potencia Máxima Admisible de la Línea (W):", value=float(st.session_state.get("mtd_in_pot_max", 5750.0)), step=250.0, key="mtd_in_pot_max")
             
             t_opts = ["Monofásico (230 V) - 50 Hz", "Trifásico (400 V) - 50 Hz"]
             t_def = st.session_state.get("mtd_in_tension", t_opts[0])
             idx_t = t_opts.index(t_def) if t_def in t_opts else 0
             sum_tension = st.selectbox("Tensión Nominal y Fases:", t_opts, index=idx_t, key="mtd_in_tension")
-            sum_origen = st.text_input("Origen del Suministro:", value=st.session_state.get("mtd_in_origen", ""), key="mtd_in_origen")
+            sum_origen = st.text_input("Origen del Suministro:", value=st.session_state.get("mtd_in_origen", "Derivación Individual desde Centralización (ITC-BT-15)"), key="mtd_in_origen")
         with col_s2:
-            sum_di_cable = st.text_input("Conductor de Alimentación / DI:", value=st.session_state.get("mtd_in_di_cable", ""), key="mtd_in_di_cable")
-            sum_di_tubo = st.text_input("Tubo Protector:", value=st.session_state.get("mtd_in_di_tubo", ""), key="mtd_in_di_tubo")
-            sum_di_long = st.number_input("Longitud de la Línea (m):", value=float(st.session_state.get("mtd_in_di_long", 0.0)), step=1.0, key="mtd_in_di_long")
-            sum_di_cdt = st.number_input("Caída de Tensión Calculada (%):", value=float(st.session_state.get("mtd_in_di_cdt", 0.0)), step=0.05, key="mtd_in_di_cdt")
+            sum_di_cable = st.text_input("Conductor de Alimentación / DI:", value=st.session_state.get("mtd_in_di_cable", "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (AS)"), key="mtd_in_di_cable")
+            sum_di_tubo = st.text_input("Tubo Protector:", value=st.session_state.get("mtd_in_di_tubo", "Tubo M32 libre de halógenos (ITC-BT-15)"), key="mtd_in_di_tubo")
+            sum_di_long = st.number_input("Longitud de la Línea (m):", value=float(st.session_state.get("mtd_in_di_long", 15.0)), step=1.0, key="mtd_in_di_long")
+            sum_di_cdt = st.number_input("Caída de Tensión Calculada (%):", value=float(st.session_state.get("mtd_in_di_cdt", 0.72)), step=0.05, key="mtd_in_di_cdt")
             
             g_opts = ["Básica", "Elevada", "Específica IRVE (ITC-BT-52)", "Comercial / Servicios", "Provisional de Obra (ITC-BT-33)", "Autoconsumo Fotovoltaico (ITC-BT-40)"]
             g_def = st.session_state.get("mtd_in_grado", g_opts[0])
             idx_g = g_opts.index(g_def) if g_def in g_opts else 0
             sum_grado = st.selectbox("Grado de Electrificación / Uso:", g_opts, index=idx_g, key="mtd_in_grado")
 
+        # Asistente de cálculo en vivo de Caída de Tensión REBT
+        col_cdt_btn, col_cdt_res = st.columns([1.5, 2])
+        with col_cdt_btn:
+            if st.button("🧮 Auto-calcular Caída de Tensión (ΔV%) según REBT", use_container_width=True, key="btn_calc_cdt_di"):
+                import re
+                sec_match = re.search(r'(\d+(?:\.\d+)?)\s*mm', sum_di_cable)
+                s_val = float(sec_match.group(1)) if sec_match else 10.0
+                es_trif = "400" in sum_tension
+                v_nom = 400.0 if es_trif else 230.0
+                gamma = 44.0  # Cu 90°C XLPE según REBT ITC-BT-19
+                if es_trif:
+                    cdt_calc = (sum_pot_inst * sum_di_long * 100.0) / (gamma * s_val * (v_nom ** 2))
+                else:
+                    cdt_calc = (2.0 * sum_pot_inst * sum_di_long * 100.0) / (gamma * s_val * (v_nom ** 2))
+                st.session_state["mtd_in_di_cdt"] = round(cdt_calc, 2)
+                st.rerun()
+        with col_cdt_res:
+            if sum_di_cdt <= 1.50:
+                st.success(f"✅ **ΔV = {sum_di_cdt:.2f}%** cumple con el límite reglamentario de la ITC-BT-15 (≤ 1.50%).")
+            else:
+                st.warning(f"⚠️ **ΔV = {sum_di_cdt:.2f}%** supera el límite reglamentario (1.50%). Aumenta la sección de la DI.")
+
     # --- TAB 4: CUADRO CGMP Y PROTECCIONES ---
     with tab_f4:
         st.markdown("##### 🛡️ Bloque IV: Dispositivos Generales de Mando y Protección (CGMP):")
+
+        with st.expander("📘 Guía Técnica Oficial: Protecciones del Cuadro CGMP según REBT (ITC-BT-17, 23, 24)", expanded=False):
+            st.markdown(r"""
+            **Criterios técnicos exigidos por Industria (DGEAIM Murcia):**
+            * **Calibre del Interruptor General (IGA):**
+              - Corte omnipolar con corte de neutro.
+              - **25 A** para Vivienda Básica (5.750 W).
+              - **40 A** para Vivienda Elevada (9.200 W - *Caso oficial del modelo DGEAIM Murcia adjunto*).
+              - **32 A** para IRVE (7.360 W).
+            * **Curva de Disparo:**
+              - **Curva C** (disparo instantáneo 5-10 In) es el estándar general en viviendas y pequeños comercios.
+            * **Poder de Corte $I_{cn}$ (kA):**
+              - La ITC-BT-17 fija un mínimo de 4.5 kA, pero la norma técnica de distribuidora (i-DE) e Industria exige **6.0 kA** (6.000 A) en CGMP.
+            * **Interruptor Diferencial:**
+              - Sensibilidad: **30 mA** de alta sensibilidad ($I_{\Delta n} = 0.03\text{ A}$).
+              - Calibre: Debe ser mayor o igual al IGA ($\ge 40\text{ A}$).
+              - Tipo: **Tipo AC** para circuitos generales resistivos, y **Tipo A (o Superinmunizado)** obligatorio para circuitos con electrónica, climatización inverter (C9), placas de inducción o IRVE (con protección DC 6mA según IEC 62955).
+              - En Elevada (ITC-BT-25): Mínimo **2 diferenciales** (máximo 5 circuitos por diferencial).
+            * **Protección contra Sobretensiones (ITC-BT-23):**
+              - Obligatorio en la Región de Murcia:
+              - *Permanentes (VTP/POP):* Bobina de emisión que dispara el IGA ante tensiones > 275V causadas por rotura del neutro.
+              - *Transitorias (DPS Tipo 2):* Cartuchos descargadores a tierra con capacidad de derivación $I_n \ge 15\text{ kA}$.
+            * **Puesta a Tierra (PE):**
+              - Conductor de protección en cobre ($1\times 10\text{ mm}^2$ o $1\times 16\text{ mm}^2$) conectado al borne principal de tierra y picas hincadas. Resistencia medida conforme al REBT $R_t \le 15\,\Omega$.
+            * **SPL (Sistema de Protección de Línea):**
+              - Modulación de carga para cargadores de vehículo eléctrico (ITC-BT-52) o fotovoltaica; en viviendas estándar consignar "No aplica".
+            """)
+
+        st.caption("🛡️ **Plantillas Automáticas de CGMP y Protecciones (1 Clic):**")
+        col_pp1, col_pp2, col_pp3 = st.columns(3)
+        with col_pp1:
+            if st.button("🛡️ Básica (IGA 25A | 1 Dif 40A/30mA)", use_container_width=True):
+                st.session_state["mtd_in_iga"] = 25
+                st.session_state["mtd_in_curva"] = "Curva C (General)"
+                st.session_state["mtd_in_icn"] = 6.0
+                st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase AC (1 unidad para máx. 5 circuitos)"
+                st.session_state["mtd_in_vtp"] = "Permanentes (VTP/POP) + Transitorias Tipo 2 (DPS) con bobina de disparo (ITC-BT-23)"
+                st.session_state["mtd_in_tierra"] = "Conductor PE 1x10 mm² Cu | Pica tierra 2m | Rt ≤ 15 Ω"
+                st.session_state["mtd_in_spl"] = "No aplica"
+                st.success("✅ Cuadro CGMP para Vivienda Básica cargado.")
+                st.rerun()
+        with col_pp2:
+            if st.button("🏡 Elevada (IGA 40A | 2 Dif Tipo A/AC Murcia)", use_container_width=True):
+                st.session_state["mtd_in_iga"] = 40
+                st.session_state["mtd_in_curva"] = "Curva C (General)"
+                st.session_state["mtd_in_icn"] = 6.0
+                st.session_state["mtd_in_dif"] = "2 x Diferencial 2P 40A / 30mA (D1: Tipo AC uso general, D2: Tipo A Superinmunizado para Clima C9 e inducción)"
+                st.session_state["mtd_in_vtp"] = "Permanentes (VTP/POP) + Transitorias Tipo 2 con bobina y reconexión (ITC-BT-23)"
+                st.session_state["mtd_in_tierra"] = "Conductor PE 1x16 mm² Cu | Picas en anillo Rt ≤ 15 Ω"
+                st.session_state["mtd_in_spl"] = "No aplica"
+                st.success("✅ Cuadro CGMP para Vivienda Elevada (Modelo DGEAIM Murcia) cargado.")
+                st.rerun()
+        with col_pp3:
+            if st.button("🚗 IRVE (IGA 32A | Dif Clase A IEC 62955)", use_container_width=True):
+                st.session_state["mtd_in_iga"] = 32
+                st.session_state["mtd_in_curva"] = "Curva C (General)"
+                st.session_state["mtd_in_icn"] = 6.0
+                st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección de corriente continua 6mA (IEC 62955 / ITC-BT-52)"
+                st.session_state["mtd_in_vtp"] = "Permanentes (POP) + Transitorias Tipo 2 con bobina de disparo"
+                st.session_state["mtd_in_tierra"] = "Conductor PE 1x6 mm² Cu | Resistencia de bucle Rt ≤ 15 Ω"
+                st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación de recarga dinámica en tiempo real"
+                st.success("✅ Cuadro CGMP para Recarga IRVE cargado.")
+                st.rerun()
+
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             prot_iga = st.number_input("Calibre del Interruptor General (IGA / PIA) (A):", value=int(st.session_state.get("mtd_in_iga", 25)), step=1, key="mtd_in_iga")
@@ -685,78 +854,184 @@ def renderizar():
             prot_curva = st.selectbox("Curva de Disparo IGA:", c_opts, index=idx_c, key="mtd_in_curva")
             
             prot_icn = st.number_input("Poder de Corte Icn (kA):", value=float(st.session_state.get("mtd_in_icn", 6.0)), step=1.0, key="mtd_in_icn")
-            prot_dif = st.text_input("Interruptor Diferencial Principal:", value=st.session_state.get("mtd_in_dif", ""), key="mtd_in_dif")
+            prot_dif = st.text_input("Interruptor Diferencial Principal:", value=st.session_state.get("mtd_in_dif", "Diferencial 2P 40A / 30mA Clase A (ITC-BT-24)"), key="mtd_in_dif")
         with col_p2:
-            prot_vtp = st.text_input("Protección Sobretensiones:", value=st.session_state.get("mtd_in_vtp", ""), key="mtd_in_vtp")
-            prot_tierra = st.text_input("Puesta a Tierra (PE):", value=st.session_state.get("mtd_in_tierra", ""), key="mtd_in_tierra")
+            prot_vtp = st.text_input("Protección Sobretensiones:", value=st.session_state.get("mtd_in_vtp", "Permanentes (VTP/POP) + Transitorias Tipo 2 (DPS) con bobina de disparo (ITC-BT-23)"), key="mtd_in_vtp")
+            prot_tierra = st.text_input("Puesta a Tierra (PE):", value=st.session_state.get("mtd_in_tierra", "Conductor PE 1x10 mm² Cu | Pica tierra 2m | Rt ≤ 15 Ω"), key="mtd_in_tierra")
             prot_spl = st.text_input("Sistema de Balanceo de Carga (SPL):", value=st.session_state.get("mtd_in_spl", "No aplica"), key="mtd_in_spl")
 
     # --- TAB 5: CIRCUITOS DERIVADOS ---
     with tab_f5:
         st.markdown("##### 📋 Bloque V: Cuadro de Circuitos Interiores / Terminales Derivados:")
-        
+
+        # Botones de Carga Rápida de Paquetes de Circuitos
+        st.caption("⚡ **Acciones Rápidas de Configuración del Cuadro de Circuitos:**")
+        col_c_p1, col_c_p2, col_c_p3, col_c_p4 = st.columns(4)
+        with col_c_p1:
+            if st.button("🏠 Cargar Pack Básico (C1-C5)", use_container_width=True, help="Circuito C1 a C5"):
+                st.session_state["mtd_circuitos"] = [
+                    {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+                    {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+                    {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+                    {"nombre": "C4 - Lavadora / Lavavajillas / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                    {"nombre": "C5 - Baños y Auxiliares Cocina", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"}
+                ]
+                st.success("✅ Pack reglamentario Básico C1 a C5 cargado.")
+                st.rerun()
+        with col_c_p2:
+            if st.button("🏡 Pack Elevado (C1-C10 Murcia)", use_container_width=True, help="Modelo DGEAIM Murcia"):
+                st.session_state["mtd_circuitos"] = [
+                    {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+                    {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+                    {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+                    {"nombre": "C4.1 - Lavadora", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                    {"nombre": "C4.2 - Lavavajillas", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 15, "cdt": 0.95, "norma": "ITC-BT-25"},
+                    {"nombre": "C4.3 - Termo Eléctrico", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+                    {"nombre": "C5 - Baños y Auxiliares Cocina", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+                    {"nombre": "C8 - Calefacción Eléctrica", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
+                    {"nombre": "C9 - Climatización Inverter", "potencia": 5750, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                    {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"}
+                ]
+                st.success("✅ Pack reglamentario Elevado C1 a C10 (Modelo DGEAIM Murcia) cargado.")
+                st.rerun()
+        with col_c_p3:
+            if st.button("🚗 Pack con IRVE (C1-C5+C13)", use_container_width=True, help="Vivienda con Recarga VE"):
+                st.session_state["mtd_circuitos"] = [
+                    {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+                    {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+                    {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+                    {"nombre": "C4 - Lavadora / Lavavajillas", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+                    {"nombre": "C5 - Baños y Auxiliares Cocina", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+                    {"nombre": "C13 - Recarga IRVE (Wallbox)", "potencia": 7360, "pia": 32, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
+                ]
+                st.success("✅ Pack con IRVE cargado.")
+                st.rerun()
+        with col_c_p4:
+            if st.button("🗑️ Vaciar Todos", use_container_width=True, help="Eliminar todos los circuitos"):
+                st.session_state["mtd_circuitos"] = []
+                st.success("🗑️ Cuadro de circuitos vaciado.")
+                st.rerun()
+
         circs_actuales = st.session_state.get("mtd_circuitos", [])
+        
+        # Resumen técnico REBT del cuadro actual
         if circs_actuales:
-            st.dataframe(circs_actuales, use_container_width=True)
-        else:
-            st.info("ℹ️ No hay circuitos en la lista. Puedes cargarlos con la plantilla técnica superior o añadir circuitos manualmente a continuación.")
-
-        with st.expander("➕ Añadir / Modificar Circuito Terminal:", expanded=False):
-            plantillas_circuito_rapido = {
-                "-- Seleccionar Plantilla o Personalizado --": None,
-                "C1 - Alumbrado General (10A - 1.5mm²)": {"nom": "C1 - Alumbrado General", "pot": 2300, "pia": 10, "sec": "2x1.5+TT1.5", "tubo": "M20", "long": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
-                "C2 - Tomas de Uso General (16A - 2.5mm²)": {"nom": "C2 - Tomas de Uso General", "pot": 3450, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
-                "C3 - Cocina / Horno (25A - 6.0mm²)": {"nom": "C3 - Cocina / Horno", "pot": 5400, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
-                "C4 - Lavadora / Termo (20A - 4.0mm²)": {"nom": "C4 - Lavadora / Termo", "pot": 3450, "pia": 20, "sec": "2x4.0+TT4.0", "tubo": "M20", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
-                "C5 - Baños y Auxiliares (16A - 2.5mm²)": {"nom": "C5 - Baños y Auxiliares", "pot": 3450, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
-                "C8.1 - Calefacción Eléctrica Línea 1 (25A - 6.0mm²)": {"nom": "C8.1 - Calefacción Línea 1", "pot": 4500, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
-                "C8.2 - Calefacción Eléctrica Línea 2 (25A - 6.0mm²)": {"nom": "C8.2 - Calefacción Línea 2", "pot": 4500, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 18, "cdt": 1.25, "norma": "ITC-BT-25"},
-                "C9 - Climatización Inverter Conductos (25A - 6.0mm²)": {"nom": "C9 - Climatización Inverter (Tipo A SI)", "pot": 5750, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
-                "C9 - Climatización Split Individual (16A - 2.5mm²)": {"nom": "C9 - Climatización Split", "pot": 2500, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
-                "C10 - Secadora Independiente (16A - 2.5mm²)": {"nom": "C10 - Secadora Independiente", "pot": 2300, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
-                "C11 - Domótica / Automatización y Control (10A - 1.5mm²)": {"nom": "C11 - Domótica / Control", "pot": 1500, "pia": 10, "sec": "2x1.5+TT1.5", "tubo": "M20", "long": 20, "cdt": 0.75, "norma": "ITC-BT-25"},
-                "C13 - Recarga Vehículo Eléctrico IRVE (32A - 6.0mm²)": {"nom": "C13 - Recarga IRVE (ITC-BT-52)", "pot": 7360, "pia": 32, "sec": "2x6.0+TT6.0", "tubo": "M32", "long": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
-            }
-
-            p_sel = st.selectbox("🎯 Plantilla Rápida de Circuito REBT:", list(plantillas_circuito_rapido.keys()), index=0, key="mtd_circ_preset_sel")
-            if "mtd_ultimo_circ_preset" not in st.session_state:
-                st.session_state["mtd_ultimo_circ_preset"] = "-- Seleccionar Plantilla o Personalizado --"
+            tot_pot_circs = sum(float(c.get("potencia", 0)) for c in circs_actuales)
+            num_difs_req = max(1, (len(circs_actuales) + 4) // 5)
             
-            if p_sel != st.session_state["mtd_ultimo_circ_preset"]:
-                st.session_state["mtd_ultimo_circ_preset"] = p_sel
-                if p_sel in plantillas_circuito_rapido and plantillas_circuito_rapido[p_sel]:
-                    p_val = plantillas_circuito_rapido[p_sel]
+            m_c1, m_c2, m_c3 = st.columns(3)
+            with m_c1:
+                st.metric("Total Circuitos", f"{len(circs_actuales)} uds.")
+            with m_c2:
+                st.metric("Potencia Sumada Terminales", f"{tot_pot_circs/1000:.2f} kW")
+            with m_c3:
+                st.metric("Diferenciales REBT Exigidos", f"{num_difs_req} uds.", help="ITC-BT-25: Máximo 5 circuitos por diferencial de 30mA")
+
+            # Lista detallada interactiva con opción individual de ELIMINAR
+            with st.container(border=True):
+                st.markdown("###### 🔍 Circuitos Actuales en el Expediente (Gestionar / Eliminar):")
+                for idx, c in enumerate(circs_actuales):
+                    col_rw1, col_rw2, col_rw3, col_rw4, col_rw5 = st.columns([2.8, 2.0, 2.0, 2.0, 1.2])
+                    with col_rw1:
+                        st.markdown(f"**{idx + 1}. {c.get('nombre', 'Circuito')}**")
+                        st.caption(f"Norma: `{c.get('norma', 'ITC-BT-25')}`")
+                    with col_rw2:
+                        st.markdown(f"⚡ **{c.get('potencia', 0)} W**")
+                        st.caption(f"PIA: **{c.get('pia', 16)} A**")
+                    with col_rw3:
+                        st.markdown(f"📏 **{c.get('seccion', '-')}**")
+                        st.caption(f"Tubo: `{c.get('tubo', '-')}`")
+                    with col_rw4:
+                        st.markdown(f"📍 **{c.get('longitud', 0)} m**")
+                        st.caption(f"ΔV: **{c.get('cdt', 0.0)}%**")
+                    with col_rw5:
+                        if st.button("🗑️", key=f"btn_del_circ_{idx}", help=f"Eliminar {c.get('nombre')}"):
+                            st.session_state["mtd_circuitos"].pop(idx)
+                            st.rerun()
+                    if idx < len(circs_actuales) - 1:
+                        st.markdown("<hr style='margin:4px 0; border:0; border-top:1px dashed #cbd5e1;'/>", unsafe_allow_html=True)
+        else:
+            st.info("ℹ️ No hay circuitos en la lista. Puedes cargarlos con los botones rápidos superiores o añadir circuitos manualmente a continuación.")
+
+        # Selector de plantillas y formulario para añadir / modificar circuitos
+        plantillas_circuito_rapido = {
+            "-- Seleccionar Plantilla para Cargar Parámetros --": None,
+            "C1 - Alumbrado General (10A - 1.5mm²)": {"nom": "C1 - Alumbrado General", "pot": 2300, "pia": 10, "sec": "2x1.5+TT1.5", "tubo": "M20", "long": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            "C2 - Tomas de Uso General (16A - 2.5mm²)": {"nom": "C2 - Tomas de Uso General", "pot": 3450, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            "C3 - Cocina / Horno (25A - 6.0mm²)": {"nom": "C3 - Cocina / Horno", "pot": 5400, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            "C4.1 - Lavadora (16A/20A - 4.0mm²)": {"nom": "C4.1 - Lavadora", "pot": 3450, "pia": 20, "sec": "2x4.0+TT4.0", "tubo": "M20", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            "C4.2 - Lavavajillas (16A - 2.5mm²)": {"nom": "C4.2 - Lavavajillas", "pot": 2300, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 15, "cdt": 0.95, "norma": "ITC-BT-25"},
+            "C4.3 - Termo Eléctrico (16A - 2.5mm²)": {"nom": "C4.3 - Termo Eléctrico", "pot": 2300, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            "C5 - Baños y Auxiliares Cocina (16A - 2.5mm²)": {"nom": "C5 - Baños y Auxiliares Cocina", "pot": 3450, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            "C8 - Calefacción Eléctrica (25A - 6.0mm²)": {"nom": "C8 - Calefacción Eléctrica", "pot": 4500, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
+            "C9 - Climatización Inverter Conductos (25A - 6.0mm²)": {"nom": "C9 - Climatización Inverter (Tipo A SI)", "pot": 5750, "pia": 25, "sec": "2x6.0+TT6.0", "tubo": "M25", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            "C9 - Climatización Split Individual (16A - 2.5mm²)": {"nom": "C9 - Climatización Split", "pot": 2500, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            "C10 - Secadora Independiente (16A - 2.5mm²)": {"nom": "C10 - Secadora Independiente", "pot": 2300, "pia": 16, "sec": "2x2.5+TT2.5", "tubo": "M20", "long": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            "C11 - Domótica / Automatización y Control (10A - 1.5mm²)": {"nom": "C11 - Domótica / Control", "pot": 1500, "pia": 10, "sec": "2x1.5+TT1.5", "tubo": "M20", "long": 20, "cdt": 0.75, "norma": "ITC-BT-25"},
+            "C13 - Recarga Vehículo Eléctrico IRVE (32A - 6.0mm²)": {"nom": "C13 - Recarga IRVE (ITC-BT-52)", "pot": 7360, "pia": 32, "sec": "2x6.0+TT6.0", "tubo": "M32", "long": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
+        }
+
+        with st.expander("➕ Añadir Nuevo Circuito a la Lista (o Personalizar Plantilla):", expanded=True):
+            def _on_cambio_plantilla_circuito():
+                sel = st.session_state.get("mtd_circ_preset_sel")
+                if sel and sel in plantillas_circuito_rapido and plantillas_circuito_rapido[sel]:
+                    p_val = plantillas_circuito_rapido[sel]
                     st.session_state["mtd_in_nc_nom"] = p_val["nom"]
-                    st.session_state["mtd_in_nc_pot"] = p_val["pot"]
-                    st.session_state["mtd_in_nc_pia"] = p_val["pia"]
-                    st.session_state["mtd_in_nc_sec"] = p_val["sec"]
-                    st.session_state["mtd_in_nc_tubo"] = p_val["tubo"]
-                    st.session_state["mtd_in_nc_long"] = p_val["long"]
-                    st.session_state["mtd_in_nc_cdt"] = p_val["cdt"]
-                    st.session_state["mtd_in_nc_norma"] = p_val["norma"]
-                    st.rerun()
+                    st.session_state["mtd_in_nc_pot"] = int(p_val["pot"])
+                    st.session_state["mtd_in_nc_pia"] = int(p_val["pia"])
+                    st.session_state["mtd_in_nc_sec"] = str(p_val["sec"])
+                    st.session_state["mtd_in_nc_tubo"] = str(p_val["tubo"])
+                    st.session_state["mtd_in_nc_long"] = int(p_val["long"])
+                    st.session_state["mtd_in_nc_cdt"] = float(p_val["cdt"])
+                    st.session_state["mtd_in_nc_norma"] = str(p_val["norma"])
+
+            st.selectbox(
+                "🎯 Seleccionar Plantilla de Circuito REBT (Carga automática de campos):",
+                list(plantillas_circuito_rapido.keys()),
+                index=0,
+                key="mtd_circ_preset_sel",
+                on_change=_on_cambio_plantilla_circuito
+            )
+
+            # Inicialización de campos con C1 Alumbrado por defecto (NUNCA IRVE por defecto)
+            if "mtd_in_nc_nom" not in st.session_state:
+                st.session_state["mtd_in_nc_nom"] = "C1 - Alumbrado General"
+            if "mtd_in_nc_pot" not in st.session_state:
+                st.session_state["mtd_in_nc_pot"] = 2300
+            if "mtd_in_nc_pia" not in st.session_state:
+                st.session_state["mtd_in_nc_pia"] = 10
+            if "mtd_in_nc_sec" not in st.session_state:
+                st.session_state["mtd_in_nc_sec"] = "2x1.5+TT1.5"
+            if "mtd_in_nc_tubo" not in st.session_state:
+                st.session_state["mtd_in_nc_tubo"] = "M20"
+            if "mtd_in_nc_long" not in st.session_state:
+                st.session_state["mtd_in_nc_long"] = 18
+            if "mtd_in_nc_cdt" not in st.session_state:
+                st.session_state["mtd_in_nc_cdt"] = 1.15
+            if "mtd_in_nc_norma" not in st.session_state:
+                st.session_state["mtd_in_nc_norma"] = "ITC-BT-25"
 
             col_c1, col_c2, col_c3, col_c4 = st.columns(4)
             with col_c1:
-                nc_nom = st.text_input("Nombre Circuito:", value=st.session_state.get("mtd_in_nc_nom", "C13 - Recarga IRVE"), key="mtd_in_nc_nom")
-                nc_pot = st.number_input("Potencia (W):", value=int(st.session_state.get("mtd_in_nc_pot", 7360)), step=250, key="mtd_in_nc_pot")
+                nc_nom = st.text_input("Nombre Circuito:", key="mtd_in_nc_nom")
+                nc_pot = st.number_input("Potencia (W):", step=250, key="mtd_in_nc_pot")
             with col_c2:
-                nc_pia = st.number_input("PIA (A):", value=int(st.session_state.get("mtd_in_nc_pia", 32)), step=1, key="mtd_in_nc_pia")
-                nc_sec = st.text_input("Conductor:", value=str(st.session_state.get("mtd_in_nc_sec", "2x6.0+TT6.0")), key="mtd_in_nc_sec")
+                nc_pia = st.number_input("PIA (A):", step=1, key="mtd_in_nc_pia")
+                nc_sec = st.text_input("Conductor:", key="mtd_in_nc_sec")
             with col_c3:
-                nc_tubo = st.text_input("Tubo:", value=str(st.session_state.get("mtd_in_nc_tubo", "M32")), key="mtd_in_nc_tubo")
-                nc_long = st.number_input("Longitud (m):", value=int(st.session_state.get("mtd_in_nc_long", 25)), step=1, key="mtd_in_nc_long")
+                nc_tubo = st.text_input("Tubo Protector:", key="mtd_in_nc_tubo")
+                nc_long = st.number_input("Longitud (m):", step=1, key="mtd_in_nc_long")
             with col_c4:
-                nc_cdt = st.number_input("ΔV (%):", value=float(st.session_state.get("mtd_in_nc_cdt", 0.86)), step=0.05, key="mtd_in_nc_cdt")
-                nc_norma = st.text_input("Norma ITC:", value=str(st.session_state.get("mtd_in_nc_norma", "ITC-BT-52")), key="mtd_in_nc_norma")
+                nc_cdt = st.number_input("ΔV (%):", step=0.05, key="mtd_in_nc_cdt")
+                nc_norma = st.text_input("Norma ITC:", key="mtd_in_nc_norma")
                 
-            if st.button("➕ Insertar Circuito a la Lista", key="btn_add_circ_mtd"):
+            if st.button("➕ Insertar Circuito al Cuadro", type="primary", use_container_width=True, key="btn_add_circ_mtd"):
                 st.session_state["mtd_circuitos"].append({
                     "nombre": nc_nom, "potencia": nc_pot, "pia": nc_pia,
                     "seccion": nc_sec, "tubo": nc_tubo, "longitud": nc_long,
                     "cdt": nc_cdt, "norma": nc_norma
                 })
-                st.success("Circuito añadido.")
+                st.success(f"✅ ¡Circuito '{nc_nom}' añadido al cuadro con éxito!")
                 st.rerun()
 
         col_b_mtd1, col_b_mtd2 = st.columns([1.6, 1])
