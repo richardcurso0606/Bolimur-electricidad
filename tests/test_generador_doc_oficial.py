@@ -183,4 +183,22 @@ def test_generar_docx_anexo_iii_iv_v():
     assert "Canalización de suelo" in doc_text
 
 
+def test_descripcion_instalacion_personalizada():
+    """Verifica que la Breve Descripción de la Instalación personalizada aparezca en la Tabla 2 fila 33 del Word oficial."""
+    import io, docx
+    desc_test = "REFORMA ELECTRICA INTEGRAL EN LOCAL DESTINADO A PANADERIA-CAFETERIA CON HORNO TRIFASICO."
+    datos = {
+        "titular": {"nombre": "TEST LOCAL"},
+        "descripcion_instalacion": desc_test,
+        "suministro": {"potencia_instalada_w": 18000.0, "tension": "Trifásico 400 V"}
+    }
+    docx_bytes = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos)
+    assert isinstance(docx_bytes, bytes)
+    doc = docx.Document(io.BytesIO(docx_bytes))
+    t2 = doc.tables[2]
+    # Fila 33 contiene la breve descripción
+    assert desc_test in t2.rows[33].cells[0].text
+
+
+
 

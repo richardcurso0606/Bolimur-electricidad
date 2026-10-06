@@ -393,14 +393,20 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
             t2.rows[15].cells[1].text = f"{pot_inst_kw:.2f} kW"
 
         # Fila 33: Breve descripción de la instalación
-        grado_nom = "ELECTRIFICACION ELEVADA" if grado_cod == "E" else "ELECTRIFICACION BASICA"
-        desc_oficial = (
-            f"INSTALACION ELECTRICA EN BAJA TENSION PARA VIVIENDA {grado_nom} {pot_inst_w:,.0f} W. "
-            f"CUADRO GENERAL DE MANDO Y PROTECCION (CGMP) CON IGA OMNIPOLAR DE {iga_cal}A (ICN=6KA), "
-            f"PROTECTOR DE SOBRETENSIONES PERMANENTES Y TRANSITORIAS TIPO 2 CON BOBINA DE DISPARO (ITC-BT-23), "
-            f"INTERRUPTOR DIFERENCIAL DE ALTA SENSIBILIDAD 30mA (CLASE A) Y DERIVACION INDIVIDUAL {di_cable} "
-            f"BAJO {di_tubo} CON CAIDA DE TENSION ΔV = {di_cdt:.2f}% (CONFORME REBT ITC-BT-15)."
-        )
+        desc_custom = datos.get("descripcion_instalacion") or datos.get("breve_descripcion")
+        if desc_custom:
+            desc_oficial = desc_custom.upper()
+        else:
+            uso_local = str(empl.get("uso") or "").upper()
+            if not uso_local:
+                uso_local = "VIVIENDA " + ("ELECTRIFICACION ELEVADA" if grado_cod == "E" else "ELECTRIFICACION BASICA")
+            desc_oficial = (
+                f"INSTALACION ELECTRICA EN BAJA TENSION PARA {uso_local} {pot_inst_w:,.0f} W. "
+                f"CUADRO GENERAL DE MANDO Y PROTECCION (CGMP) CON IGA OMNIPOLAR DE {iga_cal}A (ICN=6KA), "
+                f"PROTECTOR DE SOBRETENSIONES PERMANENTES Y TRANSITORIAS TIPO 2 CON BOBINA DE DISPARO (ITC-BT-23), "
+                f"INTERRUPTOR DIFERENCIAL DE ALTA SENSIBILIDAD 30mA (CLASE A) Y DERIVACION INDIVIDUAL {di_cable} "
+                f"BAJO {di_tubo} CON CAIDA DE TENSION ΔV = {di_cdt:.2f}% (CONFORME REBT ITC-BT-15)."
+            )
         if len(t2.rows) > 33 and len(t2.rows[33].cells) > 0:
             t2.rows[33].cells[0].text = desc_oficial
 

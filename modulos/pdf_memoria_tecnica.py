@@ -898,10 +898,14 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('LEFTPADDING', (0,0), (-1,-1), 4),
     ]))
 
+    desc_custom = datos_mtd.get("descripcion_instalacion") or datos_mtd.get("breve_descripcion")
+    desc_texto = desc_custom if desc_custom else (
+        f"Instalación eléctrica de baja tensión para {tipo_instalacion.lower()}, ejecutada con conductores de cobre unipolares no propagadores de la llama y libres de halógenos tipo H07Z1-K / RZ1-K 0.6/1kV bajo tubo protector normalizado. Cuadro CGMP equipado con IGA omnipolar ({protecciones.get('iga_amperaje', 25)}A Curva C, Icn=6kA), protector contra sobretensiones permanentes y transitorias Tipo 2 con bobina de disparo (ITC-BT-23), e interruptor diferencial de alta sensibilidad 30mA Clase A (ITC-BT-24). Circuito exclusivo verificado con protección contra choques eléctricos y conexión a tierra equipotencial."
+    )
+
     t_desc_data = [
         [
-            Paragraph("<b>Breve Descripción de la Instalación:</b><br/>"
-                      f"Instalación eléctrica de baja tensión para {tipo_instalacion.lower()}, ejecutada con conductores de cobre unipolares no propagadores de la llama y libres de halógenos tipo H07Z1-K / RZ1-K 0.6/1kV bajo tubo protector normalizado. Cuadro CGMP equipado con IGA omnipolar ({protecciones.get('iga_amperaje', 25)}A Curva C, Icn=6kA), protector contra sobretensiones permanentes y transitorias Tipo 2 con bobina de disparo (ITC-BT-23), e interruptor diferencial de alta sensibilidad 30mA Clase A (ITC-BT-24). Circuito exclusivo verificado con protección contra choques eléctricos y conexión a tierra equipotencial.", body_style),
+            Paragraph(f"<b>Breve Descripción de la Instalación:</b><br/>{desc_texto}", body_style),
             Paragraph("<b>Presupuesto Estimado:</b><br/>"
                       "• Instalación de enlace y CGMP: 650,00 €<br/>"
                       "• Circuitos interiores y canalización: 820,00 €<br/>"

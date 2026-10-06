@@ -8,8 +8,11 @@ y el guardado/recuperación persistente vinculado a las fichas de clientes en el
 
 import streamlit as st
 import os
+import re
 import datetime
 import math
+import copy
+import pandas as pd
 import json
 import io
 import base64
@@ -909,10 +912,10 @@ def cargar_plantilla_por_tipo(tipo: str):
         st.session_state["mtd_in_tierra"] = ""
         st.session_state["mtd_in_spl"] = "No aplica"
         st.session_state["mtd_in_emp_uso"] = ""
+        st.session_state["mtd_in_desc_instalacion"] = ""
         st.session_state["mtd_circuitos"] = []
         return
 
-    import copy
     st.session_state["mtd_in_pot_inst"] = float(info["potencia_inst"])
     st.session_state["mtd_in_pot_max"] = float(info["potencia_max"])
     st.session_state["mtd_in_tension"] = str(info["tension"])
@@ -931,6 +934,14 @@ def cargar_plantilla_por_tipo(tipo: str):
     st.session_state["mtd_in_spl"] = str(info["spl"])
     st.session_state["mtd_in_emp_uso"] = str(info["emp_uso"])
     st.session_state["mtd_circuitos"] = copy.deepcopy(info["circuitos"])
+    p_inst = float(info["potencia_inst"])
+    tens_p = str(info["tension"]).split(' ')[0]
+    nom_p = info.get("titulo", tipo).split('(')[0].replace('☀️', '').replace('🏗️', '').replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('🍽️', '').replace('🏋️', '').replace('🎓', '').strip()
+    st.session_state["mtd_in_desc_instalacion"] = (
+        f"Instalación eléctrica en baja tensión para {nom_p} con potencia prevista de {p_inst:,.0f} W a tensión nominal de {tens_p}. "
+        f"Cuadro CGMP con IGA de {info['iga']}A (Icn={info['icn']:.0f}kA), protección contra sobretensiones transitorias y permanentes Tipo 2 (ITC-BT-23), "
+        f"interruptor diferencial 30mA Clase A (ITC-BT-24) y derivación individual {info['di_cable']} bajo {info['di_tubo']} con caída de tensión calculada ΔV = {info['di_cdt']:.2f}% (conforme REBT ITC-BT-15)."
+    )
 
 def aplicar_datos_cliente_a_formulario(cli_obj: dict):
     """Vuelca los datos del cliente de CRM en los campos del formulario"""
@@ -1671,7 +1682,8 @@ def renderizar():
                         help="Puedes seleccionar varios archivos a la vez desde tu móvil, tablet o PC."
                     )
                     if up_fotos_quick:
-                        if st.button(f"➕ Añadir {len(up_fotos_quick)} Foto/s al Expediente", type="primary", use_container_width=True, key="btn_add_quick_fotos"):
+                        f_q_id = "_".join([f"{f.name}_{f.size}" for f in up_fotos_quick])
+                        if st.session_state.get("_last_quick_batch_id") != f_q_id:
                             for idx_q, f_obj in enumerate(up_fotos_quick):
                                 b64_q = procesar_archivo_anexo(f_obj)
                                 if b64_q:
@@ -1680,6 +1692,7 @@ def renderizar():
                                         "titulo": f"{tit_qf_custom}{sufijo}",
                                         "data": b64_q
                                     })
+                            st.session_state["_last_quick_batch_id"] = f_q_id
                             st.session_state["_ver_quick_fotos"] = st.session_state.get("_ver_quick_fotos", 0) + 1
                             st.success(f"✅ ¡{len(up_fotos_quick)} fotografía/s incorporada/s al expediente!")
                             st.rerun()
@@ -1889,7 +1902,6 @@ def renderizar():
         col_cdt_btn, col_cdt_res = st.columns([1.5, 2])
         with col_cdt_btn:
             if st.button("🧮 Auto-calcular Caída de Tensión (ΔV%) según REBT", use_container_width=True, key="btn_calc_cdt_di"):
-                import re
                 sec_match = re.search(r'(\d+(?:\.\d+)?)\s*mm', sum_di_cable)
                 s_val = float(sec_match.group(1)) if sec_match else 10.0
                 es_trif = "400" in sum_tension
@@ -1906,6 +1918,31 @@ def renderizar():
                 st.success(f"✅ **ΔV = {sum_di_cdt:.2f}%** cumple con el límite reglamentario de la ITC-BT-15 (≤ 1.50%).")
             else:
                 st.warning(f"⚠️ **ΔV = {sum_di_cdt:.2f}%** supera el límite reglamentario (1.50%). Aumenta la sección de la DI.")
+
+        # Breve Descripción de la Instalación (Exigida por DGEAIM Murcia en MTD)
+        st.markdown("<hr style='margin:12px 0; border:0; border-top:1px dashed #cbd5e1;'/>", unsafe_allow_html=True)
+        st.markdown("###### 📝 Breve Descripción de la Instalación (Apartado Oficial DGEAIM Murcia):")
+        st.caption("Texto técnico resumen que se plasma en la página 2 del documento oficial (Tabla 2 del Word oficial y Sección 6 del PDF). Puedes personalizarlo libremente.")
+
+        tipo_limpio_desc = tipo_inst_sel.split('(')[0].replace('☀️', '').replace('🏗️', '').replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('🍽️', '').replace('🏋️', '').replace('🎓', '').strip()
+        desc_sugerida = (
+            f"Instalación eléctrica en baja tensión para {tipo_limpio_desc} con potencia prevista de {sum_pot_inst:,.0f} W a tensión {sum_tension.split(' ')[0]}. "
+            f"Cuadro CGMP con IGA de {st.session_state.get('mtd_in_iga', 25)}A (Icn={st.session_state.get('mtd_in_icn', 6.0):.0f}kA), "
+            f"protector de sobretensiones transitorias y permanentes Tipo 2 (ITC-BT-23), diferencial 30mA Clase A (ITC-BT-24) "
+            f"y derivación individual {sum_di_cable} bajo {sum_di_tubo} con caída de tensión calculada ΔV = {sum_di_cdt:.2f}% (conforme ITC-BT-15)."
+        )
+        desc_val_actual = st.session_state.get("mtd_in_desc_instalacion")
+        if not desc_val_actual:
+            desc_val_actual = desc_sugerida
+            st.session_state["mtd_in_desc_instalacion"] = desc_sugerida
+
+        st.text_area(
+            "Resumen descriptivo para la MTD oficial:",
+            value=desc_val_actual,
+            height=85,
+            key="mtd_in_desc_instalacion",
+            help="Este párrafo oficial se inserta directamente en la casilla reglamentaria 'Breve Descripción de la Instalación' del modelo normalizado DGEAIM Murcia."
+        )
 
     # --- TAB 4: CUADRO CGMP Y PROTECCIONES ---
     with tab_f4:
@@ -2239,7 +2276,6 @@ def renderizar():
                     "Tubo": tubo_c
                 })
 
-            import pandas as pd
             df_anx4 = pd.DataFrame(filas_anx4)
             st.dataframe(df_anx4, use_container_width=True, hide_index=True)
 
@@ -2494,20 +2530,20 @@ def renderizar():
             help="Puedes seleccionar varias fotos a la vez desde tu móvil, tablet o PC."
         )
         if up_nueva_foto:
-            col_bf1, col_bf2 = st.columns([1.5, 3])
-            with col_bf1:
-                if st.button(f"➕ Insertar {len(up_nueva_foto)} Foto/s al Reportaje", type="primary", use_container_width=True, key="btn_add_foto_list"):
-                    for idx_f, f_obj in enumerate(up_nueva_foto):
-                        b64_f = procesar_archivo_anexo(f_obj)
-                        if b64_f:
-                            sufijo = f" (Foto {idx_f + 1})" if len(up_nueva_foto) > 1 else ""
-                            st.session_state["mtd_fotos_obra"].append({
-                                "titulo": f"{tit_foto_custom}{sufijo}",
-                                "data": b64_f
-                            })
-                    st.session_state["_ver_tab7_fotos"] = st.session_state.get("_ver_tab7_fotos", 0) + 1
-                    st.success(f"✅ ¡{len(up_nueva_foto)} fotografía/s añadida/s al reportaje!")
-                    st.rerun()
+            f_tab7_id = "_".join([f"{f.name}_{f.size}" for f in up_nueva_foto])
+            if st.session_state.get("_last_tab7_batch_id") != f_tab7_id:
+                for idx_f, f_obj in enumerate(up_nueva_foto):
+                    b64_f = procesar_archivo_anexo(f_obj)
+                    if b64_f:
+                        sufijo = f" (Foto {idx_f + 1})" if len(up_nueva_foto) > 1 else ""
+                        st.session_state["mtd_fotos_obra"].append({
+                            "titulo": f"{tit_foto_custom}{sufijo}",
+                            "data": b64_f
+                        })
+                st.session_state["_last_tab7_batch_id"] = f_tab7_id
+                st.session_state["_ver_tab7_fotos"] = st.session_state.get("_ver_tab7_fotos", 0) + 1
+                st.success(f"✅ ¡{len(up_nueva_foto)} fotografía/s añadida/s automáticamente al reportaje!")
+                st.rerun()
 
         # Mostrar galería de fotos adjuntadas
         fotos_actuales = st.session_state.get("mtd_fotos_obra", [])
@@ -2613,6 +2649,7 @@ def renderizar():
                         "mtd_in_vtp": prot_vtp,
                         "mtd_in_tierra": prot_tierra,
                         "mtd_in_spl": prot_spl,
+                        "mtd_in_desc_instalacion": st.session_state.get("mtd_in_desc_instalacion", ""),
                         "mtd_circuitos": st.session_state.get("mtd_circuitos", []),
                         "mtd_in_med_pe": med_pe,
                         "mtd_in_med_aisl": med_aisl,
@@ -2708,6 +2745,7 @@ def renderizar():
                 "dif_ms": med_dif_ms
             },
             "circuitos": st.session_state.get("mtd_circuitos", []),
+            "descripcion_instalacion": st.session_state.get("mtd_in_desc_instalacion", ""),
             "anexos": {
                 "plano_situacion": st.session_state.get("mtd_plano_situacion", ""),
                 "plano_emplazamiento": st.session_state.get("mtd_plano_emplazamiento", ""),
