@@ -949,43 +949,51 @@ def aplicar_datos_cliente_a_formulario(cli_obj: dict):
     """Vuelca los datos del cliente de CRM en los campos del formulario"""
     if not cli_obj:
         return
-    st.session_state["mtd_in_tit_nom"] = cli_obj.get("nombre_completo", "")
-    st.session_state["mtd_in_tit_nif"] = cli_obj.get("nif_cif", "")
-    st.session_state["mtd_in_tit_tel"] = cli_obj.get("telefono", "")
-    st.session_state["mtd_in_tit_email"] = cli_obj.get("email", "")
-    st.session_state["mtd_in_emp_dir"] = cli_obj.get("direccion_suministro", cli_obj.get("direccion", ""))
-    st.session_state["mtd_in_emp_cups"] = cli_obj.get("cups", "")
+    st.session_state["mtd_in_tit_nom"] = cli_obj.get("nombre_completo") or ""
+    st.session_state["mtd_in_tit_nif"] = cli_obj.get("nif_cif") or ""
+    st.session_state["mtd_in_tit_tel"] = cli_obj.get("telefono") or ""
+    st.session_state["mtd_in_tit_email"] = cli_obj.get("email") or ""
+    st.session_state["mtd_in_emp_dir"] = cli_obj.get("direccion_suministro") or cli_obj.get("direccion") or ""
+    st.session_state["mtd_in_emp_cups"] = cli_obj.get("cups") or ""
     
-    loc = cli_obj.get("localidad", "Murcia")
+    loc = str(cli_obj.get("localidad") or "Murcia")
     for m in MUNICIPIOS_MURCIA_OFICIALES:
         if m.lower() in loc.lower() or loc.lower() in m.lower():
             st.session_state["mtd_in_emp_muni"] = m
             break
     
-    tipo_inm = cli_obj.get("tipo_inmueble", "")
+    tipo_inm = cli_obj.get("tipo_inmueble") or ""
     if tipo_inm:
         st.session_state["mtd_in_emp_uso"] = tipo_inm
 
 def renderizar():
-    st.markdown("""
+    es_oscuro = st.session_state.get("tema_modo", "solar") == "oscuro"
+    tab_list_bg = "#0b1329" if es_oscuro else "#f8fafc"
+    tab_btn_bg = "#1e293b" if es_oscuro else "#ffffff"
+    tab_btn_border = "#334155" if es_oscuro else "#cbd5e1"
+    tab_btn_color = "#cbd5e1" if es_oscuro else "#334155"
+    tab_btn_hover_bg = "#334155" if es_oscuro else "#e0f2fe"
+    tab_btn_hover_color = "#38bdf8" if es_oscuro else "#0369a1"
+
+    st.markdown(f"""
     <style>
     /* Desplegables BaseWeb Popovers: aseguramos que el menú nunca corte las descripciones */
     div[data-baseweb="popover"],
-    div[data-baseweb="popover"] > div {
+    div[data-baseweb="popover"] > div {{
         min-width: 650px !important;
         max-width: 96vw !important;
         width: max-content !important;
         z-index: 999999 !important;
-    }
+    }}
 
-    div[data-baseweb="popover"] ul[role="listbox"] {
+    div[data-baseweb="popover"] ul[role="listbox"] {{
         min-width: 100% !important;
         max-width: 96vw !important;
         max-height: 480px !important;
         padding: 6px !important;
-    }
+    }}
 
-    div[data-baseweb="popover"] li[role="option"] {
+    div[data-baseweb="popover"] li[role="option"] {{
         white-space: normal !important;
         word-break: normal !important;
         overflow-wrap: break-word !important;
@@ -994,79 +1002,79 @@ def renderizar():
         padding: 10px 14px !important;
         font-size: 13.5px !important;
         line-height: 1.45 !important;
-        border-bottom: 1px solid #f1f5f9 !important;
+        border-bottom: 1px solid {'#1e293b' if es_oscuro else '#f1f5f9'} !important;
         border-radius: 6px !important;
         margin-bottom: 2px !important;
-    }
+    }}
 
     div[data-baseweb="popover"] li[role="option"] > div,
-    div[data-baseweb="popover"] li[role="option"] span {
+    div[data-baseweb="popover"] li[role="option"] span {{
         white-space: normal !important;
         word-break: normal !important;
         overflow-wrap: break-word !important;
         overflow: visible !important;
         text-overflow: unset !important;
         display: block !important;
-    }
+    }}
 
-    div[data-baseweb="select"] {
+    div[data-baseweb="select"] {{
         width: 100% !important;
-    }
+    }}
 
-    div[data-baseweb="select"] > div {
+    div[data-baseweb="select"] > div {{
         min-height: 42px !important;
-    }
+    }}
 
     div[data-baseweb="select"] span,
-    div[data-baseweb="select"] div {
+    div[data-baseweb="select"] div {{
         white-space: normal !important;
         word-break: break-word !important;
         overflow: visible !important;
         text-overflow: unset !important;
-    }
+    }}
 
     /* Barra de Pestañas (st.tabs) Mejorada y de Alto Contraste */
-    div[data-baseweb="tab-list"] {
+    div[data-baseweb="tab-list"] {{
         gap: 6px !important;
-        background-color: #f8fafc !important;
+        background-color: {tab_list_bg} !important;
         padding: 8px 10px 4px 10px !important;
         border-radius: 10px 10px 0 0 !important;
         border-bottom: 3px solid #0284c7 !important;
         display: flex !important;
         flex-wrap: wrap !important;
-    }
+    }}
 
-    button[data-baseweb="tab"] {
-        background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
+    button[data-baseweb="tab"] {{
+        background-color: {tab_btn_bg} !important;
+        border: 1px solid {tab_btn_border} !important;
         border-radius: 8px 8px 0 0 !important;
         padding: 9px 15px !important;
         font-size: 13.5px !important;
         font-weight: 600 !important;
-        color: #334155 !important;
+        color: {tab_btn_color} !important;
         transition: all 0.15s ease-in-out !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
-    }
+    }}
 
-    button[data-baseweb="tab"]:hover {
-        background-color: #e0f2fe !important;
-        color: #0369a1 !important;
+    button[data-baseweb="tab"]:hover {{
+        background-color: {tab_btn_hover_bg} !important;
+        color: {tab_btn_hover_color} !important;
         border-color: #38bdf8 !important;
-    }
+    }}
 
-    button[data-baseweb="tab"][aria-selected="true"] {
+    button[data-baseweb="tab"][aria-selected="true"] {{
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
         color: #ffffff !important;
         border-color: #0284c7 !important;
         font-weight: 700 !important;
         box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3) !important;
-    }
+    }}
 
     button[data-baseweb="tab"][aria-selected="true"] p,
     button[data-baseweb="tab"][aria-selected="true"] span,
-    button[data-baseweb="tab"][aria-selected="true"] div {
+    button[data-baseweb="tab"][aria-selected="true"] div {{
         color: #ffffff !important;
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
 

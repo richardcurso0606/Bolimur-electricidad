@@ -240,48 +240,58 @@ def app():
     if "partidas_manuales" not in st.session_state:
         st.session_state["partidas_manuales"] = []
 
-    st.markdown("""
+    es_oscuro_pres = st.session_state.get("tema_modo", "solar") == "oscuro"
+    container_bg = "#0f172a" if es_oscuro_pres else "#ffffff"
+    container_border = "#334155" if es_oscuro_pres else "#94a3b8"
+    tab_active_bg = "#0c4a6e" if es_oscuro_pres else "#f0f9ff"
+    tab_active_color = "#38bdf8" if es_oscuro_pres else "#0284c7"
+
+    st.markdown(f"""
         <style>
             /* Contenedores con Borde y Sombra Nítidos y Marcados */
-            div[data-testid="stVerticalBlockBorderWrapper"] {
+            div[data-testid="stVerticalBlockBorderWrapper"] {{
                 border-radius: 12px !important;
-                border: 2px solid #94a3b8 !important;
-                background-color: #ffffff !important;
+                border: 2px solid {container_border} !important;
+                background-color: {container_bg} !important;
                 box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
                 margin-bottom: 16px !important;
                 transition: all 0.2s ease;
-            }
-            div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+            }}
+            div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
                 border-color: #0284c7 !important;
                 box-shadow: 0 6px 18px rgba(2, 132, 199, 0.16) !important;
-            }
+            }}
 
             /* Expanders con Borde Nítido y Sombra */
-            div[data-testid="stExpander"] {
+            div[data-testid="stExpander"] {{
                 border-radius: 10px !important;
-                border: 2px solid #94a3b8 !important;
+                border: 2px solid {container_border} !important;
                 box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
-                background: #ffffff !important;
+                background: {container_bg} !important;
                 margin-bottom: 12px !important;
-            }
-            div[data-testid="stExpander"]:hover {
+            }}
+            div[data-testid="stExpander"]:hover {{
                 border-color: #0284c7 !important;
-            }
+            }}
 
             /* Estilo de Pestañas (Tabs) */
-            button[data-baseweb="tab"] {
+            button[data-baseweb="tab"] {{
                 font-size: 13.5px !important;
                 font-weight: 600 !important;
                 padding: 9px 16px !important;
                 border-radius: 8px 8px 0 0 !important;
                 transition: all 0.2s ease !important;
-            }
-            button[data-baseweb="tab"][aria-selected="true"] {
-                color: #0284c7 !important;
+            }}
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                color: {tab_active_color} !important;
                 border-bottom: 3px solid #0284c7 !important;
-                background-color: #f0f9ff !important;
-            }
+                background-color: {tab_active_bg} !important;
+            }}
+        </style>
+    """, unsafe_allow_html=True)
 
+    st.markdown("""
+        <style>
             @media print {
                 [data-testid="stSidebar"] {display: none !important;}
                 [data-testid="stHeader"] {display: none !important;}

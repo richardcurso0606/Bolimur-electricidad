@@ -138,7 +138,7 @@ tema_es_oscuro = st.session_state.get("tema_modo", "solar") == "oscuro"
 # ESTILOS CSS GLOBALES (RESPONSIVOS & DINÁMICOS POR TEMA)
 # =========================================================================
 css_tema_oscuro = """
-    /* --- TEMA OSCURO REBT --- */
+    /* --- TEMA OSCURO REBT DE ALTO CONTRASTE --- */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {
         background-color: #0b1120 !important;
         color: #f1f5f9 !important;
@@ -158,6 +158,67 @@ css_tema_oscuro = """
         background-color: #1e293b !important;
         color: #38bdf8 !important;
     }
+
+    /* TODOS LOS BOTONES ESTÁNDAR Y SECUNDARIOS EN MODO OSCURO (ELIMINA CASILLAS BLANCAS CON TEXTO INVISIBLE) */
+    div.stButton > button,
+    div[data-testid="stFormSubmitButton"] > button,
+    button[kind="secondary"],
+    div.stDownloadButton > button {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1.5px solid #475569 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+        transition: all 0.2s ease !important;
+    }
+    div.stButton > button p,
+    div.stButton > button span,
+    div.stButton > button div,
+    div[data-testid="stFormSubmitButton"] > button p,
+    div[data-testid="stFormSubmitButton"] > button span,
+    button[kind="secondary"] p,
+    button[kind="secondary"] span {
+        color: #f8fafc !important;
+    }
+    div.stButton > button:hover,
+    div[data-testid="stFormSubmitButton"] > button:hover,
+    button[kind="secondary"]:hover,
+    div.stDownloadButton > button:hover {
+        background-color: #334155 !important;
+        border-color: #38bdf8 !important;
+        color: #38bdf8 !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important;
+    }
+    div.stButton > button:hover p,
+    div.stButton > button:hover span,
+    div[data-testid="stFormSubmitButton"] > button:hover p,
+    div[data-testid="stFormSubmitButton"] > button:hover span {
+        color: #38bdf8 !important;
+    }
+
+    /* BOTONES PRIMARIOS EN MODO OSCURO */
+    div.stButton > button[kind="primary"],
+    div[data-testid="stFormSubmitButton"] > button[kind="primary"],
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border: 1.5px solid #38bdf8 !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+    }
+    div.stButton > button[kind="primary"] p,
+    div.stButton > button[kind="primary"] span,
+    button[kind="primary"] p,
+    button[kind="primary"] span {
+        color: #ffffff !important;
+    }
+    div.stButton > button[kind="primary"]:hover,
+    button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+        border-color: #7dd3fc !important;
+        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.6) !important;
+    }
+
+    /* CONTENEDORES CON BORDE Y TARJETAS */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #0f172a !important;
         border: 2px solid #334155 !important;
@@ -181,26 +242,131 @@ css_tema_oscuro = """
         border: 2px solid #334155 !important;
         color: #f1f5f9 !important;
     }
-    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+
+    /* INPUTS, SELECTORES Y ÁREAS DE TEXTO */
+    div[data-baseweb="input"],
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="base-input"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="textarea"] > div {
         background-color: #1e293b !important;
-        border: 2px solid #0284c7 !important;
+        border: 1.5px solid #0284c7 !important;
         color: #f8fafc !important;
     }
-    div[data-baseweb="input"] input, div[data-baseweb="textarea"] textarea {
+    div[data-baseweb="input"] input,
+    div[data-baseweb="base-input"] input,
+    div[data-baseweb="textarea"] textarea,
+    div[data-baseweb="select"] input {
         color: #f8fafc !important;
         background-color: transparent !important;
+        -webkit-text-fill-color: #f8fafc !important;
     }
-    p, span, label, h1, h2, h3, h4, h5, h6, li {
-        color: #f1f5f9 !important;
+
+    /* CHECKBOXES Y RADIOS */
+    div[data-testid="stCheckbox"] label,
+    div[data-testid="stRadio"] label,
+    div[data-testid="stCheckbox"] label *,
+    div[data-testid="stRadio"] label * {
+        color: #f8fafc !important;
+    }
+
+    /* MENÚS DESPLEGABLES Y POPOVERS */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    ul[role="listbox"] {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        border: 1px solid #334155 !important;
+    }
+    li[role="option"] {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+    }
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background-color: #1e293b !important;
+        color: #38bdf8 !important;
+    }
+    li[role="option"] span,
+    li[role="option"] div {
+        color: inherit !important;
+    }
+
+    /* PESTAÑAS (TABS) EN MODO OSCURO */
+    div[data-baseweb="tab-list"] {
+        background-color: #0b1329 !important;
+        border-bottom: 2px solid #0284c7 !important;
     }
     button[data-baseweb="tab"] {
         background-color: #0f172a !important;
+        border: 1px solid #334155 !important;
         color: #94a3b8 !important;
     }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #0c4a6e !important;
+    button[data-baseweb="tab"] p,
+    button[data-baseweb="tab"] span,
+    button[data-baseweb="tab"] div {
+        color: #94a3b8 !important;
+    }
+    button[data-baseweb="tab"]:hover {
+        background-color: #1e293b !important;
         color: #38bdf8 !important;
-        border-bottom: 3px solid #38bdf8 !important;
+        border-color: #38bdf8 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border-color: #0284c7 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] p,
+    button[data-baseweb="tab"][aria-selected="true"] span,
+    button[data-baseweb="tab"][aria-selected="true"] div {
+        color: #ffffff !important;
+    }
+
+    /* TOOLTIPS */
+    div[data-baseweb="tooltip"],
+    div[role="tooltip"] {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        border: 1.5px solid #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+    }
+    div[data-baseweb="tooltip"] *,
+    div[role="tooltip"] * {
+        color: #f8fafc !important;
+    }
+
+    /* ALERTAS */
+    div[data-testid="stAlert"] {
+        background-color: #0f172a !important;
+        border: 1.5px solid #0284c7 !important;
+        color: #f1f5f9 !important;
+    }
+    div[data-testid="stAlert"] * {
+        color: #f1f5f9 !important;
+    }
+
+    /* TABLAS Y DATAFRAMES */
+    div[data-testid="stDataFrame"],
+    div[data-testid="stTable"] {
+        background-color: #0f172a !important;
+    }
+    table {
+        color: #f1f5f9 !important;
+        background-color: #0f172a !important;
+    }
+    th {
+        background-color: #1e293b !important;
+        color: #38bdf8 !important;
+        border-bottom: 2px solid #0284c7 !important;
+    }
+    td {
+        border-bottom: 1px solid #334155 !important;
+        color: #f1f5f9 !important;
+    }
+
+    p, span, label, h1, h2, h3, h4, h5, h6, li {
+        color: #f1f5f9 !important;
     }
     .section-header-blue {
         background: linear-gradient(90deg, #0c4a6e 0%, #0f172a 100%) !important;
@@ -331,34 +497,109 @@ st.markdown(f"""
             transform: translateX(2px);
         }}
 
-        /* Botón de expandir menú lateral (cuando está oculto) */
-        [data-testid="stExpandSidebarButton"] button {{
-            background-color: #0284c7 !important;
+        /* =========================================================================
+           PESTAÑA FLOTANTE PERMANENTE PARA DESPLEGAR MENÚ LATERAL (TABLETS & MÓVILES)
+           Garantiza que el botón ☰ MENÚ permanezca SIEMPRE visible al hacer scroll vertical hacia abajo.
+           ========================================================================= */
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="collapsedControl"],
+        header [data-testid="stSidebarCollapsedControl"] {{
+            position: fixed !important;
+            top: 10px !important;
+            left: 10px !important;
+            z-index: 99999999 !important;
+            display: flex !important;
+            align-items: center !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }}
+
+        [data-testid="stSidebarCollapsedControl"] button,
+        [data-testid="stExpandSidebarButton"] button,
+        [data-testid="collapsedControl"] button,
+        header [data-testid="stSidebarCollapsedControl"] button {{
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
             color: #ffffff !important;
-            border-radius: 8px !important;
-            border: 1.5px solid #0369a1 !important;
-            padding: 6px 10px !important;
-            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35) !important;
+            border: 2px solid #38bdf8 !important;
+            border-radius: 10px !important;
+            padding: 7px 15px !important;
+            min-height: 42px !important;
+            box-shadow: 0 4px 16px rgba(2, 132, 199, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
             transition: all 0.2s ease !important;
         }}
-        [data-testid="stExpandSidebarButton"] button:hover {{
-            background-color: #0369a1 !important;
-            transform: scale(1.06) !important;
-            box-shadow: 0 6px 14px rgba(2, 132, 199, 0.5) !important;
+
+        [data-testid="stSidebarCollapsedControl"] button::after,
+        [data-testid="stExpandSidebarButton"] button::after,
+        [data-testid="collapsedControl"] button::after,
+        header [data-testid="stSidebarCollapsedControl"] button::after {{
+            content: " ☰ MENÚ" !important;
+            color: #ffffff !important;
+            font-size: 12.5px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.8px !important;
+            margin-left: 3px !important;
         }}
-        [data-testid="stExpandSidebarButton"] button svg {{
+
+        [data-testid="stSidebarCollapsedControl"] button:hover,
+        [data-testid="stExpandSidebarButton"] button:hover,
+        [data-testid="collapsedControl"] button:hover {{
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+            border-color: #7dd3fc !important;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.75) !important;
+            transform: scale(1.03) !important;
+        }}
+
+        [data-testid="stSidebarCollapsedControl"] button svg,
+        [data-testid="stExpandSidebarButton"] button svg,
+        [data-testid="collapsedControl"] button svg {{
             fill: #ffffff !important;
             color: #ffffff !important;
+            width: 20px !important;
+            height: 20px !important;
         }}
 
         /* Botón para colapsar menú (dentro del sidebar) */
         [data-testid="stSidebarCollapseButton"] button {{
+            background-color: #0f172a !important;
+            color: #38bdf8 !important;
+            border: 1.5px solid #0284c7 !important;
             border-radius: 8px !important;
+            padding: 6px 12px !important;
+            min-height: 38px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
             transition: all 0.2s ease !important;
         }}
+        [data-testid="stSidebarCollapseButton"] button::after {{
+            content: " ✕ CERRAR MENÚ" !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #38bdf8 !important;
+            margin-left: 3px !important;
+        }}
         [data-testid="stSidebarCollapseButton"] button:hover {{
-            background-color: #e0f2fe !important;
-            color: #0284c7 !important;
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+        }}
+        [data-testid="stSidebarCollapseButton"] button:hover::after {{
+            color: #ffffff !important;
+        }}
+        [data-testid="stSidebarCollapseButton"] button svg {{
+            fill: #38bdf8 !important;
+        }}
+        [data-testid="stSidebarCollapseButton"] button:hover svg {{
+            fill: #ffffff !important;
         }}
 
         /* Contenedores con Borde y Sombra Nítidos y Marcados */
@@ -640,11 +881,11 @@ with col_bar_brand:
     """, unsafe_allow_html=True)
 with col_bar_btn:
     if es_oscuro:
-        if st.button("☀️ MODO SOLAR", key="btn_toggle_tema_top", use_container_width=True, help="Cambiar a Modo Solar (Claro de alta visibilidad)"):
+        if st.button("☀️ MODO SOLAR", key="btn_toggle_tema_top", use_container_width=True):
             st.session_state["tema_modo"] = "solar"
             st.rerun()
     else:
-        if st.button("🌙 MODO OSCURO", key="btn_toggle_tema_top", use_container_width=True, help="Cambiar a Modo Oscuro (Nocturno / Descanso visual)"):
+        if st.button("🌙 MODO OSCURO", key="btn_toggle_tema_top", use_container_width=True):
             st.session_state["tema_modo"] = "oscuro"
             st.rerun()
 
