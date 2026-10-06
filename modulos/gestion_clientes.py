@@ -67,6 +67,9 @@ def renderizar():
         if c_id:
             conteo_proyectos_por_cli[c_id] = conteo_proyectos_por_cli.get(c_id, 0) + 1
 
+    # Limpiar cualquier clave residual de versiones anteriores
+    st.session_state.pop("crm_sel_dropdown_sync", None)
+
     # Asegurar cliente seleccionado por defecto
     if "crm_cliente_seleccionado_id" not in st.session_state or not st.session_state["crm_cliente_seleccionado_id"]:
         if clientes:
@@ -276,7 +279,7 @@ def renderizar():
                 if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
                     st.session_state["crm_cliente_seleccionado_id"] = clicked_id
                     st.session_state["cliente_activo_proyecto"] = clicked_cli
-                    st.rerun()
+                    curr_id = clicked_id
 
             cliente_sel_obj = db_manager.obtener_cliente_por_id(curr_id, usuario_id) if curr_id else None
             if cliente_sel_obj and st.session_state.get("cliente_activo_proyecto") != cliente_sel_obj:
@@ -511,7 +514,7 @@ def renderizar():
                     if not proyectos_cliente:
                         st.info("ℹ️ No hay cálculos ni presupuestos guardados todavía para este cliente. Realiza un cálculo en cualquiera de los módulos y guárdalo asociándolo a esta ficha.")
                     else:
-                        for proj in proyectos_cliente:
+                        for idx_p, proj in enumerate(proyectos_cliente):
                             with st.container(border=True):
                                 col_p1, col_p2, col_p3, col_p4 = st.columns([3.5, 2.5, 2, 1.2])
                                 with col_p1:
@@ -521,14 +524,14 @@ def renderizar():
                                 with col_p2:
                                     st.markdown(f"**Resumen Técnico:**  \n{proj.get('resumen_potencia_o_importe', '-')}")
                                 with col_p3:
-                                    if st.button("🚀 Cargar y Modificar", key=f"btn_load_p_{proj['id']}", type="primary", use_container_width=True):
+                                    if st.button("🚀 Cargar y Modificar", key=f"btn_load_p_{proj['id']}_{idx_p}", type="primary", use_container_width=True):
                                         datos_p = db_manager.cargar_proyecto_por_id(proj["id"], usuario_id)
                                         if datos_p:
                                             cargar_proyecto_en_session(proj["modulo"], datos_p.get("datos", {}), cliente_sel_obj)
                                             st.session_state.menu_activo = obtener_label_menu_por_modulo(proj["modulo"])
                                             st.rerun()
                                 with col_p4:
-                                    if st.button("🗑️ Borrar", key=f"btn_del_p_{proj['id']}", use_container_width=True):
+                                    if st.button("🗑️ Borrar", key=f"btn_del_p_{proj['id']}_{idx_p}", use_container_width=True):
                                         db_manager.eliminar_proyecto(proj["id"], usuario_id)
                                         st.rerun()
 
