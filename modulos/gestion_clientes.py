@@ -241,33 +241,42 @@ def renderizar():
             # 2. TABLA INTERACTIVA DE CLIENTES (CENTRO DE CONTROL)
             # =========================================================
             st.markdown(f"#### 📊 Directorio de Clientes y Suministros ({len(clientes_filtrados)})")
-            st.caption("💡 **Haz clic sobre cualquier fila de la tabla** para seleccionarla y ver o editar sus datos inmediatamente.")
+            st.caption("💡 **Haz clic sobre cualquier celda o fila de la tabla** para posicionarte en el cliente y pulsa **'✏️ Editar este Cliente'**:")
+
+            # Determinar índice de la fila actualmente seleccionada para marcarla por defecto
+            ids_filtrados = [c["id"] for c in clientes_filtrados]
+            curr_id = st.session_state.get("crm_cliente_seleccionado_id")
+            if (curr_id not in ids_filtrados) and ids_filtrados:
+                curr_id = ids_filtrados[0]
+                st.session_state["crm_cliente_seleccionado_id"] = curr_id
+
+            default_row_idx = ids_filtrados.index(curr_id) if (curr_id in ids_filtrados) else 0
 
             event_tabla = st.dataframe(
                 df_clientes,
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
-                selection_mode="single-row",
+                selection_mode=["single-row", "single-cell"],
+                selection_default={"rows": [default_row_idx]} if ids_filtrados else None,
                 key="crm_grid_dataframe"
             )
 
-            # Sincronización instantánea al hacer clic en una fila
-            ids_filtrados = [c["id"] for c in clientes_filtrados]
-            if event_tabla and hasattr(event_tabla, "selection") and event_tabla.selection.rows:
-                sel_row_idx = event_tabla.selection.rows[0]
-                if 0 <= sel_row_idx < len(clientes_filtrados):
-                    clicked_cli = clientes_filtrados[sel_row_idx]
-                    clicked_id = clicked_cli["id"]
-                    if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
-                        st.session_state["crm_cliente_seleccionado_id"] = clicked_id
-                        st.session_state["cliente_activo_proyecto"] = clicked_cli
-                        st.rerun()
+            # Sincronización instantánea al hacer clic en cualquier celda o fila
+            clicked_row_idx = None
+            if event_tabla and hasattr(event_tabla, "selection"):
+                if event_tabla.selection.rows:
+                    clicked_row_idx = event_tabla.selection.rows[0]
+                elif event_tabla.selection.cells:
+                    clicked_row_idx = event_tabla.selection.cells[0][0]
 
-            curr_id = st.session_state.get("crm_cliente_seleccionado_id")
-            if (curr_id not in ids_filtrados) and ids_filtrados:
-                curr_id = ids_filtrados[0]
-                st.session_state["crm_cliente_seleccionado_id"] = curr_id
+            if clicked_row_idx is not None and 0 <= clicked_row_idx < len(clientes_filtrados):
+                clicked_cli = clientes_filtrados[clicked_row_idx]
+                clicked_id = clicked_cli["id"]
+                if st.session_state.get("crm_cliente_seleccionado_id") != clicked_id:
+                    st.session_state["crm_cliente_seleccionado_id"] = clicked_id
+                    st.session_state["cliente_activo_proyecto"] = clicked_cli
+                    st.rerun()
 
             cliente_sel_obj = db_manager.obtener_cliente_por_id(curr_id, usuario_id) if curr_id else None
             if cliente_sel_obj and st.session_state.get("cliente_activo_proyecto") != cliente_sel_obj:
@@ -278,13 +287,13 @@ def renderizar():
             # =========================================================
             if cliente_sel_obj:
                 with st.container(border=True):
-                    col_bar_info, col_bar_btn_edit, col_bar_btn_dup, col_bar_btn_del = st.columns([3.2, 1.4, 1.4, 1.0])
+                    col_bar_info, col_bar_btn_edit, col_bar_btn_dup, col_bar_btn_del = st.columns([3.1, 1.5, 1.3, 1.0])
                     with col_bar_info:
                         tipo_ico = "🏠" if "vivienda" in (cliente_sel_obj.get("tipo_inmueble") or "").lower() else "🏢"
                         st.markdown(
                             f"<div style='padding-top: 3px;'>"
                             f"<span style='font-size: 16px; font-weight: 700; color: #0284c7;'>"
-                            f"📍 Fila Seleccionada: #{cliente_sel_obj['id']} — {cliente_sel_obj['nombre_completo']}</span>"
+                            f"📍 Cliente Posicionado: #{cliente_sel_obj['id']} — {cliente_sel_obj['nombre_completo']}</span>"
                             f"<div style='font-size: 12px; color: #475569; margin-top: 2px;'>"
                             f"NIF/CIF: <b>{cliente_sel_obj.get('nif_cif') or '-'}</b> | "
                             f"📞 <b>{cliente_sel_obj.get('telefono') or '-'}</b> | "
@@ -301,7 +310,7 @@ def renderizar():
                                 st.session_state["crm_modo_edicion"] = False
                                 st.rerun()
                         else:
-                            if st.button("✏️ Editar Fila", key="btn_toggle_edit_on", type="primary", use_container_width=True, help="Modifica los datos del cliente seleccionado en la tabla"):
+                            if st.button("✏️ Editar este Cliente", key="btn_toggle_edit_on", type="primary", use_container_width=True, help="Modifica los datos del cliente seleccionado en la tabla"):
                                 st.session_state["crm_modo_edicion"] = True
                                 st.rerun()
                     with col_bar_btn_dup:
