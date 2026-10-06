@@ -389,12 +389,73 @@ css_tema_oscuro = """
         color: #ffffff !important;
     }
 
-    /* CHECKBOXES Y RADIOS */
+    /* CHECKBOXES Y RADIOS - MODO OSCURO */
     div[data-testid="stCheckbox"] label,
     div[data-testid="stRadio"] label,
     div[data-testid="stCheckbox"] label *,
     div[data-testid="stRadio"] label * {
         color: #f8fafc !important;
+    }
+    div[data-testid="stCheckbox"] label > span + div,
+    div[data-testid="stCheckbox"] label > div:first-of-type,
+    div[data-testid="stCheckbox"] label > div:not([data-testid="stWidgetLabel"]),
+    div[data-testid="stCheckbox"] [class*="e15oan335"],
+    div[data-testid="stCheckbox"] div.e15oan335,
+    .st-emotion-cache-e15oan335,
+    div[data-testid="stCheckbox"] [role="checkbox"],
+    div[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        border: 2.5px solid #38bdf8 !important;
+        border-radius: 6px !important;
+        background-color: #1e293b !important;
+        background: #1e293b !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+    }
+    div[data-testid="stCheckbox"] label:hover > span + div,
+    div[data-testid="stCheckbox"] label:hover > div:first-of-type,
+    div[data-testid="stCheckbox"] label:hover [class*="e15oan335"] {
+        border-color: #7dd3fc !important;
+        background-color: #0f172a !important;
+        background: #0f172a !important;
+        transform: scale(1.08) !important;
+    }
+    div[data-testid="stCheckbox"] label[data-selected="true"] > span + div,
+    div[data-testid="stCheckbox"] label[data-selected="true"] > div:first-of-type,
+    div[data-testid="stCheckbox"] label[data-selected="true"] [class*="e15oan335"],
+    div[data-testid="stCheckbox"] label:has(input:checked) > span + div,
+    div[data-testid="stCheckbox"] label:has(input:checked) > div:first-of-type,
+    div[data-testid="stCheckbox"] label:has(input:checked) [class*="e15oan335"],
+    div[data-testid="stCheckbox"] label > span + div:has(svg),
+    div[data-testid="stCheckbox"] label > div:first-of-type:has(svg),
+    div[data-testid="stCheckbox"] [class*="e15oan335"]:has(svg) {
+        background-color: #0284c7 !important;
+        background: #0284c7 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.6) !important;
+    }
+    div[data-testid="stCheckbox"] svg,
+    div[data-testid="stCheckbox"] [class*="e15oan335"] svg {
+        width: 14px !important;
+        height: 14px !important;
+        stroke-width: 3.5px !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
+        fill: none !important;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)) !important;
+    }
+    div[data-testid="stCheckbox"] svg polyline,
+    div[data-testid="stCheckbox"] svg path {
+        stroke: #ffffff !important;
+        stroke-width: 3.5px !important;
+        fill: none !important;
     }
 
     /* MENÚS DESPLEGABLES Y POPOVERS - MODO OSCURO */
@@ -834,13 +895,82 @@ css_tema_solar = """
     div[data-baseweb="popover"] li[role="option"] * {
         color: inherit !important;
     }
+
+    /* CASILLAS DE CHECKBOX EN MODO SOLAR (DÍA) - CUADRO MUY VISIBLE CON FONDO Y BORDE AZUL */
+    div[data-testid="stCheckbox"] label > span + div,
+    div[data-testid="stCheckbox"] label > div:first-of-type,
+    div[data-testid="stCheckbox"] label > div:not([data-testid="stWidgetLabel"]),
+    div[data-testid="stCheckbox"] [class*="e15oan335"],
+    div[data-testid="stCheckbox"] div.e15oan335,
+    .st-emotion-cache-e15oan335,
+    div[data-testid="stCheckbox"] [role="checkbox"],
+    div[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 6px !important;
+        background-color: #e2e8f0 !important;
+        background: #e2e8f0 !important;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+    }
+    div[data-testid="stCheckbox"] label:hover > span + div,
+    div[data-testid="stCheckbox"] label:hover > div:first-of-type,
+    div[data-testid="stCheckbox"] label:hover [class*="e15oan335"] {
+        border-color: #0369a1 !important;
+        background-color: #bae6fd !important;
+        background: #bae6fd !important;
+        transform: scale(1.08) !important;
+    }
+    div[data-testid="stCheckbox"] label[data-selected="true"] > span + div,
+    div[data-testid="stCheckbox"] label[data-selected="true"] > div:first-of-type,
+    div[data-testid="stCheckbox"] label[data-selected="true"] [class*="e15oan335"],
+    div[data-testid="stCheckbox"] label:has(input:checked) > span + div,
+    div[data-testid="stCheckbox"] label:has(input:checked) > div:first-of-type,
+    div[data-testid="stCheckbox"] label:has(input:checked) [class*="e15oan335"],
+    div[data-testid="stCheckbox"] label > span + div:has(svg),
+    div[data-testid="stCheckbox"] label > div:first-of-type:has(svg),
+    div[data-testid="stCheckbox"] [class*="e15oan335"]:has(svg) {
+        background-color: #0284c7 !important;
+        background: #0284c7 !important;
+        border-color: #0284c7 !important;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.45) !important;
+    }
+    div[data-testid="stCheckbox"] svg,
+    div[data-testid="stCheckbox"] [class*="e15oan335"] svg {
+        width: 14px !important;
+        height: 14px !important;
+        stroke-width: 3.5px !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
+        fill: none !important;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)) !important;
+    }
+    div[data-testid="stCheckbox"] svg polyline,
+    div[data-testid="stCheckbox"] svg path {
+        stroke: #ffffff !important;
+        stroke-width: 3.5px !important;
+        fill: none !important;
+    }
+    div[data-testid="stCheckbox"] label p,
+    div[data-testid="stCheckbox"] label span {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+    }
 """ if not tema_es_oscuro else ""
 
 container_bg_global = "#0f172a" if tema_es_oscuro else "#ffffff"
 container_text_global = "#f1f5f9" if tema_es_oscuro else "#0f172a"
 container_sub_bg_global = "#1e293b" if tema_es_oscuro else "#f8fafc"
 radio_border_global = "#38bdf8" if tema_es_oscuro else "#0284c7"
-radio_bg_global = "#0f172a" if tema_es_oscuro else "#ffffff"
+radio_bg_global = "#0f172a" if tema_es_oscuro else "#e2e8f0"
 radio_dot_global = "#38bdf8" if tema_es_oscuro else "#0284c7"
 
 st.markdown(f"""
@@ -1234,46 +1364,76 @@ st.markdown(f"""
             background-color: {'rgba(56, 189, 248, 0.12)' if tema_es_oscuro else 'rgba(2, 132, 199, 0.08)'} !important;
         }}
         /* Cuadro Exterior del Checkbox (Desmarcado) */
-        div[data-testid="stCheckbox"] label > div:first-child,
-        div[class*="e15oan335"],
-        div[class*="e15oan337"],
-        div[class*="e15oan338"],
+        div[data-testid="stCheckbox"] label > span + div,
+        div[data-testid="stCheckbox"] label > div:first-of-type,
+        div[data-testid="stCheckbox"] label > div:not([data-testid="stWidgetLabel"]),
+        div[data-testid="stCheckbox"] [class*="e15oan335"],
+        div[data-testid="stCheckbox"] div.e15oan335,
         .st-emotion-cache-e15oan335,
-        .st-emotion-cache-e15oan337 {{
+        div[data-testid="stCheckbox"] [role="checkbox"],
+        div[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {{
             width: 22px !important;
             height: 22px !important;
             min-width: 22px !important;
             min-height: 22px !important;
             border: 2.5px solid {radio_border_global} !important;
             border-radius: 6px !important;
-            background-color: {radio_bg_global} !important;
-            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.35)' if tema_es_oscuro else '0 2px 5px rgba(2, 132, 199, 0.2)'} !important;
+            background-color: {'#1e293b' if tema_es_oscuro else '#e2e8f0'} !important;
+            background: {'#1e293b' if tema_es_oscuro else '#e2e8f0'} !important;
+            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.35)' if tema_es_oscuro else '0 1px 4px rgba(2, 132, 199, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.08)'} !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
             transition: all 0.2s ease !important;
+            flex-shrink: 0 !important;
+        }}
+        div[data-testid="stCheckbox"] label:hover > span + div,
+        div[data-testid="stCheckbox"] label:hover > div:first-of-type,
+        div[data-testid="stCheckbox"] label:hover [class*="e15oan335"] {{
+            border-color: {'#7dd3fc' if tema_es_oscuro else '#0369a1'} !important;
+            background-color: {'#0f172a' if tema_es_oscuro else '#bae6fd'} !important;
+            background: {'#0f172a' if tema_es_oscuro else '#bae6fd'} !important;
+            transform: scale(1.08) !important;
         }}
         /* Cuadro Exterior del Checkbox (Marcado con Tilde) */
-        div[data-testid="stCheckbox"] label > div:first-child:has(svg),
-        div[data-testid="stCheckbox"] label:has(input:checked) > div:first-child {{
+        div[data-testid="stCheckbox"] label[data-selected="true"] > span + div,
+        div[data-testid="stCheckbox"] label[data-selected="true"] > div:first-of-type,
+        div[data-testid="stCheckbox"] label[data-selected="true"] [class*="e15oan335"],
+        div[data-testid="stCheckbox"] label:has(input:checked) > span + div,
+        div[data-testid="stCheckbox"] label:has(input:checked) > div:first-of-type,
+        div[data-testid="stCheckbox"] label:has(input:checked) [class*="e15oan335"],
+        div[data-testid="stCheckbox"] label > span + div:has(svg),
+        div[data-testid="stCheckbox"] label > div:first-of-type:has(svg),
+        div[data-testid="stCheckbox"] [class*="e15oan335"]:has(svg) {{
             background-color: #0284c7 !important;
+            background: #0284c7 !important;
             border-color: {'#38bdf8' if tema_es_oscuro else '#0284c7'} !important;
-            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.5)' if tema_es_oscuro else '0 2px 6px rgba(2, 132, 199, 0.35)'} !important;
+            box-shadow: {'0 0 12px rgba(56, 189, 248, 0.6)' if tema_es_oscuro else '0 2px 8px rgba(2, 132, 199, 0.45)'} !important;
         }}
         /* Icono de Tilde (Checkmark SVG) */
-        div[data-testid="stCheckbox"] svg {{
-            width: 15px !important;
-            height: 15px !important;
+        div[data-testid="stCheckbox"] svg,
+        div[data-testid="stCheckbox"] [class*="e15oan335"] svg {{
+            width: 14px !important;
+            height: 14px !important;
             stroke-width: 3.5px !important;
             stroke: #ffffff !important;
             color: #ffffff !important;
             fill: none !important;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)) !important;
+        }}
+        div[data-testid="stCheckbox"] svg polyline,
+        div[data-testid="stCheckbox"] svg path {{
+            stroke: #ffffff !important;
+            stroke-width: 3.5px !important;
+            fill: none !important;
         }}
         /* Texto del Checkbox */
         div[data-testid="stCheckbox"] label p,
-        div[data-testid="stCheckbox"] label span {{
+        div[data-testid="stCheckbox"] label span,
+        div[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] p,
+        div[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] span {{
             font-size: 15px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             color: {container_text_global} !important;
             letter-spacing: 0.2px !important;
         }}
