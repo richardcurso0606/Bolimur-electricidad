@@ -117,8 +117,8 @@ def _auditar_con_gemini_vision(
         "2. Puesta a tierra: Verificar pica, grapa de apriete, arqueta registrable, puente seccionador y sección de cobre (mínimo 35 mm² desnudo) según ITC-BT-18.\n"
         "3. Displays de comprobador multifunción: Leer el valor numérico en el display (OCR). Tierra: Ra <= 15 Ohm (pararrayos) o Ra <= 50-800 Ohm según diferenciales. "
         "Disparo diferencial: tiempo <= 200 ms y corriente <= 30 mA (ITC-BT-05). Aislamiento: >= 0.5 MOhm a 500 V DC. Continuidad: < 1 Ohm.\n"
-        "4. Canalizaciones/Rozas: Zonas reglamentarias de rozas a 20 cm de techos y esquinas (ITC-BT-21), sin empalmes sueltos fuera de cajas de derivación.\n"
-        "5. Esquema Unifilar: Correspondencia de calibre de magnetotérmicos con secciones de cable (10A->1.5mm2, 16A->2.5mm2, 20A->4mm2, 25A->6mm2, 32A->10mm2), selectividad diferencial.\n\n"
+        "5. Esquema Unifilar: Correspondencia de calibre de magnetotérmicos con secciones de cable (10A->1.5mm2, 16A->2.5mm2, 20A->4mm2, 25A->6mm2, 32A->10mm2), selectividad diferencial.\n"
+        "6. Locales de Pública Concurrencia (ITC-BT-28 / Bares, Restaurantes, Clínicas, etc.): Exigir cables no propagadores de incendio y libres de halógenos (AS tipo H07Z1-K / RZ1-K), doble línea de alumbrado en salas de público, alumbrado de emergencia (mínimo 5 lux en cuadros) y advertencia de inspección inicial obligatoria por OCA.\n\n"
         "DEBES RESPONDER EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO con la siguiente estructura exacta (sin texto previo ni posterior, sin markdown adicional):\n"
         "{\n"
         '  "estado": "conforme" | "advertencia" | "no_conforme",\n'
@@ -205,9 +205,8 @@ def _auditar_con_motor_reglas_rebt(
     Aplica matrices de comprobación según el tipo de evidencia reportada.
     """
     tipo_lower = (tipo_evidencia + " " + descripcion_usuario).lower()
-
     if any(k in tipo_lower for k in ["cuadro", "cgmp", "protecc", "pia", "diferencial", "iga"]):
-        return {
+        res_cuadro = {
             "estado": "conforme",
             "calificacion": "Cuadro Eléctrico Conforme (Pre-inspección REBT)",
             "tipo_detectado": "Cuadro General de Mando y Protección (CGMP - ITC-BT-17)",
@@ -259,6 +258,23 @@ def _auditar_con_motor_reglas_rebt(
             ],
             "origen_auditoria": "motor_reglas_rebt"
         }
+        if contexto_instalacion and any(k in str(contexto_instalacion.get("tipo", "")).lower() or k in str(contexto_instalacion.get("grado", "")).lower() for k in ["pública", "publica", "concurrencia", "bar", "restaurante", "lpc"]):
+            res_cuadro["comprobaciones"].append({
+                "criterio": "Cables de Alta Seguridad (AS) - Libres de Halógenos",
+                "resultado": "OK",
+                "detalle": "Exigidos obligatoriamente en locales de pública concurrencia para evitar humos tóxicos (ITC-BT-28).",
+                "norma_rebt": "ITC-BT-28 pto. 4"
+            })
+            res_cuadro["comprobaciones"].append({
+                "criterio": "Inspección Inicial Reglamentaria por OCA",
+                "resultado": "AVISO",
+                "detalle": "Exigida inspección reglamentaria inicial por Organismo de Control Autorizado antes de la puesta en marcha.",
+                "norma_rebt": "ITC-BT-05 / ITC-BT-28"
+            })
+            if "ITC-BT-28" not in res_cuadro["normas_aplicadas"]:
+                res_cuadro["normas_aplicadas"].append("ITC-BT-28")
+            res_cuadro["recomendaciones"].append("Solicitar cita de inspección inicial con la OCA con antelación suficiente a la solicitud de suministro.")
+        return res_cuadro
 
     elif any(k in tipo_lower for k in ["tierra", "pica", "arqueta", "seccionador", "borne", "pe"]):
         return {

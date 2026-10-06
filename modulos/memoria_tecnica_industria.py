@@ -66,12 +66,747 @@ def procesar_archivo_anexo(uploaded_file) -> str:
         st.error(f"Error procesando imagen del plano: {e}")
         return ""
 
+# =========================================================================
+# CATÁLOGO OFICIAL DE PLANTILLAS MTD REBT - REGIÓN DE MURCIA (CÓDIGO 30)
+# =========================================================================
+
+CATALOGO_PLANTILLAS_MTD = {
+    "vivienda_basica": {
+        "id": "vivienda_basica",
+        "titulo": "Vivienda Básica (5.750 W - 230V - IGA 25A)",
+        "categoria": "🏡 Viviendas Residenciales (ITC-BT-10 / 25)",
+        "potencia_inst": 5750.0,
+        "potencia_max": 5750.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Derivación Individual desde Centralización (ITC-BT-15)",
+        "di_cable": "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M32 libre de halógenos (ITC-BT-15)",
+        "di_long": 15.0,
+        "di_cdt": 0.72,
+        "grado": "Básica",
+        "iga": 25,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "Interruptor Diferencial 2P 40A / 30mA Clase A / Superinmunizado",
+        "vtp": "Permanentes (VTP) + Transitorias Tipo 2 con reconexión",
+        "tierra": "Conductor PE 1x10 mm² Cu | Picas en anillo Rt ≤ 15 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Vivienda Residencial Electrificación Básica",
+        "cuando_elegir": "Viviendas estándar de hasta 160 m² de superficie útil sin climatización centralizada, aerotermia ni calefacción eléctrica.",
+        "criterios_rebt": "ITC-BT-10 e ITC-BT-25: Mínimo 5.750 W con IGA 25A. Secciones mínimas de 1,5 a 6 mm² Cu. Máximo 5 circuitos por diferencial de 30 mA.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"}
+        ]
+    },
+    "vivienda_elevada_clima": {
+        "id": "vivienda_elevada_clima",
+        "titulo": "Vivienda Elevada - Clima / Calefacción (9.200 W - 230V - IGA 40A)",
+        "categoria": "🏡 Viviendas Residenciales (ITC-BT-10 / 25)",
+        "potencia_inst": 9200.0,
+        "potencia_max": 9200.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Derivación Individual desde Centralización (ITC-BT-15)",
+        "di_cable": "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M40 libre de halógenos (ITC-BT-15)",
+        "di_long": 18.0,
+        "di_cdt": 0.85,
+        "grado": "Elevada",
+        "iga": 40,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "2 x Diferencial 2P 40A / 30mA (D1: Tipo AC, D2: Tipo A Superinmunizado para Clima e Inverter)",
+        "vtp": "Permanentes (VTP) + Transitorias Tipo 2 con reconexión",
+        "tierra": "Conductor PE 1x16 mm² Cu | Picas en anillo Rt ≤ 15 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Vivienda Residencial Electrificación Elevada con Climatización",
+        "cuando_elegir": "Vivienda habitual en Murcia equipada con aire acondicionado por conductos o varios splits, secadora y/o calefacción eléctrica.",
+        "criterios_rebt": "ITC-BT-10 e ITC-BT-25. Potencia mínima 9.200 W con IGA 40A. DI obligatoria de 16 mm² Cu en tubo M40 (modelo oficial Murcia DGEAIM). Al superar 5 circuitos, se instalan obligatoriamente al menos 2 diferenciales de 30 mA.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora / Lavavajillas / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C8.1 - Calefacción Línea 1", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
+            {"nombre": "C8.2 - Calefacción Línea 2", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 18, "cdt": 1.25, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización Inverter (Tipo A SI)", "potencia": 5750, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            {"nombre": "C11 - Domótica / Automatización y Control", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.75, "norma": "ITC-BT-25"}
+        ]
+    },
+    "vivienda_elevada_aerotermia": {
+        "id": "vivienda_elevada_aerotermia",
+        "titulo": "Vivienda Elevada - Aerotermia + Climatización (11.500 W - 230V - IGA 50A)",
+        "categoria": "🏡 Viviendas Residenciales (ITC-BT-10 / 25)",
+        "potencia_inst": 11500.0,
+        "potencia_max": 11500.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Derivación Individual desde Centralización (ITC-BT-15)",
+        "di_cable": "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M40 libre de halógenos (ITC-BT-15)",
+        "di_long": 18.0,
+        "di_cdt": 0.95,
+        "grado": "Elevada",
+        "iga": 50,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "3 x Diferencial 2P 40A / 30mA (Diferencial dedicado Tipo A Superinmunizado para Bomba de Calor Aerotérmica)",
+        "vtp": "Permanentes (VTP) + Transitorias Tipo 2 con reconexión",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Vivienda Residencial con Aerotermia y Clima Centralizado",
+        "cuando_elegir": "Viviendas de obra nueva o reformas integrales con sistema de climatización por aerotermia, suelo radiante/refrescante y producción hidrónica de ACS.",
+        "criterios_rebt": "ITC-BT-10 y 25. IGA de 50A a 230V. Diferencial superinmunizado clase A imprescindible para evitar disparos intempestivos provocados por los filtros EMC del compresor inverter.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora y Lavavajillas", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Tomas Húmedas", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización / Fancoils Inverter", "potencia": 4500, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.12, "norma": "ITC-BT-25"},
+            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            {"nombre": "C11 - Aerotermia Bomba de Calor ACS y Suelo Radiante", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 14, "cdt": 0.95, "norma": "ITC-BT-25"},
+            {"nombre": "C12 - Cuadro Exterior / Depuradora / Piscina", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 22, "cdt": 1.25, "norma": "ITC-BT-25"}
+        ]
+    },
+    "vivienda_elevada_max_mono": {
+        "id": "vivienda_elevada_max_mono",
+        "titulo": "Vivienda Elevada - Máxima Monofásica (14.490 W - 230V - IGA 63A)",
+        "categoria": "🏡 Viviendas Residenciales (ITC-BT-10 / 25)",
+        "potencia_inst": 14490.0,
+        "potencia_max": 14490.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Derivación Individual desde Centralización (ITC-BT-15)",
+        "di_cable": "2x25 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M50 libre de halógenos (ITC-BT-15)",
+        "di_long": 20.0,
+        "di_cdt": 0.98,
+        "grado": "Elevada",
+        "iga": 63,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "3 x Diferencial 2P 63A/30mA y 40A/30mA Clase A Superinmunizados",
+        "vtp": "Permanentes (VTP) + Transitorias Tipo 2 con bobina y reconexión",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Vivienda Residencial Máxima Electrificación Monofásica",
+        "cuando_elegir": "Viviendas grandes que agotan el límite máximo monofásico admitido por distribuidoras en España (63A = 14,49 kW) para evitar el cambio a trifásica.",
+        "criterios_rebt": "Tope técnico monofásico (63A a 230V). Derivación individual reforzada a 25 mm² Cu en tubo M50 para mantener la caída de tensión < 1,5% y capacidad térmica suficiente.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Placa Inducción y Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora y Lavavajillas", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Zonas Húmedas", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C8 - Calefacción Eléctrica / Emisores", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 16, "cdt": 1.20, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización Inverter Planta Baja", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.05, "norma": "ITC-BT-25"},
+            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            {"nombre": "C11 - Climatización Planta Alta / Dormitorios", "potencia": 4000, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 18, "cdt": 1.18, "norma": "ITC-BT-25"},
+            {"nombre": "C12 - Automatización y Domótica", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.70, "norma": "ITC-BT-25"},
+            {"nombre": "C13 - Tomas Cocina Office Reforzadas", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.92, "norma": "ITC-BT-25"}
+        ]
+    },
+    "vivienda_unifamiliar_chalet_tri": {
+        "id": "vivienda_unifamiliar_chalet_tri",
+        "titulo": "Vivienda Unifamiliar / Chalet Trifásica (17.320 W - 400V - IGA 25A Tri)",
+        "categoria": "🏡 Viviendas Residenciales (ITC-BT-10 / 25)",
+        "potencia_inst": 17320.0,
+        "potencia_max": 17320.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Caja de Protección y Medida CPM Fachada (ITC-BT-13)",
+        "di_cable": "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M40 libre de halógenos (ITC-BT-15)",
+        "di_long": 22.0,
+        "di_cdt": 0.62,
+        "grado": "Elevada Trifásica",
+        "iga": 25,
+        "curva": "Curva C (General)",
+        "icn": 10.0,
+        "dif": "1 x Diferencial Tetrapolar 4P 40A/30mA + 2 x Bipolares 2P 40A/30mA Clase A",
+        "vtp": "Permanentes + Transitorias Tipo 2 Tetrapolar con bobina",
+        "tierra": "Conductor PE 1x16 mm² Cu | Anillo cimentación Rt ≤ 10 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Vivienda Unifamiliar Aislada / Chalet con Parcela",
+        "cuando_elegir": "Chalets, viviendas en urbanizaciones o huerta de Murcia con piscina privada, climatización trifásica centralizada, riego por goteo y portón motorizado.",
+        "criterios_rebt": "ITC-BT-10 e ITC-BT-25. Suministro trifásico 400V que distribuye equilibradamente las cargas en 3 fases y reduce la sección necesaria en tiradas largas hacia jardines o anexos.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Interior y Fachada", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora y Lavavajillas", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Zonas Húmedas", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización Centralizada Trifásica 400V", "potencia": 7000, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 16, "cdt": 0.58, "norma": "ITC-BT-25"},
+            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            {"nombre": "C11 - Depuradora Piscina y Bomba Pozo", "potencia": 3000, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 25, "cdt": 1.35, "norma": "ITC-BT-25"},
+            {"nombre": "C12 - Riego Automático y Alumbrado Parcela", "potencia": 1800, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 30, "cdt": 1.20, "norma": "ITC-BT-25"}
+        ]
+    },
+    "irve_garaje_comunitario": {
+        "id": "irve_garaje_comunitario",
+        "titulo": "IRVE - Garaje Comunitario (Esquema 2 - 7.360 W - 230V - IGA 32A/40A)",
+        "categoria": "🚗 Vehículo Eléctrico IRVE (ITC-BT-52)",
+        "potencia_inst": 7360.0,
+        "potencia_max": 7360.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Centralización de Contadores (Esquema 2)",
+        "di_cable": "3G6 mm² Cu RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M32 libre de halógenos (IK08)",
+        "di_long": 25.0,
+        "di_cdt": 0.86,
+        "grado": "Específica IRVE (ITC-BT-52)",
+        "iga": 32,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)",
+        "vtp": "Permanentes (POP/VTP) + Transitorias Tipo 2 con bobina de disparo",
+        "tierra": "Conductor PE 1x6 mm² Cu | Resistencia bucle tierra Rt ≤ 15 Ω",
+        "spl": "Sensor toroidal CT para modulación dinámica en tiempo real",
+        "emp_uso": "Garaje Comunitario / Punto de Recarga VE",
+        "cuando_elegir": "Instalación de punto de recarga en plaza de garaje comunitario en Murcia según Esquema 2 (contador principal en la centralización común de contadores).",
+        "criterios_rebt": "ITC-BT-52 e ITC-BT-29. Cables obligatoriamente no propagadores de incendio y libres de halógenos Cca-s1b,d1,a1 por zonas comunes, tubo rígido/curvable IK08 y diferencial Clase A con 6mA DC.",
+        "alerta_lpc": False,
+        "alerta_garaje": True,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "Línea Específica IRVE (Wallbox)", "potencia": 7360, "pia": 32, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
+        ]
+    },
+    "irve_trifasico_comercial": {
+        "id": "irve_trifasico_comercial",
+        "titulo": "IRVE - Trifásico Comercial / Rápido (22.000 W - 400V - IGA 32A Tri)",
+        "categoria": "🚗 Vehículo Eléctrico IRVE (ITC-BT-52)",
+        "potencia_inst": 22000.0,
+        "potencia_max": 22000.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Cuadro General / Línea Distribución Terciaria (ITC-BT-52)",
+        "di_cable": "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV",
+        "di_tubo": "Tubo M40 libre de halógenos (IK08)",
+        "di_long": 20.0,
+        "di_cdt": 0.70,
+        "grado": "Específica IRVE (ITC-BT-52)",
+        "iga": 32,
+        "curva": "Curva C (General)",
+        "icn": 10.0,
+        "dif": "Diferencial Tetrapolar 4P 40A / 30mA Clase A o Tipo B con detección DC 6mA",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina de emisión",
+        "tierra": "Conductor PE 1x10 mm² Cu | Rt ≤ 10 Ω",
+        "spl": "Modulación dinámica de potencia según disponibilidad de red",
+        "emp_uso": "Aparcamiento Comercial / Flota / Cargador Rápido VE",
+        "cuando_elegir": "Cargadores trifásicos de 22 kW en parkings de oficinas, hoteles, flotas de reparto o talleres mecánicos.",
+        "criterios_rebt": "ITC-BT-52 Modo 3 (32A por fase). Legalizable con MTD hasta 50 kW en interior (en exterior el límite de MTD es 10 kW; superado exige Proyecto).",
+        "alerta_lpc": False,
+        "alerta_garaje": True,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "Línea Recarga VE Trifásica Modo 3", "potencia": 22000, "pia": 32, "seccion": "4x10+TT10", "tubo": "M40", "longitud": 20, "cdt": 0.70, "norma": "ITC-BT-52"}
+        ]
+    },
+    "vivienda_con_irve_integrado": {
+        "id": "vivienda_con_irve_integrado",
+        "titulo": "Vivienda con Recarga VE Integrada (11.500 W - 230V - IGA 50A con SPL)",
+        "categoria": "🚗 Vehículo Eléctrico IRVE (ITC-BT-52)",
+        "potencia_inst": 11500.0,
+        "potencia_max": 11500.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Derivación Individual desde Centralización (ITC-BT-15)",
+        "di_cable": "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV",
+        "di_tubo": "Tubo M40 libre de halógenos (ITC-BT-15)",
+        "di_long": 18.0,
+        "di_cdt": 0.95,
+        "grado": "Elevada + IRVE (ITC-BT-25 / ITC-BT-52)",
+        "iga": 50,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "3 x Diferencial 2P 40A/30mA (Dedicado Clase A con detección DC 6mA para cargador VE)",
+        "vtp": "Permanentes (VTP) + Transitorias Tipo 2 con reconexión",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω",
+        "spl": "Sensor toroidal CT con Modulación Dinámica de Carga SPL (ITC-BT-52)",
+        "emp_uso": "Vivienda Unifamiliar con Garaje Privado y Punto de Recarga VE",
+        "cuando_elegir": "Vivienda unifamiliar o adosado donde se instala un cargador en el garaje privado compartiendo el cuadro general mediante circuito C13 con sensor de balanceo dinámico SPL.",
+        "criterios_rebt": "ITC-BT-25 e ITC-BT-52. El sistema de protección de línea (SPL) modula dinámicamente la corriente de carga del vehículo para no sobrepasar la potencia del IGA/ICP contratado.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización Inverter", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
+            {"nombre": "C13 - Línea Recarga VE con SPL Dinámico", "potencia": 7360, "pia": 32, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 18, "cdt": 0.72, "norma": "ITC-BT-52"}
+        ]
+    },
+    "autoconsumo_solar_fv": {
+        "id": "autoconsumo_solar_fv",
+        "titulo": "Autoconsumo Solar Fotovoltaico (5.000 W Inversor - 230V - IGA 25A)",
+        "categoria": "☀️ Autoconsumo Fotovoltaico (ITC-BT-40)",
+        "potencia_inst": 5000.0,
+        "potencia_max": 5000.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Generador Fotovoltaico Interconectado a Red Interior (ITC-BT-40)",
+        "di_cable": "3G6 mm² Cu RZ1-K (AS) 0.6/1kV",
+        "di_tubo": "Tubo M32 libre de halógenos",
+        "di_long": 12.0,
+        "di_cdt": 0.58,
+        "grado": "Autoconsumo Fotovoltaico (ITC-BT-40)",
+        "iga": 25,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (UNE-EN 62955)",
+        "vtp": "Permanentes (POP) + Transitorias Tipo 2 con bobina y protección anti-isla integrada",
+        "tierra": "Conductor PE 1x6 mm² Cu uniendo marcos y estructuras a tierra | Rt ≤ 15 Ω",
+        "spl": "Smart Meter / Vatímetro de inyección cero / balance neto",
+        "emp_uso": "Instalación Generadora en Autoconsumo (RD 244/2019)",
+        "cuando_elegir": "Legalización de instalación de placas solares de autoconsumo interconectadas a la red interior de una vivienda o local comercial.",
+        "criterios_rebt": "ITC-BT-40 y RD 244/2019. Inversor con relé de desconexión anti-isla conforme a UNE-EN 50549-1. Caída de tensión máxima en la línea de evacuación AC ≤ 1,0% para evitar sobretensiones en la red pública.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": True,
+        "circuitos": [
+            {"nombre": "Línea Evacuación AC Inversor", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 12, "cdt": 0.58, "norma": "ITC-BT-40"},
+            {"nombre": "Circuito Generación DC String 1", "potencia": 2750, "pia": 15, "seccion": "2x6.0 H1Z2Z2-K", "tubo": "M25 UV", "longitud": 18, "cdt": 0.65, "norma": "ITC-BT-40"},
+            {"nombre": "Circuito Generación DC String 2", "potencia": 2750, "pia": 15, "seccion": "2x6.0 H1Z2Z2-K", "tubo": "M25 UV", "longitud": 20, "cdt": 0.72, "norma": "ITC-BT-40"}
+        ]
+    },
+    "combo_vivienda_solar_irve": {
+        "id": "combo_vivienda_solar_irve",
+        "titulo": "Combo: Vivienda + Solar Fotovoltaica (5 kW) + IRVE (7.36 kW)",
+        "categoria": "☀️ Autoconsumo Fotovoltaico (ITC-BT-40)",
+        "potencia_inst": 11500.0,
+        "potencia_max": 11500.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Centralización Contadores + Inversor Fotovoltaico Interconectado",
+        "di_cable": "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV",
+        "di_tubo": "Tubo M40 libre de halógenos",
+        "di_long": 18.0,
+        "di_cdt": 0.90,
+        "grado": "Vivienda Sostenible (Solar + IRVE)",
+        "iga": 50,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "3 x Diferencial 2P 40A/30mA Clase A Superinmunizados (Dedicado para VE y para Solar)",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina y anti-isla",
+        "tierra": "Conductor PE 1x16 mm² Cu | Estructura FV conectada a PE | Rt ≤ 15 Ω",
+        "spl": "Smart Meter bidireccional con gestión de excedentes hacia cargador VE",
+        "emp_uso": "Vivienda Residencial con Autoconsumo Solar e Infraestructura IRVE",
+        "cuando_elegir": "Viviendas energéticamente sostenibles donde se legaliza conjuntamente el autoconsumo solar y la recarga inteligente del vehículo eléctrico.",
+        "criterios_rebt": "ITC-BT-10, 25, 40 y 52. Permite tramitar simultáneamente en una sola MTD la vivienda, la planta fotovoltaica y el punto de recarga con modulación por excedentes.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": True,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
+            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
+            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
+            {"nombre": "C4 - Lavadora y Lavavajillas", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
+            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
+            {"nombre": "C9 - Climatización Inverter", "potencia": 4500, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.12, "norma": "ITC-BT-25"},
+            {"nombre": "C13 - Recarga VE con sensor SPL / Excedentes", "potencia": 7360, "pia": 32, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 18, "cdt": 0.72, "norma": "ITC-BT-52"},
+            {"nombre": "Gen Solar AC - Inversor Fotovoltaico Interconectado", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 12, "cdt": 0.58, "norma": "ITC-BT-40"}
+        ]
+    },
+    "local_comercial_monofasico": {
+        "id": "local_comercial_monofasico",
+        "titulo": "Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)",
+        "categoria": "🏢 Locales Comerciales Ordinarios (ITC-BT-10 / 28)",
+        "potencia_inst": 9200.0,
+        "potencia_max": 9200.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Módulo de Medida / CPM en Fachada (ITC-BT-13)",
+        "di_cable": "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV",
+        "di_tubo": "Tubo M40 libre de halógenos",
+        "di_long": 16.0,
+        "di_cdt": 0.75,
+        "grado": "Comercial / Terciario Ordinario",
+        "iga": 40,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "2 x Diferencial 2P 40A / 30mA Clase A Superinmunizados",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina de emisión",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Local Comercial Ordinario (Oficina / Tienda / Despacho)",
+        "cuando_elegir": "Locales comerciales de comercio menor, despachos u oficinas con ocupación inferior a 50 personas (tiendas de ropa, zapaterías, despachos de asesoría, inmobiliarias) sin maquinaria pesada.",
+        "criterios_rebt": "ITC-BT-10.3.3: Mínimo 100 W/m² de superficie útil y mínimo absoluto de 3.450 W. Suministro monofásico estándar hasta 14.490 W (IGA 40A = 9.200 W). No requiere OCA inicial.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Comercial LED", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.10, "norma": "ITC-BT-28"},
+            {"nombre": "C2 - Alumbrado de Emergencia", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 25, "cdt": 0.40, "norma": "ITC-BT-28"},
+            {"nombre": "C3 - Tomas de Fuerza General y Mostrador", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-28"},
+            {"nombre": "C4 - Climatización Split / Bomba Calor", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.05, "norma": "ITC-BT-28"},
+            {"nombre": "C5 - Informática, Servidor y TPV", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-28"}
+        ]
+    },
+    "local_comercial_trifasico": {
+        "id": "local_comercial_trifasico",
+        "titulo": "Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)",
+        "categoria": "🏢 Locales Comerciales Ordinarios (ITC-BT-10 / 28)",
+        "potencia_inst": 17320.0,
+        "potencia_max": 17320.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Línea General de Alimentación / CPM (ITC-BT-14)",
+        "di_cable": "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV",
+        "di_tubo": "Tubo M40 libre de halógenos",
+        "di_long": 20.0,
+        "di_cdt": 0.65,
+        "grado": "Comercial Trifásico",
+        "iga": 25,
+        "curva": "Curva C (General)",
+        "icn": 10.0,
+        "dif": "Diferencial Tetrapolar 4P 40A / 30mA Clase A + Bipolares 2P 40A/30mA",
+        "vtp": "Permanentes + Transitorias Tipo 2 Tetrapolar con bobina",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 10 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Local Comercial / Nave de Servicios",
+        "cuando_elegir": "Comercios o naves con maquinaria trifásica (cámaras de frío, obradores, compresores) o aire acondicionado centralizado trifásico de más de 7 kW.",
+        "criterios_rebt": "ITC-BT-10.3.3. Tensión trifásica 400V para equilibrar fases. Legalizable con MTD hasta 100 kW siempre que la ocupación sea inferior a 50 personas.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Comercial Trifásico Equilibrado", "potencia": 3000, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 22, "cdt": 1.10, "norma": "ITC-BT-28"},
+            {"nombre": "C2 - Alumbrado de Emergencia", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 30, "cdt": 0.45, "norma": "ITC-BT-28"},
+            {"nombre": "C3 - Tomas de Fuerza General", "potencia": 4000, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M25", "longitud": 18, "cdt": 1.12, "norma": "ITC-BT-28"},
+            {"nombre": "C4 - Climatización Centralizada Trifásica", "potencia": 7500, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 15, "cdt": 0.68, "norma": "ITC-BT-28"},
+            {"nombre": "C5 - Maquinaria Auxiliar / Compresor / Cuadro Secundario", "potencia": 4500, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 16, "cdt": 0.55, "norma": "ITC-BT-28"}
+        ]
+    },
+    "lpc_bar_restaurante": {
+        "id": "lpc_bar_restaurante",
+        "titulo": "LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA obligatoria)",
+        "categoria": "🍽️ Locales de Pública Concurrencia (LPC - ITC-BT-28)",
+        "potencia_inst": 27710.0,
+        "potencia_max": 27710.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Línea General de Alimentación / Centralización (ITC-BT-14)",
+        "di_cable": "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M50 libre de halógenos",
+        "di_long": 22.0,
+        "di_cdt": 0.72,
+        "grado": "Pública Concurrencia (ITC-BT-28)",
+        "iga": 40,
+        "curva": "Curva C (General)",
+        "icn": 10.0,
+        "dif": "Diferenciales Tetrapolares 4P 40A / 30mA Clase A Superinmunizados + Bipolares dedicados",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina y corte omnipolar general",
+        "tierra": "Conductor PE 1x16 mm² Cu | Anillo cimentación Rt ≤ 10 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Local de Pública Concurrencia: Bar / Restaurante / Cafetería",
+        "cuando_elegir": "Actividades de hostelería (bares, cafeterías, restaurantes, pizzerías, pubs). Potencia estándar en la Región de Murcia: 27,7 kW a 400V (IGA 40A).",
+        "criterios_rebt": "ITC-BT-28: Cables obligatoriamente AS libres de halógenos en TODO el local. Doble línea de alumbrado en zonas de público. Alumbrado de emergencia ≥ 5 lux en cuadros. Enclavamiento de corte de gas en campana extractora. Tramitable por MTD hasta 100 kW. INSPECCIÓN INICIAL OBLIGATORIA POR OCA.",
+        "alerta_lpc": True,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Bar / Salón Comedor - Línea A (Cables AS)", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 0.85, "norma": "ITC-BT-28"},
+            {"nombre": "C2 - Alumbrado Bar / Salón Comedor - Línea B (Doble línea ITC-BT-28)", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.92, "norma": "ITC-BT-28"},
+            {"nombre": "C3 - Alumbrado Cocina y Almacén", "potencia": 1000, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 14, "cdt": 0.65, "norma": "ITC-BT-28"},
+            {"nombre": "C4 - Alumbrado de Emergencia y Evacuación", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 25, "cdt": 0.40, "norma": "ITC-BT-28"},
+            {"nombre": "C5 - Tomas Mostrador, TPV y Barra", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-28"},
+            {"nombre": "C6 - Tomas Cocina y Pequeño Electrodoméstico", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.95, "norma": "ITC-BT-28"},
+            {"nombre": "C7 - Cocina Industrial / Freidoras / Plancha Trifásica", "potencia": 8000, "pia": 20, "seccion": "4x4.0+TT4.0", "tubo": "M25", "longitud": 14, "cdt": 0.72, "norma": "ITC-BT-28"},
+            {"nombre": "C8 - Extracción Campana con Enclavamiento Corte Gas", "potencia": 2000, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 16, "cdt": 0.88, "norma": "ITC-BT-28"},
+            {"nombre": "C9 - Cámaras Frigoríficas y Botelleros", "potencia": 3000, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 15, "cdt": 0.98, "norma": "ITC-BT-28"},
+            {"nombre": "C10 - Climatización Centralizada Trifásica Salón", "potencia": 8000, "pia": 20, "seccion": "4x4.0+TT4.0", "tubo": "M25", "longitud": 16, "cdt": 0.82, "norma": "ITC-BT-28"}
+        ]
+    },
+    "lpc_academia_clinica": {
+        "id": "lpc_academia_clinica",
+        "titulo": "LPC: Academia / Clínica / Centro de Enseñanza (>50 pers. - 17.320 W - 400V - OCA)",
+        "categoria": "🍽️ Locales de Pública Concurrencia (LPC - ITC-BT-28)",
+        "potencia_inst": 17320.0,
+        "potencia_max": 17320.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Línea General de Alimentación / Centralización (ITC-BT-14)",
+        "di_cable": "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M40 libre de halógenos",
+        "di_long": 20.0,
+        "di_cdt": 0.65,
+        "grado": "Pública Concurrencia (ITC-BT-28)",
+        "iga": 25,
+        "curva": "Curva C (General)",
+        "icn": 10.0,
+        "dif": "Diferenciales 4P y 2P 40A / 30mA Clase A Superinmunizados",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 10 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Local de Pública Concurrencia: Academia / Clínica / Centro de Formación",
+        "cuando_elegir": "Centros docentes, autoescuelas, academias de idiomas, policlínicas o despachos médicos donde el aforo supera las 50 personas.",
+        "criterios_rebt": "ITC-BT-28: Clasificado como Pública Concurrencia por aforo. Obligatorio cables no propagadores de incendio y libres de halógenos (AS), doble línea de alumbrado, alumbrado de emergencia e inspección inicial por OCA.",
+        "alerta_lpc": True,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Aulas / Consultas - Línea A (AS)", "potencia": 2000, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 0.95, "norma": "ITC-BT-28"},
+            {"nombre": "C2 - Alumbrado Aulas / Pasillos - Línea B (Doble línea ITC-BT-28)", "potencia": 2000, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 1.05, "norma": "ITC-BT-28"},
+            {"nombre": "C3 - Alumbrado de Emergencia y Rutas Evacuación", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 25, "cdt": 0.45, "norma": "ITC-BT-28"},
+            {"nombre": "C4 - Tomas de Uso General y Pasillos", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-28"},
+            {"nombre": "C5 - Tomas Informática y Equipamiento Específico", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 16, "cdt": 1.02, "norma": "ITC-BT-28"},
+            {"nombre": "C6 - Climatización Centralizada Trifásica Aulas", "potencia": 6500, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 18, "cdt": 0.72, "norma": "ITC-BT-28"}
+        ]
+    },
+    "lpc_gimnasio": {
+        "id": "lpc_gimnasio",
+        "titulo": "LPC: Gimnasio / Polideportivo con Duchas (20.780 W - 400V - IGA 32A Tri - OCA)",
+        "categoria": "🍽️ Locales de Pública Concurrencia (LPC - ITC-BT-28)",
+        "potencia_inst": 20780.0,
+        "potencia_max": 20780.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Línea General de Alimentación / CPM (ITC-BT-14)",
+        "di_cable": "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M40 libre de halógenos",
+        "di_long": 20.0,
+        "di_cdt": 0.68,
+        "grado": "Pública Concurrencia (ITC-BT-28)",
+        "iga": 32,
+        "curva": "Curva C (General)",
+        "icn": 10.0,
+        "dif": "Diferenciales 4P y 2P 40A / 30mA Clase A Superinmunizados",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 10 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Local de Pública Concurrencia: Gimnasio / Centro Deportivo",
+        "cuando_elegir": "Centros deportivos, boxes de crossfit, gimnasios con vestuarios y duchas colectivas que demandan gran potencia para termos de ACS y ventilación forzada.",
+        "criterios_rebt": "ITC-BT-28 e ITC-BT-30 (locales mojados en vestuarios). Cables AS libres de halógenos, doble circuito de alumbrado, termos trifásicos con diferencial 30 mA clase A y renovación RITE. Requiere OCA inicial.",
+        "alerta_lpc": True,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Alumbrado Salas Fitness - Línea A (AS)", "potencia": 1800, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.95, "norma": "ITC-BT-28"},
+            {"nombre": "C2 - Alumbrado Salas y Pasillos - Línea B (AS)", "potencia": 1800, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 22, "cdt": 1.05, "norma": "ITC-BT-28"},
+            {"nombre": "C3 - Alumbrado de Emergencia y Evacuación", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 28, "cdt": 0.42, "norma": "ITC-BT-28"},
+            {"nombre": "C4 - Termos Eléctricos ACS Vestuarios Colectivos", "potencia": 6000, "pia": 25, "seccion": "4x4.0+TT4.0", "tubo": "M25", "longitud": 15, "cdt": 0.65, "norma": "ITC-BT-28"},
+            {"nombre": "C5 - Ventilación Forzada y Renovación Aire RITE", "potencia": 2500, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 18, "cdt": 0.92, "norma": "ITC-BT-28"},
+            {"nombre": "C6 - Climatización Centralizada Trifásica", "potencia": 7500, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 16, "cdt": 0.72, "norma": "ITC-BT-28"},
+            {"nombre": "C7 - Tomas de Corriente Máquinas y Recepción", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.25, "norma": "ITC-BT-28"}
+        ]
+    },
+    "obra_provisional": {
+        "id": "obra_provisional",
+        "titulo": "Instalación Provisional de Obra (ITC-BT-33 - 15.000 W - 400V)",
+        "categoria": "🏗️ Obras y Líneas de Distribución",
+        "potencia_inst": 15000.0,
+        "potencia_max": 15000.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Acometida Provisional desde Red Distribuidora (CPM / CGP Intemperie)",
+        "di_cable": "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)",
+        "di_tubo": "Tubo M40 intemperie resistente a impactos IK09",
+        "di_long": 15.0,
+        "di_cdt": 0.52,
+        "grado": "Provisional de Obra (ITC-BT-33)",
+        "iga": 40,
+        "curva": "Curva D",
+        "icn": 10.0,
+        "dif": "Diferencial 4P 40A / 30mA Clase A Superinmunizado + Seta Parada Emergencia Exterior",
+        "vtp": "Permanentes + Transitorias Tipo 2 con corte omnipolar y bobina de disparo",
+        "tierra": "Pica de puesta a tierra independiente de obra (Rt ≤ 15 Ω) | Conductor PE 1x16 mm² Cu",
+        "spl": "No aplica",
+        "emp_uso": "Instalación Provisional y Temporal de Obras (ITC-BT-33)",
+        "cuando_elegir": "Suministros de electricidad temporales para obras de edificación o reformas con tomas industriales normalizadas CETAC.",
+        "criterios_rebt": "ITC-BT-33: Cuadro con envolvente mínimo IP44 e IK08, tomas con clavijas industriales CETAC UNE-EN 60309, interruptores diferenciales clase A de 30 mA y pulsador exterior de parada de emergencia con enclavamiento mecánico.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "C1 - Toma CETAC Trifásica 32A 3P+N+T (Grúa / Maquinaria)", "potencia": 10000, "pia": 32, "seccion": "4x6.0+TT6.0", "tubo": "M32", "longitud": 15, "cdt": 0.65, "norma": "ITC-BT-33"},
+            {"nombre": "C2 - Toma CETAC Trifásica 16A 3P+N+T (Hormigonera / Elevador)", "potencia": 5000, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-33"},
+            {"nombre": "C3 - Tomas CETAC/Schuko Monofásicas 16A (Herramientas)", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.78, "norma": "ITC-BT-33"},
+            {"nombre": "C4 - Alumbrado de Seguridad y Balizamiento de Obra", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.60, "norma": "ITC-BT-33"}
+        ]
+    },
+    "linea_general_alimentacion": {
+        "id": "linea_general_alimentacion",
+        "titulo": "Línea General de Alimentación LGA (ITC-BT-14 - 43.600 W - 400V)",
+        "categoria": "🏗️ Obras y Líneas de Distribución",
+        "potencia_inst": 43600.0,
+        "potencia_max": 50000.0,
+        "tension": "Trifásico (400 V) - 50 Hz",
+        "origen": "Caja General de Protección (CGP / ITC-BT-13)",
+        "di_cable": "3x50/25 mm² Al/Cu RZ1-K 0.6/1kV",
+        "di_tubo": "Conducto / Tubo M110 libre de halógenos",
+        "di_long": 15.0,
+        "di_cdt": 0.42,
+        "grado": "Comercial / Edificio",
+        "iga": 63,
+        "curva": "Curva C (General)",
+        "icn": 15.0,
+        "dif": "Protección General con Toroidal / Relé electrónico",
+        "vtp": "Protección contra sobretensiones Tipo 1+2",
+        "tierra": "Línea principal PE 1x35 mm² Cu | Rt ≤ 10 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Línea General de Alimentación (ITC-BT-14)",
+        "cuando_elegir": "Línea que enlaza la CGP con la centralización de contadores de un edificio residencial, terciario o comercial.",
+        "criterios_rebt": "ITC-BT-14: Cables no propagadores de incendio y libres de halógenos. Caída de tensión máxima admisible de 0,5% para contadores totalmente concentrados.",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "Línea General LGA Centralización", "potencia": 43600, "pia": 63, "seccion": "3x50+25+TT25", "tubo": "M110", "longitud": 15, "cdt": 0.42, "norma": "ITC-BT-14"}
+        ]
+    },
+    "derivacion_individual": {
+        "id": "derivacion_individual",
+        "titulo": "Derivación Individual DI (ITC-BT-15 - 9.200 W - 230V)",
+        "categoria": "🏗️ Obras y Líneas de Distribución",
+        "potencia_inst": 9200.0,
+        "potencia_max": 14490.0,
+        "tension": "Monofásico (230 V) - 50 Hz",
+        "origen": "Contador / Centralización de Contadores (ITC-BT-16)",
+        "di_cable": "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV",
+        "di_tubo": "Tubo M40 libre de halógenos (ITC-BT-15)",
+        "di_long": 20.0,
+        "di_cdt": 0.85,
+        "grado": "Elevada",
+        "iga": 40,
+        "curva": "Curva C (General)",
+        "icn": 6.0,
+        "dif": "Diferencial 2P 40A / 30mA Clase A Superinmunizado",
+        "vtp": "Permanentes + Transitorias Tipo 2 con bobina de emisión",
+        "tierra": "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω",
+        "spl": "No aplica",
+        "emp_uso": "Derivación Individual B.T. (ITC-BT-15)",
+        "cuando_elegir": "Renovación o adecuación de la línea que une el contador individual con el cuadro interior del usuario.",
+        "criterios_rebt": "ITC-BT-15: Sección mínima de cobre 6 mm² (16 mm² recomendada en Murcia). Caída de tensión máx. 1,5%. Tubo mínimo exterior M32 (M40 para 16 mm²).",
+        "alerta_lpc": False,
+        "alerta_garaje": False,
+        "alerta_solar": False,
+        "circuitos": [
+            {"nombre": "Línea Derivación Individual", "potencia": 9200, "pia": 40, "seccion": "2x16+TT16", "tubo": "M40", "longitud": 20, "cdt": 0.85, "norma": "ITC-BT-15"}
+        ]
+    }
+}
+
+OPCIONES_TIPO_INSTALACION = [
+    "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --",
+    # 🏡 VIVIENDAS RESIDENCIALES
+    "🏡 Vivienda Básica (5.750 W - 230V Monofásica - IGA 25A)",
+    "🏡 Vivienda Elevada - Climatización / Aire Acondicionado (9.200 W - 230V - IGA 40A)",
+    "🏡 Vivienda Elevada - Aerotermia + Climatización (11.500 W - 230V - IGA 50A)",
+    "🏡 Vivienda Elevada - Máxima Monofásica (14.490 W - 230V - IGA 63A)",
+    "🏡 Vivienda Unifamiliar / Chalet Trifásica (17.320 W - 400V - IGA 25A Tri)",
+    # 🚗 VEHÍCULO ELÉCTRICO IRVE
+    "🚗 IRVE - Garaje Comunitario (Esquema 2 - 7.360 W - 230V - IGA 32A/40A)",
+    "🚗 IRVE - Trifásico Comercial / Rápido (22.000 W - 400V - IGA 32A Tri)",
+    "🚗 Vivienda con Recarga VE Integrada (11.500 W - 230V - IGA 50A con SPL)",
+    # ☀️ AUTOCONSUMO FOTOVOLTAICO
+    "☀️ Autoconsumo Solar Fotovoltaico (5.000 W Inversor - 230V - IGA 25A)",
+    "☀️ Combo: Vivienda + Solar Fotovoltaica (5 kW) + IRVE (7.36 kW)",
+    # 🏢 LOCALES COMERCIALES ORDINARIOS
+    "🏢 Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)",
+    "🏢 Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)",
+    # 🍽️ LOCALES DE PÚBLICA CONCURRENCIA (LPC)
+    "🍽️ LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA obligatoria)",
+    "🎓 LPC: Academia / Clínica / Centro de Enseñanza (>50 pers. - 17.320 W - 400V - OCA)",
+    "🏋️ LPC: Gimnasio / Polideportivo con Duchas (20.780 W - 400V - IGA 32A Tri - OCA)",
+    # 🏗️ OBRAS Y LÍNEAS DE DISTRIBUCIÓN
+    "🏗️ Instalación Provisional de Obra (ITC-BT-33 - 15.000 W - 400V)",
+    "⚡ Línea General de Alimentación LGA (ITC-BT-14 - 43.600 W - 400V)",
+    "🔌 Derivación Individual DI (ITC-BT-15 - 9.200 W - 230V)"
+]
+
+def obtener_info_plantilla(tipo: str) -> dict:
+    """Retorna la ficha de metadatos técnicos de la plantilla seleccionada o None si es en blanco."""
+    if not tipo or "Blanco" in tipo or "Seleccionar" in tipo or tipo.startswith("⚪"):
+        return None
+    
+    t_low = tipo.lower()
+    
+    # 1. Aerotermia
+    if "aerotermia" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["vivienda_elevada_aerotermia"]
+    
+    # 2. Máxima monofásica (14.49 kW / 14490)
+    if "máxima" in t_low or "maxima" in t_low or "14.49" in t_low or "14490" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["vivienda_elevada_max_mono"]
+    
+    # 3. Chalet / Unifamiliar trifásica
+    if "chalet" in t_low or ("trifásic" in t_low and "vivienda" in t_low):
+        return CATALOGO_PLANTILLAS_MTD["vivienda_unifamiliar_chalet_tri"]
+        
+    # 4. Combo Solar + IRVE
+    if "combo" in t_low or ("solar" in t_low and "irve" in t_low):
+        return CATALOGO_PLANTILLAS_MTD["combo_vivienda_solar_irve"]
+        
+    # 5. Vivienda con IRVE integrado
+    if "vivienda" in t_low and ("irve" in t_low or "recarga" in t_low or "coche" in t_low):
+        return CATALOGO_PLANTILLAS_MTD["vivienda_con_irve_integrado"]
+        
+    # 6. IRVE Trifásico comercial
+    if ("irve" in t_low or "recarga" in t_low) and ("trifásic" in t_low or "22.000" in t_low or "22000" in t_low or "rápido" in t_low or "rapido" in t_low):
+        return CATALOGO_PLANTILLAS_MTD["irve_trifasico_comercial"]
+        
+    # 7. IRVE Garaje Comunitario
+    if "irve" in t_low or "recarga" in t_low or "vehículo" in t_low or "vehiculo" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["irve_garaje_comunitario"]
+        
+    # 8. Fotovoltaica
+    if "fotovoltaic" in t_low or "autoconsumo" in t_low or "solar" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["autoconsumo_solar_fv"]
+        
+    # 9. Pública Concurrencia (LPC)
+    if "bar" in t_low or "restaurante" in t_low or "cafetería" in t_low or "cafeteria" in t_low or "27.710" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["lpc_bar_restaurante"]
+    if "academia" in t_low or "clínica" in t_low or "clinica" in t_low or "enseñanza" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["lpc_academia_clinica"]
+    if "gimnasio" in t_low or "polideportivo" in t_low or "20.780" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["lpc_gimnasio"]
+        
+    # 10. Locales Comerciales Ordinarios
+    if ("local" in t_low or "oficina" in t_low or "tienda" in t_low) and ("monofásic" in t_low or "9.200" in t_low or "9200" in t_low or "ordinario" in t_low):
+        return CATALOGO_PLANTILLAS_MTD["local_comercial_monofasico"]
+    if "local" in t_low or "comercial" in t_low or "nave" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["local_comercial_trifasico"]
+        
+    # 11. Obras provisionales
+    if "obra" in t_low or "provisional" in t_low or "itc-bt-33" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["obra_provisional"]
+        
+    # 12. Redes de distribución LGA / DI
+    if "lga" in t_low or "alimentación" in t_low or "alimentacion" in t_low or "itc-bt-14" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["linea_general_alimentacion"]
+    if "derivación" in t_low or "derivacion" in t_low or " di " in t_low or "itc-bt-15" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["derivacion_individual"]
+        
+    # 13. Viviendas Elevada estándar
+    if "elevada" in t_low or "clima" in t_low or "calefacción" in t_low or "domótica" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["vivienda_elevada_clima"]
+        
+    # 14. Vivienda Básica estándar
+    if "vivienda" in t_low or "residencial" in t_low:
+        return CATALOGO_PLANTILLAS_MTD["vivienda_basica"]
+        
+    return CATALOGO_PLANTILLAS_MTD.get("vivienda_basica")
+
 def cargar_plantilla_por_tipo(tipo: str):
     """
     Rellena automáticamente los parámetros técnicos y circuitos según el tipo de instalación reglamentaria.
     Si tipo es en blanco o no seleccionado, inicializa los campos técnicos limpios y sin circuitos.
     """
-    if not tipo or "Blanco" in tipo or "Seleccionar" in tipo or tipo.startswith("⚪"):
+    info = obtener_info_plantilla(tipo)
+    if not info:
         st.session_state["mtd_in_pot_inst"] = 0.0
         st.session_state["mtd_in_pot_max"] = 0.0
         st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -90,203 +825,27 @@ def cargar_plantilla_por_tipo(tipo: str):
         st.session_state["mtd_in_spl"] = "No aplica"
         st.session_state["mtd_in_emp_uso"] = ""
         st.session_state["mtd_circuitos"] = []
+        return
 
-    elif "Fotovoltaic" in tipo or "Autoconsumo" in tipo or "Solar" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 5000.0
-        st.session_state["mtd_in_pot_max"] = 5000.0
-        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Generador Fotovoltaico Interconectado a Red Interior (ITC-BT-40)"
-        st.session_state["mtd_in_di_cable"] = "3G6 mm² Cu RZ1-K (AS) 0.6/1kV"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos"
-        st.session_state["mtd_in_di_long"] = 12.0
-        st.session_state["mtd_in_di_cdt"] = 0.58
-        st.session_state["mtd_in_grado"] = "Autoconsumo Fotovoltaico (ITC-BT-40)"
-        st.session_state["mtd_in_iga"] = 25
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 6.0
-        st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (UNE-EN 62955)"
-        st.session_state["mtd_in_vtp"] = "Permanentes (POP) + Transitorias Tipo 2 con bobina y protección anti-isla integrada"
-        st.session_state["mtd_in_tierra"] = "Conductor PE 1x6 mm² Cu uniendo marcos y estructuras a tierra | Rt ≤ 15 Ω"
-        st.session_state["mtd_in_spl"] = "Smart Meter / Vatímetro de inyección cero / balance neto"
-        st.session_state["mtd_in_emp_uso"] = "Instalación Generadora en Autoconsumo (RD 244/2019)"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "Línea Evacuación AC Inversor", "potencia": 5000, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 12, "cdt": 0.58, "norma": "ITC-BT-40"},
-            {"nombre": "Circuito Generación DC String 1", "potencia": 2750, "pia": 15, "seccion": "2x6.0 H1Z2Z2-K", "tubo": "M25 UV", "longitud": 18, "cdt": 0.65, "norma": "ITC-BT-40"},
-            {"nombre": "Circuito Generación DC String 2", "potencia": 2750, "pia": 15, "seccion": "2x6.0 H1Z2Z2-K", "tubo": "M25 UV", "longitud": 20, "cdt": 0.72, "norma": "ITC-BT-40"}
-        ]
-
-    elif "IRVE" in tipo or "Recarga" in tipo or "Vehículo" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 7360.0
-        st.session_state["mtd_in_pot_max"] = 7360.0
-        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Centralización de Contadores (Esquema 2)"
-        st.session_state["mtd_in_di_cable"] = "3G6 mm² Cu RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos (IK08)"
-        st.session_state["mtd_in_di_long"] = 25.0
-        st.session_state["mtd_in_di_cdt"] = 0.86
-        st.session_state["mtd_in_grado"] = "Específica IRVE (ITC-BT-52)"
-        st.session_state["mtd_in_iga"] = 32
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 6.0
-        st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A con detección DC 6mA (IEC 62955)"
-        st.session_state["mtd_in_vtp"] = "Permanentes (POP/VTP) + Transitorias Tipo 2 (DPS/VSP) con bobina de disparo"
-        st.session_state["mtd_in_tierra"] = "Conductor PE 1x6 mm² Cu | Resistencia bucle tierra Rt ≤ 15 Ω"
-        st.session_state["mtd_in_spl"] = "Sensor toroidal CT para modulación dinámica en tiempo real"
-        st.session_state["mtd_in_emp_uso"] = "Garaje Comunitario / Punto de Recarga VE"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "Línea Específica IRVE (Wallbox)", "potencia": 7360, "pia": 32, "seccion": "2x6.0+TT6.0", "tubo": "M32", "longitud": 25, "cdt": 0.86, "norma": "ITC-BT-52"}
-        ]
-
-    elif ("Vivienda" in tipo or "Residencial" in tipo) and any(kw in tipo for kw in ["Elevada", "Clima", "Calefacción", "Domótica"]):
-        st.session_state["mtd_in_pot_inst"] = 9200.0
-        st.session_state["mtd_in_pot_max"] = 9200.0
-        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
-        st.session_state["mtd_in_di_cable"] = "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos (ITC-BT-15)"
-        st.session_state["mtd_in_di_long"] = 18.0
-        st.session_state["mtd_in_di_cdt"] = 0.85
-        st.session_state["mtd_in_grado"] = "Elevada"
-        st.session_state["mtd_in_iga"] = 40
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 6.0
-        st.session_state["mtd_in_dif"] = "2 x Diferencial 2P 40A / 30mA (D1: Tipo AC, D2: Tipo A Superinmunizado para Clima e Inverter)"
-        st.session_state["mtd_in_vtp"] = "Permanentes (VTP) + Transitorias Tipo 2 con reconexión"
-        st.session_state["mtd_in_tierra"] = "Conductor PE 1x16 mm² Cu | Picas en anillo Rt ≤ 15 Ω"
-        st.session_state["mtd_in_spl"] = "No aplica"
-        st.session_state["mtd_in_emp_uso"] = "Vivienda Residencial Electrificación Elevada"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
-            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
-            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
-            {"nombre": "C4 - Lavadora / Lavavajillas / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
-            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"},
-            {"nombre": "C8.1 - Calefacción Línea 1", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 16, "cdt": 1.18, "norma": "ITC-BT-25"},
-            {"nombre": "C8.2 - Calefacción Línea 2", "potencia": 4500, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 18, "cdt": 1.25, "norma": "ITC-BT-25"},
-            {"nombre": "C9 - Climatización Inverter (Tipo A SI)", "potencia": 5750, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
-            {"nombre": "C10 - Secadora Independiente", "potencia": 2300, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.85, "norma": "ITC-BT-25"},
-            {"nombre": "C11 - Domótica / Automatización y Control", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.75, "norma": "ITC-BT-25"}
-        ]
-
-    elif "Vivienda" in tipo or "Residencial" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 5750.0
-        st.session_state["mtd_in_pot_max"] = 5750.0
-        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
-        st.session_state["mtd_in_di_cable"] = "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M32 libre de halógenos (ITC-BT-15)"
-        st.session_state["mtd_in_di_long"] = 15.0
-        st.session_state["mtd_in_di_cdt"] = 0.72
-        st.session_state["mtd_in_grado"] = "Básica"
-        st.session_state["mtd_in_iga"] = 25
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 6.0
-        st.session_state["mtd_in_dif"] = "Interruptor Diferencial 2P 40A / 30mA Clase A / Superinmunizado"
-        st.session_state["mtd_in_vtp"] = "Permanentes (VTP) + Transitorias Tipo 2 con reconexión"
-        st.session_state["mtd_in_tierra"] = "Conductor PE 1x10 mm² Cu | Picas en anillo Rt ≤ 15 Ω"
-        st.session_state["mtd_in_spl"] = "No aplica"
-        st.session_state["mtd_in_emp_uso"] = "Vivienda Residencial Unifamiliar"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "C1 - Alumbrado General", "potencia": 2300, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 18, "cdt": 1.15, "norma": "ITC-BT-25"},
-            {"nombre": "C2 - Tomas de Uso General", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 20, "cdt": 1.42, "norma": "ITC-BT-25"},
-            {"nombre": "C3 - Cocina / Horno", "potencia": 5400, "pia": 25, "seccion": "2x6.0+TT6.0", "tubo": "M25", "longitud": 12, "cdt": 0.88, "norma": "ITC-BT-25"},
-            {"nombre": "C4 - Lavadora / Termo", "potencia": 3450, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M20", "longitud": 15, "cdt": 1.10, "norma": "ITC-BT-25"},
-            {"nombre": "C5 - Baños y Auxiliares", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 14, "cdt": 0.98, "norma": "ITC-BT-25"}
-        ]
-
-    elif "Local" in tipo or "Comercial" in tipo or "Nave" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 11500.0
-        st.session_state["mtd_in_pot_max"] = 14490.0
-        st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Línea General de Alimentación (LGA / CPM)"
-        st.session_state["mtd_in_di_cable"] = "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos"
-        st.session_state["mtd_in_di_long"] = 20.0
-        st.session_state["mtd_in_di_cdt"] = 0.65
-        st.session_state["mtd_in_grado"] = "Comercial / Servicios"
-        st.session_state["mtd_in_iga"] = 40
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 10.0
-        st.session_state["mtd_in_dif"] = "Diferencial Tetrapolar 4P 40A / 30mA Clase A / Superinmunizado"
-        st.session_state["mtd_in_vtp"] = "Permanentes + Transitorias Tipo 2 con bobina de emisión"
-        st.session_state["mtd_in_tierra"] = "Conductor PE 1x16 mm² Cu | Anillo cimentación Rt ≤ 10 Ω"
-        st.session_state["mtd_in_spl"] = "No aplica"
-        st.session_state["mtd_in_emp_uso"] = "Local Comercial / Actividad Terciaria"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "C1 - Alumbrado Comercial", "potencia": 3000, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 22, "cdt": 1.10, "norma": "ITC-BT-28"},
-            {"nombre": "C2 - Alumbrado Emergencia", "potencia": 500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 30, "cdt": 0.45, "norma": "ITC-BT-28"},
-            {"nombre": "C3 - Tomas Fuerza General", "potencia": 4000, "pia": 20, "seccion": "2x4.0+TT4.0", "tubo": "M25", "longitud": 18, "cdt": 1.12, "norma": "ITC-BT-28"},
-            {"nombre": "C4 - Climatización / Bomba Calor", "potencia": 6000, "pia": 25, "seccion": "4x6.0+TT6.0", "tubo": "M32", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-28"}
-        ]
-
-    elif "Obra" in tipo or "Provisional" in tipo or "ITC-BT-33" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 15000.0
-        st.session_state["mtd_in_pot_max"] = 15000.0
-        st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Acometida Provisional desde Red Distribuidora (CPM / CGP Intemperie)"
-        st.session_state["mtd_in_di_cable"] = "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (Cca-s1b,d1,a1)"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M40 intemperie resistente a impactos IK09"
-        st.session_state["mtd_in_di_long"] = 15.0
-        st.session_state["mtd_in_di_cdt"] = 0.52
-        st.session_state["mtd_in_grado"] = "Provisional de Obra (ITC-BT-33)"
-        st.session_state["mtd_in_iga"] = 40
-        st.session_state["mtd_in_curva"] = "Curva D"
-        st.session_state["mtd_in_icn"] = 10.0
-        st.session_state["mtd_in_dif"] = "Diferencial 4P 40A / 30mA Clase A Superinmunizado + Seta Parada Emergencia"
-        st.session_state["mtd_in_vtp"] = "Permanentes + Transitorias Tipo 2 con corte omnipolar y bobina de disparo"
-        st.session_state["mtd_in_tierra"] = "Pica de puesta a tierra independiente de obra (Rt ≤ 15 Ω) | Conductor PE 1x16 mm² Cu"
-        st.session_state["mtd_in_spl"] = "No aplica"
-        st.session_state["mtd_in_emp_uso"] = "Instalación Provisional y Temporal de Obras (ITC-BT-33)"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "C1 - Toma CETAC Trifásica 32A 3P+N+T (Grúa / Maquinaria)", "potencia": 10000, "pia": 32, "seccion": "4x6.0+TT6.0", "tubo": "M32", "longitud": 15, "cdt": 0.65, "norma": "ITC-BT-33"},
-            {"nombre": "C2 - Toma CETAC Trifásica 16A 3P+N+T (Hormigonera / Elevador)", "potencia": 5000, "pia": 16, "seccion": "4x2.5+TT2.5", "tubo": "M25", "longitud": 15, "cdt": 0.85, "norma": "ITC-BT-33"},
-            {"nombre": "C3 - Tomas CETAC/Schuko Monofásicas 16A (Herramientas manuales)", "potencia": 3450, "pia": 16, "seccion": "2x2.5+TT2.5", "tubo": "M20", "longitud": 12, "cdt": 0.78, "norma": "ITC-BT-33"},
-            {"nombre": "C4 - Alumbrado de Seguridad y Balizamiento de Obra", "potencia": 1500, "pia": 10, "seccion": "2x1.5+TT1.5", "tubo": "M20", "longitud": 20, "cdt": 0.60, "norma": "ITC-BT-33"}
-        ]
-
-    elif "Derivación" in tipo or " DI " in tipo or "ITC-BT-15" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 9200.0
-        st.session_state["mtd_in_pot_max"] = 14490.0
-        st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Contador / Centralización de Contadores (ITC-BT-16)"
-        st.session_state["mtd_in_di_cable"] = "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV"
-        st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos (ITC-BT-15)"
-        st.session_state["mtd_in_di_long"] = 20.0
-        st.session_state["mtd_in_di_cdt"] = 0.85
-        st.session_state["mtd_in_grado"] = "Elevada"
-        st.session_state["mtd_in_iga"] = 40
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 6.0
-        st.session_state["mtd_in_dif"] = "Diferencial 2P 40A / 30mA Clase A Superinmunizado"
-        st.session_state["mtd_in_vtp"] = "Permanentes + Transitorias Tipo 2 con bobina de emisión"
-        st.session_state["mtd_in_tierra"] = "Conductor PE 1x16 mm² Cu | Rt ≤ 15 Ω"
-        st.session_state["mtd_in_spl"] = "No aplica"
-        st.session_state["mtd_in_emp_uso"] = "Derivación Individual B.T. (ITC-BT-15)"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "Línea Derivación Individual", "potencia": 9200, "pia": 40, "seccion": "2x16+TT16", "tubo": "M40", "longitud": 20, "cdt": 0.85, "norma": "ITC-BT-15"}
-        ]
-
-    elif "Alimentación" in tipo or "LGA" in tipo or "ITC-BT-14" in tipo:
-        st.session_state["mtd_in_pot_inst"] = 43600.0
-        st.session_state["mtd_in_pot_max"] = 50000.0
-        st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
-        st.session_state["mtd_in_origen"] = "Caja General de Protección (CGP / ITC-BT-13)"
-        st.session_state["mtd_in_di_cable"] = "3x50/25 mm² Al/Cu RZ1-K 0.6/1kV"
-        st.session_state["mtd_in_di_tubo"] = "Conducto / Tubo M110 libre de halógenos"
-        st.session_state["mtd_in_di_long"] = 15.0
-        st.session_state["mtd_in_di_cdt"] = 0.42
-        st.session_state["mtd_in_grado"] = "Comercial / Edificio"
-        st.session_state["mtd_in_iga"] = 63
-        st.session_state["mtd_in_curva"] = "Curva C (General)"
-        st.session_state["mtd_in_icn"] = 15.0
-        st.session_state["mtd_in_dif"] = "Protección General con Toroidal / Relé electrónico"
-        st.session_state["mtd_in_vtp"] = "Protección contra sobretensiones Tipo 1+2"
-        st.session_state["mtd_in_tierra"] = "Línea principal PE 1x35 mm² Cu | Rt ≤ 10 Ω"
-        st.session_state["mtd_in_spl"] = "No aplica"
-        st.session_state["mtd_in_emp_uso"] = "Línea General de Alimentación (ITC-BT-14)"
-        st.session_state["mtd_circuitos"] = [
-            {"nombre": "Línea General LGA Centralización", "potencia": 43600, "pia": 63, "seccion": "3x50+25+TT25", "tubo": "M110", "longitud": 15, "cdt": 0.42, "norma": "ITC-BT-14"}
-        ]
+    import copy
+    st.session_state["mtd_in_pot_inst"] = float(info["potencia_inst"])
+    st.session_state["mtd_in_pot_max"] = float(info["potencia_max"])
+    st.session_state["mtd_in_tension"] = str(info["tension"])
+    st.session_state["mtd_in_origen"] = str(info["origen"])
+    st.session_state["mtd_in_di_cable"] = str(info["di_cable"])
+    st.session_state["mtd_in_di_tubo"] = str(info["di_tubo"])
+    st.session_state["mtd_in_di_long"] = float(info["di_long"])
+    st.session_state["mtd_in_di_cdt"] = float(info["di_cdt"])
+    st.session_state["mtd_in_grado"] = str(info["grado"])
+    st.session_state["mtd_in_iga"] = int(info["iga"])
+    st.session_state["mtd_in_curva"] = str(info["curva"])
+    st.session_state["mtd_in_icn"] = float(info["icn"])
+    st.session_state["mtd_in_dif"] = str(info["dif"])
+    st.session_state["mtd_in_vtp"] = str(info["vtp"])
+    st.session_state["mtd_in_tierra"] = str(info["tierra"])
+    st.session_state["mtd_in_spl"] = str(info["spl"])
+    st.session_state["mtd_in_emp_uso"] = str(info["emp_uso"])
+    st.session_state["mtd_circuitos"] = copy.deepcopy(info["circuitos"])
 
 def aplicar_datos_cliente_a_formulario(cli_obj: dict):
     """Vuelca los datos del cliente de CRM en los campos del formulario"""
@@ -392,17 +951,7 @@ def renderizar():
         col_t1, col_t1_b, col_t2 = st.columns([1.3, 1.3, 2.4])
         
         with col_t1:
-            opciones_tipo_inst = [
-                "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --",
-                "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)",
-                "🏡 Vivienda Electrificación Elevada con Clima, Calefacción y Domótica (ITC-BT-25 - 9.200W)",
-                "☀️ Autoconsumo Solar Fotovoltaico (ITC-BT-40 / RD 244/2019)",
-                "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
-                "🏢 Local Comercial / Nave Industrial (ITC-BT-28)",
-                "🏗️ Instalación Provisional y Temporal de Obras (ITC-BT-33 / Cuadro de Obra)",
-                "⚡ Línea General de Alimentación LGA (ITC-BT-14)",
-                "🔌 Derivación Individual DI (ITC-BT-15)"
-            ]
+            opciones_tipo_inst = OPCIONES_TIPO_INSTALACION
             tipo_actual = st.session_state.get("mtd_tipo_inst_sel", opciones_tipo_inst[0])
             idx_tipo_def = opciones_tipo_inst.index(tipo_actual) if tipo_actual in opciones_tipo_inst else 0
 
@@ -486,6 +1035,152 @@ def renderizar():
                                     st.session_state[k] = v
                                 st.success(f"✅ ¡Memoria '{p_datos.get('nombre_proyecto')}' cargada con éxito!")
                                 st.rerun()
+
+        # Ficha Dinámica de Ayuda Técnica de la Plantilla Seleccionada
+        info_sel = obtener_info_plantilla(tipo_inst_sel)
+        if info_sel:
+            st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
+            with st.container(border=True):
+                col_ay_tit, col_ay_pot = st.columns([2.4, 1.6])
+                with col_ay_tit:
+                    st.markdown(f"##### 💡 Ficha de Ayuda para Elección: **{info_sel['titulo']}**")
+                    st.caption(f"Categoría Oficial: **{info_sel.get('categoria', '')}**")
+                    st.markdown(f"**📌 ¿Cuándo elegirla en Murcia?:** {info_sel['cuando_elegir']}")
+                with col_ay_pot:
+                    p_kw = info_sel['potencia_inst'] / 1000.0
+                    st.markdown(
+                        f"<div style='background-color:#f1f5f9; border-left:4px solid #0284c7; padding:8px 12px; border-radius:4px; font-size:13px;'>"
+                        f"<b>⚡ Potencia de Diseño:</b> {info_sel['potencia_inst']:,.0f} W ({p_kw:.2f} kW)<br>"
+                        f"<b>🔌 Tensión:</b> {info_sel['tension'].split(' - ')[0]}<br>"
+                        f"<b>🛡️ IGA Cabecera:</b> {info_sel['iga']} A ({info_sel['curva'].split(' ')[0]})<br>"
+                        f"<b>📏 Cable DI:</b> {info_sel['di_cable'].split(' ')[0]} Cu | <b>Tubo:</b> {info_sel['di_tubo'].split(' ')[0]}<br>"
+                        f"<b>📋 Circuitos:</b> {len(info_sel['circuitos'])} circuitos incluidos"
+                        f"</div>",
+                        unsafe_allow_html=True
+                    )
+                
+                st.markdown(f"**📜 Prescripción Reglamentaria REBT:** {info_sel['criterios_rebt']}")
+
+                if info_sel.get("alerta_lpc"):
+                    st.warning(
+                        "🚨 **REQUISITOS OBLIGATORIOS PARA LOCAL DE PÚBLICA CONCURRENCIA (ITC-BT-28):**\n"
+                        "1. **Cables de Alta Seguridad (AS):** Obligatoriamente no propagadores del incendio y de reducida emisión de humos (H07Z1-K / RZ1-K) en **toda** la instalación interior.\n"
+                        "2. **Doble línea de alumbrado general** en salas con público (si salta un PIA no quedarse a oscuras).\n"
+                        "3. **Alumbrado de emergencia:** Mínimo 5 lux en cuadros y 1 lux en rutas de evacuación (autonomía ≥ 1h).\n"
+                        "4. **Campana de cocina (si hostelería):** Enclavamiento obligatorio con corte de electroválvula de gas.\n"
+                        "5. **INSPECCIÓN INICIAL OBLIGATORIA POR OCA:** Exigida antes de la puesta en servicio oficial y enganche con distribuidora (revisión periódica cada 5 años)."
+                    )
+                elif info_sel.get("alerta_garaje"):
+                    st.warning(
+                        "🚨 **REQUISITOS OBLIGATORIOS PARA GARAJE / IRVE (ITC-BT-52 / ITC-BT-29):**\n"
+                        "1. **Cables libres de halógenos (AS)** Cca-s1b,d1,a1 obligatorios en todo el trazado por zonas comunes y parking.\n"
+                        "2. **Tubo de alta resistencia mecánica:** Mínimo impacto IK08 en garajes comunitarios.\n"
+                        "3. **Diferencial específico:** Clase A con detección DC de 6 mA (IEC 62955) o Tipo B.\n"
+                        "4. **Comunicación a la Comunidad:** Notificación formal previa según art. 17.5 de la Ley de Propiedad Horizontal."
+                    )
+                elif info_sel.get("alerta_solar"):
+                    st.info(
+                        "ℹ️ **REQUISITOS OBLIGATORIOS PARA AUTOCONSUMO SOLAR (ITC-BT-40 / RD 244/2019):**\n"
+                        "1. **Protección anti-isla:** Integrada según UNE-EN 50549-1 para desconexión inmediata si cae la red.\n"
+                        "2. **Caída de tensión AC:** Diseñar para ≤ 1,0% en la línea de evacuación para evitar bloqueos por sobretensión (>253 V) a pleno sol en Murcia.\n"
+                        "3. **Diferencial:** Tipo A o B según prescripción técnica del fabricante del inversor."
+                    )
+
+    # Asistente de Decisión y Calculadora de Potencia para Locales Comerciales
+    with st.expander("🧮 Asistente de Decisión y Calculadora de Potencia para Locales (ITC-BT-10.3.3 / ITC-BT-28)", expanded=False):
+        st.markdown(
+            "Herramienta interactiva para ayudar al instalador a determinar la potencia de diseño reglamentaria, "
+            "comprobar si requiere Proyecto o MTD, y seleccionar la plantilla idónea para cualquier local en la Región de Murcia."
+        )
+        tab_calc_loc, tab_guia_loc = st.tabs(["📊 Calculadora de Potencia para Locales", "📖 Guía de Selección para el Instalador"])
+
+        with tab_calc_loc:
+            col_cl1, col_cl2 = st.columns([1.1, 1.9])
+            with col_cl1:
+                st.markdown("###### 📏 Datos de Partida del Inmueble:")
+                sup_calc = st.number_input("Superficie útil del local (m²):", min_value=5.0, max_value=5000.0, value=80.0, step=5.0, key="in_calc_sup_loc")
+                clima_calc = st.number_input("Potencia estimada Climatización / Frío (W):", min_value=0.0, max_value=60000.0, value=6000.0, step=500.0, key="in_calc_clima_loc")
+                maq_calc = st.number_input("Potencia Maquinaria / Cocina / Hornos (W):", min_value=0.0, max_value=100000.0, value=4000.0, step=500.0, key="in_calc_maq_loc")
+                act_calc = st.selectbox(
+                    "Tipo de Actividad y Afluencia de Público:",
+                    [
+                        "Local Comercial Ordinario (Tienda, oficina, despacho, aforo < 50 pers.)",
+                        "Bar / Restaurante / Cafetería (Hostelería con cocina industrial)",
+                        "Academia / Centro Educativo / Clínica (> 50 pers. - Pública Concurrencia)",
+                        "Gimnasio / Centro Deportivo con vestuarios y duchas"
+                    ],
+                    key="in_calc_act_loc"
+                )
+
+            with col_cl2:
+                st.markdown("###### ⚡ Cálculo Reglamentario y Recomendación:")
+                base_minima = max(3450.0, sup_calc * 100.0)
+                es_bar = "Bar" in act_calc or "Restaurante" in act_calc
+                es_acad = "Academia" in act_calc or "Clínica" in act_calc
+                es_gym = "Gimnasio" in act_calc
+                es_lpc = es_bar or es_acad or es_gym
+
+                if es_bar:
+                    pot_calc_total = base_minima * 0.7 + clima_calc + maq_calc * 0.8
+                    plantilla_rec = "🍽️ LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA obligatoria)"
+                elif es_gym:
+                    pot_calc_total = base_minima * 0.8 + clima_calc + maq_calc
+                    plantilla_rec = "🏋️ LPC: Gimnasio / Polideportivo con Duchas (20.780 W - 400V - IGA 32A Tri - OCA)"
+                elif es_acad:
+                    pot_calc_total = base_minima + clima_calc * 0.8 + maq_calc * 0.7
+                    plantilla_rec = "🎓 LPC: Academia / Clínica / Centro de Enseñanza (>50 pers. - 17.320 W - 400V - OCA)"
+                else:
+                    pot_calc_total = base_minima + clima_calc * 0.8 + maq_calc * 0.7
+                    if pot_calc_total <= 9200.0 and maq_calc < 3000:
+                        plantilla_rec = "🏢 Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)"
+                    else:
+                        plantilla_rec = "🏢 Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)"
+
+                col_mc1, col_mc2, col_mc3 = st.columns(3)
+                col_mc1.metric("Base Mínima Legal", f"{base_minima:,.0f} W", help="ITC-BT-10.3.3: 100 W/m² con mínimo de 3.450 W")
+                col_mc2.metric("Potencia Simultánea", f"{pot_calc_total:,.0f} W", f"{pot_calc_total/1000.0:.2f} kW")
+                tension_sug = "Trifásica (400 V)" if pot_calc_total > 9200.0 or es_lpc else "Monofásica (230 V)"
+                col_mc3.metric("Tensión Sugerida", tension_sug)
+
+                st.markdown(f"**🎯 Plantilla Recomendada:** `{plantilla_rec}`")
+
+                if pot_calc_total <= 100000.0:
+                    st.success("✅ **Legalizable con MTD:** No supera los 100 kW de potencia. Puedes firmar y tramitar la instalación directamente con tu carnet de instalador autorizado.")
+                else:
+                    st.error("⚠️ **REQUIERE PROYECTO TÉCNICO:** Al superar los 100 kW, el REBT (ITC-BT-04 Tabla 3.1) exige obligatoriamente Proyecto visado por Ingeniero Colegiado y Dirección Técnica de Obra.")
+
+                if es_lpc:
+                    st.warning("⚠️ **Local de Pública Concurrencia (ITC-BT-28):** Obligatorio cables libres de halógenos AS, doble línea de alumbrado e inspección inicial por OCA.")
+
+                if st.button("⚡ Cargar Plantilla Calculada en la MTD", key="btn_cargar_calc_loc", type="primary"):
+                    st.session_state["mtd_tipo_inst_sel"] = plantilla_rec
+                    cargar_plantilla_por_tipo(plantilla_rec)
+                    st.session_state["mtd_in_pot_inst"] = float(round(pot_calc_total, 0))
+                    st.session_state["mtd_in_pot_max"] = float(max(st.session_state.get("mtd_in_pot_max", pot_calc_total), pot_calc_total))
+                    st.success(f"✅ ¡Plantilla cargada con {pot_calc_total:,.0f} W calculados!")
+                    st.rerun()
+
+        with tab_guia_loc:
+            st.markdown(r"""
+            #### 📚 Criterios de Selección Oficial para el Instalador en Murcia
+
+            | Tipo de Instalación | Potencia Habitual | Tensión | IGA | ¿Cuándo elegirla? | Trámite Legal |
+            | :--- | :---: | :---: | :---: | :--- | :--- |
+            | **Vivienda Básica** | 5.750 W | 230 V | 25 A | Viviendas estándar < 160 m² sin aire acondicionado centralizado. | MTD Instalador |
+            | **Vivienda Elevada Clima** | 9.200 W | 230 V | 40 A | Vivienda habitual con aire por conductos o varios splits. | MTD Instalador |
+            | **Vivienda Aerotermia** | 11.500 W | 230 V | 50 A | Obra nueva con bomba de calor para ACS y suelo radiante. | MTD Instalador |
+            | **Vivienda Máx Monofásica** | 14.490 W | 230 V | 63 A | Límite máximo monofásico en España sin pasar a trifásica. | MTD Instalador |
+            | **Chalet Trifásica** | 17.320 W | 400 V | 25 A | Parcela con piscina, riego, pozo y clima trifásico. | MTD Instalador |
+            | **IRVE Garaje Comunitario** | 7.360 W | 230 V | 32 A | Wallbox en garaje comunitario (Esquema 2). Cable AS obligatorio. | MTD Instalador |
+            | **IRVE Trifásico Rápido** | 22.000 W | 400 V | 32 A | Cargador rápido en empresa, hotel o flota. | MTD Instalador (≤50 kW int.) |
+            | **Autoconsumo Solar** | 5.000 W | 230 V | 25 A | Placas solares interconectadas a red interior (RD 244/2019). | MTD Instalador (≤10 kW gen.) |
+            | **Local Monofásico** | 9.200 W | 230 V | 40 A | Tiendas, despachos, oficinas con aforo < 50 personas. | MTD Instalador |
+            | **Local Trifásico** | 17.320 W | 400 V | 25 A | Comercios con climatización trifásica o maquinaria. | MTD Instalador (≤100 kW) |
+            | **Bar / Restaurante (LPC)** | 27.710 W | 400 V | 40 A | Hostelería con cocina industrial, campana y salón. Cables AS. | MTD + OCA Inicial |
+            | **Academia / Clínica (LPC)** | 17.320 W | 400 V | 25 A | Aforo > 50 personas. Cables AS y doble línea de alumbrado. | MTD + OCA Inicial |
+            | **Gimnasio con Duchas (LPC)** | 20.780 W | 400 V | 32 A | Vestuarios colectivos, termos de ACS y ventilación RITE. | MTD + OCA Inicial |
+            | **Cuadro de Obra** | 15.000 W | 400 V | 40 A | Suministro provisional de obra con tomas CETAC y parada emergencia. | MTD Instalador (≤50 kW) |
+            """)
 
     # Inicialización por defecto si no existen
     if "mtd_circuitos" not in st.session_state:
@@ -686,9 +1381,9 @@ def renderizar():
 
         # Botones de Carga Rápida Automática de Suministro
         st.caption("⚡ **Plantillas Automáticas de Suministro Oficial (1 Clic):**")
-        col_ps1, col_ps2, col_ps3, col_ps4 = st.columns(4)
+        col_ps1, col_ps2, col_ps3, col_ps4, col_ps5, col_ps6 = st.columns(6)
         with col_ps1:
-            if st.button("🏠 Básica (5.750 W)", use_container_width=True, help="Vivienda Básica 230V"):
+            if st.button("🏠 Básica (5.75 kW)", use_container_width=True, help="Vivienda Básica 230V"):
                 st.session_state["mtd_in_pot_inst"] = 5750.0
                 st.session_state["mtd_in_pot_max"] = 5750.0
                 st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -701,7 +1396,7 @@ def renderizar():
                 st.success("✅ Parámetros de Vivienda Básica cargados.")
                 st.rerun()
         with col_ps2:
-            if st.button("🏡 Elevada (9.200 W Murcia)", use_container_width=True, help="Vivienda Elevada DGEAIM Murcia"):
+            if st.button("🏡 Clima (9.2 kW)", use_container_width=True, help="Vivienda Elevada Clima DGEAIM Murcia"):
                 st.session_state["mtd_in_pot_inst"] = 9200.0
                 st.session_state["mtd_in_pot_max"] = 9200.0
                 st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -711,10 +1406,23 @@ def renderizar():
                 st.session_state["mtd_in_di_long"] = 18.0
                 st.session_state["mtd_in_di_cdt"] = 0.85
                 st.session_state["mtd_in_grado"] = "Elevada"
-                st.success("✅ Parámetros de Vivienda Elevada (Modelo DGEAIM Murcia) cargados.")
+                st.success("✅ Parámetros de Vivienda Elevada Clima cargados.")
                 st.rerun()
         with col_ps3:
-            if st.button("🚗 IRVE 32A (7.360 W)", use_container_width=True, help="Recarga VE ITC-BT-52"):
+            if st.button("🌡️ Aerotermia (11.5 kW)", use_container_width=True, help="Vivienda con Bomba de Calor Aerotérmica"):
+                st.session_state["mtd_in_pot_inst"] = 11500.0
+                st.session_state["mtd_in_pot_max"] = 11500.0
+                st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Derivación Individual desde Centralización (ITC-BT-15)"
+                st.session_state["mtd_in_di_cable"] = "2x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (AS)"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos (ITC-BT-15)"
+                st.session_state["mtd_in_di_long"] = 18.0
+                st.session_state["mtd_in_di_cdt"] = 0.95
+                st.session_state["mtd_in_grado"] = "Elevada"
+                st.success("✅ Parámetros de Vivienda Aerotermia cargados.")
+                st.rerun()
+        with col_ps4:
+            if st.button("🚗 IRVE (7.36 kW)", use_container_width=True, help="Recarga VE ITC-BT-52"):
                 st.session_state["mtd_in_pot_inst"] = 7360.0
                 st.session_state["mtd_in_pot_max"] = 7360.0
                 st.session_state["mtd_in_tension"] = "Monofásico (230 V) - 50 Hz"
@@ -726,18 +1434,31 @@ def renderizar():
                 st.session_state["mtd_in_grado"] = "Específica IRVE (ITC-BT-52)"
                 st.success("✅ Parámetros de Recarga IRVE cargados.")
                 st.rerun()
-        with col_ps4:
-            if st.button("🏢 Comercial (14.490 W 400V)", use_container_width=True, help="Trifásico 400V"):
-                st.session_state["mtd_in_pot_inst"] = 14490.0
-                st.session_state["mtd_in_pot_max"] = 14490.0
+        with col_ps5:
+            if st.button("🍽️ Bar LPC (27.7 kW)", use_container_width=True, help="Hostelería 400V Trifásica"):
+                st.session_state["mtd_in_pot_inst"] = 27710.0
+                st.session_state["mtd_in_pot_max"] = 27710.0
+                st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
+                st.session_state["mtd_in_origen"] = "Línea General de Alimentación / Centralización"
+                st.session_state["mtd_in_di_cable"] = "4x16 mm² Cu + TT 1x16 mm² RZ1-K 0.6/1kV (AS)"
+                st.session_state["mtd_in_di_tubo"] = "Tubo M50 libre de halógenos"
+                st.session_state["mtd_in_di_long"] = 22.0
+                st.session_state["mtd_in_di_cdt"] = 0.72
+                st.session_state["mtd_in_grado"] = "Pública Concurrencia (ITC-BT-28)"
+                st.success("✅ Parámetros de Bar / Restaurante LPC cargados.")
+                st.rerun()
+        with col_ps6:
+            if st.button("🏢 Comercio Tri (17.3 kW)", use_container_width=True, help="Comercial Trifásico 400V"):
+                st.session_state["mtd_in_pot_inst"] = 17320.0
+                st.session_state["mtd_in_pot_max"] = 17320.0
                 st.session_state["mtd_in_tension"] = "Trifásico (400 V) - 50 Hz"
                 st.session_state["mtd_in_origen"] = "Módulo de Medida / CPM en Fachada"
                 st.session_state["mtd_in_di_cable"] = "4x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (AS)"
                 st.session_state["mtd_in_di_tubo"] = "Tubo M40 libre de halógenos"
                 st.session_state["mtd_in_di_long"] = 20.0
-                st.session_state["mtd_in_di_cdt"] = 0.62
+                st.session_state["mtd_in_di_cdt"] = 0.65
                 st.session_state["mtd_in_grado"] = "Comercial / Servicios"
-                st.success("✅ Parámetros de Suministro Trifásico cargados.")
+                st.success("✅ Parámetros de Comercio Trifásico cargados.")
                 st.rerun()
 
         col_s1, col_s2 = st.columns(2)

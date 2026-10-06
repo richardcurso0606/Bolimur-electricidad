@@ -31,11 +31,22 @@ Combinas dos perfiles complementarios:
      ITC-BT-05 (aislamiento DC 1000V >= 1 MΩ, aislamiento AC 500V >= 0.5 MΩ) y resolución rápida de averías en campo (Isolation Fault,
      Grid Overvoltage, disparos de diferencial con fugas de 6 mA DC, y termografía de puntos calientes/hotspots).
 
+3. Asesor Experto en Elección de Plantillas e Instalaciones en la Región de Murcia:
+   Conoces a la perfección el catálogo oficial de plantillas técnicas de Bolimur y sabes orientar al instalador:
+   - Viviendas (ITC-BT-10/25): Básica 5.75 kW (sin clima central), Elevada Clima 9.2 kW (modelo oficial DGEAIM Murcia con IGA 40A y DI 16 mm² Cu), Elevada Aerotermia 11.5 kW (IGA 50A con diferencial dedicado superinmunizado), Máxima Monofásica 14.49 kW (límite 63A a 230V con DI 25 mm² Cu), Chalet Trifásico 17.32 kW (400V para parcelas con piscina y riego).
+   - Vehículo Eléctrico IRVE (ITC-BT-52): Garaje comunitario Esquema 2 (7.36 kW, cables libres de halógenos AS, tubo IK08, diferencial clase A 6mA DC), IRVE Trifásico 22 kW, y Vivienda con IRVE integrado (circuito C13 con modulación dinámica de carga SPL).
+   - Autoconsumo Fotovoltaico (ITC-BT-40 / RD 244/2019): Solar 5 kW e Híbrido Vivienda + Solar + IRVE.
+   - Locales Comerciales Ordinarios: Monofásico 9.2 kW y Trifásico 17.32 kW (cálculo de 100 W/m² según ITC-BT-10.3.3 con mínimo de 3.450 W).
+   - Locales de Pública Concurrencia (LPC - ITC-BT-28): Bar/Restaurante 27.71 kW (IGA 40A 400V con enclavamiento de gas en campana), Academia/Clínica 17.32 kW (>50 personas), Gimnasio con duchas 20.78 kW. Recuerda siempre que en LPC son obligatorios los cables libres de halógenos AS, doble línea de alumbrado, emergencias e inspección inicial por OCA.
+   - Cuadros de Obra (ITC-BT-33): 15 kW con tomas CETAC y pulsador exterior de parada de emergencia.
+   - Límite de tramitación: Hasta 100 kW se tramita por MTD del instalador; más de 100 kW exige Proyecto Técnico visado por Ingeniero.
+
 Tus principios de respuesta:
-- Cita siempre la ITC-BT exacta (ej. ITC-BT-04, ITC-BT-15, ITC-BT-17, ITC-BT-18, ITC-BT-25, ITC-BT-40, ITC-BT-52, RD 244/2019).
+- Cita siempre la ITC-BT exacta (ej. ITC-BT-04, ITC-BT-10, ITC-BT-15, ITC-BT-17, ITC-BT-18, ITC-BT-25, ITC-BT-28, ITC-BT-40, ITC-BT-52, RD 244/2019).
 - Diferencia claramente si la consulta es sobre CONEXIÓN A RED (RD 244/2019) o AISLADA CON BATERÍAS (Off-Grid).
-- Si la potencia del inversor fotovoltaico supera los 10 kW (ITC-BT-04 Grupo F) o el local es de pública concurrencia, advierte claramente
-  que requiere PROYECTO TÉCNICO visado por Ingeniero Colegiado y OCA inicial.
+- Si la potencia del inversor fotovoltaico supera los 10 kW (ITC-BT-04 Grupo F) o la instalación supera 100 kW, advierte claramente
+  que requiere PROYECTO TÉCNICO visado por Ingeniero Colegiado y Dirección de Obra.
+- Explica de forma pedagógica y práctica al instalador qué plantilla elegir y cómo justificar los cálculos ante Industria (DGEAIM Murcia).
 - Sé claro, directo y estructurado (utiliza viñetas, tablas markdown y fórmulas KaTeX cuando haya cálculos técnicos o económicos).
 - Aporta tanto la fórmula y el artículo legal como el consejo práctico de taller o montaje para que el instalador resuelva la obra sin incidencias.
 - Responde siempre en español profesional, técnico y motivador.
@@ -43,7 +54,7 @@ Tus principios de respuesta:
 
 BASE_CONOCIMIENTO_OFFLINE = [
     {
-        "keywords": ["proyecto", "ingeniero", "mtd", "limite", "firmar", "bar", "restaurante", "publica concurrencia"],
+        "keywords": ["proyecto", "ingeniero", "mtd", "limite proyecto", "firmar", "cuando proyecto"],
         "pregunta": "¿Cuándo se necesita Proyecto de Ingeniero en lugar de MTD?",
         "respuesta": """### ⚖️ Proyecto de Ingeniero vs Memoria Técnica de Diseño (MTD) - ITC-BT-04
 
@@ -269,26 +280,158 @@ Es la avería número 1 en días de lluvia o con rocío matinal. El inversor com
    - **Aumentar la sección del cable AC:** La caída de tensión en la línea AC debe ser **$\\le 1,0\\%$ (máximo 2,3 V)**. Cambiar la línea de 4 mm² a 6 mm² o 10 mm² reduce la resistencia y la tensión en bornes del inversor baja inmediatamente de 253V.
    - **Comprobar apriete de bornes:** Un borne flojo en el PIA o diferencial añade resistencia de contacto que eleva la tensión localmente.
    - **Si la red en reposo ya supera los 250V:** Abrir reclamación a la distribuidora eléctrica (i-DE) para que regulen las tomas del centro de transformación (bajar el *tap* del transformador)."""
+    },
+    {
+        "keywords": ["local comercial", "potencia local", "100 w/m2", "calcular local", "tienda", "oficina"],
+        "pregunta": "¿Cómo se calcula la potencia y qué plantilla elegir para un local comercial o nave?",
+        "respuesta": """### 🏢 Dimensionamiento de Potencia para Locales Comerciales - ITC-BT-10.3.3 e ITC-BT-28
+
+Para cualquier local comercial, oficina o nave terciaria en la Región de Murcia, el REBT exige seguir esta metodología de cálculo:
+
+1. **La Base Legal Mínima por Superficie (ITC-BT-10.3.3):**
+   - Mínimo **$100\\text{ W/m}^2$** de superficie útil.
+   - Suelo mínimo absoluto legal: **$3.450\\text{ W}$** (incluso si el local tiene solo $15\\text{ m}^2$).
+   - *Ejemplo:* Local de $80\\text{ m}^2 \\rightarrow 80 \\times 100 = 8.000\\text{ W}$.
+
+2. **Añadir Cargas Específicas (Climatización y Maquinaria):**
+   - **Climatización / Bomba de calor:** Se suma con factor de simultaneidad $0,8$ a $1,0$ según el uso.
+   - **Maquinaria / Hornos / Frío industrial:** Se suma la potencia nominal de los receptores.
+   - $$P_{\\text{prevista}} = P_{\\text{base}} + 0,8 \\cdot P_{\\text{clima}} + 0,75 \\cdot P_{\\text{maquinaria}}$$
+
+3. **¿Monofásica (230 V) o Trifásica (400 V)?:**
+   - **Monofásica hasta $9.200\\text{ W}$ (IGA 40A) o máx $14.490\\text{ W}$ (IGA 63A):** Adecuada para pequeñas tiendas de ropa, oficinas, zapaterías o despachos profesionales sin maquinaria trifásica.
+   - **Trifásica a 400 V (17.320 W en adelante):** Obligatoria si hay equipos de aire centralizado trifásicos, cámaras frigoríficas, hornos trifásicos o cuando la potencia prevista supera los $14.490\\text{ W}$.
+
+4. **Trámite Legal ante Industria (DGEAIM Murcia):**
+   - **Hasta $100\\text{ kW}$:** Se diseña y legaliza directamente mediante **Memoria Técnica de Diseño (MTD)** por el instalador autorizado.
+   - **Más de $100\\text{ kW}$:** Exige **Proyecto de Ingeniero Colegiado** y Dirección Facultativa (ITC-BT-04 Tabla 3.1).
+   - *¡Atención!* Si el local es de Pública Concurrencia (aforo $>50$ personas, bar, restaurante, clínica), exige además **inspección inicial por OCA**."""
+    },
+    {
+        "keywords": ["publica concurrencia", "pública concurrencia", "lpc", "itc-bt-28", "oca", "cables as", "doble linea"],
+        "pregunta": "¿Qué requisitos debe cumplir un Local de Pública Concurrencia (LPC) según la ITC-BT-28?",
+        "respuesta": """### 🏛️ Requisitos Estrictos para Locales de Pública Concurrencia (LPC) - ITC-BT-28
+
+Se consideran Locales de Pública Concurrencia:
+- **Por actividad:** Bares, restaurantes, cafeterías, discotecas, cines, teatros, centros de culto, hospitales, clínicas, centros sanitarios y centros docentes/academias.
+- **Por aforo:** Cualquier establecimiento comercial o de pública reunión cuya ocupación calculada supere las **50 personas** ($1\\text{ pers.}/0,8\\text{ m}^2$ en zona de público o $1\\text{ pers.}/2\\text{ m}^2$ en comercial).
+
+**Prescripciones técnicas obligatorias que revisará el inspector:**
+1. **Cables de Alta Seguridad (AS) obligatorios en TODA la instalación:**
+   - Conductores no propagadores del incendio y de reducida emisión de humos y opacidad (cables libres de halógenos tipo **H07Z1-K** o **RZ1-K 0.6/1kV** clase $C_{ca}\\text{-s1b,d1,a1}$). Queda totalmente prohibido el PVC.
+2. **Doble Línea de Alumbrado General:**
+   - En todas las dependencias destinadas al público, el alumbrado debe repartirse en al menos **dos circuitos independientes** alternados (Línea A y Línea B). Si dispara un PIA, nunca debe quedarse la sala en penumbra total.
+3. **Alumbrado de Emergencia y Señalización:**
+   - Obligatorio en cuadros eléctricos (mínimo **$5\\text{ lux}$**), salidas y puertas de evacuación, y a lo largo de los recorridos y pasillos (mínimo **$1\\text{ lux}$**). Autonomía mínima de **1 hora**.
+4. **Corte Omnipolar:**
+   - Todos los dispositivos de mando y protección (IGA, diferenciales, magnetotérmicos) deben cortar simultáneamente fase y neutro.
+5. **Enclavamiento de Gas en Campanas (Hostelería):**
+   - En cocinas de bares/restaurantes con gas, la campana extractora debe tener enclavamiento eléctrico que corte la electroválvula de gas si el extractor está apagado o falla el tiro.
+6. **Inspección Inicial OBLIGATORIA por OCA:**
+   - Antes de dar de alta el boletín y antes de que la distribuidora enganche el contador, un Organismo de Control Autorizado (OCA) debe inspeccionar y emitir acta de inspección favorable. Además, tienen inspección periódica obligatoria cada 5 años."""
+    },
+    {
+        "keywords": ["potencias", "vivienda", "electrificacion", "aerotermia", "grados electrificacion", "14490", "11500", "9200", "chalet trifasica", "itc-bt-25"],
+        "pregunta": "¿Qué potencias normalizadas de electrificación existen para viviendas y cuál elegir?",
+        "respuesta": """### 🏡 Potencias de Electrificación en Viviendas - ITC-BT-10 e ITC-BT-25
+
+En la Región de Murcia y bajo el REBT se manejan estas opciones clave según el grado de equipamiento:
+
+1. **Electrificación Básica ($5.750\\text{ W}$ - Monofásica 230 V - IGA 25 A):**
+   - Para viviendas de hasta $160\\text{ m}^2$ sin aire centralizado ni calefacción eléctrica.
+   - Dotación de 5 circuitos básicos: C1 (Alumbrado), C2 (Tomas uso general), C3 (Cocina/Horno), C4 (Lavadora/Termo/Lavavajillas), C5 (Baños/Auxiliares).
+   - Derivación individual mínima: $10\\text{ mm}^2\\text{ Cu}$ en tubo M32.
+
+2. **Electrificación Elevada con Clima ($9.200\\text{ W}$ - Monofásica 230 V - IGA 40 A):**
+   - **El estándar de referencia en Murcia** para pisos y adosados con aire acondicionado por conductos (C9) y secadora (C10).
+   - Obligatorio si la vivienda supera $160\\text{ m}^2$ o tiene previsión de clima/calefacción.
+   - Derivación individual oficial Murcia: **$16\\text{ mm}^2\\text{ Cu}$ en tubo M40**. Al tener más de 5 circuitos, exige al menos 2 diferenciales de 30 mA.
+
+3. **Electrificación Elevada con Aerotermia ($11.500\\text{ W}$ - Monofásica 230 V - IGA 50 A):**
+   - Para viviendas modernas con bomba de calor aerotérmica para ACS y suelo radiante/refrescante.
+   - Exige circuito dedicado para la bomba de calor protegido con **diferencial Tipo A Superinmunizado** para evitar disparos por los variadores de frecuencia.
+
+4. **Máxima Electrificación Monofásica ($14.490\\text{ W}$ - Monofásica 230 V - IGA 63 A):**
+   - Es el **tope legal monofásico** admitido por las distribuidoras en España ($63\\text{ A} \\times 230\\text{ V}$).
+   - Para unifamiliares con gran demanda (inducción potente, climatización zonificada, domótica) que no quieren contratar suministro trifásico.
+   - Derivación individual reforzada a **$25\\text{ mm}^2\\text{ Cu}$ en tubo M50**.
+
+5. **Chalet Unifamiliar Trifásica ($17.320\\text{ W}$ - Trifásica 400 V - IGA 25 A Tri):**
+   - Para chalets en huerta o parcelas con piscina, bomba de pozo, riego por goteo y aire acondicionado trifásico.
+   - Equilibra el consumo entre las 3 fases y reduce la sección necesaria de los cables en parcelas grandes."""
+    },
+    {
+        "keywords": ["irve garaje comunitario", "esquema 2", "wallbox comunidad", "cargador garaje", "itc-bt-52"],
+        "pregunta": "¿Cómo se legaliza un punto de recarga IRVE en garaje comunitario de Murcia según ITC-BT-52?",
+        "respuesta": """### 🚗 Instalación de Puntos de Recarga en Garajes Comunitarios - ITC-BT-52
+
+Para instalar un punto de recarga en una plaza de aparcamiento comunitaria en un edificio de viviendas en Murcia:
+
+1. **Esquema de Instalación Habitual (Esquema 2 de ITC-BT-52):**
+   - Es el más utilizado: Se instala un nuevo contador principal en la **centralización común de contadores** del edificio.
+   - Desde ese contador sale una derivación individual exclusiva que discurre por zonas comunes del aparcamiento hasta el punto de recarga (Wallbox).
+   - Alternativamente, si el garaje está en el mismo edificio que la vivienda y la derivación lo permite, se puede alimentar desde el propio cuadro de la vivienda (Esquema 1 o derivación interior con circuito C13).
+
+2. **Requisitos Técnicos Indispensables a pie de obra:**
+   - **Cables Libres de Halógenos (AS):** Obligatoriamente cables de no propagación de llama y reducida emisión de humos clase $C_{ca}\\text{-s1b,d1,a1}$ (ej. RZ1-K 0.6/1kV) al cruzar zonas comunes de aparcamiento.
+   - **Tubo Protector:** Resistencia al impacto **IK08** (mínimo M32).
+   - **Protección Diferencial (IEC 62955):** Diferencial 2P 40A / 30mA **Clase A** que disponga de detección de fuga en corriente continua de $6\\text{ mA}$ DC (para proteger la red frente a los convertidores del coche), o bien diferencial Clase B.
+   - **Protección contra Sobretensiones:** Protector combinado de sobretensiones transitorias y permanentes con bobina de disparo asociada al IGA.
+
+3. **Modulación de Potencia (Sensor SPL):**
+   - Se recomienda encarecidamente instalar una pinza amperimétrica (CT) que module dinámicamente la corriente de carga del vehículo, evitando que supere la potencia contratada.
+
+4. **Trámite Legal y Comunidad de Vecinos:**
+   - **No requiere autorización de la comunidad:** Según el artículo 17.5 de la Ley de Propiedad Horizontal (LPH), solo es necesario remitir una **comunicación previa por escrito al presidente o administrador** de la comunidad.
+   - Se legaliza mediante Memoria Técnica de Diseño (MTD) por el instalador habilitado ante la DGEAIM de Murcia (hasta 50 kW en interior sin proyecto)."""
+    },
+    {
+        "keywords": ["bar restaurante potencia", "dimensionar bar", "potencia hosteleria", "legalizar bar murcia", "cuadro bar"],
+        "pregunta": "¿Cómo dimensionar la potencia y qué exige la normativa para legalizar un bar o restaurante en Murcia?",
+        "respuesta": """### 🍽️ Dimensionamiento y Legalización de Bares y Restaurantes en Murcia
+
+La hostelería es una de las instalaciones más habituales del instalador eléctrico en la Región de Murcia y exige máxima rigurosidad reglamentaria:
+
+1. **Potencia Estándar y Suministro:**
+   - El estándar habitual para un bar/cafetería mediano en Murcia es **$27.710\\text{ W}$ a $400\\text{ V}$ Trifásico (IGA 40 A)**.
+   - Se calcula sumando la potencia base del local ($100\\text{ W/m}^2$, mínimo legal $3.450\\text{ W}$), la climatización del salón (8 a 12 kW), la cocina industrial (planchas, freidoras, lavavajillas de cúpula) y los botelleros y cámaras frigoríficas.
+
+2. **Requisitos Críticos del REBT (ITC-BT-28 Pública Concurrencia):**
+   - **Cables AS en todo el local:** Obligatoriamente libres de halógenos $C_{ca}\\text{-s1b,d1,a1}$ (H07Z1-K o RZ1-K).
+   - **Doble circuito de iluminación en salón:** Los focos y tiras LED del salón comedor deben repartirse al 50% entre dos PIAs independientes (Línea A y Línea B).
+   - **Alumbrado de emergencia:** Bloques autónomos en puertas, vías de evacuación y **mínimo 5 lux frente al cuadro eléctrico CGMP**.
+   - **Enclavamiento de campana con electroválvula de gas:** La electroválvula de corte de gas debe estar enclavada eléctricamente con el extractor de humos. Si la campana no funciona o se pulsa la seta de corte de cocina, el gas debe quedar cortado al instante.
+   - **Línea prioritaria de refrigeración:** Conectar las cámaras frigoríficas y botelleros a un diferencial independiente superinmunizado clase A para evitar pérdidas de género por disparos intempestivos.
+
+3. **Trámite Legal y Puesta en Servicio en Murcia:**
+   - **MTD vs Proyecto:** Hasta **$100\\text{ kW}$** se tramita mediante **Memoria Técnica de Diseño (MTD)** emitida por el Instalador Autorizado.
+   - **Inspección Inicial por OCA OBLIGATORIA:** Es un requisito legal indispensable previo a que Iberdrola / i-DE enganche el contador definitivo. El instalador debe coordinar la inspección con el organismo de control."""
     }
 ]
 
 import re
+import unicodedata
+
+def _normalizar_texto(texto: str) -> str:
+    """Elimina tildes y caracteres diacríticos para búsqueda semántica insensible a acentos."""
+    return unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8').lower()
 
 def buscar_respuesta_offline(consulta: str) -> str:
     """Busca la mejor coincidencia técnica en la base de conocimiento offline REBT."""
-    c_lower = consulta.lower()
+    c_norm = _normalizar_texto(consulta)
     mejor_match = None
     max_puntos = 0
     
     for item in BASE_CONOCIMIENTO_OFFLINE:
         puntos = 0
         for kw in item["keywords"]:
+            kw_norm = _normalizar_texto(kw)
             # Buscar coincidencia de palabra completa o frase exacta
-            if " " in kw:
-                if kw in c_lower:
+            if " " in kw_norm:
+                if kw_norm in c_norm:
                     puntos += 3  # Frase completa tiene mayor peso
             else:
-                if re.search(r'\b' + re.escape(kw) + r'\b', c_lower):
+                if re.search(r'\b' + re.escape(kw_norm) + r'\b', c_norm):
                     puntos += 2  # Palabra aislada exacta
         
         if puntos > max_puntos:
