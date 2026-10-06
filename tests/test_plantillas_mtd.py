@@ -243,4 +243,28 @@ def test_normalizar_opciones_y_cargas_pendientes():
     assert tram_norm in mtd.OPCIONES_TRAMITE
     assert "Nueva" in tram_norm
 
+def test_auto_sincronizacion_plantilla_suministro():
+    # 1. Cargar Vivienda Elevada Clima
+    tipo_clima = "🏡 Vivienda Elevada - Climatización / Aire Acondicionado (9.200 W - 230V - IGA 40A)"
+    mtd.cargar_plantilla_por_tipo(tipo_clima)
+    assert st.session_state["mtd_in_pot_inst"] == 9200.0
+    assert st.session_state["mtd_in_pot_max"] == 9200.0
+    assert st.session_state["mtd_in_iga"] == 40
+    assert "2x16" in st.session_state["mtd_in_di_cable"]
+    assert "M40" in st.session_state["mtd_in_di_tubo"]
+    assert len(st.session_state["mtd_circuitos"]) == 10
+    assert "9.200 W" in st.session_state["mtd_in_desc_instalacion"]
+
+    # 2. Cargar Aerotermia 11.5 kW
+    tipo_aero = "🏡 Vivienda Elevada - Aerotermia + Climatización (11.500 W - 230V - IGA 50A)"
+    mtd.cargar_plantilla_por_tipo(tipo_aero)
+    assert st.session_state["mtd_in_pot_inst"] == 11500.0
+    assert st.session_state["mtd_in_iga"] == 50
+
+    # 3. Limpiar en blanco
+    mtd.cargar_plantilla_por_tipo("⚪ -- Seleccionar Tipo de Instalación (En Blanco) --")
+    assert st.session_state["mtd_in_pot_inst"] == 0.0
+    assert len(st.session_state["mtd_circuitos"]) == 0
+
+
 
