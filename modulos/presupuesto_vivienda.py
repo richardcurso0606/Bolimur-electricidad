@@ -325,61 +325,115 @@ def app():
                 border-color: #0369a1 !important;
             }}
 
-            /* Estilo de Pestañas (Tabs) Sin Desbordamiento ni Recortes */
+            /* =========================================================================
+               MENÚ DE SECCIONES (BOTONES EN 2 FILAS / RETÍCULA TÁCTIL)
+               ========================================================================= */
             div[data-baseweb="tab-list"] {{
+                display: flex !important;
                 flex-wrap: wrap !important;
-                gap: 6px !important;
-                border-bottom: 2.5px solid #0284c7 !important;
-                padding-bottom: 4px !important;
+                gap: 10px 12px !important;
+                background-color: {'#0b1329' if es_oscuro_pres else '#f1f5f9'} !important;
+                padding: 12px !important;
+                border-radius: 14px !important;
+                border: 2px solid {'#1e293b' if es_oscuro_pres else '#cbd5e1'} !important;
+                margin-bottom: 18px !important;
+                overflow: visible !important;
+                box-shadow: inset 0 2px 6px {'rgba(0,0,0,0.4)' if es_oscuro_pres else 'rgba(0,0,0,0.05)'} !important;
             }}
             div[data-baseweb="tab-border"] {{
                 display: none !important;
             }}
+            div[data-baseweb="tab-highlight"] {{
+                display: none !important;
+            }}
             button[data-baseweb="tab"] {{
-                font-size: 13.5px !important;
-                font-weight: 600 !important;
-                padding: 9px 16px !important;
-                border-radius: 8px 8px 0 0 !important;
-                border: 1.5px solid {'#334155' if es_oscuro_pres else '#cbd5e1'} !important;
-                border-bottom: none !important;
-                background-color: {'#0f172a' if es_oscuro_pres else '#f8fafc'} !important;
-                color: {'#94a3b8' if es_oscuro_pres else '#334155'} !important;
-                transition: all 0.2s ease !important;
-                white-space: nowrap !important;
+                flex: 1 1 calc(33.333% - 12px) !important;
+                min-width: 175px !important;
+                height: auto !important;
+                min-height: 50px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                padding: 12px 18px !important;
+                border-radius: 10px !important;
+                border: 2px solid {'#334155' if es_oscuro_pres else '#cbd5e1'} !important;
+                background-color: {'#1e293b' if es_oscuro_pres else '#ffffff'} !important;
+                color: {'#f1f5f9' if es_oscuro_pres else '#1e293b'} !important;
+                font-size: 15.5px !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.3px !important;
+                box-shadow: 0 2px 6px {'rgba(0,0,0,0.35)' if es_oscuro_pres else 'rgba(15,23,42,0.08)'} !important;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                white-space: normal !important;
+                word-break: normal !important;
+                cursor: pointer !important;
             }}
             button[data-baseweb="tab"] p,
             button[data-baseweb="tab"] span,
             button[data-baseweb="tab"] div {{
-                color: {'#94a3b8' if es_oscuro_pres else '#334155'} !important;
-                font-weight: 600 !important;
+                color: {'#f1f5f9' if es_oscuro_pres else '#1e293b'} !important;
+                font-size: 15.5px !important;
+                font-weight: 700 !important;
+                text-align: center !important;
+                line-height: 1.3 !important;
             }}
             button[data-baseweb="tab"]:hover {{
-                background-color: {'#1e293b' if es_oscuro_pres else '#e0f2fe'} !important;
-                color: #0284c7 !important;
+                background-color: {'#0f172a' if es_oscuro_pres else '#e0f2fe'} !important;
                 border-color: #0284c7 !important;
+                color: #0284c7 !important;
+                transform: translateY(-2px) !important;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25) !important;
+            }}
+            button[data-baseweb="tab"]:hover p,
+            button[data-baseweb="tab"]:hover span,
+            button[data-baseweb="tab"]:hover div {{
+                color: #0284c7 !important;
             }}
             button[data-baseweb="tab"][aria-selected="true"] {{
                 color: #ffffff !important;
                 background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
                 border: 2px solid #0284c7 !important;
-                border-bottom: none !important;
-                font-weight: 700 !important;
-                box-shadow: 0 -2px 8px rgba(2, 132, 199, 0.2) !important;
+                font-size: 15.5px !important;
+                font-weight: 800 !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45) !important;
             }}
             button[data-baseweb="tab"][aria-selected="true"] p,
             button[data-baseweb="tab"][aria-selected="true"] span,
             button[data-baseweb="tab"][aria-selected="true"] div {{
                 color: #ffffff !important;
-                font-weight: 700 !important;
+                font-size: 15.5px !important;
+                font-weight: 800 !important;
+            }}
+            /* Pestañas anidadas dentro de secciones */
+            div[data-testid="stTabPanel"] div[data-baseweb="tab-list"],
+            div[role="tabpanel"] div[data-baseweb="tab-list"] {{
+                gap: 8px !important;
+                padding: 8px !important;
+                margin-bottom: 14px !important;
+                border: 1.5px solid #38bdf8 !important;
+            }}
+            div[data-testid="stTabPanel"] button[data-baseweb="tab"],
+            div[role="tabpanel"] button[data-baseweb="tab"] {{
+                flex: 1 1 calc(25% - 8px) !important;
+                min-width: 145px !important;
+                min-height: 44px !important;
+                font-size: 14.5px !important;
+                padding: 8px 14px !important;
+            }}
+            div[data-testid="stTabPanel"] button[data-baseweb="tab"] p,
+            div[data-testid="stTabPanel"] button[data-baseweb="tab"] span,
+            div[data-testid="stTabPanel"] button[data-baseweb="tab"] div,
+            div[role="tabpanel"] button[data-baseweb="tab"] p,
+            div[role="tabpanel"] button[data-baseweb="tab"] span,
+            div[role="tabpanel"] button[data-baseweb="tab"] div {{
+                font-size: 14.5px !important;
             }}
             div[data-baseweb="tab-list"] ~ button,
             button[aria-label="Previous tab"],
             button[aria-label="Next tab"] {{
-                background-color: {container_bg} !important;
-                color: #0284c7 !important;
-                border: 1.5px solid #0284c7 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
+                display: none !important;
             }}
         </style>
     """, unsafe_allow_html=True)

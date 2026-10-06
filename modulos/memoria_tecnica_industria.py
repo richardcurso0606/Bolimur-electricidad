@@ -1033,47 +1033,97 @@ def renderizar():
         text-overflow: unset !important;
     }}
 
-    /* Barra de Pestañas (st.tabs) Mejorada y de Alto Contraste */
+    /* =========================================================================
+       MENÚ DE PESTAÑAS MTD (BOTONES EN RETÍCULA / 2 FILAS TÁCTIL)
+       ========================================================================= */
     div[data-baseweb="tab-list"] {{
-        gap: 6px !important;
-        background-color: {tab_list_bg} !important;
-        padding: 8px 10px 4px 10px !important;
-        border-radius: 10px 10px 0 0 !important;
-        border-bottom: 3px solid #0284c7 !important;
         display: flex !important;
         flex-wrap: wrap !important;
+        gap: 10px 12px !important;
+        background-color: {tab_list_bg} !important;
+        padding: 12px !important;
+        border-radius: 14px !important;
+        border: 2px solid {'#1e293b' if es_oscuro else '#cbd5e1'} !important;
+        margin-bottom: 18px !important;
+        overflow: visible !important;
+        box-shadow: inset 0 2px 6px {'rgba(0,0,0,0.4)' if es_oscuro else 'rgba(0,0,0,0.05)'} !important;
+    }}
+    div[data-baseweb="tab-border"] {{
+        display: none !important;
+    }}
+    div[data-baseweb="tab-highlight"] {{
+        display: none !important;
     }}
 
     button[data-baseweb="tab"] {{
+        flex: 1 1 calc(25% - 12px) !important;
+        min-width: 160px !important;
+        height: auto !important;
+        min-height: 50px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 12px 16px !important;
+        border-radius: 10px !important;
+        border: 2px solid {tab_btn_border} !important;
         background-color: {tab_btn_bg} !important;
-        border: 1px solid {tab_btn_border} !important;
-        border-radius: 8px 8px 0 0 !important;
-        padding: 9px 15px !important;
-        font-size: 13.5px !important;
-        font-weight: 600 !important;
         color: {tab_btn_color} !important;
-        transition: all 0.15s ease-in-out !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.3px !important;
+        box-shadow: 0 2px 6px {'rgba(0,0,0,0.35)' if es_oscuro else 'rgba(15,23,42,0.08)'} !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        white-space: normal !important;
+        word-break: normal !important;
+        cursor: pointer !important;
+    }}
+    button[data-baseweb="tab"] p,
+    button[data-baseweb="tab"] span,
+    button[data-baseweb="tab"] div {{
+        color: {tab_btn_color} !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        line-height: 1.3 !important;
     }}
 
     button[data-baseweb="tab"]:hover {{
         background-color: {tab_btn_hover_bg} !important;
         color: {tab_btn_hover_color} !important;
         border-color: #38bdf8 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25) !important;
+    }}
+    button[data-baseweb="tab"]:hover p,
+    button[data-baseweb="tab"]:hover span,
+    button[data-baseweb="tab"]:hover div {{
+        color: {tab_btn_hover_color} !important;
     }}
 
     button[data-baseweb="tab"][aria-selected="true"] {{
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
         color: #ffffff !important;
-        border-color: #0284c7 !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3) !important;
+        border: 2px solid #0284c7 !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45) !important;
     }}
 
     button[data-baseweb="tab"][aria-selected="true"] p,
     button[data-baseweb="tab"][aria-selected="true"] span,
     button[data-baseweb="tab"][aria-selected="true"] div {{
         color: #ffffff !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+    }}
+
+    /* Neutralizar flechas de scroll de BaseWeb */
+    div[data-baseweb="tab-list"] ~ button,
+    button[aria-label="Previous tab"],
+    button[aria-label="Next tab"] {{
+        display: none !important;
     }}
     </style>
     """, unsafe_allow_html=True)
