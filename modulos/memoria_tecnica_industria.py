@@ -1429,14 +1429,33 @@ def renderizar():
         ])
 
         from modulos import visor_pdf
+        from modulos import generador_doc_oficial
 
         with tab_doc1:
+            st.info("💡 **Doble Formato Oficial Disponible:** Puedes descargar la Memoria Técnica tanto en **PDF oficial** (para firmar con AutoFirma/DNIe y registrar en la Sede Electrónica de la CARM) como en **Word (.docx editable)** (sobre la plantilla oficial de la DGEAIM Murcia para edición personal o archivo).")
+            
+            col_d_act1, col_d_act2 = st.columns([1.5, 1])
+            with col_d_act2:
+                try:
+                    docx_bytes_mtd = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos_para_pdf)
+                    st.download_button(
+                        label="📝 Descargar MTD Oficial en Word (.docx Editable)",
+                        data=docx_bytes_mtd,
+                        file_name=f"MTD_Oficial_DGEAIM_Murcia_{exp_in}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        type="secondary",
+                        use_container_width=True,
+                        help="Descarga el documento de Microsoft Word original de Industria de Murcia con todos tus datos introducidos en sus tablas y casillas."
+                    )
+                except Exception as err_docx:
+                    st.warning(f"⚠️ Nota Word: {err_docx}")
+
             try:
                 pdf_bytes_mtd = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_para_pdf)
                 visor_pdf.mostrar_visor_pdf(
                     pdf_bytes=pdf_bytes_mtd,
                     nombre_archivo=f"MTD_Oficial_DGEAIM_Murcia_{exp_in}.pdf",
-                    label_boton="📥 Descargar Memoria Técnica Oficial MTD (PDF Murcia)"
+                    label_boton="📥 Descargar Memoria Técnica Oficial MTD (PDF Murcia - Listo para Firmar)"
                 )
             except Exception as err:
                 st.error(f"⚠️ Error al generar el PDF de la MTD: {err}")
