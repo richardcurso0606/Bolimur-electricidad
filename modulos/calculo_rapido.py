@@ -349,7 +349,11 @@ def renderizar():
                     f"* **Veredicto:** {estado_icc}"
                 )
 
-            st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</div>""", unsafe_allow_html=True)
+            es_osc_cr = st.session_state.get('tema_modo', 'solar') == 'oscuro'
+            box_pia_bg = "#1e293b" if es_osc_cr else "#f0f9ff"
+            box_pia_text = "#38bdf8" if es_osc_cr else "#0284c7"
+            box_pia_border = "#38bdf8" if es_osc_cr else "#0284c7"
+            st.markdown(f"""<div style="background: {box_pia_bg}; color: {box_pia_text}; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid {box_pia_border}; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">🛡️ PROTECCIÓN MAGNETOTÉRMICA: PIA {prot_q} A (Curva C)</div>""", unsafe_allow_html=True)
 
             tubo_diam_q, razon_tubo_q = rebt.dimensionar_tubo_di(s_opt_q)
 

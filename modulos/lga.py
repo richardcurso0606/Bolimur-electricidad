@@ -47,13 +47,21 @@ def renderizar():
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         st.button("🔄 Restablecer", on_click=reset_valores_lga, use_container_width=True)
 
+    es_oscuro_lga = st.session_state.get('tema_modo', 'solar') == 'oscuro'
+    tbl_bg = "#1e293b" if es_oscuro_lga else "#ffffff"
+    tbl_color = "#f1f5f9" if es_oscuro_lga else "#334155"
+    tbl_border = "#334155" if es_oscuro_lga else "#e2e8f0"
+    tbl_alt_bg = "#0f172a" if es_oscuro_lga else "#f8fafc"
+    tbl_th_bg = "#0b1120" if es_oscuro_lga else "#1e293b"
+    tbl_th_color = "#38bdf8" if es_oscuro_lga else "#ffffff"
+
     with st.expander("📖 Ayuda Técnica: Tabla de Conductividad (γ) y Resistividad (ρ) del REBT"):
         st.markdown("Valores oficiales de conductividad ($\gamma$) y resistividad ($\rho$) según la norma UNE-HD 60364-5-2:")
-        st.markdown("""
+        st.markdown(f"""
         <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 10px;">
-        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <table style="width: 100%; border-collapse: collapse; background-color: {tbl_bg}; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
             <thead>
-                <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 13px;">
+                <tr style="background-color: {tbl_th_bg}; color: {tbl_th_color}; text-align: left; font-size: 13px;">
                     <th style="padding: 10px 14px;">MATERIAL CONDUCTOR</th>
                     <th style="padding: 10px 14px;">AISLAMIENTO</th>
                     <th style="padding: 10px 14px;">TEMP. SERVICIO</th>
@@ -61,38 +69,39 @@ def renderizar():
                     <th style="padding: 10px 14px;">RESISTIVIDAD (ρ) [Ω·mm²/m]</th>
                 </tr>
             </thead>
-            <tbody style="font-size: 13px; color: #334155;">
-                <tr style="border-bottom: 1px solid #e2e8f0;">
+            <tbody style="font-size: 13px; color: {tbl_color};">
+                <tr style="border-bottom: 1px solid {tbl_border};">
                     <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
                     <td style="padding: 10px 14px;">PVC</td>
                     <td style="padding: 10px 14px;">70 ºC</td>
-                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">56.0</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #38bdf8;">56.0</td>
                     <td style="padding: 10px 14px;">~0.0179</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                <tr style="border-bottom: 1px solid {tbl_border}; background-color: {tbl_alt_bg};">
                     <td style="padding: 10px 14px; font-weight: bold;">Cobre</td>
                     <td style="padding: 10px 14px;">XLPE / EPR</td>
                     <td style="padding: 10px 14px;">90 ºC</td>
-                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">44.0</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #38bdf8;">44.0</td>
                     <td style="padding: 10px 14px;">~0.0227</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e2e8f0;">
+                <tr style="border-bottom: 1px solid {tbl_border};">
                     <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
                     <td style="padding: 10px 14px;">PVC</td>
                     <td style="padding: 10px 14px;">70 ºC</td>
-                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">35.0</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #38bdf8;">35.0</td>
                     <td style="padding: 10px 14px;">~0.0286</td>
                 </tr>
-                <tr style="background-color: #f8fafc;">
+                <tr style="background-color: {tbl_alt_bg};">
                     <td style="padding: 10px 14px; font-weight: bold;">Aluminio</td>
                     <td style="padding: 10px 14px;">XLPE / EPR</td>
                     <td style="padding: 10px 14px;">90 ºC</td>
-                    <td style="padding: 10px 14px; font-weight: bold; color: #0284c7;">28.0</td>
+                    <td style="padding: 10px 14px; font-weight: bold; color: #38bdf8;">28.0</td>
                     <td style="padding: 10px 14px;">~0.0357</td>
                 </tr>
             </tbody>
         </table>
         </div>
+        """, unsafe_allow_html=True)
         """, unsafe_allow_html=True)
     
     try:
@@ -278,7 +287,14 @@ def renderizar():
                 dv_c_pct = rebt.calcular_caida_tension_pct(dv_c_v, 400.0)
                 cond_s_lga = 0.91 * iz_val_t
             
-                bg_row = "background-color: #f0fdf4;" if s_com == s_final_lga else ""
+                if es_oscuro_lga:
+                    bg_row = "background-color: rgba(16, 185, 129, 0.22); color: #86efac;" if s_com == s_final_lga else ""
+                    border_row = "#334155"
+                    text_row = "#f1f5f9"
+                else:
+                    bg_row = "background-color: #f0fdf4;" if s_com == s_final_lga else ""
+                    border_row = "#e2e8f0"
+                    text_row = "#334155"
             
                 if iz_val_t < ib_lga:
                     est = "❌ Falla Calentamiento"
@@ -293,22 +309,27 @@ def renderizar():
                     est = "Válido pero sobredimensionado"
                     est_clean = "Válido sobredimensionado"
                 
-                fila_str = f'<tr style="border-bottom: 1px solid #e2e8f0; {bg_row}"><td style="padding: 12px 16px; font-weight: bold;">{s_com} mm²</td><td style="padding: 12px 16px;">{iz_val_t} A</td><td style="padding: 12px 16px;">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px;">{est}</td></tr>'
+                fila_str = f'<tr style="border-bottom: 1px solid {border_row}; {bg_row}"><td style="padding: 12px 16px; font-weight: bold; color: {text_row};">{s_com} mm²</td><td style="padding: 12px 16px; color: {text_row};">{iz_val_t} A</td><td style="padding: 12px 16px; color: {text_row};">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px; color: {text_row};">{est}</td></tr>'
                 filas_lista.append(fila_str)
                 tabla_secciones_list.append({"sec": s_com, "iz": iz_val_t, "cdt": dv_c_pct, "estado": est_clean})
 
+            tbl_sec_bg = "#1e293b" if es_oscuro_lga else "#ffffff"
+            tbl_sec_th_bg = "#0b1120" if es_oscuro_lga else "#1e293b"
+            tbl_sec_th_color = "#38bdf8" if es_oscuro_lga else "#ffffff"
+            tbl_sec_tbody_color = "#f1f5f9" if es_oscuro_lga else "#334155"
+
             html_tabla_secciones = f"""
             <div style="overflow-x: auto; margin-bottom: 20px;">
-            <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <table style="width: 100%; border-collapse: collapse; background-color: {tbl_sec_bg}; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
                 <thead>
-                    <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 14px;">
+                    <tr style="background-color: {tbl_sec_th_bg}; color: {tbl_sec_th_color}; text-align: left; font-size: 14px;">
                         <th style="padding: 12px 16px;">SECCIÓN</th>
                         <th style="padding: 12px 16px;">IZ ADMISIBLE (A)</th>
                         <th style="padding: 12px 16px;">CDT REAL (%)</th>
                         <th style="padding: 12px 16px;">ESTADO DE VERIFICACIÓN (I<sub>n</sub> ≤ 0.91 · I<sub>z</sub>)</th>
                     </tr>
                 </thead>
-                <tbody style="font-size: 14px; color: #334155;">
+                <tbody style="font-size: 14px; color: {tbl_sec_tbody_color};">
                     {"".join(filas_lista)}
                 </tbody>
             </table>

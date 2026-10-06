@@ -234,10 +234,16 @@ def renderizar():
         """)
 
         # Árbol de decisión rápido
-        st.markdown("""
-        <div style="background: #f1f5f9; border: 2px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
-            <h4 style="margin: 0 0 8px 0; color: #0369a1;">⚡ GUÍA RÁPIDA DE DECISIÓN (En 5 Segundos):</h4>
-            <ul style="margin: 0; padding-left: 20px; font-size: 13.5px; color: #1e293b; line-height: 1.6;">
+        es_osc_irve = st.session_state.get('tema_modo', 'solar') == 'oscuro'
+        g_bg = "#1e293b" if es_osc_irve else "#f1f5f9"
+        g_bd = "#38bdf8" if es_osc_irve else "#0284c7"
+        g_tit = "#38bdf8" if es_osc_irve else "#0369a1"
+        g_txt = "#f1f5f9" if es_osc_irve else "#1e293b"
+
+        st.markdown(f"""
+        <div style="background: {g_bg}; border: 2px solid {g_bd}; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; color: {g_tit};">⚡ GUÍA RÁPIDA DE DECISIÓN (En 5 Segundos):</h4>
+            <ul style="margin: 0; padding-left: 20px; font-size: 13.5px; color: {g_txt}; line-height: 1.6;">
                 <li>🏡 <b>¿Es un chalet, adosado o casa unifamiliar?</b> &rarr; Elige <b>ESQUEMA 4a</b> (directo desde el cuadro general de la casa).</li>
                 <li>⭐ <b>¿Es un garaje comunitario y el cliente vive en el mismo bloque?</b> &rarr; Elige <b>ESQUEMA 2</b> (salida de su contador en centralización). <i>¡Es el más rentable y el 90% de los casos!</i></li>
                 <li>🏢 <b>¿Es un garaje comunitario pero el cliente vive en otro edificio?</b> &rarr; Elige <b>ESQUEMA 3a</b> (solicitar contador nuevo independiente).</li>
@@ -433,23 +439,29 @@ def renderizar():
         
             info_esq = ESQUEMAS_IRVE_INFO.get(esq_key_sel, ESQUEMAS_IRVE_INFO["Esquema 2"])
         
+            f_bg = "#1e293b" if es_osc_irve else "#f0f9ff"
+            f_bd = "#38bdf8" if es_osc_irve else "#0284c7"
+            f_tit = "#38bdf8" if es_osc_irve else "#0369a1"
+            f_txt = "#f1f5f9" if es_osc_irve else "#1e293b"
+            f_perm = "#4ade80" if es_osc_irve else "#047857"
+
             # Ficha Explicativa Completa y Siempre Visible del Esquema Seleccionado
             st.markdown(f"""
-            <div style="background: #f0f9ff; border: 2px solid #0284c7; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
+            <div style="background: {f_bg}; border: 2px solid {f_bd}; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap;">
-                    <b style="color: #0369a1; font-size: 15px;">📋 FICHA TÉCNICA DEL ORIGEN: {info_esq['nombre'].upper()}</b>
+                    <b style="color: {f_tit}; font-size: 15px;">📋 FICHA TÉCNICA DEL ORIGEN: {info_esq['nombre'].upper()}</b>
                     <span style="background: #0284c7; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11.5px; font-weight: bold;">
                         Límite Caída Tensión: {info_esq['limite_cdt']}%
                     </span>
                 </div>
-                <div style="font-size: 13px; color: #1e293b; line-height: 1.5;">
-                    <p style="margin: 4px 0;"><b>📍 ¿Dónde conectar los cables en la obra?</b><br/>
+                <div style="font-size: 13px; color: {f_txt}; line-height: 1.5;">
+                    <p style="margin: 4px 0;"><b style="color: {f_txt};">📍 ¿Dónde conectar los cables en la obra?</b><br/>
                     {info_esq['origen']}.</p>
-                    <p style="margin: 4px 0;"><b>💡 ¿Por qué debes elegir este esquema?</b><br/>
+                    <p style="margin: 4px 0;"><b style="color: {f_txt};">💡 ¿Por qué debes elegir este esquema?</b><br/>
                     {info_esq['ventajas']}</p>
-                    <p style="margin: 4px 0;"><b>🛡️ Protecciones y Requisitos:</b><br/>
+                    <p style="margin: 4px 0;"><b style="color: {f_txt};">🛡️ Protecciones y Requisitos:</b><br/>
                     {info_esq['requisitos']}</p>
-                    <p style="margin: 4px 0; color: #047857;"><b>📜 Permiso Comunidad de Propietarios:</b><br/>
+                    <p style="margin: 4px 0; color: {f_perm};"><b style="color: {f_perm};">📜 Permiso Comunidad de Propietarios:</b><br/>
                     {'Conforme al <b>Art. 17.5 de la Ley de Propiedad Horizontal</b>, solo requiere <b>comunicación previa por escrito</b> con 30 días de antelación. <b>¡No requiere votación ni aprobación en junta!</b>' if esq_key_sel == 'Esquema 2' else 'Instalación dentro de la propiedad privada sin trámites comunitarios.' if esq_key_sel == 'Esquema 4a' else 'Requiere solicitud de nuevo punto de suministro (CUPS) a la distribuidora eléctrica.'}</p>
                 </div>
             </div>
@@ -579,25 +591,32 @@ def renderizar():
                 * Caída máxima permitida: **{dv_max_adm_v:.2f} V ({dv_pct_limite:.1f}%)**.
                 """)
 
+            prot_bg = "#1e293b" if es_osc_irve else "#f8fafc"
+            prot_bd = "#38bdf8" if es_osc_irve else "#0284c7"
+            prot_tit = "#38bdf8" if es_osc_irve else "#0284c7"
+            card_item_bg = "#0f172a" if es_osc_irve else "#ffffff"
+            card_item_bd = "#334155" if es_osc_irve else "#cbd5e1"
+            card_sub_c = "#94a3b8" if es_osc_irve else "#64748b"
+
             # Banner de Protecciones Exigidas
             st.markdown(f"""
-            <div style="background: #f8fafc; border: 2px solid #0284c7; padding: 18px; border-radius: 8px; color: #0f172a; margin: 15px 0;">
-                <h4 style="margin-top: 0; color: #0284c7; font-size: 16px;">🛡️ Esquema de Protecciones Obligatorias (ITC-BT-52):</h4>
+            <div style="background: {prot_bg}; border: 2px solid {prot_bd}; padding: 18px; border-radius: 8px; margin: 15px 0;">
+                <h4 style="margin-top: 0; color: {prot_tit}; font-size: 16px;">🛡️ Esquema de Protecciones Obligatorias (ITC-BT-52):</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 10px;">
-                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                        <b style="color: #0369a1;">1. Magnetotérmico (PIA):</b><br/>
-                        Calibre <b>{in_pi_auto} A (Curva C)</b><br/>
-                        <small style="color: #64748b;">Poder de corte ≥ 6 kA. Protección contra sobrecargas y cortocircuitos.</small>
+                    <div style="background: {card_item_bg}; padding: 10px; border-radius: 6px; border: 1.5px solid {card_item_bd};">
+                        <b style="color: {'#38bdf8' if es_osc_irve else '#0369a1'};">1. Magnetotérmico (PIA):</b><br/>
+                        Calibre <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">{in_pi_auto} A (Curva C)</b><br/>
+                        <small style="color: {card_sub_c};">Poder de corte ≥ 6 kA. Protección contra sobrecargas y cortocircuitos.</small>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                        <b style="color: #15803d;">2. Diferencial Obligatorio:</b><br/>
-                        <b>Clase A (con 6mA DC)</b> o <b>Clase B</b><br/>
-                        <small style="color: #64748b;">Sensibilidad 30 mA. Detección de fugas en alterna y corriente continua pura.</small>
+                    <div style="background: {card_item_bg}; padding: 10px; border-radius: 6px; border: 1.5px solid {card_item_bd};">
+                        <b style="color: {'#4ade80' if es_osc_irve else '#15803d'};">2. Diferencial Obligatorio:</b><br/>
+                        <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">Clase A (con 6mA DC)</b> o <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">Clase B</b><br/>
+                        <small style="color: {card_sub_c};">Sensibilidad 30 mA. Detección de fugas en alterna y corriente continua pura.</small>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                        <b style="color: #d97706;">3. Sobretensiones (VTP+VSP):</b><br/>
-                        <b>Permanentes + Transitorias Tipo 2</b><br/>
-                        <small style="color: #64748b;">Con bobina de emisión/disparo o rearme automático.</small>
+                    <div style="background: {card_item_bg}; padding: 10px; border-radius: 6px; border: 1.5px solid {card_item_bd};">
+                        <b style="color: {'#fbbf24' if es_osc_irve else '#d97706'};">3. Sobretensiones (VTP+VSP):</b><br/>
+                        <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">Permanentes + Transitorias Tipo 2</b><br/>
+                        <small style="color: {card_sub_c};">Con bobina de emisión/disparo o rearme automático.</small>
                     </div>
                 </div>
             </div>
@@ -662,21 +681,26 @@ def renderizar():
             </div>
             """, height=270, scrolling=True)
 
+            c_box_bg = "#1e293b" if es_osc_irve else "#f8fafc"
+            c_box_bd = "#38bdf8" if es_osc_irve else "#cbd5e1"
+            c_box_tit = "#38bdf8" if es_osc_irve else "#0369a1"
+            c_box_txt = "#f1f5f9" if es_osc_irve else "#334155"
+
             st.markdown(f"""
-            <div style="margin-top: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
-                <b style="color: #0369a1; font-size: 13px;">📋 Componentes Normalizados del Esquema Unifilar Oficial:</b>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 12px; color: #334155;">
+            <div style="margin-top: 10px; background: {c_box_bg}; border: 1.5px solid {c_box_bd}; border-radius: 6px; padding: 12px;">
+                <b style="color: {c_box_tit}; font-size: 13px;">📋 Componentes Normalizados del Esquema Unifilar Oficial:</b>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 12px; color: {c_box_txt};">
                     <div>
-                        • <b>Origen de Alimentación:</b> {info_esq_actual['origen']}<br/>
-                        • <b>Sensor de Medida / Balanceo:</b> Pinza toroidal CT conectada al Wallbox (SPL)<br/>
-                        • <b>Línea Derivación:</b> Cable <b>{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu (RZ1-K CPR Cca)</b><br/>
-                        • <b>Canalización Protectora:</b> Tubo <b>{tubo_dim_str}</b> libre de halógenos (IK08)
+                        • <b style="color: {c_box_txt};">Origen de Alimentación:</b> {info_esq_actual['origen']}<br/>
+                        • <b style="color: {c_box_txt};">Sensor de Medida / Balanceo:</b> Pinza toroidal CT conectada al Wallbox (SPL)<br/>
+                        • <b style="color: {c_box_txt};">Línea Derivación:</b> Cable <b style="color: {c_box_txt};">{'5G' if es_trif_irve else '3G'}{s_final_irve:.1f} mm² Cu (RZ1-K CPR Cca)</b><br/>
+                        • <b style="color: {c_box_txt};">Canalización Protectora:</b> Tubo <b style="color: {c_box_txt};">{tubo_dim_str}</b> libre de halógenos (IK08)
                     </div>
                     <div>
-                        • <b>Protector Sobretensiones:</b> VSP Transitorias Tipo 2 + VTP Permanentes con bobina<br/>
-                        • <b>Interruptor Automático:</b> Magnetotérmico PIA <b>{in_pi_auto} A (Curva C - Icn ≥ 6 kA)</b><br/>
-                        • <b>Interruptor Diferencial:</b> <b>Clase A (con detección DC 6mA según IEC 62955) o Clase B (30 mA)</b><br/>
-                        • <b>Estación de Recarga:</b> Wallbox <b>{p_cargador_val/1000:.2f} kW (Modo 3 con conector Tipo 2 Mennekes)</b>
+                        • <b style="color: {c_box_txt};">Protector Sobretensiones:</b> VSP Transitorias Tipo 2 + VTP Permanentes con bobina<br/>
+                        • <b style="color: {c_box_txt};">Interruptor Automático:</b> Magnetotérmico PIA <b style="color: {c_box_txt};">{in_pi_auto} A (Curva C - Icn ≥ 6 kA)</b><br/>
+                        • <b style="color: {c_box_txt};">Interruptor Diferencial:</b> <b style="color: {c_box_txt};">Clase A (con detección DC 6mA según IEC 62955) o Clase B (30 mA)</b><br/>
+                        • <b style="color: {c_box_txt};">Estación de Recarga:</b> Wallbox <b style="color: {c_box_txt};">{p_cargador_val/1000:.2f} kW (Modo 3 con conector Tipo 2 Mennekes)</b>
                     </div>
                 </div>
             </div>
@@ -742,19 +766,26 @@ def renderizar():
             subvencion_moves_70 = total_con_iva * 0.70
             neto_cliente_moves = total_con_iva - subvencion_moves_70
 
+            pres_box_bg = "#064e3b" if es_osc_irve else "#f0fdf4"
+            pres_box_bd = "#22c55e" if es_osc_irve else "#16a34a"
+            pres_tit_c = "#4ade80" if es_osc_irve else "#15803d"
+            pres_sub_c = "#86efac" if es_osc_irve else "#334155"
+            card_subv_bg = "#0f172a" if es_osc_irve else "#ffffff"
+            card_subv_bd = "#22c55e" if es_osc_irve else "#16a34a"
+
             st.markdown(f"""
-            <div style="background: #f0fdf4; border: 2px solid #16a34a; border-radius: 8px; padding: 16px; margin: 15px 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="background: {pres_box_bg}; border: 2px solid {pres_box_bd}; border-radius: 8px; padding: 16px; margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <h3 style="color: #15803d; margin: 0;">Presupuesto Total de Instalación: {total_con_iva:,.2f} € (IVA Incluido)</h3>
-                        <p style="color: #334155; margin: 4px 0 0 0; font-size: 13px;">
-                            Base Imponible: <b>{subtotal_obra:,.2f} €</b> | IVA ({int(pct_iva*100)}%): <b>{iva_total:,.2f} €</b>
+                        <h3 style="color: {pres_tit_c}; margin: 0;">Presupuesto Total de Instalación: {total_con_iva:,.2f} € (IVA Incluido)</h3>
+                        <p style="color: {pres_sub_c}; margin: 4px 0 0 0; font-size: 13px;">
+                            Base Imponible: <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">{subtotal_obra:,.2f} €</b> | IVA ({int(pct_iva*100)}%): <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">{iva_total:,.2f} €</b>
                         </p>
                     </div>
-                    <div style="background: white; border: 1.5px solid #16a34a; padding: 8px 14px; border-radius: 6px; text-align: right;">
-                        <span style="font-size: 11px; color: #15803d; font-weight: bold;">🌱 AYUDA ESTIMADA PLAN MOVES III (70%):</span><br/>
-                        <b style="font-size: 15px; color: #15803d;">- {subvencion_moves_70:,.2f} €</b><br/>
-                        <small style="color: #475569;">Coste neto para el cliente: <b>{neto_cliente_moves:,.2f} €</b></small>
+                    <div style="background: {card_subv_bg}; border: 1.5px solid {card_subv_bd}; padding: 8px 14px; border-radius: 6px; text-align: right;">
+                        <span style="font-size: 11px; color: {pres_tit_c}; font-weight: bold;">🌱 AYUDA ESTIMADA PLAN MOVES III (70%):</span><br/>
+                        <b style="font-size: 15px; color: {pres_tit_c};">- {subvencion_moves_70:,.2f} €</b><br/>
+                        <small style="color: {'#94a3b8' if es_osc_irve else '#475569'};">Coste neto para el cliente: <b style="color: {'#f8fafc' if es_osc_irve else '#0f172a'};">{neto_cliente_moves:,.2f} €</b></small>
                     </div>
                 </div>
             </div>

@@ -490,30 +490,39 @@ def render_tarjeta_auditoria(auditoria: dict, titulo_contexto: str = ""):
         return
 
     estado = auditoria.get("estado", "conforme").lower()
-    color_map = {
-        "conforme": {"bg": "#ecfdf5", "border": "#10b981", "badge": "🟢 CONFORME REBT", "badge_bg": "#059669"},
-        "advertencia": {"bg": "#fffbeb", "border": "#f59e0b", "badge": "🟡 OBSERVACIONES", "badge_bg": "#d97706"},
-        "no_conforme": {"bg": "#fef2f2", "border": "#ef4444", "badge": "🔴 DEFECTO CRÍTICO", "badge_bg": "#dc2626"}
-    }
+    es_oscuro_aud = st.session_state.get("tema_modo", "solar") == "oscuro"
+
+    if es_oscuro_aud:
+        color_map = {
+            "conforme": {"bg": "#064e3b", "border": "#22c55e", "badge": "🟢 CONFORME REBT", "badge_bg": "#15803d", "title": "#f1f5f9", "body": "#e2e8f0", "meta": "#86efac"},
+            "advertencia": {"bg": "#451a03", "border": "#f59e0b", "badge": "🟡 OBSERVACIONES", "badge_bg": "#b45309", "title": "#fef08a", "body": "#fde68a", "meta": "#fcd34d"},
+            "no_conforme": {"bg": "#450a0a", "border": "#ef4444", "badge": "🔴 DEFECTO CRÍTICO", "badge_bg": "#dc2626", "title": "#fee2e2", "body": "#fecaca", "meta": "#fca5a5"}
+        }
+    else:
+        color_map = {
+            "conforme": {"bg": "#ecfdf5", "border": "#10b981", "badge": "🟢 CONFORME REBT", "badge_bg": "#059669", "title": "#1e293b", "body": "#334155", "meta": "#64748b"},
+            "advertencia": {"bg": "#fffbeb", "border": "#f59e0b", "badge": "🟡 OBSERVACIONES", "badge_bg": "#d97706", "title": "#1e293b", "body": "#334155", "meta": "#64748b"},
+            "no_conforme": {"bg": "#fef2f2", "border": "#ef4444", "badge": "🔴 DEFECTO CRÍTICO", "badge_bg": "#dc2626", "title": "#1e293b", "body": "#334155", "meta": "#64748b"}
+        }
     cfg = color_map.get(estado, color_map["conforme"])
 
     origen = auditoria.get("origen_auditoria", "motor_reglas_rebt")
     origen_tag = "🤖 Visión Multimodal (Gemini)" if origen == "gemini_vision" else "⚙️ Motor de Reglas REBT"
 
     html_card = f"""
-    <div style="background-color: {cfg['bg']}; border-left: 5px solid {cfg['border']}; border-radius: 8px; padding: 12px 14px; margin-top: 8px; margin-bottom: 8px; font-family: sans-serif;">
+    <div style="background-color: {cfg['bg']}; border-left: 5px solid {cfg['border']}; border-radius: 8px; padding: 12px 14px; margin-top: 8px; margin-bottom: 8px; font-family: sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <span style="background-color: {cfg['badge_bg']}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;">
                 {cfg['badge']}
             </span>
-            <span style="font-size: 11px; color: #64748b; font-weight: 500;">
+            <span style="font-size: 11px; color: {cfg['meta']}; font-weight: 500;">
                 {origen_tag}
             </span>
         </div>
-        <div style="font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 4px;">
+        <div style="font-size: 13.5px; font-weight: bold; color: {cfg['title']}; margin-bottom: 4px;">
             {auditoria.get('calificacion', 'Auditoría Técnica REBT')}
         </div>
-        <div style="font-size: 12px; color: #334155; line-height: 1.4;">
+        <div style="font-size: 12.5px; color: {cfg['body']}; line-height: 1.45;">
             {auditoria.get('resumen', '')}
         </div>
     </div>

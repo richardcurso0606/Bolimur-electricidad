@@ -574,6 +574,15 @@ css_tema_oscuro = """
         margin: 14px 0 14px 0 !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
+    .section-header-blue h1,
+    .section-header-blue h2,
+    .section-header-blue h3,
+    .section-header-blue h4,
+    .section-header-blue p,
+    .section-header-blue span {
+        color: #38bdf8 !important;
+        font-weight: 800 !important;
+    }
     .section-header-green {
         background: linear-gradient(90deg, #064e3b 0%, #0f172a 100%) !important;
         border: 2.5px solid #16a34a !important;
@@ -582,6 +591,15 @@ css_tema_oscuro = """
         border-radius: 10px !important;
         margin: 14px 0 14px 0 !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+    }
+    .section-header-green h1,
+    .section-header-green h2,
+    .section-header-green h3,
+    .section-header-green h4,
+    .section-header-green p,
+    .section-header-green span {
+        color: #4ade80 !important;
+        font-weight: 800 !important;
     }
     .section-header-amber {
         background: linear-gradient(90deg, #451a03 0%, #0f172a 100%) !important;
@@ -592,6 +610,15 @@ css_tema_oscuro = """
         margin: 14px 0 14px 0 !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
+    .section-header-amber h1,
+    .section-header-amber h2,
+    .section-header-amber h3,
+    .section-header-amber h4,
+    .section-header-amber p,
+    .section-header-amber span {
+        color: #fbbf24 !important;
+        font-weight: 800 !important;
+    }
     .section-header-slate {
         background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%) !important;
         border: 2.5px solid #475569 !important;
@@ -601,6 +628,15 @@ css_tema_oscuro = """
         margin: 14px 0 14px 0 !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
     }
+    .section-header-slate h1,
+    .section-header-slate h2,
+    .section-header-slate h3,
+    .section-header-slate h4,
+    .section-header-slate p,
+    .section-header-slate span {
+        color: #e2e8f0 !important;
+        font-weight: 800 !important;
+    }
     div[data-testid="stMetricValue"] {
         color: #38bdf8 !important;
     }
@@ -608,6 +644,13 @@ css_tema_oscuro = """
         color: #94a3b8 !important;
     }
 """ if tema_es_oscuro else ""
+
+container_bg_global = "#0f172a" if tema_es_oscuro else "#ffffff"
+container_text_global = "#f1f5f9" if tema_es_oscuro else "#0f172a"
+container_sub_bg_global = "#1e293b" if tema_es_oscuro else "#f8fafc"
+radio_border_global = "#38bdf8" if tema_es_oscuro else "#0284c7"
+radio_bg_global = "#0f172a" if tema_es_oscuro else "#ffffff"
+radio_dot_global = "#38bdf8" if tema_es_oscuro else "#0284c7"
 
 st.markdown(f"""
     <style>
@@ -714,13 +757,24 @@ st.markdown(f"""
            PESTAÑA FLOTANTE PERMANENTE PARA DESPLEGAR MENÚ LATERAL (TABLETS & MÓVILES)
            Garantiza que el botón ☰ MENÚ permanezca SIEMPRE visible al hacer scroll vertical hacia abajo.
            ========================================================================= */
+        /* =========================================================================
+           PESTAÑA FLOTANTE PERMANENTE PARA DESPLEGAR MENÚ LATERAL (TABLETS & MÓVILES)
+           Garantiza que el botón ☰ MENÚ permanezca SIEMPRE visible al hacer scroll vertical hacia abajo.
+           ========================================================================= */
+        header[data-testid="stHeader"] {{
+            transform: none !important;
+            filter: none !important;
+            perspective: none !important;
+            background: transparent !important;
+            z-index: 9999999 !important;
+        }}
+
         [data-testid="stSidebarCollapsedControl"],
-        [data-testid="stExpandSidebarButton"],
         [data-testid="collapsedControl"],
         header [data-testid="stSidebarCollapsedControl"] {{
             position: fixed !important;
-            top: 10px !important;
-            left: 10px !important;
+            top: 12px !important;
+            left: 12px !important;
             z-index: 99999999 !important;
             display: flex !important;
             align-items: center !important;
@@ -729,55 +783,76 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebarCollapsedControl"] button,
-        [data-testid="stExpandSidebarButton"] button,
+        button[data-testid="stExpandSidebarButton"],
+        [data-testid="stExpandSidebarButton"],
         [data-testid="collapsedControl"] button,
-        header [data-testid="stSidebarCollapsedControl"] button {{
+        header [data-testid="stSidebarCollapsedControl"] button,
+        header button[data-testid="stExpandSidebarButton"] {{
+            position: fixed !important;
+            top: 12px !important;
+            left: 12px !important;
+            z-index: 99999999 !important;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
             color: #ffffff !important;
             border: 2px solid #38bdf8 !important;
             border-radius: 10px !important;
-            padding: 7px 15px !important;
-            min-height: 42px !important;
-            box-shadow: 0 4px 16px rgba(2, 132, 199, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+            padding: 8px 16px !important;
+            min-height: 44px !important;
+            min-width: 120px !important;
+            box-shadow: 0 4px 18px rgba(2, 132, 199, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
             cursor: pointer !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
             gap: 6px !important;
-            font-size: 13.5px !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.5px !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.6px !important;
+            visibility: visible !important;
+            opacity: 1 !important;
             transition: all 0.2s ease !important;
         }}
 
         [data-testid="stSidebarCollapsedControl"] button::after,
-        [data-testid="stExpandSidebarButton"] button::after,
+        button[data-testid="stExpandSidebarButton"]::after,
+        [data-testid="stExpandSidebarButton"]::after,
         [data-testid="collapsedControl"] button::after,
         header [data-testid="stSidebarCollapsedControl"] button::after {{
             content: " ☰ MENÚ" !important;
             color: #ffffff !important;
-            font-size: 12.5px !important;
+            font-size: 13.5px !important;
             font-weight: 800 !important;
             letter-spacing: 0.8px !important;
-            margin-left: 3px !important;
+            margin-left: 4px !important;
         }}
 
         [data-testid="stSidebarCollapsedControl"] button:hover,
-        [data-testid="stExpandSidebarButton"] button:hover,
+        button[data-testid="stExpandSidebarButton"]:hover,
+        [data-testid="stExpandSidebarButton"]:hover,
         [data-testid="collapsedControl"] button:hover {{
             background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
             border-color: #7dd3fc !important;
-            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.75) !important;
-            transform: scale(1.03) !important;
+            box-shadow: 0 6px 22px rgba(2, 132, 199, 0.85) !important;
+            transform: scale(1.04) !important;
         }}
 
         [data-testid="stSidebarCollapsedControl"] button svg,
-        [data-testid="stExpandSidebarButton"] button svg,
-        [data-testid="collapsedControl"] button svg {{
+        button[data-testid="stExpandSidebarButton"] svg,
+        [data-testid="stExpandSidebarButton"] svg,
+        [data-testid="collapsedControl"] button svg,
+        [data-testid="stSidebarCollapsedControl"] button span,
+        button[data-testid="stExpandSidebarButton"] span,
+        [data-testid="stExpandSidebarButton"] span,
+        [data-testid="collapsedControl"] button span {{
             fill: #ffffff !important;
             color: #ffffff !important;
+            stroke: #ffffff !important;
+            font-size: 20px !important;
             width: 20px !important;
             height: 20px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }}
 
         /* Botón para colapsar menú (dentro del sidebar) */
@@ -815,7 +890,7 @@ st.markdown(f"""
             fill: #ffffff !important;
         }}
 
-        /* Contenedores con Borde, Pestañas y Tarjetas (Línea Gruesa de Sección en Modo Solar) */
+        /* Contenedores con Borde, Pestañas y Tarjetas (Línea Gruesa de Sección) */
         div[data-testid="stTabPanel"],
         div[role="tabpanel"],
         div[data-testid="stTabContent"] {{
@@ -824,13 +899,14 @@ st.markdown(f"""
             padding: 24px 20px !important;
             margin-top: 14px !important;
             margin-bottom: 24px !important;
-            background-color: #ffffff !important;
-            box-shadow: 0 4px 18px rgba(2, 132, 199, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+            background-color: {container_bg_global} !important;
+            color: {container_text_global} !important;
+            box-shadow: {'0 4px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(2, 132, 199, 0.2)' if tema_es_oscuro else '0 4px 18px rgba(2, 132, 199, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)'} !important;
         }}
         div[data-testid="stTabPanel"] div[data-testid="stTabPanel"],
         div[role="tabpanel"] div[role="tabpanel"] {{
             border: 2px solid #38bdf8 !important;
-            background-color: #f8fafc !important;
+            background-color: {container_sub_bg_global} !important;
             border-radius: 10px !important;
             padding: 16px !important;
             margin-top: 8px !important;
@@ -849,8 +925,9 @@ st.markdown(f"""
         div:has(> [data-testid="stVerticalBlock"]):has([style*="border"]) {{
             border-radius: 12px !important;
             border: 2.5px solid #0284c7 !important;
-            background-color: #ffffff !important;
-            box-shadow: 0 4px 16px rgba(2, 132, 199, 0.12), 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+            background-color: {container_bg_global} !important;
+            color: {container_text_global} !important;
+            box-shadow: {'0 4px 16px rgba(0, 0, 0, 0.4)' if tema_es_oscuro else '0 4px 16px rgba(2, 132, 199, 0.12), 0 1px 4px rgba(0, 0, 0, 0.05)'} !important;
             margin-bottom: 16px !important;
             transition: all 0.2s ease !important;
         }}
@@ -876,14 +953,156 @@ st.markdown(f"""
         div[data-testid="stExpander"] {{
             border-radius: 10px !important;
             border: 2.5px solid #0284c7 !important;
-            background-color: #ffffff !important;
+            background-color: {container_bg_global} !important;
+            color: {container_text_global} !important;
             box-shadow: 0 2px 10px rgba(2, 132, 199, 0.08) !important;
             margin-bottom: 14px !important;
             transition: all 0.2s ease !important;
         }}
+        div[data-testid="stExpander"] > details {{
+            background-color: {container_bg_global} !important;
+            color: {container_text_global} !important;
+        }}
         div[data-testid="stExpander"]:hover {{
             border-color: #0369a1 !important;
             box-shadow: 0 4px 14px rgba(2, 132, 199, 0.16) !important;
+        }}
+
+        /* Etiquetas y Textos Informativos de Alto Contraste */
+        div[data-testid="stWidgetLabel"] label,
+        div[data-testid="stWidgetLabel"] p,
+        label[data-testid="stWidgetLabel"] {{
+            color: {container_text_global} !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+        }}
+        div[data-testid="stCaption"],
+        .stCaption,
+        p[data-testid="stCaption"] {{
+            color: {'#94a3b8' if tema_es_oscuro else '#475569'} !important;
+            font-weight: 600 !important;
+        }}
+
+        /* =========================================================================
+           FIGURAS Y CÍRCULOS DE TILDE (RADIO BUTTONS Y CHECKBOXES DE ALTA NITIDEZ)
+           ========================================================================= */
+        /* Círculos de Radio Button */
+        div[data-testid="stRadio"] [role="radiogroup"] label {{
+            display: inline-flex !important;
+            align-items: center !important;
+            cursor: pointer !important;
+            gap: 10px !important;
+            margin-bottom: 6px !important;
+            padding: 4px 8px !important;
+            border-radius: 6px !important;
+            transition: all 0.15s ease !important;
+        }}
+        div[data-testid="stRadio"] [role="radiogroup"] label:hover {{
+            background-color: {'rgba(56, 189, 248, 0.12)' if tema_es_oscuro else 'rgba(2, 132, 199, 0.08)'} !important;
+        }}
+        div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) {{
+            background-color: {'rgba(56, 189, 248, 0.15)' if tema_es_oscuro else 'rgba(2, 132, 199, 0.09)'} !important;
+        }}
+        /* Círculo Exterior del Radio Button */
+        div[data-testid="stRadio"] [role="radiogroup"] label > div:first-child,
+        div[data-testid="stRadioOption"] > div:first-child,
+        div[class*="e1mpz0hj4"],
+        .st-emotion-cache-e1mpz0hj4 {{
+            width: 22px !important;
+            height: 22px !important;
+            min-width: 22px !important;
+            min-height: 22px !important;
+            border: 2.5px solid {radio_border_global} !important;
+            border-radius: 50% !important;
+            background-color: {radio_bg_global} !important;
+            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.35)' if tema_es_oscuro else '0 2px 5px rgba(2, 132, 199, 0.2)'} !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease !important;
+        }}
+        div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) > div:first-child {{
+            border-color: {'#38bdf8' if tema_es_oscuro else '#0284c7'} !important;
+            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.6)' if tema_es_oscuro else '0 2px 8px rgba(2, 132, 199, 0.35)'} !important;
+        }}
+        /* Punto Interior del Radio Button Seleccionado */
+        div[class*="e1mpz0hj5"],
+        .st-emotion-cache-e1mpz0hj5 {{
+            width: 10px !important;
+            height: 10px !important;
+            min-width: 10px !important;
+            min-height: 10px !important;
+            border-radius: 50% !important;
+            background-color: {radio_dot_global} !important;
+            box-shadow: {'0 0 8px #38bdf8' if tema_es_oscuro else 'none'} !important;
+        }}
+        /* Texto de Opción de Radio Button */
+        div[data-testid="stRadio"] [role="radiogroup"] label p,
+        div[data-testid="stRadio"] [role="radiogroup"] label span,
+        div[data-testid="stRadioOption"] p,
+        div[data-testid="stRadioOption"] span {{
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            color: {container_text_global} !important;
+            letter-spacing: 0.2px !important;
+        }}
+
+        /* Casillas de Checkbox (Tilde Cuadrada / Selección) */
+        div[data-testid="stCheckbox"] label {{
+            display: inline-flex !important;
+            align-items: center !important;
+            cursor: pointer !important;
+            gap: 10px !important;
+            padding: 4px 8px !important;
+            border-radius: 6px !important;
+            transition: all 0.15s ease !important;
+        }}
+        div[data-testid="stCheckbox"] label:hover {{
+            background-color: {'rgba(56, 189, 248, 0.12)' if tema_es_oscuro else 'rgba(2, 132, 199, 0.08)'} !important;
+        }}
+        /* Cuadro Exterior del Checkbox (Desmarcado) */
+        div[data-testid="stCheckbox"] label > div:first-child,
+        div[class*="e15oan335"],
+        div[class*="e15oan337"],
+        div[class*="e15oan338"],
+        .st-emotion-cache-e15oan335,
+        .st-emotion-cache-e15oan337 {{
+            width: 22px !important;
+            height: 22px !important;
+            min-width: 22px !important;
+            min-height: 22px !important;
+            border: 2.5px solid {radio_border_global} !important;
+            border-radius: 6px !important;
+            background-color: {radio_bg_global} !important;
+            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.35)' if tema_es_oscuro else '0 2px 5px rgba(2, 132, 199, 0.2)'} !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease !important;
+        }}
+        /* Cuadro Exterior del Checkbox (Marcado con Tilde) */
+        div[data-testid="stCheckbox"] label > div:first-child:has(svg),
+        div[data-testid="stCheckbox"] label:has(input:checked) > div:first-child {{
+            background-color: #0284c7 !important;
+            border-color: {'#38bdf8' if tema_es_oscuro else '#0284c7'} !important;
+            box-shadow: {'0 0 10px rgba(56, 189, 248, 0.5)' if tema_es_oscuro else '0 2px 6px rgba(2, 132, 199, 0.35)'} !important;
+        }}
+        /* Icono de Tilde (Checkmark SVG) */
+        div[data-testid="stCheckbox"] svg {{
+            width: 15px !important;
+            height: 15px !important;
+            stroke-width: 3.5px !important;
+            stroke: #ffffff !important;
+            color: #ffffff !important;
+            fill: none !important;
+        }}
+        /* Texto del Checkbox */
+        div[data-testid="stCheckbox"] label p,
+        div[data-testid="stCheckbox"] label span {{
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            color: {container_text_global} !important;
+            letter-spacing: 0.2px !important;
         }}
 
         /* Cabeceras de Secciones con Insignia y Borde Integral */
@@ -896,6 +1115,10 @@ st.markdown(f"""
             margin: 14px 0 14px 0 !important;
             box-shadow: 0 3px 10px rgba(2, 132, 199, 0.15) !important;
         }}
+        .section-header-blue h1, .section-header-blue h2, .section-header-blue h3, .section-header-blue h4 {{
+            color: #0369a1 !important;
+            font-weight: 800 !important;
+        }}
         .section-header-green {{
             background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
             border: 2.5px solid #16a34a !important;
@@ -904,6 +1127,10 @@ st.markdown(f"""
             border-radius: 10px !important;
             margin: 14px 0 14px 0 !important;
             box-shadow: 0 3px 10px rgba(22, 163, 74, 0.15) !important;
+        }}
+        .section-header-green h1, .section-header-green h2, .section-header-green h3, .section-header-green h4 {{
+            color: #15803d !important;
+            font-weight: 800 !important;
         }}
         .section-header-amber {{
             background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
@@ -914,6 +1141,10 @@ st.markdown(f"""
             margin: 14px 0 14px 0 !important;
             box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15) !important;
         }}
+        .section-header-amber h1, .section-header-amber h2, .section-header-amber h3, .section-header-amber h4 {{
+            color: #b45309 !important;
+            font-weight: 800 !important;
+        }}
         .section-header-slate {{
             background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
             border: 2.5px solid #475569 !important;
@@ -922,6 +1153,10 @@ st.markdown(f"""
             border-radius: 10px !important;
             margin: 14px 0 14px 0 !important;
             box-shadow: 0 3px 10px rgba(71, 85, 105, 0.15) !important;
+        }}
+        .section-header-slate h1, .section-header-slate h2, .section-header-slate h3, .section-header-slate h4 {{
+            color: #1e293b !important;
+            font-weight: 800 !important;
         }}
 
         /* Tarjeta Genérica Bolimur */
@@ -1198,7 +1433,7 @@ with st.sidebar:
     for grp in grupos_menu:
         st.markdown(
             f"<div style='font-size: 11px; font-weight: 700; color: #0284c7; letter-spacing: 0.05em; "
-            f"margin: 12px 0 5px 2px; text-transform: uppercase; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 2px;'>"
+            f"margin: 12px 0 5px 2px; text-transform: uppercase; border-bottom: 1.5px solid {'#334155' if tema_es_oscuro else '#e2e8f0'}; padding-bottom: 2px;'>"
             f"{grp['categoria']}</div>",
             unsafe_allow_html=True
         )
@@ -1208,6 +1443,21 @@ with st.sidebar:
             btn_label = f"▶ {label}" if es_activo else label
             if st.button(btn_label, key=f"nav_btn_{target}", use_container_width=True, type=btn_type):
                 navegar_a_modulo(target)
+
+    st.markdown(
+        f"<div style='font-size: 11px; font-weight: 700; color: #0284c7; letter-spacing: 0.05em; "
+        f"margin: 16px 0 6px 2px; text-transform: uppercase; border-bottom: 1.5px solid {'#334155' if tema_es_oscuro else '#e2e8f0'}; padding-bottom: 2px;'>"
+        f"🎨 APARIENCIA VISUAL</div>",
+        unsafe_allow_html=True
+    )
+    if tema_es_oscuro:
+        if st.button("☀️ Cambiar a Modo Solar", key="btn_toggle_tema_sidebar", use_container_width=True):
+            st.session_state["tema_modo"] = "solar"
+            st.rerun()
+    else:
+        if st.button("🌙 Cambiar a Modo Oscuro", key="btn_toggle_tema_sidebar", use_container_width=True):
+            st.session_state["tema_modo"] = "oscuro"
+            st.rerun()
 
     seleccion_modulo = st.session_state.menu_activo
 

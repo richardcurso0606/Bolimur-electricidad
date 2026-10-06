@@ -177,7 +177,11 @@ def renderizar():
             * **Veredicto de Protección:** {'✅ **GARANTIZADO** (La Icc final de cortocircuito de ' + f'{icc_fin_di:.1f} A' + ' supera ampliamente el umbral magnético de disparo instantáneo del IGA de ' + str(in_iga_auto) + ' A).' if icc_fin_di >= umbral_magnetico_iga else '⚠️ **REVISAR** (La Icc es inferior al umbral magnético de la curva C).'}
             """)
 
-            st.markdown(f"""<div style="background: #f1f5f9; color: #0f172a; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid #cbd5e1;">🛡️ IGA RECOMENDADO EN CUADRO VIVIENDA: {in_iga_auto} A (Curva C)</div>""", unsafe_allow_html=True)
+            es_osc_di = st.session_state.get('tema_modo', 'solar') == 'oscuro'
+            box_iga_bg = "#1e293b" if es_osc_di else "#f0f9ff"
+            box_iga_text = "#38bdf8" if es_osc_di else "#0284c7"
+            box_iga_border = "#38bdf8" if es_osc_di else "#0284c7"
+            st.markdown(f"""<div style="background: {box_iga_bg}; color: {box_iga_text}; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin: 15px 0; border: 2px solid {box_iga_border}; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">🛡️ IGA RECOMENDADO EN CUADRO VIVIENDA: {in_iga_auto} A (Curva C)</div>""", unsafe_allow_html=True)
 
             st.markdown("#### 📊 Tabla de Verificación de Secciones Comerciales (DI)")
             tabla_di_md = "| SECCIÓN | IZ ADMISIBLE (A) | CDT REAL (%) | ESTADO DE VERIFICACIÓN ($I_n \\le I_z$) |\n| :--- | :--- | :--- | :--- |\n"

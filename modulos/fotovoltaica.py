@@ -331,15 +331,22 @@ def clasificar_tramite_fotovoltaico(potencia_inversor_kw: float) -> Tuple[str, s
 # MODO AISLADA DE RED CON BATERÍAS (OFF-GRID)
 # =========================================================================
 def _renderizar_modo_aislada(user_auth, cliente_sel):
-    st.markdown("""
-        <div style="background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
+    es_osc_fv = st.session_state.get('tema_modo', 'solar') == 'oscuro'
+    b_bg = "#064e3b" if es_osc_fv else "#f0fdf4"
+    b_bd = "#22c55e" if es_osc_fv else "#16a34a"
+    b_tit = "#4ade80" if es_osc_fv else "#15803d"
+    b_sub = "#86efac" if es_osc_fv else "#166534"
+    b_badge_bg = "#0f172a" if es_osc_fv else "rgba(22, 163, 74, 0.15)"
+
+    st.markdown(f"""
+        <div style="background: {b_bg}; border: 1.5px solid {b_bd}; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                 <div>
-                    <span style="color: #15803d; font-weight: bold; font-size: 16px;">🔋 Modo Instalación Solar Aislada de Red (Off-Grid con Acumulación en Baterías)</span>
-                    <p style="color: #166534; font-size: 12.5px; margin: 3px 0 0 0;">Dimensionamiento para el mes más desfavorable de invierno (Diciembre en Murcia: HSP = 2.80 h/día) para garantizar suministro continuo 24/7 sin red de compañía.</p>
+                    <span style="color: {b_tit}; font-weight: bold; font-size: 16px;">🔋 Modo Instalación Solar Aislada de Red (Off-Grid con Acumulación en Baterías)</span>
+                    <p style="color: {b_sub}; font-size: 12.5px; margin: 3px 0 0 0;">Dimensionamiento para el mes más desfavorable de invierno (Diciembre en Murcia: HSP = 2.80 h/día) para garantizar suministro continuo 24/7 sin red de compañía.</p>
                 </div>
-                <div style="background: rgba(22, 163, 74, 0.15); border-radius: 6px; padding: 4px 10px; text-align: center; border: 1px solid #16a34a;">
-                    <span style="color: #15803d; font-size: 12px; font-weight: bold;">HSP Invierno: 2.8 h/d</span>
+                <div style="background: {b_badge_bg}; border-radius: 6px; padding: 4px 10px; text-align: center; border: 1px solid {b_bd};">
+                    <span style="color: {b_tit}; font-size: 12px; font-weight: bold;">HSP Invierno: 2.8 h/d</span>
                 </div>
             </div>
         </div>

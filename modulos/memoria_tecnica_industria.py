@@ -1318,13 +1318,16 @@ def renderizar():
                     st.markdown(f"**📌 ¿Cuándo elegirla en Murcia?:** {info_sel['cuando_elegir']}")
                 with col_ay_pot:
                     p_kw = info_sel['potencia_inst'] / 1000.0
+                    box_bg = "#1e293b" if es_oscuro else "#f0f9ff"
+                    box_text = "#f1f5f9" if es_oscuro else "#0f172a"
+                    box_border = "#38bdf8" if es_oscuro else "#0284c7"
                     st.markdown(
-                        f"<div style='background-color:#f1f5f9; border-left:4px solid #0284c7; padding:8px 12px; border-radius:4px; font-size:13px;'>"
-                        f"<b>⚡ Potencia de Diseño:</b> {info_sel['potencia_inst']:,.0f} W ({p_kw:.2f} kW)<br>"
-                        f"<b>🔌 Tensión:</b> {info_sel['tension'].split(' - ')[0]}<br>"
-                        f"<b>🛡️ IGA Cabecera:</b> {info_sel['iga']} A ({info_sel['curva'].split(' ')[0]})<br>"
-                        f"<b>📏 Cable DI:</b> {info_sel['di_cable'].split(' ')[0]} Cu | <b>Tubo:</b> {info_sel['di_tubo'].split(' ')[0]}<br>"
-                        f"<b>📋 Circuitos:</b> {len(info_sel['circuitos'])} circuitos incluidos"
+                        f"<div style='background-color:{box_bg}; color:{box_text}; border-left:4px solid {box_border}; padding:10px 14px; border-radius:6px; font-size:13.5px; font-weight:500; line-height:1.5; box-shadow: 0 1px 4px rgba(0,0,0,0.1);'>"
+                        f"<b style='color:{box_text};'>⚡ Potencia de Diseño:</b> {info_sel['potencia_inst']:,.0f} W ({p_kw:.2f} kW)<br>"
+                        f"<b style='color:{box_text};'>🔌 Tensión:</b> {info_sel['tension'].split(' - ')[0]}<br>"
+                        f"<b style='color:{box_text};'>🛡️ IGA Cabecera:</b> {info_sel['iga']} A ({info_sel['curva'].split(' ')[0]})<br>"
+                        f"<b style='color:{box_text};'>📏 Cable DI:</b> {info_sel['di_cable'].split(' ')[0]} Cu | <b style='color:{box_text};'>Tubo:</b> {info_sel['di_tubo'].split(' ')[0]}<br>"
+                        f"<b style='color:{box_text};'>📋 Circuitos:</b> {len(info_sel['circuitos'])} circuitos incluidos"
                         f"</div>",
                         unsafe_allow_html=True
                     )
@@ -1465,26 +1468,56 @@ def renderizar():
                             plantilla_rec = "🏢 Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)"
                             pot_final_plantilla = 17320.0
 
-                bg_tens = "#eff6ff" if "Monofásica" in tension_sug else "#fef3c7"
-                border_tens = "#0284c7" if "Monofásica" in tension_sug else "#d97706"
-                color_tens = "#0369a1" if "Monofásica" in tension_sug else "#b45309"
-                color_tens_lbl = "#0284c7" if "Monofásica" in tension_sug else "#92400e"
+                if es_oscuro:
+                    c1_bg = "#1e293b"
+                    c1_bd = "#475569"
+                    c1_lbl = "#94a3b8"
+                    c1_val = "#f8fafc"
+                    c1_sub = "#94a3b8"
+
+                    c2_bg = "#064e3b"
+                    c2_bd = "#22c55e"
+                    c2_lbl = "#86efac"
+                    c2_val = "#4ade80"
+                    c2_sub = "#86efac"
+
+                    bg_tens = "#1e3a5f" if "Monofásica" in tension_sug else "#451a03"
+                    border_tens = "#38bdf8" if "Monofásica" in tension_sug else "#f59e0b"
+                    color_tens = "#38bdf8" if "Monofásica" in tension_sug else "#fbbf24"
+                    color_tens_lbl = "#7dd3fc" if "Monofásica" in tension_sug else "#fcd34d"
+                else:
+                    c1_bg = "#f8fafc"
+                    c1_bd = "#cbd5e1"
+                    c1_lbl = "#64748b"
+                    c1_val = "#0f172a"
+                    c1_sub = "#64748b"
+
+                    c2_bg = "#f0fdf4"
+                    c2_bd = "#16a34a"
+                    c2_lbl = "#15803d"
+                    c2_val = "#16a34a"
+                    c2_sub = "#15803d"
+
+                    bg_tens = "#eff6ff" if "Monofásica" in tension_sug else "#fef3c7"
+                    border_tens = "#0284c7" if "Monofásica" in tension_sug else "#d97706"
+                    color_tens = "#0369a1" if "Monofásica" in tension_sug else "#b45309"
+                    color_tens_lbl = "#0284c7" if "Monofásica" in tension_sug else "#92400e"
 
                 # Tarjetas métricas limpias y responsivas sin truncado de texto
                 st.markdown(
                     f"""
                     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                        <div style="flex:1; min-width:130px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; text-align:center;">
-                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Base Legal Mínima</div>
-                            <div style="font-size:18px; font-weight:800; color:#0f172a; margin:3px 0;">{base_minima:,.0f} W</div>
-                            <div style="font-size:10.5px; color:#64748b;">100 W/m² (ITC-BT-10)</div>
+                        <div style="flex:1; min-width:130px; background:{c1_bg}; border:1.5px solid {c1_bd}; border-radius:8px; padding:8px 10px; text-align:center;">
+                            <div style="font-size:11px; font-weight:700; color:{c1_lbl}; text-transform:uppercase; letter-spacing:0.5px;">Base Legal Mínima</div>
+                            <div style="font-size:18px; font-weight:800; color:{c1_val}; margin:3px 0;">{base_minima:,.0f} W</div>
+                            <div style="font-size:10.5px; color:{c1_sub};">100 W/m² (ITC-BT-10)</div>
                         </div>
-                        <div style="flex:1; min-width:130px; background:#f0fdf4; border:1px solid #16a34a; border-radius:8px; padding:8px 10px; text-align:center;">
-                            <div style="font-size:11px; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:0.5px;">Potencia Simultánea</div>
-                            <div style="font-size:18px; font-weight:800; color:#16a34a; margin:3px 0;">{pot_calc_total:,.0f} W</div>
-                            <div style="font-size:10.5px; color:#15803d;"><b>{pot_calc_total/1000.0:.2f} kW</b></div>
+                        <div style="flex:1; min-width:130px; background:{c2_bg}; border:1.5px solid {c2_bd}; border-radius:8px; padding:8px 10px; text-align:center;">
+                            <div style="font-size:11px; font-weight:700; color:{c2_lbl}; text-transform:uppercase; letter-spacing:0.5px;">Potencia Simultánea</div>
+                            <div style="font-size:18px; font-weight:800; color:{c2_val}; margin:3px 0;">{pot_calc_total:,.0f} W</div>
+                            <div style="font-size:10.5px; color:{c2_sub};"><b>{pot_calc_total/1000.0:.2f} kW</b></div>
                         </div>
-                        <div style="flex:1; min-width:130px; background:{bg_tens}; border:1px solid {border_tens}; border-radius:8px; padding:8px 10px; text-align:center;">
+                        <div style="flex:1; min-width:130px; background:{bg_tens}; border:1.5px solid {border_tens}; border-radius:8px; padding:8px 10px; text-align:center;">
                             <div style="font-size:11px; font-weight:700; color:{color_tens_lbl}; text-transform:uppercase; letter-spacing:0.5px;">Tensión Sugerida</div>
                             <div style="font-size:16px; font-weight:800; color:{color_tens}; margin:3px 0;">{tension_sug}</div>
                             <div style="font-size:10.5px; color:{color_tens_lbl};">{sub_tens}</div>
@@ -1578,60 +1611,88 @@ def renderizar():
         else:
             badge_unif = '<span style="color:#ef4444; font-weight:bold; font-size:12px;">⚠️ Falta archivo</span>'
 
-        bg_sit = '#f0fdf4' if tiene_sit else '#f8fafc'
-        border_sit = '#16a34a' if tiene_sit else '#cbd5e1'
-        bg_emp = '#f0fdf4' if tiene_emp else '#f8fafc'
-        border_emp = '#16a34a' if tiene_emp else '#cbd5e1'
-        bg_dist = '#f0fdf4' if tiene_dist else '#f8fafc'
-        border_dist = '#16a34a' if tiene_dist else '#cbd5e1'
-        bg_unif = '#f0fdf4' if (unif_modo == 'custom' and bool(st.session_state.get("mtd_plano_unifilar_custom"))) else ('#f0f9ff' if unif_modo == 'auto' else '#f8fafc')
-        border_unif = '#16a34a' if (unif_modo == 'custom' and bool(st.session_state.get("mtd_plano_unifilar_custom"))) else ('#0284c7' if unif_modo == 'auto' else '#cbd5e1')
-        bg_fotos = '#f0fdf4' if n_fotos > 0 else '#f8fafc'
-        border_fotos = '#16a34a' if n_fotos > 0 else '#cbd5e1'
+        if es_oscuro:
+            lbl_color = "#94a3b8"
+            tit_color = "#f8fafc"
+            bg_ok = "#064e3b"
+            border_ok = "#22c55e"
+            bg_def = "#1e293b"
+            border_def = "#475569"
+            bg_info = "#0c4a6e"
+            border_info = "#38bdf8"
+            badge_sit = '<span style="color:#4ade80; font-weight:bold; font-size:12px;">✅ Adjuntado</span>' if tiene_sit else '<span style="color:#94a3b8; font-size:12px;">⚪ Sin adjuntar</span>'
+            badge_emp = '<span style="color:#4ade80; font-weight:bold; font-size:12px;">✅ Adjuntado</span>' if tiene_emp else '<span style="color:#94a3b8; font-size:12px;">⚪ Sin adjuntar</span>'
+            badge_dist = '<span style="color:#4ade80; font-weight:bold; font-size:12px;">✅ Adjuntado</span>' if tiene_dist else '<span style="color:#94a3b8; font-size:12px;">⚪ Sin adjuntar</span>'
+            if unif_modo == 'auto':
+                badge_unif = '<span style="color:#38bdf8; font-weight:bold; font-size:12px;">⚙️ Vectorial Auto</span>'
+            elif bool(st.session_state.get("mtd_plano_unifilar_custom")):
+                badge_unif = '<span style="color:#4ade80; font-weight:bold; font-size:12px;">📁 Plano Propio</span>'
+            else:
+                badge_unif = '<span style="color:#f87171; font-weight:bold; font-size:12px;">⚠️ Falta archivo</span>'
+        else:
+            lbl_color = "#64748b"
+            tit_color = "#0f172a"
+            bg_ok = "#f0fdf4"
+            border_ok = "#16a34a"
+            bg_def = "#f8fafc"
+            border_def = "#cbd5e1"
+            bg_info = "#f0f9ff"
+            border_info = "#0284c7"
+
+        bg_sit = bg_ok if tiene_sit else bg_def
+        border_sit = border_ok if tiene_sit else border_def
+        bg_emp = bg_ok if tiene_emp else bg_def
+        border_emp = border_ok if tiene_emp else border_def
+        bg_dist = bg_ok if tiene_dist else bg_def
+        border_dist = border_ok if tiene_dist else border_def
+        bg_unif = bg_ok if (unif_modo == 'custom' and bool(st.session_state.get("mtd_plano_unifilar_custom"))) else (bg_info if unif_modo == 'auto' else bg_def)
+        border_unif = border_ok if (unif_modo == 'custom' and bool(st.session_state.get("mtd_plano_unifilar_custom"))) else (border_info if unif_modo == 'auto' else border_def)
+        bg_fotos = bg_ok if n_fotos > 0 else bg_def
+        border_fotos = border_ok if n_fotos > 0 else border_def
 
         cp1, cp2, cp3, cp4, cp5 = st.columns(5)
         with cp1:
             st.markdown(
-                f"<div style='border:1px solid {border_sit}; background:{bg_sit}; padding:8px 10px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO I (a)</div>"
-                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>🗺️ Situación</div>"
+                f"<div style='border:1.5px solid {border_sit}; background:{bg_sit}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:{lbl_color};'>ANEXO I (a)</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0; color:{tit_color};'>🗺️ Situación</div>"
                 f"{badge_sit}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp2:
             st.markdown(
-                f"<div style='border:1px solid {border_emp}; background:{bg_emp}; padding:8px 10px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO I (b)</div>"
-                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>📍 Emplazamiento</div>"
+                f"<div style='border:1.5px solid {border_emp}; background:{bg_emp}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:{lbl_color};'>ANEXO I (b)</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0; color:{tit_color};'>📍 Emplazamiento</div>"
                 f"{badge_emp}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp3:
             st.markdown(
-                f"<div style='border:1px solid {border_dist}; background:{bg_dist}; padding:8px 10px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO II</div>"
-                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>📐 Distribución</div>"
+                f"<div style='border:1.5px solid {border_dist}; background:{bg_dist}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:{lbl_color};'>ANEXO II</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0; color:{tit_color};'>📐 Distribución</div>"
                 f"{badge_dist}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp4:
             st.markdown(
-                f"<div style='border:1px solid {border_unif}; background:{bg_unif}; padding:8px 10px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO III</div>"
-                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>⚡ Unifilar</div>"
+                f"<div style='border:1.5px solid {border_unif}; background:{bg_unif}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:{lbl_color};'>ANEXO III</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0; color:{tit_color};'>⚡ Unifilar</div>"
                 f"{badge_unif}"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with cp5:
             st.markdown(
-                f"<div style='border:1px solid {border_fotos}; background:{bg_fotos}; padding:8px 10px; border-radius:8px; text-align:center;'>"
-                f"<div style='font-size:10.5px; font-weight:bold; color:#64748b;'>ANEXO V</div>"
-                f"<div style='font-size:13px; font-weight:bold; margin:2px 0;'>📸 Fotos Obra</div>"
-                f"<span style='color:#334155; font-weight:bold; font-size:12px;'>{n_fotos} fotos</span>"
+                f"<div style='border:1.5px solid {border_fotos}; background:{bg_fotos}; padding:8px 10px; border-radius:8px; text-align:center;'>"
+                f"<div style='font-size:10.5px; font-weight:bold; color:{lbl_color};'>ANEXO V</div>"
+                f"<div style='font-size:13px; font-weight:bold; margin:2px 0; color:{tit_color};'>📸 Fotos Obra</div>"
+                f"<span style='color:{tit_color}; font-weight:bold; font-size:12px;'>{n_fotos} fotos</span>"
                 f"</div>",
                 unsafe_allow_html=True
             )
@@ -2566,7 +2627,10 @@ def renderizar():
                 
                 if "Adjuntar mi Propio" in sel_modo_unif:
                     st.session_state["mtd_unifilar_modo"] = "custom"
-                    st.markdown("<div style='background:#fef3c7; border:1px solid #f59e0b; padding:8px 12px; border-radius:6px; margin:8px 0; font-size:13px;'>📁 <b>Modo Plano Propio Activado:</b> Selecciona abajo tu imagen o PDF del unifilar para reemplazar el esquema estándar.</div>", unsafe_allow_html=True)
+                    box_warn_bg = "#451a03" if es_oscuro else "#fef3c7"
+                    box_warn_border = "#f59e0b"
+                    box_warn_text = "#fef08a" if es_oscuro else "#92400e"
+                    st.markdown(f"<div style='background:{box_warn_bg}; border:1.5px solid {box_warn_border}; color:{box_warn_text}; padding:8px 12px; border-radius:6px; margin:8px 0; font-size:13px;'>📁 <b style='color:{box_warn_text};'>Modo Plano Propio Activado:</b> Selecciona abajo tu imagen o PDF del unifilar para reemplazar el esquema estándar.</div>", unsafe_allow_html=True)
                     k_t7_unif = f"up_mtd_unif_custom_{st.session_state.get('_ver_tab7_unif', 0)}"
                     up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key=k_t7_unif)
                     if up_unif is not None:
