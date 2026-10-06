@@ -246,6 +246,14 @@ def app():
     tab_active_bg = "#0c4a6e" if es_oscuro_pres else "#f0f9ff"
     tab_active_color = "#38bdf8" if es_oscuro_pres else "#0284c7"
 
+    # Colores dinámicos para tarjetas y ofertas comerciales (Sección 6)
+    card_bg = "#0f172a" if es_oscuro_pres else "#f0f9ff"
+    card_border = "#0284c7"
+    card_title_color = "#38bdf8" if es_oscuro_pres else "#0369a1"
+    card_text_color = "#f1f5f9" if es_oscuro_pres else "#1e293b"
+    card_hr_color = "#1e293b" if es_oscuro_pres else "#bae6fd"
+    card_subtotal_bg = "#1e293b" if es_oscuro_pres else "#f1f5f9"
+
     st.markdown(f"""
         <style>
             /* Contenedores con Borde y Sombra Nítidos y Marcados */
@@ -274,18 +282,35 @@ def app():
                 border-color: #0284c7 !important;
             }}
 
-            /* Estilo de Pestañas (Tabs) */
+            /* Estilo de Pestañas (Tabs) Sin Desbordamiento ni Recortes */
+            div[data-baseweb="tab-list"] {{
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+            }}
+            div[data-baseweb="tab-border"] {{
+                display: none !important;
+            }}
             button[data-baseweb="tab"] {{
                 font-size: 13.5px !important;
                 font-weight: 600 !important;
-                padding: 9px 16px !important;
+                padding: 8px 14px !important;
                 border-radius: 8px 8px 0 0 !important;
                 transition: all 0.2s ease !important;
+                white-space: nowrap !important;
             }}
             button[data-baseweb="tab"][aria-selected="true"] {{
                 color: {tab_active_color} !important;
                 border-bottom: 3px solid #0284c7 !important;
                 background-color: {tab_active_bg} !important;
+            }}
+            div[data-baseweb="tab-list"] ~ button,
+            button[aria-label="Previous tab"],
+            button[aria-label="Next tab"] {{
+                background-color: {container_bg} !important;
+                color: {tab_active_color} !important;
+                border: 1.5px solid #0284c7 !important;
+                border-radius: 6px !important;
+                box-shadow: none !important;
             }}
         </style>
     """, unsafe_allow_html=True)
@@ -1035,7 +1060,7 @@ def app():
     with tab_sec3:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⏱️ SECCIÓN 3: Mano de Obra, Rozas, Techos, Boletín CIE y Márgenes</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
-            col_m1, col_m2, col_m3 = st.columns(3)
+            col_m1, col_m2, col_m3 = st.columns([1, 1, 1.8])
             with col_m1:
                 margen_comercial = st.number_input(
                     "Margen Comercial General (%)", 
@@ -1049,7 +1074,31 @@ def app():
                     help="Colchón adicional para imprevistos y reposición de materiales."
                 )
             with col_m3:
-                iva_sel = st.selectbox("IVA Aplicado al Cliente", [10, 21], index=0)
+                opciones_iva_hacienda = [
+                    "10% - IVA Reducido (Reforma Vivienda Particular > 2 años | Art. 91 LIVA)",
+                    "21% - IVA General (Locales, Oficinas o Material aportado > 40%)",
+                    "0% - Exento / Inversión de Sujeto Pasivo (Art. 84 LIVA | B2B Empresas)"
+                ]
+                iva_label_sel = st.selectbox(
+                    "IVA Aplicado al Cliente (Conforme Hacienda / AEAT):", 
+                    opciones_iva_hacienda, 
+                    index=0,
+                    key="sel_iva_cliente_hacienda"
+                )
+                if "10%" in iva_label_sel:
+                    iva_sel = 10
+                elif "21%" in iva_label_sel:
+                    iva_sel = 21
+                else:
+                    iva_sel = 0
+
+            # Explicación de requisitos legales de Hacienda
+            if iva_sel == 10:
+                st.caption("⚖️ **Requisitos Hacienda (Art. 91.Uno.2.10º Ley IVA):** 1) Vivienda particular terminada hace más de 2 años. 2) Destinatario persona física o comunidad. 3) Los materiales aportados por el electricista NO deben superar el 40% del total de la obra.")
+            elif iva_sel == 21:
+                st.caption("⚖️ **Régimen General AEAT:** Aplicable a locales comerciales, despachos, naves o reformas donde el material aportado supera el 40% del presupuesto.")
+            else:
+                st.caption("⚖️ **Inversión de Sujeto Pasivo (Art. 84.Uno.2º.f Ley IVA):** Facturación directa entre empresas / autónomos subcontratistas en ejecución de obra sin repercusión de IVA.")
 
             col_roz1, col_roz2 = st.columns(2)
             with col_roz1:
@@ -2264,19 +2313,19 @@ def app():
             with tab_doc_com:
                 st.header("📄 Vista Comercial: Presupuesto Oficial para el Cliente")
                 st.markdown(f"""
-                <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff; margin-bottom: 20px;">
+                <div style="border: 2px solid {card_border}; padding: 20px; border-radius: 10px; background-color: {card_bg}; color: {card_text_color}; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <h3 style="color: #0369a1; margin: 0;">{empresa_nombre}</h3>
-                            <p style="margin: 3px 0;"><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
+                            <h3 style="color: {card_title_color}; margin: 0;">{empresa_nombre}</h3>
+                            <p style="margin: 3px 0; color: {card_text_color};"><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
                         </div>
                         <div style="text-align: right;">
                             <span style="background-color: #0284c7; color: white; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 13px;">OFERTA COMERCIAL</span>
-                            <p style="margin: 4px 0 0 0; font-size: 13px;"><b>Fecha:</b> {datetime.date.today().strftime("%d/%m/%Y")}</p>
+                            <p style="margin: 4px 0 0 0; font-size: 13px; color: {card_text_color};"><b>Fecha:</b> {datetime.date.today().strftime("%d/%m/%Y")}</p>
                         </div>
                     </div>
-                    <hr style="border: 1px solid #bae6fd; margin: 12px 0;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                    <hr style="border: 1px solid {card_hr_color}; margin: 12px 0;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: {card_text_color};">
                         <div>• <b>Objeto:</b> Instalación Eléctrica Integral en Vivienda ({grado_electr})</div>
                         <div>• <b>Potencia Prevista / IGA:</b> {potencia_prevista_kw} ({pot_w_val} W)</div>
                         <div>• <b>Gama de Mecanismos:</b> {serie_mecanismos}</div>
@@ -2567,10 +2616,10 @@ def app():
                         use_container_width=True
                     )
 
-                st.markdown("""
-                <div style="border: 2px solid #0284c7; background: #f0f9ff; border-radius: 10px; padding: 18px; margin: 18px 0 10px 0;">
-                    <h4 style="color: #0369a1; margin: 0 0 8px 0;">🗺️ ¿Dónde se adjuntan los Planos de Situación, Emplazamiento y Esquema Unifilar?</h4>
-                    <p style="color: #334155; margin: 0; font-size: 14px;">
+                st.markdown(f"""
+                <div style="border: 2px solid {card_border}; background: {card_bg}; border-radius: 10px; padding: 18px; margin: 18px 0 10px 0;">
+                    <h4 style="color: {card_title_color}; margin: 0 0 8px 0;">🗺️ ¿Dónde se adjuntan los Planos de Situación, Emplazamiento y Esquema Unifilar?</h4>
+                    <p style="color: {card_text_color}; margin: 0; font-size: 14px;">
                         Los planos oficiales (situación en callejero municipal, emplazamiento catastral y esquema unifilar oficial de la vivienda) se gestionan en el módulo oficial de <b>Memoria Técnica & Planos (MTD 30)</b>.<br/>
                         Al pulsar el botón inferior, todos los circuitos, potencias y datos de este presupuesto se transfieren automáticamente y se abrirá directamente el gestor de planos listo para subir tus archivos (PNG, JPG o PDF).
                     </p>
@@ -2613,9 +2662,9 @@ def app():
                     st.rerun()
 
                 st.markdown(f"""
-                <div style="text-align: right; font-size: 18px; background-color: #f1f5f9; padding: 18px; border-radius: 8px; border: 1px solid #94a3b8; margin-top: 15px;">
-                    <p style="margin: 3px 0;"><b>Subtotal Comercial Neto (Base Imponible):</b> {subtotal_general_neto:,.2f} €</p>
-                    <p style="margin: 3px 0;"><b>IVA ({iva_sel}%):</b> {cuota_iva:,.2f} €</p>
+                <div style="text-align: right; font-size: 18px; background-color: {card_subtotal_bg}; color: {card_text_color}; padding: 18px; border-radius: 8px; border: 1.5px solid {card_border}; margin-top: 15px;">
+                    <p style="margin: 3px 0; color: {card_text_color};"><b>Subtotal Comercial Neto (Base Imponible):</b> {subtotal_general_neto:,.2f} €</p>
+                    <p style="margin: 3px 0; color: {card_text_color};"><b>IVA ({iva_sel}%):</b> {cuota_iva:,.2f} €</p>
                     <h2 style="color: #16a34a; margin: 8px 0 0 0;">TOTAL PRESUPUESTO CLIENTE: {total_cliente:,.2f} €</h2>
                 </div>
                 """, unsafe_allow_html=True)
@@ -2629,10 +2678,10 @@ def app():
                 st.markdown("---")
 
                 st.markdown(f"""
-                <div style="border: 2px solid #0284c7; padding: 20px; border-radius: 10px; background-color: #f0f9ff; margin-bottom: 25px;">
-                    <h3 style="color: #0369a1; margin-top: 0;">💼 RESUMEN ECONÓMICO PARA EL CLIENTE (A Cobrar)</h3>
-                    <p><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
-                    <p><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
+                <div style="border: 2px solid {card_border}; padding: 20px; border-radius: 10px; background-color: {card_bg}; color: {card_text_color}; margin-bottom: 25px;">
+                    <h3 style="color: {card_title_color}; margin-top: 0;">💼 RESUMEN ECONÓMICO PARA EL CLIENTE (A Cobrar)</h3>
+                    <p style="color: {card_text_color};"><b>Subtotal Comercial Neto:</b> {subtotal_general_neto:.2f} €</p>
+                    <p style="color: {card_text_color};"><b>IVA ({iva_sel}%):</b> {cuota_iva:.2f} €</p>
                     <h2 style="color: #16a34a; margin: 0;">TOTAL A COBRAR AL CLIENTE: {total_cliente:.2f} €</h2>
                 </div>
                 """, unsafe_allow_html=True)
@@ -3111,9 +3160,9 @@ def app():
                 """)
 
                 st.markdown(f"""
-                <div style="border: 2px solid #0284c7; padding: 18px; border-radius: 8px; background-color: #f0f9ff; margin-bottom: 20px;">
-                    <h4 style="color: #0369a1; margin-top: 0;">🏛️ Datos Técnicos Oficiales del Suministro</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                <div style="border: 2px solid {card_border}; padding: 18px; border-radius: 8px; background-color: {card_bg}; color: {card_text_color}; margin-bottom: 20px;">
+                    <h4 style="color: {card_title_color}; margin-top: 0;">🏛️ Datos Técnicos Oficiales del Suministro</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: {card_text_color};">
                         <div>• <b>Titular / Emplazamiento:</b> Vivienda Residencial ({localidad})</div>
                         <div>• <b>Instalador Autorizado:</b> {instalador_nombre} (Lic: {n_licencia})</div>
                         <div>• <b>Potencia Prevista:</b> {pot_w_val:,} W ({grado_electr})</div>

@@ -243,15 +243,25 @@ css_tema_oscuro = """
         color: #f1f5f9 !important;
     }
 
-    /* INPUTS, SELECTORES Y ÁREAS DE TEXTO */
+    /* INPUTS, SELECTORES, NUMBER INPUTS Y ÁREAS DE TEXTO */
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stTextArea"] textarea,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"],
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    div[data-testid="stSelectbox"] [role="combobox"],
     div[data-baseweb="input"],
     div[data-baseweb="input"] > div,
     div[data-baseweb="base-input"],
+    div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
+    div[data-baseweb="textarea"],
     div[data-baseweb="textarea"] > div {
         background-color: #1e293b !important;
+        background: #1e293b !important;
         border: 1.5px solid #0284c7 !important;
         color: #f8fafc !important;
+        -webkit-text-fill-color: #f8fafc !important;
     }
     div[data-baseweb="input"] input,
     div[data-baseweb="base-input"] input,
@@ -260,6 +270,31 @@ css_tema_oscuro = """
         color: #f8fafc !important;
         background-color: transparent !important;
         -webkit-text-fill-color: #f8fafc !important;
+    }
+
+    /* BOTONES DE INCREMENTO / DECREMENTO (-) (+) EN NUMBER INPUTS */
+    div[data-testid="stNumberInput"] button {
+        background-color: #0f172a !important;
+        background: #0f172a !important;
+        color: #38bdf8 !important;
+        border: 1.5px solid #334155 !important;
+    }
+    div[data-testid="stNumberInput"] button:hover {
+        background-color: #0284c7 !important;
+        color: #ffffff !important;
+        border-color: #38bdf8 !important;
+    }
+    div[data-testid="stNumberInput"] button svg {
+        fill: #38bdf8 !important;
+    }
+    div[data-testid="stNumberInput"] button:hover svg {
+        fill: #ffffff !important;
+    }
+
+    /* TEXTO SELECCIONADO EN SELECTBOX */
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div {
+        color: #f8fafc !important;
     }
 
     /* CHECKBOXES Y RADIOS */
@@ -292,15 +327,25 @@ css_tema_oscuro = """
         color: inherit !important;
     }
 
-    /* PESTAÑAS (TABS) EN MODO OSCURO */
+    /* PESTAÑAS (TABS) EN MODO OSCURO: FLEX-WRAP Y ELIMINACIÓN DE PARCHES BLANCOS */
     div[data-baseweb="tab-list"] {
         background-color: #0b1329 !important;
         border-bottom: 2px solid #0284c7 !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        overflow: visible !important;
+    }
+    div[data-baseweb="tab-border"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-highlight"] {
+        background-color: #38bdf8 !important;
     }
     button[data-baseweb="tab"] {
         background-color: #0f172a !important;
         border: 1px solid #334155 !important;
         color: #94a3b8 !important;
+        white-space: nowrap !important;
     }
     button[data-baseweb="tab"] p,
     button[data-baseweb="tab"] span,
@@ -321,6 +366,54 @@ css_tema_oscuro = """
     button[data-baseweb="tab"][aria-selected="true"] span,
     button[data-baseweb="tab"][aria-selected="true"] div {
         color: #ffffff !important;
+    }
+    /* Neutralizar botones y flechas de scroll de pestañas BaseWeb para que nunca tapen el texto */
+    button[aria-label="Previous tab"],
+    button[aria-label="Next tab"],
+    div[data-baseweb="tab-list"] ~ button,
+    div[data-baseweb="tab-list"] button[aria-label*="tab"] {
+        background: #0f172a !important;
+        background-color: #0f172a !important;
+        color: #38bdf8 !important;
+        border: 1.5px solid #0284c7 !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+    }
+    button[aria-label="Previous tab"] svg,
+    button[aria-label="Next tab"] svg {
+        fill: #38bdf8 !important;
+        color: #38bdf8 !important;
+    }
+
+    /* CONVERSIÓN DE FONDOS CLAROS INLINE EN MODO OSCURO (NUNCA CASILLAS BLANCAS CON TEXTO INVISIBLE) */
+    div[style*="background: #f0f9ff"],
+    div[style*="background-color: #f0f9ff"],
+    div[style*="background: #f1f5f9"],
+    div[style*="background-color: #f1f5f9"],
+    div[style*="background: #f8fafc"],
+    div[style*="background-color: #f8fafc"] {
+        background-color: #0f172a !important;
+        background: #0f172a !important;
+        border-color: #0284c7 !important;
+        color: #f1f5f9 !important;
+    }
+    div[style*="background: #f0f9ff"] *,
+    div[style*="background-color: #f0f9ff"] *,
+    div[style*="background: #f1f5f9"] *,
+    div[style*="background-color: #f1f5f9"] *,
+    div[style*="background: #f8fafc"] *,
+    div[style*="background-color: #f8fafc"] * {
+        color: #f1f5f9 !important;
+    }
+    div[style*="background: #f0f9ff"] h1,
+    div[style*="background: #f0f9ff"] h2,
+    div[style*="background: #f0f9ff"] h3,
+    div[style*="background: #f0f9ff"] h4,
+    div[style*="background-color: #f0f9ff"] h1,
+    div[style*="background-color: #f0f9ff"] h2,
+    div[style*="background-color: #f0f9ff"] h3,
+    div[style*="background-color: #f0f9ff"] h4 {
+        color: #38bdf8 !important;
     }
 
     /* TOOLTIPS */
@@ -675,18 +768,32 @@ st.markdown(f"""
             margin-bottom: 20px;
         }}
 
-        /* Estilo de Pestañas (Tabs) */
+        /* Estilo de Pestañas (Tabs) Sin Desbordamiento ni Recortes */
+        div[data-baseweb="tab-list"] {{
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+        }}
+        div[data-baseweb="tab-border"] {{
+            display: none !important;
+        }}
         button[data-baseweb="tab"] {{
             font-size: 13.5px !important;
             font-weight: 600 !important;
-            padding: 9px 16px !important;
+            padding: 8px 14px !important;
             border-radius: 8px 8px 0 0 !important;
             transition: all 0.2s ease !important;
+            white-space: nowrap !important;
         }}
         button[data-baseweb="tab"][aria-selected="true"] {{
             color: #0284c7 !important;
             border-bottom: 3px solid #0284c7 !important;
             background-color: #f0f9ff !important;
+        }}
+        div[data-baseweb="tab-list"] ~ button,
+        button[aria-label="Previous tab"],
+        button[aria-label="Next tab"] {{
+            border-radius: 6px !important;
+            box-shadow: none !important;
         }}
     </style>
 """, unsafe_allow_html=True)
