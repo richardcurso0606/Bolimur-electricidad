@@ -1434,12 +1434,17 @@ def renderizar():
         with tab_doc1:
             st.info("💡 **Doble Formato Oficial Disponible:** Puedes descargar la Memoria Técnica tanto en **PDF oficial** (para firmar con AutoFirma/DNIe y registrar en la Sede Electrónica de la CARM) como en **Word (.docx editable)** (sobre la plantilla oficial de la DGEAIM Murcia para edición personal o archivo).")
             
-            col_d_act1, col_d_act2 = st.columns([1.5, 1])
-            with col_d_act2:
-                try:
-                    docx_bytes_mtd = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos_para_pdf)
+            docx_bytes_mtd = None
+            try:
+                docx_bytes_mtd = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos_para_pdf)
+            except Exception as err_docx:
+                st.warning(f"⚠️ Nota Word: {err_docx}")
+
+            col_d_act1, col_d_act2 = st.columns([1.2, 1.8])
+            with col_d_act1:
+                if docx_bytes_mtd:
                     st.download_button(
-                        label="📝 Descargar MTD Oficial en Word (.docx Editable)",
+                        label="📝 Descargar Word (.docx Editable)",
                         data=docx_bytes_mtd,
                         file_name=f"MTD_Oficial_DGEAIM_Murcia_{exp_in}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1447,18 +1452,44 @@ def renderizar():
                         use_container_width=True,
                         help="Descarga el documento de Microsoft Word original de Industria de Murcia con todos tus datos introducidos en sus tablas y casillas."
                     )
-                except Exception as err_docx:
-                    st.warning(f"⚠️ Nota Word: {err_docx}")
+            with col_d_act2:
+                formato_pdf_sel = st.radio(
+                    "Motor de Renderizado PDF:",
+                    [
+                        "🏛️ PDF Clonado Oficial (Plantilla Word + Logos CARM)",
+                        "⚡ PDF Vectorial Directo (ReportLab + Membrete CARM)"
+                    ],
+                    horizontal=True,
+                    key="sel_motor_pdf_mtd"
+                )
 
-            try:
-                pdf_bytes_mtd = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_para_pdf)
+            pdf_bytes_mtd = None
+            es_clonado_word = "Clonado" in formato_pdf_sel
+
+            if es_clonado_word and docx_bytes_mtd:
+                cache_key = f"pdf_word_com_{exp_in}"
+                if cache_key in st.session_state:
+                    pdf_bytes_mtd = st.session_state[cache_key]
+                else:
+                    with st.spinner("Compilando PDF idéntico a Word con motor oficial de Microsoft Word..."):
+                        pdf_bytes_mtd = generador_doc_oficial.convertir_docx_a_pdf(docx_bytes_mtd)
+                        if pdf_bytes_mtd:
+                            st.session_state[cache_key] = pdf_bytes_mtd
+                        else:
+                            st.caption("ℹ️ El motor Word COM no está disponible en este servidor. Generando con motor vectorial homologado.")
+
+            if not pdf_bytes_mtd:
+                try:
+                    pdf_bytes_mtd = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos_para_pdf)
+                except Exception as err:
+                    st.error(f"⚠️ Error al generar el PDF de la MTD: {err}")
+
+            if pdf_bytes_mtd:
                 visor_pdf.mostrar_visor_pdf(
                     pdf_bytes=pdf_bytes_mtd,
                     nombre_archivo=f"MTD_Oficial_DGEAIM_Murcia_{exp_in}.pdf",
                     label_boton="📥 Descargar Memoria Técnica Oficial MTD (PDF Murcia - Listo para Firmar)"
                 )
-            except Exception as err:
-                st.error(f"⚠️ Error al generar el PDF de la MTD: {err}")
 
         with tab_doc2:
             try:

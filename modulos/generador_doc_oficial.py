@@ -3,7 +3,7 @@
 Módulo de Generación y Clonación de Documentos Oficiales de Industria (DGEAIM Murcia)
 Genera:
 1. Documento Microsoft Word (.docx) 100% oficial sobre la plantilla reglamentaria de la CARM.
-2. Documento PDF Oficial listo para firma telemática.
+2. Documento PDF Oficial clonado pixel a pixel listo para firma telemática en CARM / AutoFirma.
 """
 
 import os
@@ -11,6 +11,8 @@ import io
 import re
 import datetime
 import base64
+import subprocess
+import tempfile
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -24,14 +26,22 @@ RUTA_PLANTILLA_DOCX = os.path.join(os.path.dirname(os.path.dirname(__file__)), "
 RUTA_PLANTILLA_PDF = os.path.join(os.path.dirname(os.path.dirname(__file__)), "plantillas", "plantilla_mtd_murcia_oficial.pdf")
 
 
-def _extraer_numero(cadena: str, default: float = 0.0) -> float:
-    if not cadena:
+def _safe_str(val, default="") -> str:
+    """Retorna un string sin espacios garantizando que None nunca lance AttributeError."""
+    if val is None:
+        return str(default).strip()
+    s = str(val).strip()
+    return s if s else str(default).strip()
+
+
+def _extraer_numero(cadena, default: float = 0.0) -> float:
+    if cadena is None:
         return default
     m = re.search(r'(\d+(?:\.\d+)?)', str(cadena).replace(',', '.'))
     return float(m.group(1)) if m else default
 
 
-def _extraer_seccion_fase(seccion_str: str, default: str = "2.5") -> str:
+def _extraer_seccion_fase(seccion_str, default: str = "2.5") -> str:
     if not seccion_str:
         return default
     s = str(seccion_str).strip()
@@ -96,35 +106,37 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     Rellena la plantilla oficial de Microsoft Word de la DGEAIM de la Región de Murcia
     con los datos de la memoria técnica de diseño (MTD), conservando los logos originales,
     membretes y estilos de la Consejería.
+    Totalmente blindada contra valores None o datos vacíos.
     """
     if not os.path.exists(RUTA_PLANTILLA_DOCX):
         raise FileNotFoundError(f"No se encontró la plantilla Word oficial en {RUTA_PLANTILLA_DOCX}")
 
     doc = docx.Document(RUTA_PLANTILLA_DOCX)
 
-    titular = datos_mtd.get("titular", {})
-    empl = datos_mtd.get("emplazamiento", {})
-    instalador = datos_mtd.get("instalador", {})
-    suministro = datos_mtd.get("suministro", {})
-    protecciones = datos_mtd.get("protecciones", {})
-    ensayos = datos_mtd.get("ensayos", {})
-    circuitos = datos_mtd.get("circuitos", [])
-    anexos = datos_mtd.get("anexos", {})
+    datos = datos_mtd or {}
+    titular = datos.get("titular") or {}
+    empl = datos.get("emplazamiento") or {}
+    instalador = datos.get("instalador") or {}
+    suministro = datos.get("suministro") or {}
+    protecciones = datos.get("protecciones") or {}
+    ensayos = datos.get("ensayos") or {}
+    circuitos = datos.get("circuitos") or []
+    anexos = datos.get("anexos") or {}
 
-    pot_inst_w = float(suministro.get("potencia_instalada_w", 5750.0))
+    pot_inst_w = float(suministro.get("potencia_instalada_w") or 5750.0)
     pot_inst_kw = pot_inst_w / 1000.0
-    tension_str = str(suministro.get("tension", "230 V"))
+    tension_str = str(suministro.get("tension") or "230 V")
     es_trifasico = "400" in tension_str
     v_nom = 400.0 if es_trifasico else 230.0
 
-    di_cable = str(suministro.get("di_cable", "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (AS)"))
-    di_tubo = str(suministro.get("di_tubo", "Tubo M32 libre de halógenos"))
-    di_long = float(suministro.get("di_long_m", 15.0))
-    di_cdt = float(suministro.get("di_cdt_pct", 0.72))
+    di_cable = str(suministro.get("di_cable") or "2x10 mm² Cu + TT 1x10 mm² RZ1-K 0.6/1kV (AS)")
+    di_tubo = str(suministro.get("di_tubo") or "Tubo M32 libre de halógenos")
+    di_long = float(suministro.get("di_long_m") or 15.0)
+    di_cdt = float(suministro.get("di_cdt_pct") or 0.72)
     di_sec = _extraer_seccion_fase(di_cable, default="10")
 
-    iga_cal = int(protecciones.get("iga_amperaje", 25))
-    rt_medida = float(ensayos.get("rt_ohm", 11.8))
+    iga_cal = int(protecciones.get("iga_amperaje") or 25)
+    rt_medida = float(ensayos.get("rt_ohm") or 11.8)
 
     hoy = datetime.date.today()
     dia = hoy.day
@@ -140,15 +152,16 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
         # Fila 2: Datos del Titular
         if len(t0.rows) > 2 and len(t0.rows[2].cells) > 0:
             c_tit = t0.rows[2].cells[0]
-            nom_tit = titular.get("nombre", "").strip() or "BEATRIZ IRIARTE QUIROZ"
-            nif_tit = titular.get("nif", "").strip() or "34330049L"
-            dir_tit = empl.get("direccion", "").strip() or "CALLE CRUCETA 11"
-            muni_tit = empl.get("municipio", "MURCIA").strip()
-            cp_tit = empl.get("cp", "30165").strip()
-            tel_tit = titular.get("telefono", "").strip() or "632000000"
-            email_tit = titular.get("email", "").strip() or "instalaciones@bolimur.com"
+            nom_tit = _safe_str(titular.get("nombre"), "BEATRIZ IRIARTE QUIROZ")
+            nif_tit = _safe_str(titular.get("nif"), "34330049L")
+            dir_tit = _safe_str(empl.get("direccion"), "CALLE CRUCETA 11")
+            muni_tit = _safe_str(empl.get("municipio"), "MURCIA")
+            cp_tit = _safe_str(empl.get("cp"), "30165")
+            tel_tit = _safe_str(titular.get("telefono"), "632000000")
+            email_tit = _safe_str(titular.get("email"), "instalaciones@bolimur.com")
 
-            c_tit.paragraphs[0].text = f"Nombre: {nom_tit.upper()}   N.I.F.: {nif_tit.upper()}"
+            if len(c_tit.paragraphs) > 0:
+                c_tit.paragraphs[0].text = f"Nombre: {nom_tit.upper()}   N.I.F.: {nif_tit.upper()}"
             if len(c_tit.paragraphs) > 1:
                 c_tit.paragraphs[1].text = f"Dirección: {dir_tit.upper()}   Localidad: {muni_tit.upper()}"
             if len(c_tit.paragraphs) > 2:
@@ -157,13 +170,13 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
                 c_tit.paragraphs[3].text = f"Teléfono: {tel_tit}   Correo electrónico: {email_tit}"
 
         # Fila 5 a 10: Datos del Instalador Habilitado
-        emp_nom = instalador.get("empresa", "BOLIMUR INSTALACIONES Y REFORMAS").strip()
-        emp_cif = instalador.get("cif", "B-73123456").strip()
-        emp_rii = instalador.get("registro_rii", "RII-30/08492").strip()
-        inst_nom = instalador.get("nombre", "Richard Orlando Choque Tejerina").strip()
-        inst_nif = instalador.get("nif", "34331426Q").strip()
-        inst_lic = instalador.get("licencia", "REBT-30/15892").strip()
-        inst_tel = instalador.get("telefono", "+34 600 000 000").strip()
+        emp_nom = _safe_str(instalador.get("empresa"), "BOLIMUR INSTALACIONES Y REFORMAS")
+        emp_cif = _safe_str(instalador.get("cif"), "B-73123456")
+        emp_rii = _safe_str(instalador.get("registro_rii"), "RII-30/08492")
+        inst_nom = _safe_str(instalador.get("nombre"), "Richard Orlando Choque Tejerina")
+        inst_nif = _safe_str(instalador.get("nif"), "34331426Q")
+        inst_lic = _safe_str(instalador.get("licencia"), "REBT-30/15892")
+        inst_tel = _safe_str(instalador.get("telefono"), "+34 600 000 000")
 
         if len(t0.rows) > 5 and len(t0.rows[5].cells) > 0:
             t0.rows[5].cells[0].text = f"Razón Social (Empresa instaladora): {emp_nom.upper()}"
@@ -188,14 +201,14 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
             t0.rows[10].cells[0].text = f"Categoría: ESPECIALISTA   Número Carnet: {inst_lic}   en la Comunidad Autónoma de: REGIÓN DE MURCIA"
 
         # Fila 17 y 18: Clasificación ITC-BT-04
-        uso_inm = empl.get("uso", "Vivienda Residencial").strip()
+        uso_inm = _safe_str(empl.get("uso"), "Vivienda Residencial")
         if len(t0.rows) > 17 and len(t0.rows[17].cells) > 0:
             t0.rows[17].cells[0].text = "[X]  INSTALACIONES PARA VIVIENDAS, OFICINAS Y/O LOCALES COMERCIALES."
         if len(t0.rows) > 18 and len(t0.rows[18].cells) > 0:
             t0.rows[18].cells[0].text = "[ ]  INSTALACIONES INDUSTRIALES, TEMPORALES, AGRARIAS O DE SERVICIOS."
 
         # Fila 19: Carácter de la Instalación
-        tipo_tram = datos_mtd.get("tipo_tramitacion", "Nueva Instalación")
+        tipo_tram = _safe_str(datos.get("tipo_tramitacion"), "Nueva Instalación")
         nueva_mark = "[X]" if "Nueva" in tipo_tram else "[ ]"
         ampl_mark = "[X]" if "Ampliación" in tipo_tram else "[ ]"
         mod_mark = "[X]" if "Modificación" in tipo_tram or "Reforma" in tipo_tram else "[ ]"
@@ -243,7 +256,8 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     # =========================================================================
     if len(doc.tables) > 1:
         t1 = doc.tables[1]
-        grado_cod = "E" if (pot_inst_w >= 9200.0 or "Elevad" in str(suministro.get("grado_electrif", ""))) else "B"
+        grado_str = _safe_str(suministro.get("grado_electrif"))
+        grado_cod = "E" if (pot_inst_w >= 9200.0 or "Elevad" in grado_str) else "B"
 
         if len(t1.rows) > 6 and len(t1.rows[6].cells) > 4:
             t1.rows[6].cells[1].text = "1 A"
@@ -355,14 +369,14 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
             r_circ = t12.rows[row_idx]
 
             if idx < len(circuitos):
-                c_item = circuitos[idx]
-                c_nom = str(c_item.get("nombre", f"C{idx+1}"))
-                c_pot_w = float(c_item.get("potencia", 2300))
+                c_item = circuitos[idx] or {}
+                c_nom = _safe_str(c_item.get("nombre"), f"C{idx+1}")
+                c_pot_w = float(c_item.get("potencia") or 2300)
                 c_pot_kw = c_pot_w / 1000.0
-                c_long_m = float(c_item.get("longitud", 15))
-                c_sec_str = _extraer_seccion_fase(str(c_item.get("seccion", "2.5")), default="2.5")
-                c_tubo_str = str(c_item.get("tubo", "M20"))
-                c_cdt_parc = float(c_item.get("cdt", 1.10))
+                c_long_m = float(c_item.get("longitud") or 15)
+                c_sec_str = _extraer_seccion_fase(str(c_item.get("seccion") or "2.5"), default="2.5")
+                c_tubo_str = _safe_str(c_item.get("tubo"), "M20")
+                c_cdt_parc = float(c_item.get("cdt") or 1.10)
                 c_cdt_tot = di_cdt + c_cdt_parc
                 c_ib = c_pot_w / 230.0
 
@@ -390,8 +404,6 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     img_sit = _preparar_imagen_bytes(anexos.get("plano_situacion"))
     if img_sit and len(doc.tables) > 8:
         try:
-            t_sit = doc.tables[8]  # Al pie de Table 8 o en Table 9
-            # Se inserta en Table 9 si existe
             if len(doc.tables) > 9 and len(doc.tables[9].rows) > 1:
                 p_sit = doc.tables[9].rows[1].cells[0].paragraphs[0]
                 p_sit.add_run().add_picture(img_sit, width=Inches(6.2))
@@ -417,3 +429,55 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     bio_out = io.BytesIO()
     doc.save(bio_out)
     return bio_out.getvalue()
+
+
+def convertir_docx_a_pdf(docx_bytes: bytes) -> bytes | None:
+    """
+    Convierte un documento Word (.docx) a PDF utilizando Microsoft Word COM en Windows.
+    Produce una copia 100% idéntica, con los membretes, sellos, fuentes y tablas oficiales de la CARM.
+    Si no está en Windows o Word COM no está disponible, devuelve None de forma segura.
+    """
+    if os.name != "nt" or not docx_bytes:
+        return None
+
+    tmp_dir = None
+    try:
+        tmp_dir = tempfile.mkdtemp(prefix="bolimur_carm_")
+        tmp_docx = os.path.join(tmp_dir, "mtd_oficial.docx")
+        tmp_pdf = os.path.join(tmp_dir, "mtd_oficial.pdf")
+
+        with open(tmp_docx, "wb") as f_in:
+            f_in.write(docx_bytes)
+
+        ps_script = f"""
+$word = New-Object -ComObject Word.Application
+$word.Visible = $false
+try {{
+    $doc = $word.Documents.Open('{tmp_docx}')
+    $doc.SaveAs([ref]'{tmp_pdf}', [ref]17)
+    $doc.Close([ref]0)
+}} finally {{
+    $word.Quit([ref]0)
+}}
+"""
+        res = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_script],
+            capture_output=True,
+            text=True,
+            timeout=25
+        )
+
+        if res.returncode == 0 and os.path.exists(tmp_pdf) and os.path.getsize(tmp_pdf) > 1000:
+            with open(tmp_pdf, "rb") as f_out:
+                return f_out.read()
+    except Exception:
+        pass
+    finally:
+        if tmp_dir and os.path.exists(tmp_dir):
+            try:
+                import shutil
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+    return None

@@ -281,6 +281,30 @@ def _obtener_logo_path():
     return None
 
 
+def _obtener_logo_carm_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    posibles = [
+        os.path.join(base_dir, "plantillas", "logo_carm_oficial.jpg"),
+        os.path.join(os.getcwd(), "plantillas", "logo_carm_oficial.jpg"),
+    ]
+    for p in posibles:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def _obtener_escudo_carm_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    posibles = [
+        os.path.join(base_dir, "plantillas", "escudo_carm_oficial.png"),
+        os.path.join(os.getcwd(), "plantillas", "escudo_carm_oficial.png"),
+    ]
+    for p in posibles:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
 def _crear_logo_flowable(width=4.8*cm, height=2.68*cm):
     path = _obtener_logo_path()
     if path:
@@ -358,40 +382,33 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     expediente = datos_mtd.get("expediente", "EXP-MTD-MURCIA-2026")
 
     # =========================================================================
-    # PÁGINA 1: ENCABEZADO INSTITUCIONAL OFICIAL DGEAIM MURCIA CON LOGO BOLIMUR
+    # PÁGINA 1: ENCABEZADO INSTITUCIONAL OFICIAL DGEAIM MURCIA
     # =========================================================================
-    logo_img = _crear_logo_flowable(width=4.6*cm, height=2.57*cm)
-    col_logo = logo_img if logo_img else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogo', parent=body_style, alignment=2))
+    logo_carm_p = _obtener_logo_carm_path()
+    if logo_carm_p:
+        try:
+            story.append(Image(logo_carm_p, width=18.4*cm, height=3.68*cm))
+            story.append(Spacer(1, 2))
+        except Exception:
+            pass
 
     header_table_data = [
         [
             Paragraph(
-                "<b>Región de Murcia</b><br/>"
-                "<font size='6.5'>Consejería de Ciencia, Tecnologías, Industria y Comercio<br/>"
-                "<b>Dirección General de Industria, Energía y Minas</b><br/>"
-                "Nuevas Tecnologías s/n., 30005 Murcia | Tel. (968) 362002</font>",
-                body_style
-            ),
-            Paragraph(
-                "<b>MEMORIA TÉCNICA DE DISEÑO</b><br/>"
-                "<font size='7.5' color='#0369a1'><b>DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b></font><br/>"
-                f"<font size='6.5' color='#991b1b'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> | Ref: {expediente}</font>",
-                ParagraphStyle('HdrR', parent=body_style, alignment=1)
-            ),
-            col_logo
+                "<b>MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b><br/>"
+                f"<font size='7' color='#334155'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> &nbsp;|&nbsp; "
+                f"<b>Ref. Expediente:</b> {expediente} &nbsp;|&nbsp; <b>Fecha:</b> {fecha_str}</font>",
+                ParagraphStyle('HdrOficialCarm', parent=body_style, alignment=1, fontSize=8.5, leading=11)
+            )
         ]
     ]
-    t_hdr = Table(header_table_data, colWidths=[6.9*cm, 6.9*cm, 4.6*cm])
+    t_hdr = Table(header_table_data, colWidths=[18.4*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_head),
         ('BOX', (0,0), (-1,-1), 1.0, c_primary),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, c_border),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-        ('RIGHTPADDING', (0,0), (-1,-1), 5),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ALIGN', (2,0), (2,0), 'RIGHT'),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
     ]))
     story.append(t_hdr)
     story.append(Spacer(1, 3))
@@ -1202,28 +1219,54 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     tipo_tram = datos_cie.get("tipo_tramitacion", "Memoria Técnica de Diseño (MTD - ITC-BT-04)")
 
     # 1. CABECERA INSTITUCIONAL OFICIAL
-    logo_flowable = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
+    escudo_path = _obtener_escudo_carm_path()
+    escudo_flowable = None
+    if escudo_path:
+        try:
+            escudo_flowable = Image(escudo_path, width=1.3*cm, height=2.48*cm)
+        except Exception:
+            pass
+
+    logo_flowable = _crear_logo_flowable(width=4.4*cm, height=2.45*cm)
     carm_logo_txt = (
         "<font size='9' color='#991b1b'><b>COMUNIDAD AUTÓNOMA DE LA REGIÓN DE MURCIA</b></font><br/>"
         "<font size='7.5' color='#0f172a'><b>CONSEJERÍA DE CIENCIA, TECNOLOGÍAS, INDUSTRIA Y COMERCIO</b></font><br/>"
         "<font size='7' color='#475569'>Dirección General de Energía y Actividad Industrial y Minera (Código 30)</font>"
     )
     
-    hdr_data = [
-        [
-            Paragraph(carm_logo_txt, body_style),
-            logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR INSTALACIONES</b>", ParagraphStyle('HdrB', parent=body_style, alignment=2))
+    if escudo_flowable:
+        hdr_data = [
+            [
+                escudo_flowable,
+                Paragraph(carm_logo_txt, body_style),
+                logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR INSTALACIONES</b>", ParagraphStyle('HdrB', parent=body_style, alignment=2))
+            ]
         ]
-    ]
-    t_hdr = Table(hdr_data, colWidths=[13.6*cm, 4.8*cm])
-    t_hdr.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ALIGN', (1,0), (1,0), 'RIGHT'),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-    ]))
+        t_hdr = Table(hdr_data, colWidths=[1.8*cm, 12.0*cm, 4.6*cm])
+        t_hdr.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (2,0), (2,0), 'RIGHT'),
+            ('TOPPADDING', (0,0), (-1,-1), 2),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))
+    else:
+        hdr_data = [
+            [
+                Paragraph(carm_logo_txt, body_style),
+                logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR INSTALACIONES</b>", ParagraphStyle('HdrB', parent=body_style, alignment=2))
+            ]
+        ]
+        t_hdr = Table(hdr_data, colWidths=[13.6*cm, 4.8*cm])
+        t_hdr.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+            ('TOPPADDING', (0,0), (-1,-1), 2),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))
     story.append(t_hdr)
     story.append(HRFlowable(width="100%", thickness=1.5, color=c_carm_red, spaceBefore=3, spaceAfter=5))
 

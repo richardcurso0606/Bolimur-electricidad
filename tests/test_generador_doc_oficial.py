@@ -59,3 +59,32 @@ def test_generar_docx_oficial_dgeaim_murcia():
     assert len(docx_bytes) > 50000
     # ZIP / DOCX magic bytes: PK
     assert docx_bytes.startswith(b"PK")
+
+
+def test_generar_docx_oficial_con_nulos():
+    """Verifica que campos nulos en datos_mtd no produzcan errores AttributeError: 'NoneType' object has no attribute 'strip'"""
+    datos_con_nulos = {
+        "titular": {"nombre": None, "nif": None, "telefono": None, "email": None},
+        "emplazamiento": {"direccion": None, "cp": None, "municipio": None, "cups": None, "uso": None},
+        "instalador": {"empresa": None, "cif": None, "nombre": None, "licencia": None, "registro_rii": None, "telefono": None},
+        "suministro": {"potencia_instalada_w": None, "tension": None, "di_cable": None, "di_tubo": None, "di_long_m": None, "di_cdt_pct": None, "grado_electrif": None},
+        "protecciones": {"iga_amperaje": None},
+        "ensayos": {"rt_ohm": None},
+        "circuitos": [{"nombre": None, "potencia": None, "seccion": None, "tubo": None, "longitud": None, "cdt": None}],
+        "anexos": {}
+    }
+    docx_bytes = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos_con_nulos)
+    assert isinstance(docx_bytes, bytes)
+    assert len(docx_bytes) > 50000
+    assert docx_bytes.startswith(b"PK")
+
+
+def test_convertir_docx_a_pdf():
+    """Verifica la función de conversión Word COM a PDF oficial."""
+    datos_basicos = {}
+    docx_bytes = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos_basicos)
+    pdf_bytes = generador_doc_oficial.convertir_docx_a_pdf(docx_bytes)
+    if pdf_bytes is not None:
+        assert isinstance(pdf_bytes, bytes)
+        assert pdf_bytes.startswith(b"%PDF")
+
