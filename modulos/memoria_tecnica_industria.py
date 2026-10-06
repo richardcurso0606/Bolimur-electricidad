@@ -731,6 +731,78 @@ OPCIONES_TIPO_INSTALACION = [
     "🔌 Derivación Individual DI (ITC-BT-15 - 9.200 W - 230V)"
 ]
 
+OPCIONES_TRAMITE = [
+    "🆕 Nueva Instalación (Alta Inicial)",
+    "🏗️ Instalación Temporal de Obra (Suministro Provisional)",
+    "📈 Ampliación de Potencia / Cargas",
+    "🔧 Modificación de Importancia / Reforma",
+    "🔄 Adecuación Reglamentaria (REBT)",
+    "📋 Boletín de Reconocimiento / Cambio Titular"
+]
+
+def normalizar_opcion_tipo_inst(val: str) -> str:
+    """Garantiza que la opción seleccionada pertenezca estrictamente a OPCIONES_TIPO_INSTALACION."""
+    if not val or val in OPCIONES_TIPO_INSTALACION:
+        return val or OPCIONES_TIPO_INSTALACION[0]
+    
+    val_low = str(val).lower()
+
+    # 1. Búsqueda directa por coincidencia parcial en OPCIONES_TIPO_INSTALACION
+    for opt in OPCIONES_TIPO_INSTALACION[1:]:
+        if val_low in opt.lower() or opt.lower() in val_low:
+            return opt
+
+    # 2. Búsqueda por palabras clave REBT
+    if "aerotermia" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "aerotermia" in o.lower()][0]
+    if "máxima" in val_low or "maxima" in val_low or "14.49" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "máxima" in o.lower()][0]
+    if "chalet" in val_low or ("trifásic" in val_low and "vivienda" in val_low):
+        return [o for o in OPCIONES_TIPO_INSTALACION if "chalet" in o.lower()][0]
+    if "combo" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "combo" in o.lower()][0]
+    if "solar" in val_low or "fotovoltaic" in val_low or "autoconsumo" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "solar" in o.lower() and "combo" not in o.lower()][0]
+    if "irve" in val_low or "recarga" in val_low or "vehículo" in val_low or "vehiculo" in val_low:
+        if "trifásic" in val_low or "22.000" in val_low or "rápido" in val_low:
+            return [o for o in OPCIONES_TIPO_INSTALACION if "trifásico comercial" in o.lower()][0]
+        if "integrada" in val_low:
+            return [o for o in OPCIONES_TIPO_INSTALACION if "integrada" in o.lower()][0]
+        return [o for o in OPCIONES_TIPO_INSTALACION if "garaje comunitario" in o.lower()][0]
+    if "bar" in val_low or "restaurante" in val_low or "cafetería" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "bar" in o.lower()][0]
+    if "academia" in val_low or "clínica" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "academia" in o.lower()][0]
+    if "gimnasio" in val_low or "polideportivo" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "gimnasio" in o.lower()][0]
+    if "obra" in val_low or "provisional" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "obra" in o.lower()][0]
+    if "lga" in val_low or "alimentación" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "lga" in o.lower()][0]
+    if "derivación" in val_low or " di " in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "derivación" in o.lower()][0]
+    if "clima" in val_low or "elevada" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "climatización" in o.lower()][0]
+    if "vivienda" in val_low or "básica" in val_low:
+        return [o for o in OPCIONES_TIPO_INSTALACION if "básica" in o.lower()][0]
+
+    return OPCIONES_TIPO_INSTALACION[0]
+
+def normalizar_opcion_tramite(val: str) -> str:
+    """Garantiza que la opción seleccionada pertenezca estrictamente a OPCIONES_TRAMITE."""
+    if not val or val in OPCIONES_TRAMITE:
+        return val or OPCIONES_TRAMITE[0]
+    val_low = str(val).lower()
+    for opt in OPCIONES_TRAMITE:
+        if ("obra" in val_low and "obra" in opt.lower()) or \
+           ("alta" in val_low and "alta" in opt.lower()) or \
+           ("ampliación" in val_low and "ampliación" in opt.lower()) or \
+           ("reforma" in val_low and "reforma" in opt.lower()) or \
+           ("adecuación" in val_low and "adecuación" in opt.lower()) or \
+           ("reconocimiento" in val_low and "reconocimiento" in opt.lower()):
+            return opt
+    return OPCIONES_TRAMITE[0]
+
 def obtener_info_plantilla(tipo: str) -> dict:
     """Retorna la ficha de metadatos técnicos de la plantilla seleccionada o None si es en blanco."""
     if not tipo or "Blanco" in tipo or "Seleccionar" in tipo or tipo.startswith("⚪"):
@@ -986,8 +1058,8 @@ def renderizar():
             for k in list(st.session_state.keys()):
                 if k.startswith("mtd_") or k.startswith("quick_up_") or k.startswith("up_mtd_"):
                     st.session_state.pop(k, None)
-            st.session_state["mtd_tipo_inst_sel"] = "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --"
-            cargar_plantilla_por_tipo("⚪")
+            st.session_state["_mtd_cargar_plantilla_pendiente"] = "⚪ -- Seleccionar Tipo de Instalación (En Blanco) --"
+            st.session_state["_mtd_msg_exito_carga"] = "✅ MTD reiniciada en blanco."
             st.rerun()
 
     # Usuario autenticado
@@ -1001,6 +1073,30 @@ def renderizar():
     }
 
     # =========================================================================
+    # 0. APLICAR CARGAS PENDIENTES DE PROYECTO O PLANTILLA ANTES DE INSTANCIAR WIDGETS
+    # =========================================================================
+    if "_mtd_cargar_datos_pendientes" in st.session_state:
+        pend = st.session_state.pop("_mtd_cargar_datos_pendientes", {})
+        if isinstance(pend, dict):
+            for k, v in pend.items():
+                if k == "mtd_tipo_inst_sel":
+                    st.session_state[k] = normalizar_opcion_tipo_inst(str(v))
+                elif k == "mtd_tipo_tram_sel":
+                    st.session_state[k] = normalizar_opcion_tramite(str(v))
+                else:
+                    st.session_state[k] = v
+
+    tipo_pend = st.session_state.pop("_mtd_cargar_plantilla_pendiente", None)
+    if tipo_pend:
+        norm_tipo = normalizar_opcion_tipo_inst(tipo_pend)
+        st.session_state["mtd_tipo_inst_sel"] = norm_tipo
+        cargar_plantilla_por_tipo(norm_tipo)
+
+    msg_exito = st.session_state.pop("_mtd_msg_exito_carga", None)
+    if msg_exito:
+        st.success(msg_exito)
+
+    # =========================================================================
     # 1. EXPEDIENTE, CLIENTE (CRM) Y GUARDADO / CARGA DE MEMORIAS
     # =========================================================================
     st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">👤 1. Expediente, Cliente (CRM) y Gestión de Memorias Guardadas</h4></div>', unsafe_allow_html=True)
@@ -1009,23 +1105,13 @@ def renderizar():
         col_p_sel, col_p_btn, col_tram = st.columns([3.8, 1.4, 2.2])
         
         with col_p_sel:
-            opciones_tipo_inst = OPCIONES_TIPO_INSTALACION
-            tipo_actual = st.session_state.get("mtd_tipo_inst_sel", opciones_tipo_inst[0])
-            idx_tipo_def = 0
-            if tipo_actual in opciones_tipo_inst:
-                idx_tipo_def = opciones_tipo_inst.index(tipo_actual)
-            else:
-                for i, opt in enumerate(opciones_tipo_inst):
-                    if ("vivienda" in tipo_actual.lower() and "básica" in opt.lower()) or \
-                       ("irve" in tipo_actual.lower() and "garaje" in opt.lower()) or \
-                       ("derivación" in tipo_actual.lower() and "derivación" in opt.lower()) or \
-                       ("lga" in tipo_actual.lower() and "lga" in opt.lower()):
-                        idx_tipo_def = i
-                        break
+            tipo_actual = normalizar_opcion_tipo_inst(st.session_state.get("mtd_tipo_inst_sel", OPCIONES_TIPO_INSTALACION[0]))
+            st.session_state["mtd_tipo_inst_sel"] = tipo_actual
+            idx_tipo_def = OPCIONES_TIPO_INSTALACION.index(tipo_actual)
 
             tipo_inst_sel = st.selectbox(
                 "📋 Tipo de Instalación y Plantilla Técnica Oficial (REBT):",
-                opciones_tipo_inst,
+                OPCIONES_TIPO_INSTALACION,
                 index=idx_tipo_def,
                 key="mtd_tipo_inst_sel",
                 help="Selecciona una plantilla oficial para autorellenar potencias, IGA, cable de derivación individual y circuitos reglamentarios."
@@ -1043,17 +1129,14 @@ def renderizar():
                 st.rerun()
 
         with col_tram:
+            tram_actual = normalizar_opcion_tramite(st.session_state.get("mtd_tipo_tram_sel", OPCIONES_TRAMITE[0]))
+            st.session_state["mtd_tipo_tram_sel"] = tram_actual
+            idx_tram_def = OPCIONES_TRAMITE.index(tram_actual)
+
             tipo_tram_sel = st.selectbox(
                 "Carácter de la Instalación / Trámite:",
-                [
-                    "🆕 Nueva Instalación (Alta Inicial)",
-                    "🏗️ Instalación Temporal de Obra (Suministro Provisional)",
-                    "📈 Ampliación de Potencia / Cargas",
-                    "🔧 Modificación de Importancia / Reforma",
-                    "🔄 Adecuación Reglamentaria (REBT)",
-                    "📋 Boletín de Reconocimiento / Cambio Titular"
-                ],
-                index=0,
+                OPCIONES_TRAMITE,
+                index=idx_tram_def,
                 key="mtd_tipo_tram_sel"
             )
 
@@ -1111,9 +1194,8 @@ def renderizar():
                         if st.button("🚀 Cargar MTD", use_container_width=True, help="Cargar esta memoria guardada previamente"):
                             p_datos = db_manager.cargar_proyecto_por_id(sel_p_id, user_auth["id"])
                             if p_datos and "datos" in p_datos:
-                                for k, v in p_datos["datos"].items():
-                                    st.session_state[k] = v
-                                st.success(f"✅ ¡Memoria '{p_datos.get('nombre_proyecto')}' cargada con éxito!")
+                                st.session_state["_mtd_cargar_datos_pendientes"] = p_datos["datos"]
+                                st.session_state["_mtd_msg_exito_carga"] = f"✅ ¡Memoria '{p_datos.get('nombre_proyecto')}' cargada con éxito!"
                                 st.rerun()
                 else:
                     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
@@ -1236,11 +1318,12 @@ def renderizar():
                     st.warning("⚠️ **Local de Pública Concurrencia (ITC-BT-28):** Obligatorio cables libres de halógenos AS, doble línea de alumbrado e inspección inicial por OCA.")
 
                 if st.button("⚡ Cargar Plantilla Calculada en la MTD", key="btn_cargar_calc_loc", type="primary"):
-                    st.session_state["mtd_tipo_inst_sel"] = plantilla_rec
-                    cargar_plantilla_por_tipo(plantilla_rec)
-                    st.session_state["mtd_in_pot_inst"] = float(round(pot_calc_total, 0))
-                    st.session_state["mtd_in_pot_max"] = float(max(st.session_state.get("mtd_in_pot_max", pot_calc_total), pot_calc_total))
-                    st.success(f"✅ ¡Plantilla cargada con {pot_calc_total:,.0f} W calculados!")
+                    st.session_state["_mtd_cargar_plantilla_pendiente"] = plantilla_rec
+                    st.session_state["_mtd_cargar_datos_pendientes"] = {
+                        "mtd_in_pot_inst": float(round(pot_calc_total, 0)),
+                        "mtd_in_pot_max": float(max(st.session_state.get("mtd_in_pot_max", pot_calc_total), pot_calc_total))
+                    }
+                    st.session_state["_mtd_msg_exito_carga"] = f"✅ ¡Plantilla cargada con {pot_calc_total:,.0f} W calculados!"
                     st.rerun()
 
         with tab_guia_loc:

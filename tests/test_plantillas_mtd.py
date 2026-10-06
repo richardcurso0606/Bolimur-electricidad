@@ -228,3 +228,19 @@ def test_generacion_oficial_con_todos_los_planos():
     pdf_res = pdf_memoria_tecnica.generar_pdf_mtd_industria_murcia(datos)
     assert pdf_res is not None and len(pdf_res) > 1000
 
+def test_normalizar_opciones_y_cargas_pendientes():
+    # Probar normalización con cadenas antiguas o parciales
+    opt_antigua = "🚗 Recarga Vehículo Eléctrico IRVE (ITC-BT-52)"
+    opt_norm = mtd.normalizar_opcion_tipo_inst(opt_antigua)
+    assert opt_norm in mtd.OPCIONES_TIPO_INSTALACION
+    assert "IRVE" in opt_norm
+
+    opt_viv_antigua = "🏡 Vivienda Unifamiliar / Piso Residencial (ITC-BT-25)"
+    opt_viv_norm = mtd.normalizar_opcion_tipo_inst(opt_viv_antigua)
+    assert opt_viv_norm in mtd.OPCIONES_TIPO_INSTALACION
+
+    tram_norm = mtd.normalizar_opcion_tramite("Nueva Instalación")
+    assert tram_norm in mtd.OPCIONES_TRAMITE
+    assert "Nueva" in tram_norm
+
+
