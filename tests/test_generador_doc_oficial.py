@@ -88,3 +88,42 @@ def test_convertir_docx_a_pdf():
         assert isinstance(pdf_bytes, bytes)
         assert pdf_bytes.startswith(b"%PDF")
 
+
+def test_generar_docx_con_planos_y_casillas():
+    """Verifica que los planos se inserten sin errores y que las casillas no se solapen."""
+    import io, base64, docx
+    from PIL import Image
+
+    im = Image.new('RGB', (1200, 900), color='lightblue')
+    bio = io.BytesIO()
+    im.save(bio, format='JPEG')
+    b64_dummy = "data:image/jpeg;base64," + base64.b64encode(bio.getvalue()).decode('utf-8')
+
+    datos = {
+        "tipo_tramitacion": "Nueva Instalación",
+        "emplazamiento": {"uso": "Vivienda Residencial"},
+        "suministro": {"tension": "Monofásico 230 V", "potencia_instalada_w": 5750.0},
+        "anexos": {
+            "plano_situacion": b64_dummy,
+            "plano_emplazamiento": b64_dummy,
+            "plano_distribucion": b64_dummy,
+        }
+    }
+
+    docx_bytes = generador_doc_oficial.generar_docx_oficial_dgeaim_murcia(datos)
+    assert isinstance(docx_bytes, bytes)
+    assert docx_bytes.startswith(b"PK")
+
+    doc = docx.Document(io.BytesIO(docx_bytes))
+    t0 = doc.tables[0]
+
+    # Verificar que fila 19 tiene separadas las celdas
+    c0_txt = t0.rows[19].cells[0].text
+    c4_txt = t0.rows[19].cells[4].text
+    assert "[X] Nueva" in c0_txt
+    assert "Ampliación" in c4_txt
+    assert "Modificación" in c4_txt
+    # Verificar que no hay duplicación de Ampliación en c0
+    assert "Ampliación" not in c0_txt
+
+

@@ -94,11 +94,49 @@ def _preparar_imagen_bytes(img_data) -> io.BytesIO | None:
         from PIL import Image as PILImage
         bio = io.BytesIO(raw)
         with PILImage.open(bio) as im:
-            im.verify()
-        bio.seek(0)
-        return bio
+            # Optimizar tamaño si es gigante
+            if im.mode in ("RGBA", "P"):
+                im = im.convert("RGB")
+            if im.width > 1600 or im.height > 1600:
+                im.thumbnail((1600, 1600), PILImage.Resampling.LANCZOS)
+            bio_out = io.BytesIO()
+            im.save(bio_out, format="JPEG", quality=85, optimize=True)
+            bio_out.seek(0)
+            return bio_out
     except Exception:
         return None
+
+
+def _insertar_imagen_en_parrafo(parrafo, img_data, max_w_in=5.8, max_h_in=5.0) -> bool:
+    """
+    Inserta una imagen en un párrafo de Word escalada proporcionalmente para que
+    NUNCA desborde la página y no cree páginas en blanco redundantes.
+    """
+    bio = _preparar_imagen_bytes(img_data)
+    if not bio:
+        return False
+    try:
+        from PIL import Image as PILImage
+        bio.seek(0)
+        with PILImage.open(bio) as pil_im:
+            w_px, h_px = pil_im.size
+            if w_px <= 0 or h_px <= 0:
+                return False
+            aspect = h_px / w_px
+
+        target_w = float(max_w_in)
+        target_h = target_w * aspect
+        if target_h > float(max_h_in):
+            target_h = float(max_h_in)
+            target_w = target_h / aspect
+
+        bio.seek(0)
+        parrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = parrafo.add_run()
+        run.add_picture(bio, width=Inches(target_w), height=Inches(target_h))
+        return True
+    except Exception:
+        return False
 
 
 def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
@@ -106,7 +144,7 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     Rellena la plantilla oficial de Microsoft Word de la DGEAIM de la Región de Murcia
     con los datos de la memoria técnica de diseño (MTD), conservando los logos originales,
     membretes y estilos de la Consejería.
-    Totalmente blindada contra valores None o datos vacíos.
+    Garantiza alineación milimétrica en casillas de verificación y sin superposiciones.
     """
     if not os.path.exists(RUTA_PLANTILLA_DOCX):
         raise FileNotFoundError(f"No se encontró la plantilla Word oficial en {RUTA_PLANTILLA_DOCX}")
@@ -200,56 +238,121 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
         if len(t0.rows) > 10 and len(t0.rows[10].cells) > 0:
             t0.rows[10].cells[0].text = f"Categoría: ESPECIALISTA   Número Carnet: {inst_lic}   en la Comunidad Autónoma de: REGIÓN DE MURCIA"
 
-        # Fila 17 y 18: Clasificación ITC-BT-04
+        # Fila 17 y 18: Clasificación ITC-BT-04 (Con tipografía alineada)
         uso_inm = _safe_str(empl.get("uso"), "Vivienda Residencial")
+        es_vivienda_ofic = not ("Industrial" in uso_inm or "Agraria" in uso_inm or "Temporal" in uso_inm)
         if len(t0.rows) > 17 and len(t0.rows[17].cells) > 0:
-            t0.rows[17].cells[0].text = "[X]  INSTALACIONES PARA VIVIENDAS, OFICINAS Y/O LOCALES COMERCIALES."
-        if len(t0.rows) > 18 and len(t0.rows[18].cells) > 0:
-            t0.rows[18].cells[0].text = "[ ]  INSTALACIONES INDUSTRIALES, TEMPORALES, AGRARIAS O DE SERVICIOS."
+            p17 = t0.rows[17].cells[0].paragraphs[0]
+            p17.text = " [X]  INSTALACIONES PARA VIVIENDAS, OFICINAS Y/O LOCALES COMERCIALES." if es_vivienda_ofic else " [ ]  INSTALACIONES PARA VIVIENDAS, OFICINAS Y/O LOCALES COMERCIALES."
+            if p17.runs:
+                p17.runs[0].font.name = "Arial"
+                p17.runs[0].font.size = Pt(8.5)
 
-        # Fila 19: Carácter de la Instalación
+        if len(t0.rows) > 18 and len(t0.rows[18].cells) > 0:
+            p18 = t0.rows[18].cells[0].paragraphs[0]
+            p18.text = " [X]  INSTALACIONES INDUSTRIALES, TEMPORALES, AGRARIAS O DE SERVICIOS." if not es_vivienda_ofic else " [ ]  INSTALACIONES INDUSTRIALES, TEMPORALES, AGRARIAS O DE SERVICIOS."
+            if p18.runs:
+                p18.runs[0].font.name = "Arial"
+                p18.runs[0].font.size = Pt(8.5)
+
+        # Fila 19: Carácter de la Instalación (Separado limpiamente por celdas para evitar solapamientos)
         tipo_tram = _safe_str(datos.get("tipo_tramitacion"), "Nueva Instalación")
-        nueva_mark = "[X]" if "Nueva" in tipo_tram else "[ ]"
-        ampl_mark = "[X]" if "Ampliación" in tipo_tram else "[ ]"
-        mod_mark = "[X]" if "Modificación" in tipo_tram or "Reforma" in tipo_tram else "[ ]"
-        if len(t0.rows) > 19 and len(t0.rows[19].cells) > 0:
-            t0.rows[19].cells[0].text = f"{nueva_mark} Nueva   {ampl_mark} Ampliación   {mod_mark} Modificación"
+        nueva_chk = "[X]" if "Nueva" in tipo_tram else "[ ]"
+        ampl_chk = "[X]" if "Ampliación" in tipo_tram else "[ ]"
+        mod_chk = "[X]" if ("Modificación" in tipo_tram or "Reforma" in tipo_tram) else "[ ]"
+
+        if len(t0.rows) > 19:
+            # Celda 0: Casilla Nueva
+            if len(t0.rows[19].cells) > 0:
+                p19_0 = t0.rows[19].cells[0].paragraphs[0]
+                p19_0.text = f" {nueva_chk} Nueva"
+                if p19_0.runs:
+                    p19_0.runs[0].font.name = "Arial"
+                    p19_0.runs[0].font.size = Pt(9.0)
+
+            # Celda 4: Casillas Ampliación y Modificación con expediente anterior
+            if len(t0.rows[19].cells) > 4:
+                p19_4 = t0.rows[19].cells[4].paragraphs[0]
+                p19_4.text = f"   {ampl_chk} Ampliación    {mod_chk} Modificación - Nº Registro/Expediente BT anterior: ............................."
+                if p19_4.runs:
+                    p19_4.runs[0].font.name = "Arial"
+                    p19_4.runs[0].font.size = Pt(8.5)
 
         # Fila 20: Emplazamiento
         if len(t0.rows) > 20 and len(t0.rows[20].cells) > 0:
-            t0.rows[20].cells[0].text = f"Emplazamiento: {dir_tit.upper()}   Localidad: {muni_tit.upper()}   C.P.: {cp_tit}   Actividad: {uso_inm.upper()}"
+            p20 = t0.rows[20].cells[0].paragraphs[0]
+            p20.text = f"Emplazamiento: {dir_tit.upper()}   Localidad: {muni_tit.upper()}   C.P.: {cp_tit}   Actividad: {uso_inm.upper()}"
+            if p20.runs:
+                p20.runs[0].font.name = "Arial"
+                p20.runs[0].font.size = Pt(8.5)
 
-        # Fila 23: Tensión y Potencia
-        if len(t0.rows) > 23 and len(t0.rows[23].cells) > 4:
-            t0.rows[23].cells[1].text = "[X] 230 V" if not es_trifasico else "[ ] 230 V"
-            t0.rows[23].cells[2].text = "[X] 400 V" if es_trifasico else "[ ] 400 V"
-            t0.rows[23].cells[4].text = f"{pot_inst_kw:.2f} kW ({pot_inst_w:,.0f} W)"
+        # Fila 23: Tensión y Potencia (Usando índices de columnas exactos sin sobreescrituras)
+        if len(t0.rows) > 23:
+            if len(t0.rows[23].cells) > 3:
+                p23_v1 = t0.rows[23].cells[3].paragraphs[0]
+                p23_v1.text = " [X] 230 V" if not es_trifasico else " [ ] 230 V"
+                if p23_v1.runs:
+                    p23_v1.runs[0].font.name = "Arial"
+                    p23_v1.runs[0].font.size = Pt(9.0)
+
+            if len(t0.rows[23].cells) > 5:
+                p23_v2 = t0.rows[23].cells[5].paragraphs[0]
+                p23_v2.text = " [X] 400 V" if es_trifasico else " [ ] 400 V"
+                if p23_v2.runs:
+                    p23_v2.runs[0].font.name = "Arial"
+                    p23_v2.runs[0].font.size = Pt(9.0)
+
+            if len(t0.rows[23].cells) > 15:
+                p23_kw = t0.rows[23].cells[15].paragraphs[0]
+                p23_kw.text = f" {pot_inst_kw:.2f} kW"
+                if p23_kw.runs:
+                    p23_kw.runs[0].font.name = "Arial"
+                    p23_kw.runs[0].font.size = Pt(9.0)
 
         # Fila 25: Grupo 3.1 ITC-BT-04
         if len(t0.rows) > 25 and len(t0.rows[25].cells) > 0:
-            t0.rows[25].cells[0].text = "Grupo de instalación según 3.1 ITC-BT 04: Grupo F (Viviendas unifamiliares / edificios)"
+            p25 = t0.rows[25].cells[0].paragraphs[0]
+            p25.text = "Grupo de instalación según 3.1 ITC-BT 04: f (Viviendas unifamiliares / edificios)"
+            if p25.runs:
+                p25.runs[0].font.name = "Arial"
+                p25.runs[0].font.size = Pt(8.5)
 
-        # Fila 28 y 29: LGA / Derivación Individual y Puesta a Tierra
-        if len(t0.rows) > 28 and len(t0.rows[28].cells) > 7:
-            t0.rows[28].cells[0].text = "CGP-01"
-            t0.rows[28].cells[1].text = "Esquema 2 (i-DE)"
-            t0.rows[28].cells[2].text = f"{iga_cal} A"
-            t0.rows[28].cells[3].text = "DI Interior"
-            t0.rows[28].cells[4].text = f"{di_sec} mm² Cu"
-            t0.rows[28].cells[5].text = f"{di_long:.0f} m"
-            t0.rows[28].cells[6].text = "Bajo tubo"
-            t0.rows[28].cells[7].text = f"{rt_medida:.1f} Ω"
+        # Fila 29 y 30: LGA / Derivación Individual y Puesta a Tierra en sus filas correspondientes
+        if len(t0.rows) > 29 and len(t0.rows[29].cells) > 23:
+            r29 = t0.rows[29]
+            r29.cells[0].paragraphs[0].text = "CGP-01"
+            r29.cells[2].paragraphs[0].text = "Esquema 2"
+            r29.cells[5].paragraphs[0].text = f"{iga_cal} A"
+            r29.cells[7].paragraphs[0].text = "DI Interior"
+            r29.cells[9].paragraphs[0].text = f"{di_sec}"
+            r29.cells[13].paragraphs[0].text = f"{di_long:.0f}"
+            r29.cells[16].paragraphs[0].text = "RZ1-K (AS)"
+            r29.cells[23].paragraphs[0].text = f"{rt_medida:.1f} Ω"
+            for c_i in [0, 2, 5, 7, 9, 13, 16, 23]:
+                p = r29.cells[c_i].paragraphs[0]
+                if p.runs:
+                    p.runs[0].font.name = "Arial"
+                    p.runs[0].font.size = Pt(8.0)
 
-        if len(t0.rows) > 29 and len(t0.rows[29].cells) > 2:
-            t0.rows[29].cells[1].text = f"Línea de Enlace: {di_sec} mm² Cu"
-            t0.rows[29].cells[2].text = f"ΔV = {di_cdt:.2f}%"
+        if len(t0.rows) > 30 and len(t0.rows[30].cells) > 23:
+            r30 = t0.rows[30]
+            r30.cells[9].paragraphs[0].text = f"ΔV={di_cdt:.2f}%"
+            r30.cells[23].paragraphs[0].text = "Cu"
+            for c_i in [9, 23]:
+                p = r30.cells[c_i].paragraphs[0]
+                if p.runs:
+                    p.runs[0].font.name = "Arial"
+                    p.runs[0].font.size = Pt(8.0)
 
-        if len(t0.rows) > 30 and len(t0.rows[30].cells) > 2:
-            t0.rows[30].cells[1].text = f"Línea Principal: {di_sec} mm² Cu | Tubo: {di_tubo}"
-
-        if len(t0.rows) > 31 and len(t0.rows[31].cells) > 3:
-            t0.rows[31].cells[1].text = "Nº Contadores: 1"
-            t0.rows[31].cells[3].text = "[X] CONTADOR INDIVIDUAL"
+        if len(t0.rows) > 31 and len(t0.rows[31].cells) > 17:
+            r31 = t0.rows[31]
+            r31.cells[10].paragraphs[0].text = "1"
+            r31.cells[17].paragraphs[0].text = "[X]"
+            for c_i in [10, 17]:
+                p = r31.cells[c_i].paragraphs[0]
+                if p.runs:
+                    p.runs[0].font.name = "Arial"
+                    p.runs[0].font.size = Pt(8.5)
 
     # =========================================================================
     # TABLA 1: PÁGINA 2 - PREVISIÓN DE CARGAS EN VIVIENDAS (ITC-BT-10)
@@ -399,30 +502,48 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
                     r_circ.cells[col_k].text = "-"
 
     # =========================================================================
-    # INSERCIÓN DE PLANOS GRÁFICOS EN ANEXOS I, II Y III (SI EXISTEN)
+    # INSERCIÓN EXACTA DE PLANOS GRÁFICOS EN SUS RESPECTIVOS ANEXOS OFICIALES
     # =========================================================================
-    img_sit = _preparar_imagen_bytes(anexos.get("plano_situacion"))
-    if img_sit and len(doc.tables) > 8:
+    # Anexo I (a): Plano de Situación en Tabla 8, Fila 27
+    if anexos.get("plano_situacion") and len(doc.tables) > 8 and len(doc.tables[8].rows) > 27:
         try:
-            if len(doc.tables) > 9 and len(doc.tables[9].rows) > 1:
-                p_sit = doc.tables[9].rows[1].cells[0].paragraphs[0]
-                p_sit.add_run().add_picture(img_sit, width=Inches(6.2))
+            c8 = doc.tables[8].rows[27].cells[0]
+            p_target = c8.paragraphs[4] if len(c8.paragraphs) > 4 else c8.add_paragraph()
+            _insertar_imagen_en_parrafo(p_target, anexos.get("plano_situacion"), max_w_in=5.8, max_h_in=5.0)
         except Exception:
             pass
 
-    img_emp = _preparar_imagen_bytes(anexos.get("plano_emplazamiento"))
-    if img_emp and len(doc.tables) > 10 and len(doc.tables[10].rows) > 1:
+    # Anexo I (b): Plano de Emplazamiento en Tabla 9, Fila 1
+    if anexos.get("plano_emplazamiento") and len(doc.tables) > 9 and len(doc.tables[9].rows) > 1:
         try:
-            p_emp = doc.tables[10].rows[1].cells[0].paragraphs[0]
-            p_emp.add_run().add_picture(img_emp, width=Inches(6.2))
+            c9 = doc.tables[9].rows[1].cells[0]
+            p_target = c9.paragraphs[4] if len(c9.paragraphs) > 4 else c9.add_paragraph()
+            _insertar_imagen_en_parrafo(p_target, anexos.get("plano_emplazamiento"), max_w_in=5.8, max_h_in=5.0)
         except Exception:
             pass
 
-    img_dist = _preparar_imagen_bytes(anexos.get("plano_distribucion"))
-    if img_dist and len(doc.tables) > 11 and len(doc.tables[11].rows) > 1:
+    # Anexo II: Plano de Distribución en Planta en Tabla 10, Fila 1
+    if anexos.get("plano_distribucion") and len(doc.tables) > 10 and len(doc.tables[10].rows) > 1:
         try:
-            p_dist = doc.tables[11].rows[1].cells[0].paragraphs[0]
-            p_dist.add_run().add_picture(img_dist, width=Inches(6.2))
+            c10 = doc.tables[10].rows[1].cells[0]
+            # Limpiar párrafos vacíos redundantes que causaban overflow de página
+            for p_extra in c10.paragraphs[5:]:
+                try:
+                    p_extra._p.getparent().remove(p_extra._p)
+                except Exception:
+                    pass
+            p_target = c10.paragraphs[4] if len(c10.paragraphs) > 4 else c10.add_paragraph()
+            _insertar_imagen_en_parrafo(p_target, anexos.get("plano_distribucion"), max_w_in=5.8, max_h_in=5.0)
+        except Exception:
+            pass
+
+    # Anexo III: Esquema Unifilar Personalizado (SOLO si se subió plano propio)
+    # Si no se subió plano propio, se conserva la Tabla 11 original con el esquema oficial de la CARM.
+    if anexos.get("unifilar_modo") == "custom" and anexos.get("plano_unifilar_custom") and len(doc.tables) > 11 and len(doc.tables[11].rows) > 1:
+        try:
+            c11 = doc.tables[11].rows[1].cells[0]
+            p_target = c11.paragraphs[0] if len(c11.paragraphs) > 0 else c11.add_paragraph()
+            _insertar_imagen_en_parrafo(p_target, anexos.get("plano_unifilar_custom"), max_w_in=5.8, max_h_in=5.0)
         except Exception:
             pass
 

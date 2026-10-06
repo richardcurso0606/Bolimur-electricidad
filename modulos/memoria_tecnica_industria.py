@@ -574,14 +574,17 @@ def renderizar():
                     st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
                     up_sit_quick = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="quick_up_sit")
                     if up_sit_quick is not None:
-                        b64_sq = procesar_archivo_anexo(up_sit_quick)
-                        if b64_sq:
-                            st.session_state["mtd_plano_situacion"] = b64_sq
-                            st.rerun()
+                        f_id = f"{up_sit_quick.name}_{up_sit_quick.size}"
+                        if st.session_state.get("_last_quick_sit_id") != f_id:
+                            b64_sq = procesar_archivo_anexo(up_sit_quick)
+                            if b64_sq:
+                                st.session_state["mtd_plano_situacion"] = b64_sq
+                                st.session_state["_last_quick_sit_id"] = f_id
                     if st.session_state.get("mtd_plano_situacion"):
                         st.image(st.session_state["mtd_plano_situacion"], caption="Plano de Situación Cargado", use_container_width=True)
                         if st.button("🗑️ Quitar Situación", key="btn_del_sit_quick"):
                             st.session_state.pop("mtd_plano_situacion", None)
+                            st.session_state.pop("_last_quick_sit_id", None)
                             st.rerun()
 
             with col_qp2:
@@ -590,14 +593,17 @@ def renderizar():
                     st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
                     up_emp_quick = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="quick_up_emp")
                     if up_emp_quick is not None:
-                        b64_eq = procesar_archivo_anexo(up_emp_quick)
-                        if b64_eq:
-                            st.session_state["mtd_plano_emplazamiento"] = b64_eq
-                            st.rerun()
+                        f_id_e = f"{up_emp_quick.name}_{up_emp_quick.size}"
+                        if st.session_state.get("_last_quick_emp_id") != f_id_e:
+                            b64_eq = procesar_archivo_anexo(up_emp_quick)
+                            if b64_eq:
+                                st.session_state["mtd_plano_emplazamiento"] = b64_eq
+                                st.session_state["_last_quick_emp_id"] = f_id_e
                     if st.session_state.get("mtd_plano_emplazamiento"):
                         st.image(st.session_state["mtd_plano_emplazamiento"], caption="Plano de Emplazamiento Cargado", use_container_width=True)
                         if st.button("🗑️ Quitar Emplazamiento", key="btn_del_emp_quick"):
                             st.session_state.pop("mtd_plano_emplazamiento", None)
+                            st.session_state.pop("_last_quick_emp_id", None)
                             st.rerun()
 
     lbl_tab7 = "🗺️ 7. PLANOS Y UNIFILAR"
@@ -1081,14 +1087,18 @@ def renderizar():
                 st.caption("Mapa general / callejero de situación en el municipio (Google Maps / Cartografía).")
                 up_sit = st.file_uploader("Subir Plano de Situación (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_sit")
                 if up_sit is not None:
-                    b64_sit = procesar_archivo_anexo(up_sit)
-                    if b64_sit:
-                        st.session_state["mtd_plano_situacion"] = b64_sit
+                    f_id_s = f"{up_sit.name}_{up_sit.size}"
+                    if st.session_state.get("_last_tab7_sit_id") != f_id_s:
+                        b64_sit = procesar_archivo_anexo(up_sit)
+                        if b64_sit:
+                            st.session_state["mtd_plano_situacion"] = b64_sit
+                            st.session_state["_last_tab7_sit_id"] = f_id_s
                 if st.session_state.get("mtd_plano_situacion"):
                     st.success("✅ Plano de Situación listo para el PDF oficial.")
                     st.image(st.session_state["mtd_plano_situacion"], caption="Plano de Situación cargado", use_container_width=True)
                     if st.button("🗑️ Quitar Plano de Situación", key="btn_del_sit"):
                         st.session_state.pop("mtd_plano_situacion", None)
+                        st.session_state.pop("_last_tab7_sit_id", None)
                         st.rerun()
 
             with st.container(border=True):
@@ -1096,14 +1106,18 @@ def renderizar():
                 st.caption("Plano en planta de la vivienda, local o nave con tomas, alumbrado y cuadro (AutoCAD / Plano arquitectónico).")
                 up_dist = st.file_uploader("Subir Plano de Distribución (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_dist")
                 if up_dist is not None:
-                    b64_dist = procesar_archivo_anexo(up_dist)
-                    if b64_dist:
-                        st.session_state["mtd_plano_distribucion"] = b64_dist
+                    f_id_d = f"{up_dist.name}_{up_dist.size}"
+                    if st.session_state.get("_last_tab7_dist_id") != f_id_d:
+                        b64_dist = procesar_archivo_anexo(up_dist)
+                        if b64_dist:
+                            st.session_state["mtd_plano_distribucion"] = b64_dist
+                            st.session_state["_last_tab7_dist_id"] = f_id_d
                 if st.session_state.get("mtd_plano_distribucion"):
                     st.success("✅ Plano de Distribución listo para el PDF oficial.")
                     st.image(st.session_state["mtd_plano_distribucion"], caption="Plano de Distribución cargado", use_container_width=True)
                     if st.button("🗑️ Quitar Plano de Distribución", key="btn_del_dist"):
                         st.session_state.pop("mtd_plano_distribucion", None)
+                        st.session_state.pop("_last_tab7_dist_id", None)
                         st.rerun()
 
         with col_anx2:
@@ -1112,14 +1126,18 @@ def renderizar():
                 st.caption("Plano parcelario catastral o urbanístico de la finca / parcela.")
                 up_emp = st.file_uploader("Subir Plano de Emplazamiento (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_emp")
                 if up_emp is not None:
-                    b64_emp = procesar_archivo_anexo(up_emp)
-                    if b64_emp:
-                        st.session_state["mtd_plano_emplazamiento"] = b64_emp
+                    f_id_e = f"{up_emp.name}_{up_emp.size}"
+                    if st.session_state.get("_last_tab7_emp_id") != f_id_e:
+                        b64_emp = procesar_archivo_anexo(up_emp)
+                        if b64_emp:
+                            st.session_state["mtd_plano_emplazamiento"] = b64_emp
+                            st.session_state["_last_tab7_emp_id"] = f_id_e
                 if st.session_state.get("mtd_plano_emplazamiento"):
                     st.success("✅ Plano de Emplazamiento listo para el PDF oficial.")
                     st.image(st.session_state["mtd_plano_emplazamiento"], caption="Plano de Emplazamiento cargado", use_container_width=True)
                     if st.button("🗑️ Quitar Plano de Emplazamiento", key="btn_del_emp"):
                         st.session_state.pop("mtd_plano_emplazamiento", None)
+                        st.session_state.pop("_last_tab7_emp_id", None)
                         st.rerun()
 
             with st.container(border=True):
@@ -1143,9 +1161,12 @@ def renderizar():
                     st.markdown("<div style='background:#fef3c7; border:1px solid #f59e0b; padding:8px 12px; border-radius:6px; margin:8px 0; font-size:13px;'>📁 <b>Modo Plano Propio Activado:</b> Selecciona abajo tu imagen o PDF del unifilar para reemplazar el esquema estándar.</div>", unsafe_allow_html=True)
                     up_unif = st.file_uploader("Subir tu Esquema Unifilar (PNG, JPG o PDF):", type=["png", "jpg", "jpeg", "webp", "pdf"], key="up_mtd_unif_custom")
                     if up_unif is not None:
-                        b64_unif = procesar_archivo_anexo(up_unif)
-                        if b64_unif:
-                            st.session_state["mtd_plano_unifilar_custom"] = b64_unif
+                        f_id_u = f"{up_unif.name}_{up_unif.size}"
+                        if st.session_state.get("_last_tab7_unif_id") != f_id_u:
+                            b64_unif = procesar_archivo_anexo(up_unif)
+                            if b64_unif:
+                                st.session_state["mtd_plano_unifilar_custom"] = b64_unif
+                                st.session_state["_last_tab7_unif_id"] = f_id_u
                     if st.session_state.get("mtd_plano_unifilar_custom"):
                         st.image(st.session_state["mtd_plano_unifilar_custom"], caption="Tu Esquema Unifilar Personalizado", use_container_width=True)
                         st.success("✅ Tu propio esquema unifilar se insertará en el Anexo III con el cajetín oficial de Industria.")
@@ -1440,6 +1461,15 @@ def renderizar():
             except Exception as err_docx:
                 st.warning(f"⚠️ Nota Word: {err_docx}")
 
+            es_windows = (os.name == "nt")
+            opciones_motor = [
+                "⚡ PDF Vectorial Homologado (ReportLab + Membrete CARM)",
+                "🏛️ PDF Clonado por Word COM (Plantilla Word + Logos CARM)"
+            ] if not es_windows else [
+                "🏛️ PDF Clonado por Word COM (Plantilla Word + Logos CARM)",
+                "⚡ PDF Vectorial Homologado (ReportLab + Membrete CARM)"
+            ]
+
             col_d_act1, col_d_act2 = st.columns([1.2, 1.8])
             with col_d_act1:
                 if docx_bytes_mtd:
@@ -1450,21 +1480,19 @@ def renderizar():
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         type="secondary",
                         use_container_width=True,
+                        key=f"dl_word_btn_{exp_in.replace('-', '_').replace(' ', '_')}",
                         help="Descarga el documento de Microsoft Word original de Industria de Murcia con todos tus datos introducidos en sus tablas y casillas."
                     )
             with col_d_act2:
                 formato_pdf_sel = st.radio(
                     "Motor de Renderizado PDF:",
-                    [
-                        "🏛️ PDF Clonado Oficial (Plantilla Word + Logos CARM)",
-                        "⚡ PDF Vectorial Directo (ReportLab + Membrete CARM)"
-                    ],
+                    opciones_motor,
                     horizontal=True,
                     key="sel_motor_pdf_mtd"
                 )
 
             pdf_bytes_mtd = None
-            es_clonado_word = "Clonado" in formato_pdf_sel
+            es_clonado_word = "Word COM" in formato_pdf_sel
 
             if es_clonado_word and docx_bytes_mtd:
                 cache_key = f"pdf_word_com_{exp_in}"
@@ -1476,7 +1504,7 @@ def renderizar():
                         if pdf_bytes_mtd:
                             st.session_state[cache_key] = pdf_bytes_mtd
                         else:
-                            st.caption("ℹ️ El motor Word COM no está disponible en este servidor. Generando con motor vectorial homologado.")
+                            st.info("ℹ️ El motor Word COM requiere un entorno Windows con Word instalado. En servidores en la nube (Linux) se genera con el motor vectorial homologado con membrete y logos de la CARM.")
 
             if not pdf_bytes_mtd:
                 try:
