@@ -558,6 +558,8 @@ def _obtener_logo_path():
 def _obtener_logo_carm_path():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     posibles = [
+        os.path.join(base_dir, "plantillas", "logo_carm_murcia_recortado.png"),
+        os.path.join(os.getcwd(), "plantillas", "logo_carm_murcia_recortado.png"),
         os.path.join(base_dir, "plantillas", "logo_carm_oficial.jpg"),
         os.path.join(os.getcwd(), "plantillas", "logo_carm_oficial.jpg"),
     ]
@@ -598,7 +600,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=1.3*cm, rightMargin=1.3*cm,
-        topMargin=1.0*cm, bottomMargin=1.35*cm
+        topMargin=0.9*cm, bottomMargin=1.35*cm
     )
 
     styles = getSampleStyleSheet()
@@ -606,11 +608,11 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     c_primary = colors.HexColor("#0f172a")
     c_secondary = colors.HexColor("#0284c7")
     c_dark_blue = colors.HexColor("#0369a1")
-    c_bg_section = colors.HexColor("#e2e8f0")
-    c_bg_head = colors.HexColor("#f1f5f9")
-    c_bg_sub = colors.HexColor("#f8fafc")
-    c_border_box = colors.HexColor("#0f172a")
-    c_border_grid = colors.HexColor("#94a3b8")
+    c_bg_section = colors.HexColor("#eaeaea")  # Sombreado gris claro neutro del original CARM (RGB 234, 234, 234)
+    c_bg_head = colors.HexColor("#f4f4f4")     # Sombreado muy suave pct5 (RGB 244, 244, 244)
+    c_bg_sub = colors.HexColor("#fafafa")
+    c_border_box = colors.black
+    c_border_grid = colors.HexColor("#999999")
     c_border = colors.HexColor("#94a3b8")
     c_text_dark = colors.HexColor("#0f172a")
     c_green = colors.HexColor("#15803d")
@@ -621,25 +623,30 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         fontName='Helvetica-Bold', fontSize=10.5, leading=13,
         textColor=c_primary, alignment=1
     )
+    h_title = ParagraphStyle(
+        'HTitle_MTD', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=8.0, leading=10,
+        textColor=colors.black, alignment=1
+    )
     h_section = ParagraphStyle(
         'SecHead_MTD', parent=styles['Normal'],
         fontName='Helvetica-Bold', fontSize=7.6, leading=9.5,
-        textColor=c_text_dark
+        textColor=colors.black
     )
     body_style = ParagraphStyle(
         'Body_MTD', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=7.0, leading=9.0,
-        textColor=c_text_dark
+        fontName='Helvetica', fontSize=7.0, leading=8.8,
+        textColor=colors.black
     )
     bold_style = ParagraphStyle(
         'Bold_MTD', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=7.0, leading=9.0,
-        textColor=c_text_dark
+        fontName='Helvetica-Bold', fontSize=7.0, leading=8.8,
+        textColor=colors.black
     )
     small_style = ParagraphStyle(
         'Small_MTD', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=6.2, leading=8.0,
-        textColor=colors.HexColor("#475569")
+        fontName='Helvetica', fontSize=6.2, leading=7.8,
+        textColor=colors.HexColor("#333333")
     )
 
     story = []
@@ -664,36 +671,24 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     logo_carm_p = _obtener_logo_carm_path()
     if logo_carm_p:
         try:
-            story.append(Image(logo_carm_p, width=18.4*cm, height=3.0*cm))
-            story.append(Spacer(1, 1.5))
+            story.append(Image(logo_carm_p, width=6.2*cm, height=3.0*cm, hAlign='LEFT'))
+            story.append(Spacer(1, 4))
         except Exception:
             pass
 
-    header_table_data = [
+    # -------------------------------------------------------------------------
+    # 1. MEMORIA TÉCNICA DE DISEÑO & DATOS IDENTIFICATIVOS DEL TITULAR (RECUADRO UNIFICADO 1)
+    # -------------------------------------------------------------------------
+    t_tit_data = [
         [
             Paragraph(
                 "<b>MEMORIA TÉCNICA DE DISEÑO DE INSTALACIONES ELÉCTRICAS DE BAJA TENSIÓN</b><br/>"
-                f"<font size='7' color='#1e293b'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> &nbsp;|&nbsp; "
+                f"<font size='6.8' color='#333333'><b>CÓDIGO PROVINCIAL: 30 (MURCIA)</b> &nbsp;|&nbsp; "
                 f"<b>Ref. Expediente:</b> {expediente} &nbsp;|&nbsp; <b>Fecha:</b> {fecha_str}</font>",
-                ParagraphStyle('HdrOficialCarm', parent=body_style, alignment=1, fontSize=8.5, leading=11)
-            )
-        ]
-    ]
-    t_hdr = Table(header_table_data, colWidths=[18.4*cm])
-    t_hdr.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_bg_section),
-        ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
-        ('TOPPADDING', (0,0), (-1,-1), 1.8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1.8),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-    ]))
-    story.append(t_hdr)
-    story.append(Spacer(1, 2.0))
-
-    # -------------------------------------------------------------------------
-    # 1. DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN (RECUADRO UNIFICADO)
-    # -------------------------------------------------------------------------
-    t_tit_data = [
+                h_title
+            ),
+            ""
+        ],
         [
             Paragraph("<b>DATOS IDENTIFICATIVOS DEL TITULAR DE LA INSTALACIÓN</b>", h_section),
             ""
@@ -714,16 +709,19 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     t_tit = Table(t_tit_data, colWidths=[12.0*cm, 6.4*cm])
     t_tit.setStyle(TableStyle([
         ('SPAN', (0,0), (1,0)),
+        ('SPAN', (0,1), (1,1)),
         ('BACKGROUND', (0,0), (-1,0), c_bg_section),
+        ('BACKGROUND', (0,1), (-1,1), c_bg_head),
         ('BOX', (0,0), (-1,-1), 1.0, c_border_box),
         ('LINEBELOW', (0,0), (-1,0), 0.8, c_border_box),
-        ('INNERGRID', (0,1), (-1,-1), 0.4, c_border_grid),
+        ('LINEBELOW', (0,1), (-1,1), 0.8, c_border_box),
+        ('INNERGRID', (0,2), (-1,-1), 0.4, c_border_grid),
         ('TOPPADDING', (0,0), (-1,-1), 1.2),
         ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
-        ('BACKGROUND', (0,1), (-1,-1), colors.white)
+        ('BACKGROUND', (0,2), (-1,-1), colors.white)
     ]))
     story.append(t_tit)
-    story.append(Spacer(1, 2.0))
+    story.append(Spacer(1, 6.0))
 
     # -------------------------------------------------------------------------
     # 2. DATOS IDENTIFICATIVOS DEL REDACTOR DE LA MEMORIA (RECUADRO UNIFICADO)
@@ -763,7 +761,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_red)
-    story.append(Spacer(1, 2.0))
+    story.append(Spacer(1, 6.0))
 
     # -------------------------------------------------------------------------
     # 3. EMPLAZAMIENTO, ACTIVIDAD Y DATOS TÉCNICOS (RECUADRO UNIFICADO)
@@ -815,7 +813,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_tecn)
-    story.append(Spacer(1, 2.0))
+    story.append(Spacer(1, 6.0))
 
     # -------------------------------------------------------------------------
     # 4. CAJA GENERAL DE PROTECCIÓN (CGP) / LGA / PUESTA A TIERRA (RECUADRO UNIFICADO)
@@ -854,7 +852,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_cgp)
-    story.append(Spacer(1, 2.0))
+    story.append(Spacer(1, 6.0))
 
     # -------------------------------------------------------------------------
     # 5. PREVISIÓN DE CARGAS EN INSTALACIONES PARA VIVIENDAS Y LOCALES (ITC-BT-10) (RECUADRO UNIFICADO)
@@ -896,7 +894,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
     story.append(t_prev)
-    story.append(Spacer(1, 2.0))
+    story.append(Spacer(1, 6.0))
 
     # -------------------------------------------------------------------------
     # 6. BREVE DESCRIPCIÓN, PRESUPUESTO Y DOCUMENTACIÓN ANEXA ADJUNTA (RECUADRO UNIFICADO)
@@ -938,7 +936,7 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
         ('VALIGN', (0,1), (-1,-1), 'TOP'),
     ]))
     story.append(t_desc)
-    story.append(Spacer(1, 2.0))
+    story.append(Spacer(1, 6.0))
 
     # -------------------------------------------------------------------------
     # 7. DECLARACIÓN RESPONSABLE Y FIRMA OFICIAL (RECUADRO UNIFICADO)
@@ -1300,11 +1298,11 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
     c_primary = colors.HexColor("#0f172a")
     c_secondary = colors.HexColor("#0284c7")
     c_dark_blue = colors.HexColor("#0369a1")
-    c_bg_section = colors.HexColor("#e2e8f0")
-    c_bg_head = colors.HexColor("#f1f5f9")
-    c_bg_sub = colors.HexColor("#f8fafc")
-    c_border_box = colors.HexColor("#0f172a")
-    c_border_grid = colors.HexColor("#94a3b8")
+    c_bg_section = colors.HexColor("#eaeaea")  # Sombreado gris claro neutro del original CARM
+    c_bg_head = colors.HexColor("#f4f4f4")     # Sombreado muy suave pct5
+    c_bg_sub = colors.HexColor("#fafafa")
+    c_border_box = colors.black
+    c_border_grid = colors.HexColor("#999999")
     c_border = colors.HexColor("#94a3b8")
     c_text_dark = colors.HexColor("#0f172a")
     c_green = colors.HexColor("#15803d")
