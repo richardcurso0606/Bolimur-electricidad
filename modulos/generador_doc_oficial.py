@@ -408,7 +408,14 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
                 f"BAJO {di_tubo} CON CAIDA DE TENSION ΔV = {di_cdt:.2f}% (CONFORME REBT ITC-BT-15)."
             )
         if len(t2.rows) > 33 and len(t2.rows[33].cells) > 0:
-            t2.rows[33].cells[0].text = desc_oficial
+            c33 = t2.rows[33].cells[0]
+            c33.text = desc_oficial
+            if c33.paragraphs:
+                p33 = c33.paragraphs[0]
+                p33.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                for r_run in p33.runs:
+                    r_run.font.size = Pt(8.5)
+                    r_run.font.name = "Arial"
 
     # =========================================================================
     # TABLA 8: PÁGINA 5 - PRESUPUESTO NORMALIZADO Y DECLARACIÓN RESPONSABLE

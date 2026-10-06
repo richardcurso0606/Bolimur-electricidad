@@ -1919,30 +1919,48 @@ def renderizar():
             else:
                 st.warning(f"⚠️ **ΔV = {sum_di_cdt:.2f}%** supera el límite reglamentario (1.50%). Aumenta la sección de la DI.")
 
-        # Breve Descripción de la Instalación (Exigida por DGEAIM Murcia en MTD)
-        st.markdown("<hr style='margin:12px 0; border:0; border-top:1px dashed #cbd5e1;'/>", unsafe_allow_html=True)
-        st.markdown("###### 📝 Breve Descripción de la Instalación (Apartado Oficial DGEAIM Murcia):")
-        st.caption("Texto técnico resumen que se plasma en la página 2 del documento oficial (Tabla 2 del Word oficial y Sección 6 del PDF). Puedes personalizarlo libremente.")
+        # Breve Descripción de la Instalación (Página 3 de la MTD Oficial DGEAIM Murcia)
+        st.markdown("<hr style='margin:14px 0; border:0; border-top:1px dashed #cbd5e1;'/>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("##### 📝 Página 3 MTD Oficial: «BREVE DESCRIPCIÓN DE LA INSTALACIÓN»")
+            st.caption(
+                "En el modelo normalizado de la Región de Murcia (DGEAIM), este apartado ocupa todo el bloque inferior "
+                "de la **Página 3** (Tabla 2). Dispone de un amplio espacio reglamentario de más de 10 renglones para describir la instalación. "
+                "Puedes redactar libremente o pulsar uno de los botones rápidos de abajo:"
+            )
 
-        tipo_limpio_desc = tipo_inst_sel.split('(')[0].replace('☀️', '').replace('🏗️', '').replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('🍽️', '').replace('🏋️', '').replace('🎓', '').strip()
-        desc_sugerida = (
-            f"Instalación eléctrica en baja tensión para {tipo_limpio_desc} con potencia prevista de {sum_pot_inst:,.0f} W a tensión {sum_tension.split(' ')[0]}. "
-            f"Cuadro CGMP con IGA de {st.session_state.get('mtd_in_iga', 25)}A (Icn={st.session_state.get('mtd_in_icn', 6.0):.0f}kA), "
-            f"protector de sobretensiones transitorias y permanentes Tipo 2 (ITC-BT-23), diferencial 30mA Clase A (ITC-BT-24) "
-            f"y derivación individual {sum_di_cable} bajo {sum_di_tubo} con caída de tensión calculada ΔV = {sum_di_cdt:.2f}% (conforme ITC-BT-15)."
-        )
-        desc_val_actual = st.session_state.get("mtd_in_desc_instalacion")
-        if not desc_val_actual:
-            desc_val_actual = desc_sugerida
-            st.session_state["mtd_in_desc_instalacion"] = desc_sugerida
+            tipo_limpio_desc = tipo_inst_sel.split('(')[0].replace('☀️', '').replace('🏗️', '').replace('🚗', '').replace('🏡', '').replace('🏢', '').replace('🍽️', '').replace('🏋️', '').replace('🎓', '').strip()
+            tram_nombre = tipo_tram_sel.split('(')[0].replace('🆕', '').replace('🏗️', '').replace('📈', '').replace('🔧', '').replace('🔄', '').replace('📋', '').strip().upper()
+            
+            # Opción 1: Breve y concisa (exactamente como en los modelos tramitados en Murcia)
+            desc_breve_oficial = f"{tram_nombre} EN {tipo_limpio_desc.upper()} {sum_pot_inst:,.0f} W (REBT RD 842/2002)"
+            
+            # Opción 2: Detallada técnica reglamentaria
+            desc_tecnica_completa = (
+                f"INSTALACIÓN ELÉCTRICA EN BAJA TENSIÓN PARA {tipo_limpio_desc.upper()} ({tram_nombre}) CON POTENCIA PREVISTA DE {sum_pot_inst:,.0f} W A TENSIÓN DE {sum_tension.split(' ')[0]}. "
+                f"CUADRO GENERAL DE MANDO Y PROTECCIÓN (CGMP) CON IGA OMNIPOLAR DE {st.session_state.get('mtd_in_iga', 25)}A (ICN={st.session_state.get('mtd_in_icn', 6.0):.0f}KA), "
+                f"PROTECTOR DE SOBRETENSIONES PERMANENTES Y TRANSITORIAS TIPO 2 CON BOBINA DE DISPARO (ITC-BT-23), INTERRUPTOR DIFERENCIAL 30mA CLASE A (ITC-BT-24) "
+                f"Y DERIVACIÓN INDIVIDUAL {sum_di_cable.upper()} BAJO {sum_di_tubo.upper()} CON CAÍDA DE TENSIÓN CALCULADA ΔV = {sum_di_cdt:.2f}% (CONFORME REBT ITC-BT-15)."
+            )
 
-        st.text_area(
-            "Resumen descriptivo para la MTD oficial:",
-            value=desc_val_actual,
-            height=85,
-            key="mtd_in_desc_instalacion",
-            help="Este párrafo oficial se inserta directamente en la casilla reglamentaria 'Breve Descripción de la Instalación' del modelo normalizado DGEAIM Murcia."
-        )
+            col_bd_btn1, col_bd_btn2 = st.columns(2)
+            with col_bd_btn1:
+                if st.button("📄 Formato Breve Tradicional (Modelo Murcia)", use_container_width=True, help="Inserta una línea concisa tal como figura en los modelos tramitados ante Industria"):
+                    st.session_state["mtd_in_desc_instalacion"] = desc_breve_oficial
+                    st.rerun()
+            with col_bd_btn2:
+                if st.button("🪄 Formato Técnico Extenso (REBT Completo)", use_container_width=True, help="Inserta descripción completa con IGA, protecciones, diferenciales y caída de tensión"):
+                    st.session_state["mtd_in_desc_instalacion"] = desc_tecnica_completa
+                    st.rerun()
+
+            desc_val_actual = st.session_state.get("mtd_in_desc_instalacion", desc_breve_oficial)
+            st.text_area(
+                "Texto que se plasmará en la Página 3 del documento oficial:",
+                value=desc_val_actual,
+                height=110,
+                key="mtd_in_desc_instalacion",
+                help="Este texto se inserta exactamente en la casilla reglamentaria 'BREVE DESCRIPCIÓN DE LA INSTALACIÓN' de la Página 3 del modelo oficial de Murcia."
+            )
 
     # --- TAB 4: CUADRO CGMP Y PROTECCIONES ---
     with tab_f4:
