@@ -581,7 +581,7 @@ def _obtener_escudo_carm_path():
     return None
 
 
-def _crear_logo_flowable(width=4.8*cm, height=2.68*cm):
+def _crear_logo_flowable(width=5.6*cm, height=3.1*cm):
     path = _obtener_logo_path()
     if path:
         try:
@@ -1039,14 +1039,14 @@ def generar_pdf_mtd_industria_murcia(datos_mtd: dict) -> bytes:
     # =========================================================================
     story.append(PageBreak())
     
-    logo_p2 = _crear_logo_flowable(width=4.6*cm, height=2.57*cm)
+    logo_p2 = _crear_logo_flowable(width=5.4*cm, height=3.0*cm)
     anx_hdr_data = [
         [
             Paragraph(f"<b>MEMORIA TÉCNICA DE DISEÑO (RD 842/2002)</b><br/><font size='8' color='#0369a1'><b>ANEXO III: ESQUEMA UNIFILAR {'PERSONALIZADO (AUTOCAD/CADE_SIMU)' if (unifilar_modo == 'custom' and plano_unif_custom) else 'NORMALIZADO (ITC-BT-25)'}</b></font><br/><font size='6.5' color='#475569'>Región de Murcia - Dirección General de Industria, Energía y Minas</font>", body_style),
             logo_p2 if logo_p2 else Paragraph("<b>BOLIMUR</b>", ParagraphStyle('HdrB2', parent=body_style, alignment=2))
         ]
     ]
-    t_anx_hdr = Table(anx_hdr_data, colWidths=[13.8*cm, 4.6*cm])
+    t_anx_hdr = Table(anx_hdr_data, colWidths=[12.6*cm, 5.4*cm])
     t_anx_hdr.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (1,0), (1,0), 'RIGHT'),
@@ -1355,7 +1355,7 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
         except Exception:
             pass
 
-    logo_flowable = _crear_logo_flowable(width=4.4*cm, height=2.45*cm)
+    logo_flowable = _crear_logo_flowable(width=5.2*cm, height=2.9*cm)
     carm_logo_txt = (
         "<font size='9' color='#991b1b'><b>COMUNIDAD AUTÓNOMA DE LA REGIÓN DE MURCIA</b></font><br/>"
         "<font size='7.5' color='#0f172a'><b>CONSEJERÍA DE CIENCIA, TECNOLOGÍAS, INDUSTRIA Y COMERCIO</b></font><br/>"
@@ -1370,7 +1370,7 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
                 logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR INSTALACIONES</b>", ParagraphStyle('HdrB', parent=body_style, alignment=2))
             ]
         ]
-        t_hdr = Table(hdr_data, colWidths=[1.8*cm, 12.0*cm, 4.6*cm])
+        t_hdr = Table(hdr_data, colWidths=[1.8*cm, 11.0*cm, 5.2*cm])
         t_hdr.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (2,0), (2,0), 'RIGHT'),
@@ -1386,7 +1386,7 @@ def generar_pdf_cie_oficial(datos_cie: dict) -> bytes:
                 logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR INSTALACIONES</b>", ParagraphStyle('HdrB', parent=body_style, alignment=2))
             ]
         ]
-        t_hdr = Table(hdr_data, colWidths=[13.6*cm, 4.8*cm])
+        t_hdr = Table(hdr_data, colWidths=[12.8*cm, 5.2*cm])
         t_hdr.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (1,0), (1,0), 'RIGHT'),
@@ -1731,14 +1731,14 @@ def generar_pdf_manual_usuario(datos: dict) -> bytes:
     fecha_hoy = datos.get("fecha", datetime.date.today().strftime("%d/%m/%Y"))
 
     # Cabecera
-    logo_flowable = _crear_logo_flowable(width=4.8*cm, height=2.68*cm)
+    logo_flowable = _crear_logo_flowable(width=5.4*cm, height=3.0*cm)
     hdr_data = [
         [
             Paragraph("<b>MANUAL DE INSTRUCCIONES DE USUARIO Y MANTENIMIENTO</b><br/><font size='8' color='#0369a1'><b>Exigido por el Real Decreto 842/2002 (ITC-BT-04 apdo. 5)</b></font>", body_style),
             logo_flowable if logo_flowable else Paragraph("<b>BOLIMUR</b>", ParagraphStyle('HdrBM', parent=body_style, alignment=2))
         ]
     ]
-    t_hdr = Table(hdr_data, colWidths=[13.6*cm, 4.8*cm])
+    t_hdr = Table(hdr_data, colWidths=[12.6*cm, 5.4*cm])
     t_hdr.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('TOPPADDING', (0,0), (-1,-1), 2),

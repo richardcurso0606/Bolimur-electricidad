@@ -292,7 +292,7 @@ css_tema_oscuro = """
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* INPUTS, SELECTORES, NUMBER INPUTS Y ÁREAS DE TEXTO */
+    /* INPUTS, SELECTORES, NUMBER INPUTS Y ÁREAS DE TEXTO - MODO OSCURO */
     div[data-testid="stTextInput"] input,
     div[data-testid="stNumberInput"] input,
     div[data-testid="stTextArea"] textarea,
@@ -302,23 +302,60 @@ css_tema_oscuro = """
     div[data-baseweb="input"],
     div[data-baseweb="input"] > div,
     div[data-baseweb="base-input"],
+    div[data-baseweb="base-input"] > div,
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
     div[data-baseweb="textarea"],
     div[data-baseweb="textarea"] > div {
         background-color: #1e293b !important;
         background: #1e293b !important;
-        border: 1.5px solid #0284c7 !important;
-        color: #f8fafc !important;
-        -webkit-text-fill-color: #f8fafc !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 8px !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        -webkit-text-fill-color: #ffffff !important;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.25) !important;
     }
     div[data-baseweb="input"] input,
     div[data-baseweb="base-input"] input,
     div[data-baseweb="textarea"] textarea,
     div[data-baseweb="select"] input {
-        color: #f8fafc !important;
+        color: #ffffff !important;
         background-color: transparent !important;
-        -webkit-text-fill-color: #f8fafc !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    div[data-baseweb="input"]:focus-within,
+    div[data-baseweb="base-input"]:focus-within,
+    div[data-baseweb="select"]:focus-within,
+    div[data-baseweb="textarea"]:focus-within,
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stNumberInput"] input:focus,
+    div[data-testid="stTextArea"] textarea:focus {
+        background-color: #0f172a !important;
+        border-color: #7dd3fc !important;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.55) !important;
+    }
+
+    /* FLECHA DESPLEGABLE (CHEVRON SELECTBOX) EN MODO OSCURO - MUY VISUAL Y CIAN BRILLANTE */
+    div[data-baseweb="select"] svg,
+    div[data-testid="stSelectbox"] svg {
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px !important;
+        min-height: 26px !important;
+        stroke-width: 3px !important;
+        fill: #38bdf8 !important;
+        color: #38bdf8 !important;
+        stroke: #38bdf8 !important;
+        filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8)) !important;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    div[data-baseweb="select"]:hover svg,
+    div[data-testid="stSelectbox"]:hover svg {
+        fill: #7dd3fc !important;
+        stroke: #7dd3fc !important;
+        transform: scale(1.18) !important;
     }
 
     /* BOTONES DE INCREMENTO / DECREMENTO (-) (+) EN NUMBER INPUTS */
@@ -326,24 +363,30 @@ css_tema_oscuro = """
         background-color: #0f172a !important;
         background: #0f172a !important;
         color: #38bdf8 !important;
-        border: 1.5px solid #334155 !important;
+        border: 1.5px solid #38bdf8 !important;
+        border-radius: 6px !important;
+        font-weight: 800 !important;
+        transition: all 0.15s ease !important;
     }
     div[data-testid="stNumberInput"] button:hover {
         background-color: #0284c7 !important;
         color: #ffffff !important;
-        border-color: #38bdf8 !important;
+        border-color: #7dd3fc !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.4) !important;
     }
     div[data-testid="stNumberInput"] button svg {
         fill: #38bdf8 !important;
+        stroke: #38bdf8 !important;
     }
     div[data-testid="stNumberInput"] button:hover svg {
         fill: #ffffff !important;
+        stroke: #ffffff !important;
     }
 
     /* TEXTO SELECCIONADO EN SELECTBOX */
     div[data-baseweb="select"] span,
     div[data-baseweb="select"] div {
-        color: #f8fafc !important;
+        color: #ffffff !important;
     }
 
     /* CHECKBOXES Y RADIOS */
@@ -354,22 +397,33 @@ css_tema_oscuro = """
         color: #f8fafc !important;
     }
 
-    /* MENÚS DESPLEGABLES Y POPOVERS */
+    /* MENÚS DESPLEGABLES Y POPOVERS - MODO OSCURO */
     div[data-baseweb="popover"],
     div[data-baseweb="popover"] > div,
     ul[role="listbox"] {
         background-color: #0f172a !important;
+        background: #0f172a !important;
         color: #f8fafc !important;
-        border: 1px solid #334155 !important;
+        border: 2.5px solid #38bdf8 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 16px 45px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.35) !important;
     }
     li[role="option"] {
         background-color: #0f172a !important;
         color: #f8fafc !important;
+        font-size: 14.5px !important;
+        font-weight: 600 !important;
+        padding: 12px 18px !important;
+        border-bottom: 1.5px solid #1e293b !important;
+        border-radius: 8px !important;
+        margin-bottom: 3px !important;
+        transition: all 0.15s ease !important;
     }
     li[role="option"]:hover,
     li[role="option"][aria-selected="true"] {
         background-color: #1e293b !important;
         color: #38bdf8 !important;
+        font-weight: 700 !important;
     }
     li[role="option"] span,
     li[role="option"] div {
@@ -645,6 +699,143 @@ css_tema_oscuro = """
     }
 """ if tema_es_oscuro else ""
 
+css_tema_solar = """
+    /* --- MODO SOLAR (DÍA) - CELDAS DE INTRODUCCIÓN DE DATOS MÁS OSCURAS Y DEFINIDAS --- */
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stTextArea"] textarea,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"],
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    div[data-testid="stSelectbox"] [role="combobox"],
+    div[data-baseweb="input"],
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="base-input"],
+    div[data-baseweb="base-input"] > div,
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="textarea"],
+    div[data-baseweb="textarea"] > div {
+        background-color: #e2e8f0 !important;
+        background: #e2e8f0 !important;
+        border: 2px solid #0284c7 !important;
+        border-radius: 8px !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        -webkit-text-fill-color: #0f172a !important;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-baseweb="input"] input,
+    div[data-baseweb="base-input"] input,
+    div[data-baseweb="textarea"] textarea,
+    div[data-baseweb="select"] input {
+        color: #0f172a !important;
+        background-color: transparent !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 700 !important;
+    }
+
+    /* Foco activo en Modo Solar: Se ilumina en blanco con halo azul */
+    div[data-baseweb="input"]:focus-within,
+    div[data-baseweb="base-input"]:focus-within,
+    div[data-baseweb="select"]:focus-within,
+    div[data-baseweb="textarea"]:focus-within,
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stNumberInput"] input:focus,
+    div[data-testid="stTextArea"] textarea:focus {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border-color: #0369a1 !important;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.28) !important;
+    }
+
+    /* FLECHA DESPLEGABLE (CHEVRON SELECTBOX) EN MODO SOLAR - VISIBLE, AZUL Y MÁS GRANDE */
+    div[data-baseweb="select"] svg,
+    div[data-testid="stSelectbox"] svg {
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px !important;
+        min-height: 26px !important;
+        stroke-width: 3px !important;
+        fill: #0284c7 !important;
+        color: #0284c7 !important;
+        stroke: #0284c7 !important;
+        filter: drop-shadow(0 2px 4px rgba(2, 132, 199, 0.45)) !important;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    div[data-baseweb="select"]:hover svg,
+    div[data-testid="stSelectbox"]:hover svg {
+        fill: #0369a1 !important;
+        stroke: #0369a1 !important;
+        transform: scale(1.18) !important;
+    }
+
+    /* BOTONES DE INCREMENTO / DECREMENTO (-) (+) EN NUMBER INPUTS - MODO SOLAR */
+    div[data-testid="stNumberInput"] button {
+        background-color: #cbd5e1 !important;
+        background: #cbd5e1 !important;
+        color: #0f172a !important;
+        border: 1.5px solid #0284c7 !important;
+        border-radius: 6px !important;
+        font-weight: 800 !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stNumberInput"] button:hover {
+        background-color: #0284c7 !important;
+        background: #0284c7 !important;
+        color: #ffffff !important;
+        border-color: #0369a1 !important;
+    }
+    div[data-testid="stNumberInput"] button svg {
+        fill: #0f172a !important;
+        stroke: #0f172a !important;
+    }
+    div[data-testid="stNumberInput"] button:hover svg {
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+    }
+
+    /* MENÚS DESPLEGABLES Y POPOVERS - MODO SOLAR */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    ul[role="listbox"] {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 2.5px solid #0284c7 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 14px 40px rgba(2, 132, 199, 0.28), 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    }
+    div[data-baseweb="popover"] li[role="option"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 14.5px !important;
+        font-weight: 600 !important;
+        line-height: 1.45 !important;
+        padding: 12px 18px !important;
+        border-bottom: 1.5px solid #f1f5f9 !important;
+        border-radius: 8px !important;
+        margin-bottom: 3px !important;
+        transition: all 0.15s ease !important;
+        cursor: pointer !important;
+    }
+    div[data-baseweb="popover"] li[role="option"]:hover {
+        background-color: #e0f2fe !important;
+        color: #0284c7 !important;
+        font-weight: 700 !important;
+        transform: translateX(3px) !important;
+    }
+    div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
+        background: linear-gradient(90deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4) !important;
+    }
+    div[data-baseweb="popover"] li[role="option"] * {
+        color: inherit !important;
+    }
+""" if not tema_es_oscuro else ""
+
 container_bg_global = "#0f172a" if tema_es_oscuro else "#ffffff"
 container_text_global = "#f1f5f9" if tema_es_oscuro else "#0f172a"
 container_sub_bg_global = "#1e293b" if tema_es_oscuro else "#f8fafc"
@@ -655,6 +846,7 @@ radio_dot_global = "#38bdf8" if tema_es_oscuro else "#0284c7"
 st.markdown(f"""
     <style>
         {css_tema_oscuro}
+        {css_tema_solar}
 
         /* Botón Permanente de Modo Solar / Oscuro (Clonado con precisión de imagen) */
         .st-key-btn_toggle_tema_top button {{
@@ -677,12 +869,7 @@ st.markdown(f"""
             transform: translateY(-1px) !important;
         }}
 
-        /* Inputs y Selectores */
-        div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {{
-            border: 2px solid #0284c7; border-radius: 8px;
-        }}
-
-        /* Desplegables de Streamlit / BaseWeb Popovers: Ancho amplio y sin recortes de descripciones */
+        /* Desplegables de Streamlit / BaseWeb Popovers: Dimensiones Responsivas y Legibilidad */
         div[data-baseweb="popover"],
         div[data-baseweb="popover"] > div {{
             min-width: 650px !important;
@@ -695,21 +882,7 @@ st.markdown(f"""
             min-width: 100% !important;
             max-width: 96vw !important;
             max-height: 480px !important;
-            padding: 6px !important;
-        }}
-
-        div[data-baseweb="popover"] li[role="option"] {{
-            white-space: normal !important;
-            word-break: normal !important;
-            overflow-wrap: break-word !important;
-            overflow: visible !important;
-            text-overflow: unset !important;
-            padding: 10px 14px !important;
-            font-size: 13.5px !important;
-            line-height: 1.45 !important;
-            border-bottom: 1px solid #f1f5f9 !important;
-            border-radius: 6px !important;
-            margin-bottom: 2px !important;
+            padding: 8px !important;
         }}
 
         div[data-baseweb="popover"] li[role="option"] > div,
@@ -1323,10 +1496,21 @@ else:
 # MENÚ LATERAL
 # =========================================================================
 with st.sidebar:
+    logo_mostrado = False
+    logo_b64 = usuario_actual.get("logo_base64")
+    if logo_b64:
+        try:
+            st.image(base64.b64decode(logo_b64), use_container_width=True)
+            logo_mostrado = True
+        except Exception:
+            pass
+    if not logo_mostrado and os.path.exists("logo_bolimur.PNG"):
+        st.image("logo_bolimur.PNG", use_container_width=True)
+
     st.markdown(f"""
-        <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; text-align: center;">
-            <h3 style="color: #38bdf8; margin: 0; font-size: 17px;">⚡ BOLIMUR REBT</h3>
-            <p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0 0;">{usuario_actual.get('nombre_empresa', 'Bolimur')}</p>
+        <div style="background-color: #1e293b; padding: 12px 14px; border-radius: 8px; margin-bottom: 12px; text-align: center; border: 1.5px solid #38bdf8;">
+            <h3 style="color: #38bdf8; margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px;">⚡ BOLIMUR REBT</h3>
+            <p style="color: #94a3b8; font-size: 11.5px; margin: 4px 0 0 0; font-weight: 600;">{usuario_actual.get('nombre_empresa', 'Bolimur')}</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1499,8 +1683,21 @@ with col_bar_btn:
 # EL ENRUTADOR PRINCIPAL
 # =========================================================================
 if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("🏠"):
-    st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
-    st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
+    col_home_logo, col_home_title = st.columns([1.1, 4.9])
+    with col_home_logo:
+        logo_home_done = False
+        logo_b64 = usuario_actual.get("logo_base64")
+        if logo_b64:
+            try:
+                st.image(base64.b64decode(logo_b64), use_container_width=True)
+                logo_home_done = True
+            except Exception:
+                pass
+        if not logo_home_done and os.path.exists("logo_bolimur.PNG"):
+            st.image("logo_bolimur.PNG", use_container_width=True)
+    with col_home_title:
+        st.title("⚡ BOLIMUR - INGENIERÍA Y CÁLCULOS ELÉCTRICOS")
+        st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
     
     st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, resolver dudas reglamentarias con la IA o tramitar memorias oficiales:")
 

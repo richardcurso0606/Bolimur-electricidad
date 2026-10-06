@@ -170,7 +170,7 @@ def _obtener_logo_path():
     return None
 
 
-def _crear_logo_flowable(width=3.6*cm, height=2.0*cm):
+def _crear_logo_flowable(width=5.2*cm, height=2.9*cm):
     path = _obtener_logo_path()
     if path:
         try:
@@ -241,7 +241,7 @@ def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict,
     # =========================================================================
     # 1. ENCABEZADO OFICIAL DE LA REGIÓN DE MURCIA (DGEAIM) CON LOGO BOLIMUR
     # =========================================================================
-    logo_irve = _crear_logo_flowable(width=4.6*cm, height=2.57*cm)
+    logo_irve = _crear_logo_flowable(width=5.2*cm, height=2.9*cm)
     col_logo_irve = logo_irve if logo_irve else Paragraph("<b>BOLIMUR</b><br/><font size='6' color='#0284c7'>Instalaciones</font>", ParagraphStyle('HdrLogoIRVE', parent=body_style, alignment=2))
 
     header_dgeaim_data = [
@@ -261,7 +261,7 @@ def generar_pdf_irve(proyecto_info: dict, irve_params: dict, irve_results: dict,
             col_logo_irve
         ]
     ]
-    t_hdr = Table(header_dgeaim_data, colWidths=[6.8*cm, 6.8*cm, 4.4*cm])
+    t_hdr = Table(header_dgeaim_data, colWidths=[6.4*cm, 6.4*cm, 5.2*cm])
     t_hdr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_bg_box),
         ('BOX', (0,0), (-1,-1), 1.0, c_secondary),

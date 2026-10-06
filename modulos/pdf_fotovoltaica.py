@@ -100,7 +100,7 @@ def generar_pdf_memoria_fotovoltaica(datos: dict) -> bytes:
     # Cabecera
     logo_path = _obtener_logo_path()
     if logo_path:
-        img_logo = Image(logo_path, width=4.0*cm, height=2.0*cm)
+        img_logo = Image(logo_path, width=5.2*cm, height=2.6*cm)
     else:
         img_logo = Paragraph("<b>⚡ BOLIMUR</b>", bold_style)
 
@@ -111,7 +111,7 @@ def generar_pdf_memoria_fotovoltaica(datos: dict) -> bytes:
         ParagraphStyle('HdrT', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=11.5, alignment=1)
     )
 
-    t_top = Table([[img_logo, header_txt]], colWidths=[4.5*cm, 13.5*cm], style=[
+    t_top = Table([[img_logo, header_txt]], colWidths=[5.4*cm, 12.6*cm], style=[
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),

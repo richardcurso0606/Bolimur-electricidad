@@ -501,7 +501,7 @@ def _renderizar_modo_aislada(user_auth, cliente_sel):
         st.markdown("##### 🛡️ Protecciones Críticas en Instalaciones Aisladas")
         st.markdown(f"""
         - **Fusible de Protección del Banco de Baterías:** Fusible ultrarrápido tipo **Mega / ANL de 150 A a 250 A** situado inmediatamente en el borne positivo (+) antes de llegar al inversor.
-        - **Sección de Cables de Batería:** Debido a las altas corrientes a `{v_bat:.0f}V` ($I = P/V = {res_ais['inversor_nominal_w']/v_bat:.0f}\\text{ A}$), se exige cable de cobre flexible de **mínimo 35 mm² a 50 mm²**.
+        - **Sección de Cables de Batería:** Debido a las altas corrientes a `{v_bat:.0f}V` ($I = P/V \\approx {res_ais['inversor_nominal_w']/v_bat:.0f}\\text{{ A}}$), se exige cable de cobre flexible de **mínimo 35 mm² a 50 mm²**.
         - **Puesta a Tierra y Creación del Régimen de Neutro:** Conectar uno de los polos de salida AC del inversor a la pica de tierra general ($R_t \\le 15\\ \\Omega$) para definir el **Neutro de la instalación** y permitir que el interruptor diferencial de 30 mA dispare ante una derivación.
         """)
 

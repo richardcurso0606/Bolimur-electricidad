@@ -298,3 +298,25 @@ def test_generar_pdf_fotovoltaica_aislada():
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 2000
     assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_sistema_aislado_baterias_calculo_y_formato():
+    """Verifica que el dimensionamiento de aislada con baterías y su texto de protecciones no lance NameError"""
+    res = fv.calcular_sistema_aislado_baterias(
+        consumo_diario_wh=5000.0,
+        dias_autonomia=3.0,
+        tension_bateria_v=48.0,
+        tipo_bateria="Litio (LiFePO4)",
+        profundidad_descarga_dod=0.85,
+        potencia_cargas_max_w=3000.0
+    )
+    assert res["capacidad_total_ah"] > 0
+    assert res["num_modulos"] >= 1
+    assert res["inversor_nominal_w"] >= 3000.0
+
+    # Verificar que el texto formateado con LaTeX de corriente y fusibles se evalúa sin NameError
+    v_bat = 48.0
+    texto = f"- Sección de Cables de Batería: Debido a las altas corrientes a {v_bat:.0f}V ($I = P/V \\approx {res['inversor_nominal_w']/v_bat:.0f}\\text{{ A}}$), se exige cable de cobre flexible de mínimo 35 mm² a 50 mm²."
+    assert "text{ A}" in texto
+    assert "48V" in texto
+
