@@ -2791,7 +2791,9 @@ def renderizar():
                     "mtd_unifilar_modo": st.session_state.get("mtd_unifilar_modo", "auto"),
                     "mtd_plano_unifilar_custom": st.session_state.get("mtd_plano_unifilar_custom", ""),
                     "mtd_auditoria_unifilar": st.session_state.get("mtd_auditoria_unifilar", {}),
-                    "mtd_fotos_obra": st.session_state.get("mtd_fotos_obra", [])
+                    "mtd_fotos_obra": st.session_state.get("mtd_fotos_obra", []),
+                    "mtd_fecha_emision": st.session_state.get("mtd_fecha_emision", datetime.date.today().strftime("%d/%m/%Y")),
+                    "mtd_exp_final": st.session_state.get("mtd_exp_final", f"EXP-MTD-{emp_muni[:3].upper()}-2026-01")
                 }
                 resumen_txt = f"{sum_pot_inst/1000:.2f} kW | {tipo_tram_sel.split('(')[0].strip()} | {emp_muni}"
                 ok, p_id = db_manager.guardar_proyecto(
@@ -2813,12 +2815,33 @@ def renderizar():
         st.divider()
 
         # DOCUMENTOS OFICIALES PARA INDUSTRIA Y CLIENTE
-        col_g1, col_g2 = st.columns([3, 2])
+        col_g1, col_g2, col_g3 = st.columns([2.3, 1.7, 1.5])
         with col_g1:
-            exp_in = st.text_input("Nº de Expediente Oficial (DGEAIM Murcia):", value=f"EXP-MTD-{emp_muni[:3].upper()}-2026-01", key="mtd_exp_final")
+            exp_in = st.text_input("Nº de Expediente Oficial (DGEAIM Murcia):", value=st.session_state.get("mtd_exp_final", f"EXP-MTD-{emp_muni[:3].upper()}-2026-01"), key="mtd_exp_final")
         with col_g2:
+            fecha_def = datetime.date.today()
+            if "mtd_fecha_emision" in st.session_state:
+                f_raw = st.session_state["mtd_fecha_emision"]
+                if isinstance(f_raw, datetime.date):
+                    fecha_def = f_raw
+                elif isinstance(f_raw, str) and "/" in f_raw:
+                    try:
+                        p = f_raw.strip().split("/")
+                        fecha_def = datetime.date(int(p[2]), int(p[1]), int(p[0]))
+                    except Exception:
+                        pass
+            fecha_sel = st.date_input(
+                "📅 Fecha Oficial del Documento / Presentación:",
+                value=fecha_def,
+                format="DD/MM/YYYY",
+                key="mtd_fecha_emision_widget",
+                help="Puedes modificar esta fecha si redactas la memoria hoy y la presentas o firmas ante Industria más adelante (por ejemplo, 1 mes después)."
+            )
+            fecha_str_doc = fecha_sel.strftime("%d/%m/%Y") if hasattr(fecha_sel, "strftime") else datetime.date.today().strftime("%d/%m/%Y")
+            st.session_state["mtd_fecha_emision"] = fecha_str_doc
+        with col_g3:
             st.write("")
-            st.caption("Generación simultánea de toda la documentación requerida por Industria y el REBT.")
+            st.caption("Generación simultánea con fecha oficial personalizable.")
 
         tipo_para_doc = (emp_uso.strip() or "Instalación Eléctrica en Baja Tensión") if (tipo_inst_sel.startswith("⚪") or "Blanco" in tipo_inst_sel or "Seleccionar" in tipo_inst_sel) else tipo_inst_sel
 
@@ -2826,7 +2849,7 @@ def renderizar():
             "tipo_instalacion": tipo_para_doc,
             "tipo_tramitacion": tipo_tram_sel,
             "expediente": exp_in,
-            "fecha": datetime.date.today().strftime("%d/%m/%Y"),
+            "fecha": fecha_str_doc,
             "titular": {
                 "nombre": tit_nombre,
                 "nif": tit_nif,

@@ -160,6 +160,7 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     ensayos = datos.get("ensayos") or {}
     circuitos = datos.get("circuitos") or []
     anexos = datos.get("anexos") or {}
+    muni_tit = _safe_str(empl.get("municipio"), "Murcia")
 
     pot_inst_w = float(suministro.get("potencia_instalada_w") or 5750.0)
     pot_inst_kw = pot_inst_w / 1000.0
@@ -176,10 +177,21 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
     iga_cal = int(protecciones.get("iga_amperaje") or 25)
     rt_medida = float(ensayos.get("rt_ohm") or 11.8)
 
-    hoy = datetime.date.today()
-    dia = hoy.day
-    mes = MESES_ES[hoy.month - 1]
-    anio = hoy.year
+    fecha_custom = datos.get("fecha")
+    if isinstance(fecha_custom, datetime.date):
+        fecha_obj = fecha_custom
+    elif isinstance(fecha_custom, str) and "/" in fecha_custom:
+        try:
+            partes = fecha_custom.strip().split("/")
+            fecha_obj = datetime.date(int(partes[2]), int(partes[1]), int(partes[0]))
+        except Exception:
+            fecha_obj = datetime.date.today()
+    else:
+        fecha_obj = datetime.date.today()
+
+    dia = fecha_obj.day
+    mes = MESES_ES[fecha_obj.month - 1]
+    anio = fecha_obj.year
 
     # =========================================================================
     # TABLA 0: PÁGINA 1 - TITULAR, INSTALADOR, CARACTERÍSTICAS Y LGA/TIERRAS
@@ -441,7 +453,7 @@ def generar_docx_oficial_dgeaim_murcia(datos_mtd: dict) -> bytes:
 
         # Lugar y Fecha
         if len(t8.rows) > 23 and len(t8.rows[23].cells) > 0:
-            t8.rows[23].cells[0].text = f"En Murcia, a {dia} de {mes} de {anio}"
+            t8.rows[23].cells[0].text = f"En {muni_tit.capitalize()}, a {dia} de {mes} de {anio}"
 
         # Firma del Redactor
         if len(t8.rows) > 24 and len(t8.rows[24].cells) > 0:
