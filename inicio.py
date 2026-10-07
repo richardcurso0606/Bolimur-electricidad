@@ -481,11 +481,7 @@ css_tema_oscuro = """
     div[data-testid="stRadio"] [class*="e1mpz0hj4"],
     div[data-testid="stRadioOption"] [class*="e1mpz0hj4"],
     div[data-testid="stRadio"] div.e1mpz0hj4,
-    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4,
-    div[data-testid="stRadio"] [role="radiogroup"] label > span + div,
-    div[data-testid="stRadio"] [role="radiogroup"] label div:first-of-type,
-    div[data-testid="stRadioOption"] div:first-of-type,
-    div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child {
+    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4 {
         width: 22px !important;
         height: 22px !important;
         min-width: 22px !important;
@@ -526,10 +522,7 @@ css_tema_oscuro = """
     div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj4"],
     div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj4"],
     div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj4"],
-    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"],
-    div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) div:first-of-type,
-    div[data-testid="stRadio"] div[aria-checked="true"] > div:first-child,
-    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"] {
         background-color: #0284c7 !important;
         background: #0284c7 !important;
         border-color: #38bdf8 !important;
@@ -541,9 +534,7 @@ css_tema_oscuro = """
     div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj5"],
     div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj5"],
     div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj5"],
-    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"],
-    div[data-testid="stRadio"] div[aria-checked="true"] [class*="e1mpz0hj5"],
-    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div > div {
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"] {
         width: 9px !important;
         height: 9px !important;
         min-width: 9px !important;
@@ -1096,11 +1087,7 @@ css_tema_solar = """
     div[data-testid="stRadio"] [class*="e1mpz0hj4"],
     div[data-testid="stRadioOption"] [class*="e1mpz0hj4"],
     div[data-testid="stRadio"] div.e1mpz0hj4,
-    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4,
-    div[data-testid="stRadio"] [role="radiogroup"] label > span + div,
-    div[data-testid="stRadio"] [role="radiogroup"] label div:first-of-type,
-    div[data-testid="stRadioOption"] div:first-of-type,
-    div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child {
+    div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4 {
         width: 22px !important;
         height: 22px !important;
         min-width: 22px !important;
@@ -1142,10 +1129,7 @@ css_tema_solar = """
     div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj4"],
     div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj4"],
     div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj4"],
-    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"],
-    div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) div:first-of-type,
-    div[data-testid="stRadio"] div[aria-checked="true"] > div:first-child,
-    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"] {
         background-color: #0284c7 !important;
         background: #0284c7 !important;
         border-color: #0284c7 !important;
@@ -1157,9 +1141,7 @@ css_tema_solar = """
     div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj5"],
     div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj5"],
     div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj5"],
-    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"],
-    div[data-testid="stRadio"] div[aria-checked="true"] [class*="e1mpz0hj5"],
-    div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div > div {
+    div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"] {
         width: 9px !important;
         height: 9px !important;
         min-width: 9px !important;
@@ -1527,11 +1509,7 @@ st.markdown(f"""
         div[data-testid="stRadio"] [class*="e1mpz0hj4"],
         div[data-testid="stRadioOption"] [class*="e1mpz0hj4"],
         div[data-testid="stRadio"] div.e1mpz0hj4,
-        div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4,
-        div[data-testid="stRadio"] [role="radiogroup"] label > span + div,
-        div[data-testid="stRadio"] [role="radiogroup"] label div:first-of-type,
-        div[data-testid="stRadioOption"] div:first-of-type,
-        div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child {{
+        div[data-testid="stRadio"] .st-emotion-cache-e1mpz0hj4 {{
             width: 22px !important;
             height: 22px !important;
             min-width: 22px !important;
@@ -1570,10 +1548,7 @@ st.markdown(f"""
         div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj4"],
         div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj4"],
         div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj4"],
-        div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"],
-        div[data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) div:first-of-type,
-        div[data-testid="stRadio"] div[aria-checked="true"] > div:first-child,
-        div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div {{
+        div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj4"] {{
             background-color: {'#0284c7' if tema_es_oscuro else '#0284c7'} !important;
             border-color: {'#38bdf8' if tema_es_oscuro else '#0284c7'} !important;
             border-width: 2.5px !important;
@@ -1584,9 +1559,7 @@ st.markdown(f"""
         div[data-testid="stRadio"] label:has(input:checked) [class*="e1mpz0hj5"],
         div[data-testid="stRadio"] label[data-selected="true"] [class*="e1mpz0hj5"],
         div[data-testid="stRadioOption"][data-selected="true"] [class*="e1mpz0hj5"],
-        div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"],
-        div[data-testid="stRadio"] div[aria-checked="true"] [class*="e1mpz0hj5"],
-        div[data-testid="stRadio"] div[data-baseweb="radio"] input:checked + div > div {{
+        div[data-testid="stRadioOption"]:has(input:checked) [class*="e1mpz0hj5"] {{
             width: 9px !important;
             height: 9px !important;
             min-width: 9px !important;
