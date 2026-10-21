@@ -138,9 +138,38 @@ def get_api_key():
     return os.environ.get("GEMINI_API_KEY", "").strip()
 
 
+def optimizar_imagen(imagen_bytes: bytes) -> bytes:
+    """Convierte cualquier formato de imagen a JPEG RGB y redimensiona para IA (máx 1600px)."""
+    try:
+        img = Image.open(io.BytesIO(imagen_bytes))
+        if img.mode in ("RGBA", "P", "LA"):
+            fondo = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            fondo.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+            img = fondo
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+            
+        max_dim = 1600
+        w, h = img.size
+        if max(w, h) > max_dim:
+            ratio = max_dim / float(max(w, h))
+            new_size = (int(w * ratio), int(h * ratio))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+            
+        salida = io.BytesIO()
+        img.save(salida, format="JPEG", quality=85, optimize=True)
+        return salida.getvalue()
+    except Exception:
+        return imagen_bytes
+
+
 def analizar_foto_cuadro_gemini(imagen_bytes: bytes, api_key: str) -> dict:
-    """Envía la imagen a Gemini 2.0 / 1.5 Flash para extraer la jerarquía del cuadro eléctrico."""
-    b64_img = base64.b64encode(imagen_bytes).decode("utf-8")
+    """Envía la imagen optimizada a Gemini 2.0 / 1.5 Flash para extraer la jerarquía del cuadro eléctrico."""
+    # Optimizar imagen para que la llamada a la API sea ultrarrápida y no exceda límites
+    img_opt = optimizar_imagen(imagen_bytes)
+    b64_img = base64.b64encode(img_opt).decode("utf-8")
     
     prompt = """
 Eres un Ingeniero Eléctrico y Maestro Electricista especializado en el REBT (Reglamento Electrotécnico para Baja Tensión de España).
@@ -219,8 +248,8 @@ No incluyas explicaciones en texto fuera del JSON. Si no puedes distinguir un da
                 "parts": [
                     {"text": prompt},
                     {
-                        "inline_data": {
-                            "mime_type": "image/jpeg",
+                        "inlineData": {
+                            "mimeType": "image/jpeg",
                             "data": b64_img
                         }
                     }
@@ -234,6 +263,7 @@ No incluyas explicaciones en texto fuera del JSON. Si no puedes distinguir un da
     }
 
     modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    errores_detalle = []
     for modelo in modelos:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
         try:
@@ -244,13 +274,20 @@ No incluyas explicaciones en texto fuera del JSON. Si no puedes distinguir un da
                 if cands:
                     parts = cands[0].get("content", {}).get("parts", [])
                     txt = "".join([p.get("text", "") for p in parts])
-                    # Extraer bloque JSON
-                    match = re.search(r"\{.*\}", txt, re.DOTALL)
+                    # Extraer bloque JSON limpiando markdown
+                    txt_clean = re.sub(r"^```(?:json)?", "", txt.strip(), flags=re.MULTILINE)
+                    txt_clean = re.sub(r"```$", "", txt_clean.strip(), flags=re.MULTILINE)
+                    match = re.search(r"\{.*\}", txt_clean, re.DOTALL)
                     if match:
                         return json.loads(match.group(0))
+            else:
+                errores_detalle.append(f"{modelo}: HTTP {resp.status_code}")
         except Exception as e:
+            errores_detalle.append(f"{modelo}: {str(e)}")
             continue
-    raise RuntimeError("No se pudo obtener respuesta válida de la IA de visión. Verifica tu conexión o clave API.")
+
+    det = " | ".join(errores_detalle) if errores_detalle else "Sin respuesta"
+    raise RuntimeError(f"Respuesta no válida de Google AI ({det}). Verifica tu clave API o conexión.")
 
 
 def motor_heuristico_offline_foto() -> dict:
@@ -622,16 +659,24 @@ def render_modulo_unifilar_foto():
         with tab_subir:
             archivo = st.file_uploader(
                 "Sube una fotografía nítida del cuadro eléctrico:",
-                type=["jpg", "jpeg", "png", "webp"],
+                type=["jpg", "jpeg", "png", "webp", "bmp", "heic"],
                 key="up_foto_cuadro"
             )
             if archivo:
-                imagen_cargada = archivo.read()
+                try:
+                    bytes_raw = archivo.read()
+                    imagen_cargada = optimizar_imagen(bytes_raw)
+                except Exception as ex:
+                    st.error(f"Error al leer la imagen: {str(ex)}")
 
         with tab_camara:
             foto_cam = st.camera_input("Haz una foto al cuadro general de distribución:", key="cam_foto_cuadro")
             if foto_cam:
-                imagen_cargada = foto_cam.read()
+                try:
+                    bytes_cam = foto_cam.read()
+                    imagen_cargada = optimizar_imagen(bytes_cam)
+                except Exception as ex:
+                    st.error(f"Error en captura de cámara: {str(ex)}")
 
         with tab_demo:
             st.write("Selecciona una plantilla típica de cuadro eléctrico para probar sin subir foto:")
@@ -648,7 +693,10 @@ def render_modulo_unifilar_foto():
         
         col_img, col_act = st.columns([1.2, 2])
         with col_img:
-            st.image(imagen_cargada, caption="Fotografía del cuadro a procesar", use_container_width=True)
+            try:
+                st.image(imagen_cargada, caption="Fotografía del cuadro a procesar", use_container_width=True)
+            except Exception:
+                st.info("Imagen cargada y optimizada en memoria.")
         with col_act:
             st.write("### 🔍 Análisis de Protecciones")
             st.write("Presiona el botón para que el sistema lea la hilera de magnetotérmicos, calibres, diferenciales y rótulos.")
@@ -660,15 +708,15 @@ def render_modulo_unifilar_foto():
                         if key_actual and len(key_actual) > 10:
                             resultado = analizar_foto_cuadro_gemini(imagen_cargada, key_actual)
                         else:
-                            st.warning("Sin clave de Gemini configurada: aplicando detección heurística inteligente.")
+                            st.warning("⚠️ Sin clave de Gemini configurada: se genera el esquema base para que lo verifiques y edites a mano.")
                             resultado = motor_heuristico_offline_foto()
                             
                         st.session_state["unifilar_datos_cuadro"] = resultado
-                        st.success("¡Cuadro reconocido correctamente!")
+                        st.success("¡Cuadro procesado correctamente!")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Error durante el análisis: {str(e)}")
-                        st.info("Cargando esquema representativo de seguridad para permitir tu edición.")
+                        st.error(f"Aviso durante el análisis de IA: {str(e)}")
+                        st.info("Cargando plantilla técnica de seguridad para que puedas ajustar los circuitos manualmente.")
                         st.session_state["unifilar_datos_cuadro"] = motor_heuristico_offline_foto()
                         st.rerun()
 
