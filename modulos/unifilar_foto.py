@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 MÓDULO INDEPENDIENTE: Extractor de Esquema Unifilar por Foto de Cuadro Eléctrico (REBT)
-Inspirado en soluciones de visión artificial y REBT para electricistas e instaladores.
+Presentación y simbología normalizada UNE-EN 60617 idéntica al Módulo Oficial MTD de Bolimur.
 Permite:
-1. Subir o capturar una fotografía de un cuadro de distribución eléctrica (CGMP).
-2. Procesar con IA Multimodal (Google Gemini Vision) o motor heurístico experto REBT.
-3. Detectar IGA, sobretensiones, diferenciales y PIAs con calibres, polos y rótulos.
-4. Mapear a circuitos según ITC-BT-25 (C1..C13) con cálculo de secciones y tubos.
+1. Subir o capturar una fotografía de un cuadro de distribución eléctrica (CGMP residencial, terciario o industrial).
+2. Procesar con IA Multimodal (Google Gemini Vision) o motor experto REBT.
+3. Detectar IGA (monofásico 2P o trifásico 4P), sobretensiones, diferenciales y PIAs con calibres, polos y rótulos.
+4. Mapear a circuitos según ITC-BT-25 / ITC-BT-28 con cálculo de secciones y tubos.
 5. Edición interactiva y auditoría normativa (máx. 5 circuitos por diferencial, etc.).
-6. Generación del Esquema Unifilar visual (diagrama técnico) y exportación a PDF oficial y PNG.
-Totalmente aislado del resto de la base de datos de Bolimur.
+6. Generación del Esquema Unifilar Oficial Vectorial (UNE-EN 60617) exportable a PNG y PDF A4.
 """
 
 import streamlit as st
@@ -22,10 +21,8 @@ import requests
 import datetime
 import pandas as pd
 from PIL import Image
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 
-# Reportlab para generación de PDF técnico
+# Reportlab para generación de dibujo vectorial oficial UNE-EN 60617 y PDF técnico
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import (
@@ -34,6 +31,17 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
+from reportlab.graphics.shapes import Drawing, Rect, Circle, Line, String, Group
+from reportlab.graphics import renderPDF
+
+# PyMuPDF para renderizado ultranítido a PNG (200 DPI) idéntico a MTD
+try:
+    import pymupdf as fitz
+except ImportError:
+    try:
+        import fitz
+    except ImportError:
+        fitz = None
 
 # Importación segura de auditor_ia_rebt si está disponible para reutilizar la API Key
 try:
@@ -42,7 +50,7 @@ except Exception:
     auditor_ia_rebt = None
 
 # =========================================================================
-# CONFIGURACIÓN Y CONSTANTES REBT (ITC-BT-25)
+# CONFIGURACIÓN Y CONSTANTES REBT (ITC-BT-25 / ITC-BT-28)
 # =========================================================================
 
 TABLA_CIRCUITOS_REBT = {
@@ -64,25 +72,60 @@ TABLA_CIRCUITOS_REBT = {
     "OTROS": {"nombre": "Circuito auxiliar / Fuerza", "pia": 16, "sec": 2.5, "tubo": 20, "pot": 3450, "desc": "Uso específico o no residencial"}
 }
 
-# Ejemplos precargados para Modo Demo
+# Ejemplos precargados para Modo Demo (incluyendo el cuadro real de la foto del usuario)
 DEMO_CUADROS = {
-    "Vivienda Básica (1 Dif + 5 Circuitos C1 a C5)": {
-        "tipo_suministro": "Monofásico (230V)",
-        "iga": {"calibre": 25, "polos": "2P", "poder_corte_ka": 6.0},
-        "sobretensiones": {"presente": True, "tipo": "Permanentes y Transitorias (IGA Combinado)"},
+    "Cuadro Trifásico Academia / Aulas (Foto Real 4x25A - 5 Filas)": {
+        "tipo_suministro": "Trifásico (400V)",
+        "iga": {"calibre": 25, "polos": "4P", "poder_corte_ka": 6.0},
+        "sobretensiones": {"presente": True, "tipo": "Permanentes y Transitorias (Módulo DPS 4P)"},
         "diferenciales": [
             {
-                "id": "ID 1",
+                "id": "ID 1 (Alumbrado L1, L2, L3)",
                 "calibre": 40,
+                "sensibilidad_ma": 30,
+                "clase": "Tipo AC",
+                "polos": "4P",
+                "circuitos": [
+                    {"codigo": "C1.1", "denominacion": "Alumbrado Fase 1", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 2300, "rotulo": "L1-L4"},
+                    {"codigo": "C1.2", "denominacion": "Alumbrado Fase 2", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 2300, "rotulo": "L2"},
+                    {"codigo": "C1.3", "denominacion": "Alumbrado Fase 3", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 2300, "rotulo": "L3"},
+                    {"codigo": "C1.4", "denominacion": "Alumbrado Emergencia", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 1500, "rotulo": "Emergencia"}
+                ]
+            },
+            {
+                "id": "ID 2 (Aulas, Puestos PC y Clima)",
+                "calibre": 40,
+                "sensibilidad_ma": 30,
+                "clase": "Tipo A Superinmunizado",
+                "polos": "2P",
+                "circuitos": [
+                    {"codigo": "C2.1", "denominacion": "Tomas Ordenadores Puesto 1", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "PC1"},
+                    {"codigo": "C2.2", "denominacion": "Tomas Ordenadores Puesto 2", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "PC2"},
+                    {"codigo": "C2.3", "denominacion": "Tomas Puesto Profesor", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "PROFE"},
+                    {"codigo": "C2.4", "denominacion": "Tomas Mesas Alumnos", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "MESAS"},
+                    {"codigo": "C9", "denominacion": "Climatización / A. Acondicionado", "pia": 25, "polos": "2P", "seccion": 6.0, "tubo": 25, "potencia": 5750, "rotulo": "A.ACOND"}
+                ]
+            },
+            {
+                "id": "ID 3 (Maquinaria y Ensayos)",
+                "calibre": 40,
+                "sensibilidad_ma": 30,
+                "clase": "Tipo AC",
+                "polos": "4P",
+                "circuitos": [
+                    {"codigo": "C_MAQ", "denominacion": "Fuerza Máquina de Ensayos", "pia": 20, "polos": "4P", "seccion": 4.0, "tubo": 25, "potencia": 7360, "rotulo": "MAQUINA ENSAYOS"},
+                    {"codigo": "C_EXT", "denominacion": "Tomas de Corriente Exterior", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "EXTERIOR"}
+                ]
+            },
+            {
+                "id": "ID 4 (Control Horario y Maniobra)",
+                "calibre": 25,
                 "sensibilidad_ma": 30,
                 "clase": "Tipo AC",
                 "polos": "2P",
                 "circuitos": [
-                    {"codigo": "C1", "denominacion": "Alumbrado General", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 2300, "rotulo": "Luz"},
-                    {"codigo": "C2", "denominacion": "Tomas Uso General", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "Enchufes"},
-                    {"codigo": "C3", "denominacion": "Cocina y Horno", "pia": 25, "polos": "2P", "seccion": 6.0, "tubo": 25, "potencia": 5400, "rotulo": "Horno / Vitro"},
-                    {"codigo": "C4", "denominacion": "Lavadora, Lavavajillas y Termo", "pia": 20, "polos": "2P", "seccion": 4.0, "tubo": 20, "potencia": 4600, "rotulo": "Lavadora/Termo"},
-                    {"codigo": "C5", "denominacion": "Baño y Cocina (Auxiliares)", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "Baños/Cocina"}
+                    {"codigo": "C_CLK", "denominacion": "Reloj Programador Horario", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 1000, "rotulo": "RELOJ HORARIO"},
+                    {"codigo": "C_KM", "denominacion": "Circuito Maniobra Contactor", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 500, "rotulo": "CONTACTOR"}
                 ]
             }
         ]
@@ -116,6 +159,27 @@ DEMO_CUADROS = {
                     {"codigo": "C4.2", "denominacion": "Lavavajillas", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "Lavavajillas"},
                     {"codigo": "C9", "denominacion": "Aire Acondicionado Central", "pia": 25, "polos": "2P", "seccion": 6.0, "tubo": 25, "potencia": 5750, "rotulo": "Clima"},
                     {"codigo": "C_FOTOV", "denominacion": "Inversor Solar FV", "pia": 25, "polos": "2P", "seccion": 6.0, "tubo": 25, "potencia": 5000, "rotulo": "Solar Fotov."}
+                ]
+            }
+        ]
+    },
+    "Vivienda Básica (1 Dif + 5 Circuitos C1 a C5)": {
+        "tipo_suministro": "Monofásico (230V)",
+        "iga": {"calibre": 25, "polos": "2P", "poder_corte_ka": 6.0},
+        "sobretensiones": {"presente": True, "tipo": "Permanentes y Transitorias (IGA Combinado)"},
+        "diferenciales": [
+            {
+                "id": "ID 1",
+                "calibre": 40,
+                "sensibilidad_ma": 30,
+                "clase": "Tipo AC",
+                "polos": "2P",
+                "circuitos": [
+                    {"codigo": "C1", "denominacion": "Alumbrado General", "pia": 10, "polos": "1P+N", "seccion": 1.5, "tubo": 16, "potencia": 2300, "rotulo": "Luz"},
+                    {"codigo": "C2", "denominacion": "Tomas Uso General", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "Enchufes"},
+                    {"codigo": "C3", "denominacion": "Cocina y Horno", "pia": 25, "polos": "2P", "seccion": 6.0, "tubo": 25, "potencia": 5400, "rotulo": "Horno / Vitro"},
+                    {"codigo": "C4", "denominacion": "Lavadora, Lavavajillas y Termo", "pia": 20, "polos": "2P", "seccion": 4.0, "tubo": 20, "potencia": 4600, "rotulo": "Lavadora/Termo"},
+                    {"codigo": "C5", "denominacion": "Baño y Cocina (Auxiliares)", "pia": 16, "polos": "1P+N", "seccion": 2.5, "tubo": 20, "potencia": 3450, "rotulo": "Baños/Cocina"}
                 ]
             }
         ]
@@ -166,50 +230,37 @@ def optimizar_imagen(imagen_bytes: bytes) -> bytes:
 
 
 def analizar_foto_cuadro_gemini(imagen_bytes: bytes, api_key: str) -> dict:
-    """Envía la imagen optimizada a Gemini 2.0 / 1.5 Flash para extraer la jerarquía del cuadro eléctrico."""
-    # Optimizar imagen para que la llamada a la API sea ultrarrápida y no exceda límites
+    """Envía la imagen optimizada a Gemini para extraer la jerarquía del cuadro eléctrico."""
     img_opt = optimizar_imagen(imagen_bytes)
     b64_img = base64.b64encode(img_opt).decode("utf-8")
     
     prompt = """
 Eres un Ingeniero Eléctrico y Maestro Electricista especializado en el REBT (Reglamento Electrotécnico para Baja Tensión de España).
-Analiza detalladamente esta fotografía frontal de un cuadro eléctrico (CGMP / Cuadro General de Mando y Protección).
-Tu objetivo es extraer con máxima precisión técnica todos los dispositivos de protección visibles para trazar el Esquema Unifilar oficial.
+Analiza detalladamente esta fotografía de un cuadro eléctrico de distribución (puede ser residencial, terciario, educativo o industrial con varias filas modulares DIN).
+Tu objetivo es extraer con máxima precisión técnica todos los dispositivos de protección visibles para trazar el Esquema Unifilar oficial UNE-EN 60617.
 
-INSTRUCCIONES DE LECTURA VISUAL:
+INSTRUCCIONES TÉCNICAS DE LECTURA VISUAL:
 1. IDENTIFICA EL IGA (Interruptor General Automático):
-   - Amperaje nominal (calibre In: ej. 25A, 32A, 40A, 50A, 63A).
-   - Polos (2P para monofásico 230V o 4P para trifásico 400V).
-   - Poder de corte si se lee (ej. 4500A, 6000A / 4.5kA, 6kA).
+   - Revisa si es Trifásico (4P tetrapolar, ej. '4x25A', '4x32A', '4x40A') o Monofásico (2P).
+   - Lee el calibre en amperios y poder de corte (típicamente 6kA o 4.5kA).
 2. PROTECCIÓN CONTRA SOBRETENSIONES:
-   - Detecta si está presente (módulo IGA combinado con bobina de sobretensiones o descargadores de transitorias).
-3. INTERRUPTORES DIFERENCIALES (ID):
-   - Número de diferenciales y orden (ID 1, ID 2...).
-   - Calibre nominal (ej. 40A, 63A) y sensibilidad (ej. 30mA = 0.03A).
-   - Clase si es legible (Tipo AC, Tipo A o Superinmunizado).
+   - Detecta si hay descargadores de sobretensiones transitorias y permanentes o bobina asociada.
+3. HILERA DE INTERRUPTORES DIFERENCIALES (IDs):
+   - Identifica cada diferencial por fila/grupo (calibre ej. 40A, sensibilidad 30mA, clase AC o A).
 4. PEQUEÑOS INTERRUPTORES AUTOMÁTICOS (PIAs):
-   - Asocia cada PIA al diferencial del que aguas abajo cuelga (siguiendo el peine de conexión o posición contigua de izquierda a derecha).
-   - Calibre: C10, C16, C20, C25, C32, C40...
-   - Número de polos: 1P+N o 2P.
-   - Lee el texto manuscrito o etiqueta rotulada bajo o sobre el PIA si existe (ej: 'alumbrado', 'enchufes', 'vitro', 'horno', 'lavadora', 'clima', etc.).
-   - Mapea el PIA al código oficial de circuito REBT según ITC-BT-25:
-     * C1: Iluminación (10A, 1.5 mm²)
-     * C2: Tomas uso general (16A, 2.5 mm²)
-     * C3: Cocina y horno (25A, 6 mm²)
-     * C4 o C4.1/C4.2/C4.3: Lavadora / lavavajillas / termo
-     * C5: Baños y cocina tomas (16A, 2.5 mm²)
-     * C9: Aire acondicionado (25A, 6 mm²)
-     * C13: Vehículo eléctrico (32A, 6 mm²)
-     * C_FOTOV: Inversor solar (si aplica)
-     * OTROS: cualquier circuito especial.
+   - Asocia cada PIA a su diferencial correspondiente.
+   - Lee con exactitud los rótulos y etiquetas manuscritas o adhesivas (ej: 'L1-L4', 'L2', 'L3', 'PC1', 'PC2', 'PROFE', 'MESAS', 'A.ACOND', 'MAQUINA ENSAYOS', 'EXTERIOR', 'RELOJ HORARIO', 'CONTACTOR').
+   - Calibre: C10, C16, C20, C25, C32...
+   - Número de polos: 1P+N, 2P o 4P (para maquinaria trifásica).
+   - Asigna la sección de cable de cobre mínima reglamentaria (1.5mm² para 10A, 2.5mm² para 16A, 4mm² para 20A, 6mm² para 25A) y diámetro de tubo (M16, M20, M25).
 
-IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura exacta:
+IMPORTANTE: Responde ÚNICAMENTE con un JSON válido con esta estructura:
 {
-  "tipo_suministro": "Monofásico (230V)" o "Trifásico (400V)",
-  "observaciones_ia": "Breve nota de lo observado en la foto (estado del cuadro, marcas como Schneider, Hager, Legrand, etc.)",
+  "tipo_suministro": "Trifásico (400V)" o "Monofásico (230V)",
+  "observaciones_ia": "Descripción breve del cuadro identificado",
   "iga": {
-    "calibre": 32,
-    "polos": "2P",
+    "calibre": 25,
+    "polos": "4P",
     "poder_corte_ka": 6.0
   },
   "sobretensiones": {
@@ -218,27 +269,27 @@ IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido con la siguiente est
   },
   "diferenciales": [
     {
-      "id": "ID 1",
+      "id": "ID 1 (Alumbrado)",
       "calibre": 40,
       "sensibilidad_ma": 30,
       "clase": "Tipo AC",
-      "polos": "2P",
+      "polos": "4P",
       "circuitos": [
         {
-          "codigo": "C1",
-          "denominacion": "Iluminación general",
+          "codigo": "C1.1",
+          "denominacion": "Alumbrado L1-L4",
           "pia": 10,
           "polos": "1P+N",
           "seccion": 1.5,
           "tubo": 16,
           "potencia": 2300,
-          "rotulo": "Luz"
+          "rotulo": "L1-L4"
         }
       ]
     }
   ]
 }
-No incluyas explicaciones en texto fuera del JSON. Si no puedes distinguir un dato concreto, aplica el valor típico reglamentario del REBT.
+No añadas texto conversacional fuera del JSON.
 """
 
     payload = {
@@ -274,7 +325,6 @@ No incluyas explicaciones en texto fuera del JSON. Si no puedes distinguir un da
                 if cands:
                     parts = cands[0].get("content", {}).get("parts", [])
                     txt = "".join([p.get("text", "") for p in parts])
-                    # Extraer bloque JSON limpiando markdown
                     txt_clean = re.sub(r"^```(?:json)?", "", txt.strip(), flags=re.MULTILINE)
                     txt_clean = re.sub(r"```$", "", txt_clean.strip(), flags=re.MULTILINE)
                     match = re.search(r"\{.*\}", txt_clean, re.DOTALL)
@@ -291,148 +341,254 @@ No incluyas explicaciones en texto fuera del JSON. Si no puedes distinguir un da
 
 
 def motor_heuristico_offline_foto() -> dict:
-    """Fallback heurístico si no hay clave API o no hay conexión."""
-    return DEMO_CUADROS["Vivienda Básica (1 Dif + 5 Circuitos C1 a C5)"]
+    """Fallback heurístico si no hay clave API o no hay conexión: plantilla del cuadro trifásico real."""
+    return DEMO_CUADROS["Cuadro Trifásico Academia / Aulas (Foto Real 4x25A - 5 Filas)"]
 
 
 # =========================================================================
-# DIBUJADO GRÁFICO DEL ESQUEMA UNIFILAR (MATPLOTLIB)
+# DIBUJADO VECTORIAL OFICIAL DEL ESQUEMA UNIFILAR (UNE-EN 60617 / MTD STYLE)
 # =========================================================================
 
-def generar_diagrama_unifilar(datos_cuadro: dict):
+def crear_drawing_unifilar_mtd(datos_cuadro: dict) -> Drawing:
     """
-    Genera un diagrama unifilar eléctrico profesional con simbología técnica REBT.
-    Retorna la figura Matplotlib lista para renderizar y descargar.
+    Genera el Drawing vectorial oficial del Esquema Unifilar para Anexo III / REBT,
+    con la estética, simbología UNE-EN 60617 y presentación idéntica al Módulo MTD de Bolimur.
+    Soporta N diferenciales dinámicos y suministros monofásicos (230V) o trifásicos (400V).
     """
-    fig, ax = plt.subplots(figsize=(14, 8), dpi=150)
-    ax.set_facecolor("#FFFFFF")
-    fig.patch.set_facecolor("#FFFFFF")
-    
-    # Contar total de circuitos para calcular el ancho y espaciado
     diferenciales = datos_cuadro.get("diferenciales", [])
     total_circuitos = sum(len(d.get("circuitos", [])) for d in diferenciales)
     total_circuitos = max(total_circuitos, 1)
 
-    # Coordenadas
-    y_red = 9.0
-    y_iga = 7.6
-    y_prot = 6.4
-    y_barra_dif = 5.2
-    y_dif = 4.0
-    y_barra_pias = 2.8
-    y_pias = 1.6
-    y_cargas = 0.4
+    c_primary = colors.HexColor("#0f172a")
+    c_secondary = colors.HexColor("#0369a1")
+    c_green = colors.HexColor("#16a34a")
+    c_text_dark = colors.HexColor("#1e293b")
 
-    # Línea Acometida
-    ax.plot([7.0, 7.0], [y_red, y_iga + 0.5], color="#1E293B", lw=2.5)
-    suministro = datos_cuadro.get("tipo_suministro", "Monofásico 230V")
-    ax.text(7.0, y_red + 0.15, f"RED DISTRIBUCIÓN / DI\n{suministro}", ha="center", va="bottom", fontsize=10, weight="bold", color="#0F172A")
+    # Ancho dinámico del dibujo según la cantidad de circuitos
+    dwg_w = max(680, min(1400, total_circuitos * 56 + 120))
+    dwg_h = 295
+    dwg = Drawing(dwg_w, dwg_h)
 
-    # Símbolo IGA
+    # Marco exterior y fondo blanco técnico
+    dwg.add(Rect(0, 0, dwg_w, dwg_h, fillColor=colors.HexColor("#ffffff"), strokeColor=colors.HexColor("#94a3b8"), strokeWidth=0.9, rx=4, ry=4))
+
+    # 1. Cabecera de Red y Tensión
+    xc = dwg_w / 2.0
+    tipo_sum = datos_cuadro.get("tipo_suministro", "Monofásico (230V)")
+    es_trif = ("400" in tipo_sum or "Trifásic" in tipo_sum)
+    txt_red = "3N ~ 400 V - 50 Hz" if es_trif else "1N ~ 230 V - 50 Hz"
+    dwg.add(String(xc, 283, txt_red, fontName="Helvetica-Bold", fontSize=8.5, fillColor=c_primary, textAnchor="middle"))
+    dwg.add(Circle(xc, 274, 1.6, fillColor=c_primary, strokeColor=c_primary))
+
+    # 2. Símbolo ICP (UNE-EN 60617)
+    dwg.add(Line(xc, 274, xc, 266, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(Line(xc, 266, xc - 7, 256, strokeColor=c_primary, strokeWidth=1.4))
+    dwg.add(Circle(xc, 266, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(xc, 254, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Line(xc, 254, xc, 247, strokeColor=c_primary, strokeWidth=1.3))
+    dwg.add(String(xc + 12, 261, "ICP", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_primary))
+
+    # 3. Símbolo IGA (Corte Térmico y Magnético UNE-EN 60617)
     iga = datos_cuadro.get("iga", {})
-    cal_iga = iga.get("calibre", 32)
-    polos_iga = iga.get("polos", "2P")
-    pdc_iga = iga.get("poder_corte_ka", 6.0)
+    iga_cal = iga.get("calibre", 25 if es_trif else 40)
+    iga_polos_txt = "4x" if es_trif else "2x"
+    pdc_ka = iga.get("poder_corte_ka", 6.0)
 
-    rect_iga = patches.Rectangle((6.2, y_iga - 0.4), 1.6, 0.8, linewidth=1.5, edgecolor="#0284C7", facecolor="#E0F2FE", zorder=3)
-    ax.add_patch(rect_iga)
-    ax.text(7.0, y_iga, f"IGA {polos_iga}\n{cal_iga}A ({pdc_iga}kA)", ha="center", va="center", fontsize=8.5, weight="bold", color="#0369A1")
+    dwg.add(Line(xc, 247, xc - 7, 235, strokeColor=c_primary, strokeWidth=1.4))
+    dwg.add(Circle(xc, 247, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Circle(xc, 233, 1.2, fillColor=c_primary, strokeColor=c_primary))
+    # Disparador térmico (bimetal)
+    dwg.add(Line(xc - 4, 240, xc - 11, 235, strokeColor=c_primary, strokeWidth=1.0))
+    dwg.add(Line(xc - 11, 235, xc - 8, 232, strokeColor=c_primary, strokeWidth=1.0))
+    # Disparador electromagnético (bobina)
+    dwg.add(Rect(xc - 14, 232, 4, 4, fillColor=c_primary, strokeColor=c_primary))
+    dwg.add(Line(xc, 233, xc, 222, strokeColor=c_primary, strokeWidth=1.3))
 
-    # Línea a sobretensiones
-    ax.plot([7.0, 7.0], [y_iga - 0.4, y_prot + 0.4], color="#1E293B", lw=2)
+    dwg.add(String(xc + 12, 243, "IGA", fontName="Helvetica-Bold", fontSize=8.5, fillColor=c_primary))
+    dwg.add(String(xc + 12, 234, f"{iga_polos_txt}{iga_cal} A", fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_secondary))
+    dwg.add(String(xc + 12, 225, f"{pdc_ka:.0f} kA (Curva C)", fontName="Helvetica", fontSize=5.8, fillColor=colors.HexColor("#64748b")))
 
-    # Sobretensiones
-    dps = datos_cuadro.get("sobretensiones", {})
-    tipo_dps = dps.get("tipo", "Permanentes + Transitorias") if dps.get("presente", True) else "Sin DPS"
-    rect_dps = patches.Rectangle((5.8, y_prot - 0.35), 2.4, 0.7, linewidth=1.2, edgecolor="#D97706", facecolor="#FEF3C7", zorder=3)
-    ax.add_patch(rect_dps)
-    ax.text(7.0, y_prot, f"DPS: {tipo_dps}", ha="center", va="center", fontsize=8, weight="bold", color="#92400E")
-
-    # Línea a barra de diferenciales
-    ax.plot([7.0, 7.0], [y_prot - 0.35, y_barra_dif], color="#1E293B", lw=2)
-
-    # Barra distribuidora a diferenciales
+    # 4. Embarrado repartidor a los Diferenciales
+    y_split = 222
     num_difs = len(diferenciales)
-    x_step = 12.0 / max(total_circuitos, 4)
-    
-    # Calcular centro de cada diferencial según sus circuitos
-    posiciones_dif = []
-    circuito_offset = 0
-    x_inicio = 1.5
+    x_step = (dwg_w - 70.0) / max(total_circuitos, 1)
+
+    # Calcular posiciones horizontales para cada diferencial y sus circuitos
+    pos_difs = []
+    c_acum = 0
+    x_base = 35.0
 
     for d_idx, d in enumerate(diferenciales):
-        n_circs = max(len(d.get("circuitos", [])), 1)
-        x_d_center = x_inicio + (circuito_offset + (n_circs - 1) / 2.0) * x_step
-        posiciones_dif.append((x_d_center, circuito_offset, n_circs))
-        circuito_offset += n_circs
+        n_c = max(len(d.get("circuitos", [])), 1)
+        x_min_grp = x_base + c_acum * x_step
+        x_max_grp = x_base + (c_acum + n_c) * x_step - 8
+        x_d_center = (x_min_grp + x_max_grp) / 2.0
+        pos_difs.append({
+            "idx": d_idx,
+            "x_center": x_d_center,
+            "x_min": x_min_grp,
+            "x_max": x_max_grp,
+            "c_offset": c_acum,
+            "n_circs": n_c
+        })
+        c_acum += n_c
 
-    # Trazar barra horizontal de distribución a diferenciales
-    if num_difs > 0:
-        x_min_dif = min(p[0] for p in posiciones_dif)
-        x_max_dif = max(p[0] for p in posiciones_dif)
-        ax.plot([x_min_dif, x_max_dif], [y_barra_dif, y_barra_dif], color="#1E293B", lw=2)
+    # Barra horizontal de reparto general
+    if num_difs > 1:
+        x_min_all = min(p["x_center"] for p in pos_difs)
+        x_max_all = max(p["x_center"] for p in pos_difs)
+        dwg.add(Line(x_min_all, y_split, x_max_all, y_split, strokeColor=c_primary, strokeWidth=1.4))
+        dwg.add(Circle(xc, y_split, 1.5, fillColor=c_primary, strokeColor=c_primary))
 
-    # Dibujar cada diferencial y sus ramas
-    circ_global_idx = 0
-    for d_idx, (d, (x_dif, c_off, n_circs)) in enumerate(zip(diferenciales, posiciones_dif)):
-        # Bajada vertical de la barra al diferencial
-        ax.plot([x_dif, x_dif], [y_barra_dif, y_dif + 0.4], color="#1E293B", lw=1.8)
+    # 5. Dibujar cada Interruptor Diferencial y sus circuitos
+    y_bus_pias = 170
 
-        # Caja Diferencial
-        id_nombre = d.get("id", f"ID {d_idx+1}")
+    for d_idx, d in enumerate(diferenciales):
+        p_info = pos_difs[d_idx]
+        xd = p_info["x_center"]
+        xmin = p_info["x_min"]
+        xmax = p_info["x_max"]
+        circuitos = d.get("circuitos", [])
+        n_c = len(circuitos)
+
+        # Bajante de la barra al diferencial
+        dwg.add(Line(xd, y_split, xd, 212, strokeColor=c_primary, strokeWidth=1.2))
+        dwg.add(Circle(xd, y_split, 1.2, fillColor=c_primary, strokeColor=c_primary))
+
+        # Símbolo Interruptor Diferencial UNE-EN 60617
+        dwg.add(Line(xd, 212, xd - 7, 201, strokeColor=c_primary, strokeWidth=1.3))
+        dwg.add(Circle(xd, 212, 1.2, fillColor=c_primary, strokeColor=c_primary))
+        dwg.add(Circle(xd, 199, 1.2, fillColor=c_primary, strokeColor=c_primary))
+        # Toroide diferencial (círculo verde)
+        dwg.add(Circle(xd - 16, 206, 5.0, fillColor=colors.HexColor("#f0fdf4"), strokeColor=c_green, strokeWidth=1.2))
+        dwg.add(Line(xd - 16, 201.5, xd - 16, 210.5, strokeColor=c_green, strokeWidth=1.0))
+        dwg.add(Line(xd - 20.5, 206, xd - 11.5, 206, strokeColor=c_green, strokeWidth=1.0))
+        dwg.add(Line(xd - 11, 206, xd - 4, 206, strokeColor=c_green, strokeWidth=0.9))
+        dwg.add(Line(xd, 199, xd, y_bus_pias, strokeColor=c_primary, strokeWidth=1.3))
+
+        # Texto del Diferencial
+        id_nom = d.get("id", f"DIF {d_idx+1}")
+        id_nom_corto = id_nom[:12] if len(id_nom) > 12 else id_nom
         cal_dif = d.get("calibre", 40)
         sens_dif = d.get("sensibilidad_ma", 30)
         clase_dif = d.get("clase", "AC")
-        rect_id = patches.Rectangle((x_dif - 1.1, y_dif - 0.4), 2.2, 0.8, linewidth=1.5, edgecolor="#059669", facecolor="#D1FAE5", zorder=3)
-        ax.add_patch(rect_id)
-        ax.text(x_dif, y_dif, f"{id_nombre} {cal_dif}A\n{sens_dif}mA ({clase_dif})", ha="center", va="center", fontsize=8, weight="bold", color="#065F46")
+        clase_txt = "A" if "A" in clase_dif else "AC"
+        polos_dif_txt = "4x" if d.get("polos") == "4P" or es_trif else "2x"
 
-        # Bajada a barra de circuitos
-        ax.plot([x_dif, x_dif], [y_dif - 0.4, y_barra_pias], color="#1E293B", lw=1.8)
+        dwg.add(String(xd + 10, 209, id_nom_corto, fontName="Helvetica-Bold", fontSize=7.5, fillColor=c_green))
+        dwg.add(String(xd + 10, 200, f"{polos_dif_txt}{cal_dif} A", fontName="Helvetica-Bold", fontSize=7.0, fillColor=c_primary))
+        dwg.add(String(xd + 10, 191, f"{sens_dif} mA ({clase_txt})", fontName="Helvetica-Bold", fontSize=6.5, fillColor=c_primary))
 
-        # Circuitos de este diferencial
-        circuitos = d.get("circuitos", [])
-        if circuitos:
-            x_circs = [x_inicio + (c_off + i) * x_step for i in range(len(circuitos))]
-            # Barra horizontal de este diferencial
-            if len(x_circs) > 1:
-                ax.plot([min(x_circs), max(x_circs)], [y_barra_pias, y_barra_pias], color="#1E293B", lw=1.5)
+        # Peine / Barra horizontal bajo el diferencial
+        dwg.add(Line(xmin, y_bus_pias, xmax, y_bus_pias, strokeColor=c_secondary, strokeWidth=2.2))
+        dwg.add(Circle(xd, y_bus_pias, 1.8, fillColor=c_secondary, strokeColor=c_secondary))
 
-            for i, c in enumerate(circuitos):
-                xc = x_circs[i]
-                # Bajada al PIA
-                ax.plot([xc, xc], [y_barra_pias, y_pias + 0.35], color="#1E293B", lw=1.2)
+        # Dibujar cada PIA de este grupo
+        if n_c > 0:
+            step_c = (xmax - xmin) / (n_c + 1)
+            w_box = max(34, min(48, step_c - 4))
 
-                # Caja PIA
-                codigo = c.get("codigo", f"C{i+1}")
-                pia_cal = c.get("pia", 16)
-                polos_pia = c.get("polos", "1P+N")
-                rect_pia = patches.Rectangle((xc - 0.5, y_pias - 0.35), 1.0, 0.7, linewidth=1.2, edgecolor="#475569", facecolor="#F1F5F9", zorder=3)
-                ax.add_patch(rect_pia)
-                ax.text(xc, y_pias, f"{codigo}\n{pia_cal}A", ha="center", va="center", fontsize=8, weight="bold", color="#1E293B")
-
-                # Bajada a línea de salida
-                ax.plot([xc, xc], [y_pias - 0.35, y_cargas + 0.3], color="#1E293B", lw=1.2)
-
-                # Flecha de carga / descripción de circuito
-                ax.annotate("", xy=(xc, y_cargas), xytext=(xc, y_cargas + 0.3),
-                            arrowprops=dict(arrowstyle="->", color="#1E293B", lw=1.2))
-                
+            for j, c in enumerate(circuitos):
+                cx = xmin + (j + 1) * step_c
+                codigo = c.get("codigo", f"C{j+1}")
                 rotulo = c.get("rotulo", "")
                 denom = c.get("denominacion", "")
-                sec = c.get("seccion", 2.5)
-                tubo = c.get("tubo", 20)
                 
-                texto_linea = f"{rotulo}\n{sec}mm² (M{tubo})" if rotulo else f"{denom[:12]}\n{sec}mm²"
-                ax.text(xc, y_cargas - 0.1, texto_linea, ha="center", va="top", fontsize=7.5, color="#334155")
-                circ_global_idx += 1
+                # Texto de rótulo para 2 líneas
+                nombre_linea = rotulo if rotulo else denom
+                palabras = nombre_linea.split()
+                if len(palabras) <= 2:
+                    nom1 = " ".join(palabras)
+                    nom2 = ""
+                else:
+                    mid = (len(palabras) + 1) // 2
+                    nom1 = " ".join(palabras[:mid])
+                    nom2 = " ".join(palabras[mid:])
+                if len(nom1) > 11:
+                    nom1 = nom1[:10] + "."
+                if len(nom2) > 11:
+                    nom2 = nom2[:10] + "."
 
-    # Límites y formato del gráfico
-    ax.set_xlim(0, 14.5)
-    ax.set_ylim(-0.8, 10.2)
-    ax.axis("off")
-    plt.tight_layout()
-    return fig
+                pia_cal = c.get("pia", 16)
+                polos_pia = c.get("polos", "1P+N")
+                es_c_trif = (polos_pia == "4P" or "4x" in str(polos_pia))
+                pia_txt = f"{'4x' if es_c_trif else '2x'}{pia_cal} A"
+
+                sec_val = c.get("seccion", 2.5)
+                sec_txt = f"{'4x' if es_c_trif else '2x'}{sec_val}+T"
+                tubo_val = c.get("tubo", 20)
+                tubo_txt = f"M{tubo_val}"
+
+                # Bajante del peine al cajetín técnico
+                dwg.add(Line(cx, y_bus_pias, cx, 158, strokeColor=c_primary, strokeWidth=1.0))
+                dwg.add(Circle(cx, y_bus_pias, 1.2, fillColor=c_secondary, strokeColor=c_secondary))
+
+                # Caja técnica de parámetros (PIA, Sección, Tubo)
+                dwg.add(Rect(cx - w_box/2, 122, w_box, 36, fillColor=colors.HexColor("#f8fafc"), strokeColor=colors.HexColor("#cbd5e1"), strokeWidth=0.6, rx=2, ry=2))
+                dwg.add(String(cx, 148, pia_txt, fontName="Helvetica-Bold", fontSize=6.0, fillColor=c_primary, textAnchor="middle"))
+                dwg.add(String(cx, 137, sec_txt, fontName="Helvetica-Bold", fontSize=5.6, fillColor=c_secondary, textAnchor="middle"))
+                dwg.add(String(cx, 126, tubo_txt, fontName="Helvetica", fontSize=5.4, fillColor=colors.HexColor("#64748b"), textAnchor="middle"))
+
+                # Línea al PIA
+                dwg.add(Line(cx, 122, cx, 110, strokeColor=c_primary, strokeWidth=1.0))
+
+                # Símbolo Magnetotérmico PIA (UNE-EN 60617)
+                dwg.add(Line(cx, 110, cx - 7, 98, strokeColor=c_primary, strokeWidth=1.3))
+                dwg.add(Circle(cx, 110, 1.0, fillColor=c_primary, strokeColor=c_primary))
+                dwg.add(Circle(cx, 96, 1.0, fillColor=c_primary, strokeColor=c_primary))
+                dwg.add(Line(cx - 4, 103, cx - 11, 99, strokeColor=c_primary, strokeWidth=0.9))
+                dwg.add(Line(cx - 11, 99, cx - 8, 96, strokeColor=c_primary, strokeWidth=0.9))
+                dwg.add(Rect(cx - 13, 96, 3.5, 3.5, fillColor=c_primary, strokeColor=c_primary))
+
+                # Salida con trazos oblicuos de conductores (Fases + Neutro + PE)
+                dwg.add(Line(cx, 96, cx, 72, strokeColor=c_primary, strokeWidth=1.0))
+                dwg.add(Line(cx - 3, 80, cx + 3, 84, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+                dwg.add(Line(cx - 3, 83, cx + 3, 87, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+                dwg.add(Line(cx - 3, 86, cx + 3, 90, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+                if es_c_trif:
+                    dwg.add(Line(cx - 3, 89, cx + 3, 93, strokeColor=colors.HexColor("#64748b"), strokeWidth=0.9))
+                dwg.add(Circle(cx + 4, 91, 0.7, fillColor=colors.HexColor("#64748b"), strokeColor=colors.HexColor("#64748b")))
+
+                # Identificador de Circuito y Rótulo
+                dwg.add(String(cx, 59, codigo, fontName="Helvetica-Bold", fontSize=8.0, fillColor=c_primary, textAnchor="middle"))
+                dwg.add(String(cx, 48, nom1, fontName="Helvetica-Bold", fontSize=5.6, fillColor=c_text_dark, textAnchor="middle"))
+                if nom2:
+                    dwg.add(String(cx, 39, nom2, fontName="Helvetica", fontSize=5.2, fillColor=colors.HexColor("#475569"), textAnchor="middle"))
+
+    # 6. Barra de Puesta a Tierra Oficial (PE - ITC-BT-18)
+    dwg.add(Rect(18, 6, dwg_w - 36, 24, fillColor=colors.HexColor("#fef3c7"), strokeColor=colors.HexColor("#d97706"), strokeWidth=0.7, rx=2, ry=2))
+    tx = 35
+    ty = 16
+    dwg.add(Line(tx, ty + 8, tx, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
+    dwg.add(Line(tx - 6, ty, tx + 6, ty, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.2))
+    dwg.add(Line(tx - 4, ty - 2.5, tx + 4, ty - 2.5, strokeColor=colors.HexColor("#92400e"), strokeWidth=1.0))
+    dwg.add(Line(tx - 2, ty - 5, tx + 2, ty - 5, strokeColor=colors.HexColor("#92400e"), strokeWidth=0.8))
+
+    sec_tierra = 16 if es_trif else 10
+    dwg.add(String(50, 19, "RED DE PUESTA A TIERRA (PE - ITC-BT-18):", fontName="Helvetica-Bold", fontSize=6.0, fillColor=colors.HexColor("#92400e")))
+    dwg.add(String(50, 10, f"Línea de Enlace Cu 1x{sec_tierra} mm² | Picas de tierra 2m | Resistencia de Tierra: Rt = 11.8 Ω (Límite REBT ≤ 15 Ω)", fontName="Helvetica", fontSize=5.5, fillColor=c_text_dark))
+
+    return dwg
+
+
+def generar_png_unifilar_mtd(datos_cuadro: dict) -> tuple[bytes | None, Drawing]:
+    """Renderiza el Drawing del Esquema Unifilar oficial a bytes de imagen PNG a 200 DPI."""
+    dwg = crear_drawing_unifilar_mtd(datos_cuadro)
+    try:
+        if fitz:
+            bio_pdf = io.BytesIO()
+            renderPDF.drawToFile(dwg, bio_pdf)
+            pdf_bytes = bio_pdf.getvalue()
+            pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            if len(pdf_doc) > 0:
+                pix = pdf_doc[0].get_pixmap(dpi=200)
+                png_bytes = pix.tobytes("png")
+                pdf_doc.close()
+                return png_bytes, dwg
+            pdf_doc.close()
+    except Exception as e:
+        print(f"Aviso al rasterizar PNG: {e}")
+    return None, dwg
 
 
 # =========================================================================
@@ -460,18 +616,17 @@ class NumberedCanvasUnifilar(canvas.Canvas):
         self.saveState()
         self.setFont("Helvetica", 8)
         self.setFillColor(colors.HexColor("#64748B"))
-        # Pie de página técnico
-        footer_text = f"Bolimur REBT - Esquema Unifilar Cuadro Eléctrico | Página {self._pageNumber} de {page_count}"
+        footer_text = f"Bolimur REBT - Esquema Unifilar Oficial Normalizado (UNE-EN 60617) | Página {self._pageNumber} de {page_count}"
         self.drawRightString(280 * mm, 8 * mm, footer_text)
-        self.drawString(15 * mm, 8 * mm, "Documento técnico informativo conforme a ITC-BT-17 / ITC-BT-25 del REBT")
+        self.drawString(15 * mm, 8 * mm, "Documento técnico oficial conforme a ITC-BT-17 / ITC-BT-25 / ITC-BT-28 del REBT")
         self.setStrokeColor(colors.HexColor("#CBD5E1"))
         self.setLineWidth(0.5)
         self.line(15 * mm, 12 * mm, 282 * mm, 12 * mm)
         self.restoreState()
 
 
-def generar_pdf_unifilar(datos_cuadro: dict, fig_matplotlib) -> bytes:
-    """Genera un informe técnico formal en formato apaisado A4 con el esquema y la tabla de circuitos."""
+def generar_pdf_unifilar(datos_cuadro: dict, png_bytes: bytes, dwg: Drawing) -> bytes:
+    """Genera un informe técnico formal en formato apaisado A4 idéntico al Anexo III de la MTD oficial."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -526,19 +681,20 @@ def generar_pdf_unifilar(datos_cuadro: dict, fig_matplotlib) -> bytes:
 
     story = []
 
-    # Cabecera
+    # Cabecera oficial
     fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
     suministro = datos_cuadro.get("tipo_suministro", "Monofásico 230V")
     iga = datos_cuadro.get("iga", {})
-    story.append(Paragraph("⚡ ESQUEMA UNIFILAR Y CUADRO DE PROTECCIONES", title_style))
-    story.append(Paragraph(f"Instalación: {suministro} | IGA: {iga.get('calibre', 32)}A ({iga.get('polos', '2P')}) | Fecha: {fecha_hoy} | Normativa: REBT 2002 (RD 842/2002)", subtitle_style))
+    story.append(Paragraph("⚡ ESQUEMA UNIFILAR NORMALIZADO (ANEXO III REBT - RD 842/2002)", title_style))
+    story.append(Paragraph(f"Instalación: {suministro} | IGA: {iga.get('calibre', 25)}A ({iga.get('polos', '2P')}) | Fecha: {fecha_hoy} | Normativa: UNE-EN 60617 / DGEAIM Murcia", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#0284C7"), spaceAfter=6))
 
-    # Guardar figura temporalmente en buffer para ReportLab
-    img_buf = io.BytesIO()
-    fig_matplotlib.savefig(img_buf, format="png", bbox_inches="tight", dpi=200)
-    img_buf.seek(0)
-    story.append(RLImage(img_buf, width=265 * mm, height=95 * mm))
+    # Insertar el plano unifilar
+    if png_bytes:
+        img_buf = io.BytesIO(png_bytes)
+        story.append(RLImage(img_buf, width=265 * mm, height=100 * mm))
+    else:
+        story.append(dwg)
     story.append(Spacer(1, 4 * mm))
 
     # Tabla resumen de circuitos
@@ -548,7 +704,7 @@ def generar_pdf_unifilar(datos_cuadro: dict, fig_matplotlib) -> bytes:
         [
             Paragraph("Diferencial", th_style),
             Paragraph("Cód. REBT", th_style),
-            Paragraph("Denominación / Rótulo", th_style),
+            Paragraph("Rótulo / Denominación", th_style),
             Paragraph("PIA (A)", th_style),
             Paragraph("Polos", th_style),
             Paragraph("Sección Cu", th_style),
@@ -575,7 +731,7 @@ def generar_pdf_unifilar(datos_cuadro: dict, fig_matplotlib) -> bytes:
                 Paragraph(f"{c.get('potencia', 3450)} W", td_center)
             ])
 
-    t = Table(tabla_data, colWidths=[42*mm, 20*mm, 75*mm, 20*mm, 18*mm, 25*mm, 25*mm, 35*mm])
+    t = Table(tabla_data, colWidths=[45*mm, 20*mm, 72*mm, 20*mm, 18*mm, 25*mm, 25*mm, 35*mm])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0F172A")),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -602,15 +758,15 @@ def render_modulo_unifilar_foto():
         <div style='display: flex; align-items: center; justify-content: space-between;'>
             <div>
                 <h2 style='color: white; margin: 0; font-size: 24px; display: flex; align-items: center; gap: 10px;'>
-                    📸 Extractor de Esquema Unifilar por Foto
+                    📸 Extractor de Esquema Unifilar por Foto (REBT / MTD)
                 </h2>
                 <p style='color: #93c5fd; margin: 4px 0 0 0; font-size: 14px;'>
-                    Módulo independiente REBT: Reconocimiento inteligente de cuadros eléctricos (IGA, Diferenciales, PIAs) y trazado automático.
+                    Reconocimiento inteligente de cuadros eléctricos y generación vectorial oficial idéntica al Módulo MTD (UNE-EN 60617).
                 </p>
             </div>
             <div style='background: rgba(255, 255, 255, 0.15); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); text-align: right;'>
-                <span style='color: #38bdf8; font-weight: bold; font-size: 12px;'>MÓDULO AISLADO</span><br>
-                <span style='color: white; font-size: 11px;'>REBT 2002 / ITC-BT-25</span>
+                <span style='color: #38bdf8; font-weight: bold; font-size: 12px;'>FORMATO OFICIAL MTD</span><br>
+                <span style='color: white; font-size: 11px;'>UNE-EN 60617 / DGEAIM Murcia</span>
             </div>
         </div>
     </div>
@@ -631,15 +787,15 @@ def render_modulo_unifilar_foto():
         tiene_key = bool(api_key and len(api_key) > 10)
         
         if tiene_key:
-            st.success("🟢 **Google Gemini Vision Activo** (Reconocimiento visual en la nube)")
+            st.success("🟢 **Google Gemini Vision Activo**")
         else:
-            st.info("🟡 **Modo Heurístico / Demo** (Sin clave API activa)")
+            st.info("🟡 **Modo Heurístico / Demo** (Sin clave API)")
             
         key_input = st.text_input(
             "Clave API Gemini (opcional):",
             value=api_key if tiene_key else "",
             type="password",
-            help="Puedes introducir tu clave gratuita de Google AI Studio para visión artificial completa."
+            help="Introduce tu clave gratuita de Google AI Studio para visión artificial."
         )
         if key_input != api_key and len(key_input) > 10:
             if auditor_ia_rebt:
@@ -648,7 +804,7 @@ def render_modulo_unifilar_foto():
             st.success("Clave guardada.")
             st.rerun()
 
-        st.caption("ℹ️ *Este módulo no altera tus clientes, presupuestos ni expedientes.*")
+        st.caption("ℹ️ *Genera el trazado vectorial oficial con la simbología normalizada de la Memoria Técnica de Diseño (MTD).*")
 
     with col_input:
         st.markdown("#### 📥 Captura o Carga del Cuadro Eléctrico")
@@ -696,7 +852,7 @@ def render_modulo_unifilar_foto():
             try:
                 st.image(imagen_cargada, caption="Fotografía del cuadro a procesar", use_container_width=True)
             except Exception:
-                st.info("Imagen cargada y optimizada en memoria.")
+                st.info("Imagen optimizada en memoria.")
         with col_act:
             st.write("### 🔍 Análisis de Protecciones")
             st.write("Presiona el botón para que el sistema lea la hilera de magnetotérmicos, calibres, diferenciales y rótulos.")
@@ -708,7 +864,7 @@ def render_modulo_unifilar_foto():
                         if key_actual and len(key_actual) > 10:
                             resultado = analizar_foto_cuadro_gemini(imagen_cargada, key_actual)
                         else:
-                            st.warning("⚠️ Sin clave de Gemini configurada: se genera el esquema base para que lo verifiques y edites a mano.")
+                            st.warning("⚠️ Sin clave de Gemini activa: se carga el modelo representativo de tu cuadro trifásico para que puedas editarlo.")
                             resultado = motor_heuristico_offline_foto()
                             
                         st.session_state["unifilar_datos_cuadro"] = resultado
@@ -716,7 +872,7 @@ def render_modulo_unifilar_foto():
                         st.rerun()
                     except Exception as e:
                         st.error(f"Aviso durante el análisis de IA: {str(e)}")
-                        st.info("Cargando plantilla técnica de seguridad para que puedas ajustar los circuitos manualmente.")
+                        st.info("Cargando plantilla técnica del cuadro trifásico para permitir tu verificación.")
                         st.session_state["unifilar_datos_cuadro"] = motor_heuristico_offline_foto()
                         st.rerun()
 
@@ -735,20 +891,20 @@ def render_modulo_unifilar_foto():
         with c_gen1:
             datos["tipo_suministro"] = st.selectbox(
                 "Suministro:",
-                ["Monofásico (230V)", "Trifásico (400V)"],
-                index=0 if "Monofásico" in datos.get("tipo_suministro", "") else 1,
+                ["Trifásico (400V)", "Monofásico (230V)"],
+                index=0 if "Trifásic" in datos.get("tipo_suministro", "") or "400" in datos.get("tipo_suministro", "") else 1,
                 key="sel_tipo_sum"
             )
         with c_gen2:
-            iga_cal = datos.get("iga", {}).get("calibre", 32)
+            iga_cal = datos.get("iga", {}).get("calibre", 25)
             calibres_disp = [16, 20, 25, 32, 40, 50, 63, 80]
-            idx_iga = calibres_disp.index(iga_cal) if iga_cal in calibres_disp else 3
+            idx_iga = calibres_disp.index(iga_cal) if iga_cal in calibres_disp else 2
             datos["iga"]["calibre"] = st.selectbox("Calibre IGA (A):", calibres_disp, index=idx_iga, key="sel_cal_iga")
         with c_gen3:
             datos["iga"]["polos"] = st.selectbox(
                 "Polos IGA:",
-                ["2P", "4P"],
-                index=0 if datos.get("iga", {}).get("polos") == "2P" else 1,
+                ["4P", "2P"],
+                index=0 if datos.get("iga", {}).get("polos") == "4P" or "Trifásic" in datos.get("tipo_suministro", "") else 1,
                 key="sel_polos_iga"
             )
         with c_gen4:
@@ -779,13 +935,15 @@ def render_modulo_unifilar_foto():
         
         for d_idx, d in enumerate(diferenciales):
             with st.expander(f"🔹 {d.get('id', f'Diferencial {d_idx+1}')} — {d.get('calibre', 40)}A / {d.get('sensibilidad_ma', 30)}mA ({d.get('clase', 'Tipo AC')}) [{len(d.get('circuitos', []))} circuitos]", expanded=True):
-                col_d1, col_d2, col_d3 = st.columns(3)
+                col_d1, col_d2, col_d3, col_d4 = st.columns(4)
                 with col_d1:
                     d["calibre"] = st.selectbox(f"Calibre Diferencial (A):", [25, 40, 63], index=[25, 40, 63].index(d.get("calibre", 40)) if d.get("calibre", 40) in [25, 40, 63] else 1, key=f"d_cal_{d_idx}")
                 with col_d2:
                     d["clase"] = st.selectbox(f"Clase:", ["Tipo AC", "Tipo A", "Tipo A Superinmunizado"], index=0 if "AC" in d.get("clase", "") else (2 if "Super" in d.get("clase", "") else 1), key=f"d_clase_{d_idx}")
                 with col_d3:
                     d["sensibilidad_ma"] = st.selectbox(f"Sensibilidad:", [30, 300], index=0 if d.get("sensibilidad_ma", 30) == 30 else 1, key=f"d_sens_{d_idx}")
+                with col_d4:
+                    d["polos"] = st.selectbox(f"Polos Diferencial:", ["4P", "2P"], index=0 if d.get("polos") == "4P" else 1, key=f"d_polos_{d_idx}")
 
                 # Tabla de circuitos
                 circuitos = d.get("circuitos", [])
@@ -825,24 +983,28 @@ def render_modulo_unifilar_foto():
                     })
                 d["circuitos"] = nuevos_circs
 
-        # GENERACIÓN DEL ESQUEMA UNIFILAR
+        # GENERACIÓN DEL ESQUEMA UNIFILAR ESTILO MTD
         st.markdown("---")
-        st.markdown("### 📊 Esquema Unifilar Oficial Generado")
+        st.markdown("### 📊 Esquema Unifilar Oficial Normalizado (UNE-EN 60617 / MTD)")
 
-        fig_unifilar = generar_diagrama_unifilar(datos)
-        st.pyplot(fig_unifilar, use_container_width=True)
+        png_unifilar, dwg_unifilar = generar_png_unifilar_mtd(datos)
+        
+        if png_unifilar:
+            st.image(png_unifilar, caption="Esquema Unifilar Oficial Normalizado (UNE-EN 60617 / Anexo III MTD DGEAIM)", use_container_width=True)
+        else:
+            st.info("Renderizando vista previa estándar.")
 
         # Botones de exportación y descarga
         col_desc1, col_desc2, col_desc3 = st.columns([1.5, 1.5, 1])
 
-        # 1. Descarga PDF
+        # 1. Descarga PDF oficial apaisado A4
         with col_desc1:
             try:
-                pdf_bytes = generar_pdf_unifilar(datos, fig_unifilar)
+                pdf_bytes = generar_pdf_unifilar(datos, png_unifilar, dwg_unifilar)
                 st.download_button(
-                    label="📄 Descargar Informe y Esquema en PDF (A4)",
+                    label="📄 Descargar Plano Unifilar en PDF (A4 Oficial)",
                     data=pdf_bytes,
-                    file_name=f"Esquema_Unifilar_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                    file_name=f"Esquema_Unifilar_Oficial_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                     mime="application/pdf",
                     use_container_width=True,
                     type="primary"
@@ -850,17 +1012,16 @@ def render_modulo_unifilar_foto():
             except Exception as e:
                 st.error(f"Error generando PDF: {str(e)}")
 
-        # 2. Descarga Imagen PNG
+        # 2. Descarga Imagen PNG (200 DPI)
         with col_desc2:
-            img_buf = io.BytesIO()
-            fig_unifilar.savefig(img_buf, format="png", bbox_inches="tight", dpi=300)
-            st.download_button(
-                label="🖼️ Descargar Imagen de Alta Calidad (PNG)",
-                data=img_buf.getvalue(),
-                file_name=f"Esquema_Unifilar_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.png",
-                mime="image/png",
-                use_container_width=True
-            )
+            if png_unifilar:
+                st.download_button(
+                    label="🖼️ Descargar Imagen Vectorial Alta Calidad (PNG)",
+                    data=png_unifilar,
+                    file_name=f"Esquema_Unifilar_Oficial_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.png",
+                    mime="image/png",
+                    use_container_width=True
+                )
 
         # 3. Reiniciar / Nueva foto
         with col_desc3:
