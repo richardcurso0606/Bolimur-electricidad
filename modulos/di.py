@@ -3,6 +3,7 @@ import math
 import datetime
 from modulos import rebt_tablas as rebt
 from modulos import pdf_di
+from modulos import tarifas_obra
 
 METODOS_INSTALACION_DI = {
     "B1 (Bajo tubo empotrado)": {"ref": "B1", "desc": "Cables unipolares en tubo en rozas"},
@@ -236,6 +237,66 @@ def renderizar():
                 st.session_state["mtd_tipo_inst_sel"] = "🔌 Derivación Individual DI (ITC-BT-15)"
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
                 st.rerun()
+
+            with st.expander("💼 Tarifa de Calle y Análisis de Rentabilidad del Instalador", expanded=False):
+                st.markdown("""
+                **Valoración económica conforme a precios reales de mercado y tutor de prácticas:**  
+                Calcula el precio de venta sugerido (200 - 250 € base hasta 20 m sin rozas, suplemento si exige 16 mm², metros extra y obra) y audita tus costes y beneficio neto.
+                """)
+                
+                col_tcalle1, col_tcalle2 = st.columns(2)
+                with col_tcalle1:
+                    di_tipo_mont_calle = st.selectbox(
+                        "Tipo de Montaje Físico:",
+                        ["Superficie bajo tubo con grapas", "Tubo existente (Sustitución de conductores)", "Empotrado con rozas y tapado"],
+                        index=0,
+                        key="di_tipo_mont_calle_sel"
+                    )
+                    clave_mont = "existente" if "existente" in di_tipo_mont_calle else ("roza" if "rozas" in di_tipo_mont_calle else "superficie")
+                with col_tcalle2:
+                    di_entorno_calle = st.selectbox(
+                        "Tipo de Cliente / Obra:",
+                        ["Particular (Vivienda terminada)", "Obra nueva / Reforma integral (+20% coordinación)"],
+                        index=0,
+                        key="di_entorno_calle_sel"
+                    )
+                    es_obra_calle = "Obra nueva" in di_entorno_calle
+
+                tarifa_calle_di_res = tarifas_obra.cotizar_tarifa_calle_di(
+                    longitud_m=float(di_long),
+                    potencia_w=float(di_pot),
+                    es_trifasico=es_trifasico,
+                    metodo_montaje=clave_mont,
+                    es_obra=es_obra_calle,
+                    precio_hora_coste=25.0
+                )
+
+                c_di = tarifa_calle_di_res["coste"]
+                p_di = tarifa_calle_di_res["pvp_venta_neto"]
+                b_di = tarifa_calle_di_res["beneficio_neto"]
+                m_di = tarifa_calle_di_res["margen_sobre_venta_pct"]
+
+                col_mdi1, col_mdi2, col_mdi3 = st.columns(3)
+                with col_mdi1:
+                    st.metric("PVP Venta Cliente (S/IVA)", f"{p_di:,.2f} €")
+                    st.caption("Tarifa de mercado sugerida")
+                with col_mdi2:
+                    st.metric("Coste Real Directo", f"{c_di['coste_directo_total']:,.2f} €")
+                    st.caption(f"Materiales: {c_di['coste_materiales']:.2f} € | MO: {c_di['coste_mo']:.2f} €")
+                with col_mdi3:
+                    st.metric("Beneficio Neto", f"+{b_di:,.2f} €")
+                    st.caption(f"Margen s/venta: {m_di:.1f}%")
+
+                st.markdown(f"<div style='font-weight:bold; color:{tarifa_calle_di_res['color_hex']}; font-size:15px; margin-bottom:10px;'>{tarifa_calle_di_res['semaforo']} — {tarifa_calle_di_res['diagnostico']}</div>", unsafe_allow_html=True)
+
+                if st.button("➕ Incorporar esta DI al Presupuesto de Vivienda como Partida", key="btn_add_di_desde_modulo"):
+                    if "partidas_manuales" not in st.session_state:
+                        st.session_state.partidas_manuales = []
+                    part_di = tarifas_obra.generar_partida_presupuesto_di(tarifa_calle_di_res)
+                    part_di["id"] = f"PM-{len(st.session_state.partidas_manuales) + 1:02d}"
+                    st.session_state.partidas_manuales.append(part_di)
+                    st.session_state.presupuesto_calculado = True
+                    st.success(f"✅ Derivación Individual añadida a las partidas del presupuesto (+{p_di:.2f} €).")
 
     with tab_di3:
         st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)

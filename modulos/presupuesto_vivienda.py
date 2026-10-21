@@ -11,7 +11,7 @@ import os
 import io
 import datetime
 from modulos import pdf_presupuesto
-
+from modulos import tarifas_obra
 @st.cache_data(show_spinner="Cargando base de datos de precios...")
 def cargar_precios_excel():
     nombres_posibles = [
@@ -1269,6 +1269,34 @@ def app():
             with col_c4:
                 precio_boletin_cie = st.number_input("Tarifa Ensayos + MTD + Boletín CIE (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, help="Tarifa profesional por verificaciones previas ITC-BT-05 (aislamiento con megóhmetro, disparo diferencial, continuidad y bucle de tierra), elaboración de Memoria Técnica de Diseño (MTD) y tramitación del Certificado CIE ante la DGEAIM Murcia.")
 
+            st.markdown("---")
+            st.markdown("##### 🔌 Modalidad de Presupuesto: Escandallo Analítico vs Tarifa de Calle por Punto (25 - 30 €/pto)")
+            col_mod_tar1, col_mod_tar2 = st.columns([1.6, 1.2])
+            with col_mod_tar1:
+                modo_tarifa_sel = st.radio(
+                    "Modelo de valoración económica para distribución interior:",
+                    [
+                        "📊 Escandallo Analítico (Coste Materiales + Horas MO + Margen %)",
+                        "🔌 Tarifa de Calle por Punto (25 - 30 €/pto según mercado/tutor)"
+                    ],
+                    index=0,
+                    key="modo_tarifa_calle_vivienda",
+                    help="Permite elegir si los capítulos de distribución interior y mecanismos se valoran por escandallo detallado o por la tarifa de mercado habitual por punto (25 - 30 €/pto) que aplican instaladores y tutores en calle."
+                )
+            with col_mod_tar2:
+                es_modo_tarifa_puntos = "Tarifa de Calle por Punto" in modo_tarifa_sel
+                tarifa_punto_calle = st.number_input(
+                    "Tarifa por Punto S/IVA (€/pto):",
+                    min_value=15.0,
+                    max_value=60.0,
+                    value=28.0,
+                    step=1.0,
+                    disabled=not es_modo_tarifa_puntos,
+                    help="Precio de referencia por punto instalado (tubo, cable, caja y mecanismo). En la calle se suele cobrar de 25 € a 30 €."
+                )
+                if es_modo_tarifa_puntos:
+                    st.caption("💡 *Referencia de calle:* 25 € para tabiquería fácil/pladur, 28-30 € estándar ladrillo con roza, >30 € hormigón o gamas altas.")
+
         st.markdown("---")
     # ==========================================
     # SECCIÓN 4: GESTIÓN DINÁMICA DE ESTANCIAS Y MÉTRICA DE m²
@@ -2162,9 +2190,22 @@ def app():
         coste_mecanismos_marcos_tot = sum(m["cant"] * m["precio"] for est_x in materiales_por_estancia for m in est_x["mecanismos"]) + (global_marcos_uds * p_marco)
 
         venta_cap1_cgmp = venta_cuadro_neto
-        venta_cap2_canalizacion = (coste_tubos_cajas_tot * mult_comercial * mult_garantia_mat) + ((sum_h_rozas + sum_h_tubos) * precio_hora * mult_comercial)
-        venta_cap3_cableado = (coste_cables_tot * mult_comercial * mult_garantia_mat) + (sum_h_cable * precio_hora * mult_comercial)
-        venta_cap4_mecanismos = (coste_mecanismos_marcos_tot * mult_comercial * mult_garantia_mat) + (sum_h_mec * precio_hora * mult_comercial)
+        venta_cap2_canalizacion_esc = (coste_tubos_cajas_tot * mult_comercial * mult_garantia_mat) + ((sum_h_rozas + sum_h_tubos) * precio_hora * mult_comercial)
+        venta_cap3_cableado_esc = (coste_cables_tot * mult_comercial * mult_garantia_mat) + (sum_h_cable * precio_hora * mult_comercial)
+        venta_cap4_mecanismos_esc = (coste_mecanismos_marcos_tot * mult_comercial * mult_garantia_mat) + (sum_h_mec * precio_hora * mult_comercial)
+
+        suma_caps_interior_esc = venta_cap2_canalizacion_esc + venta_cap3_cableado_esc + venta_cap4_mecanismos_esc
+        if es_modo_tarifa_puntos and total_puntos_mecanismos > 0 and suma_caps_interior_esc > 0:
+            total_venta_puntos_deseado = float(total_puntos_mecanismos) * float(tarifa_punto_calle)
+            factor_ajuste_puntos = total_venta_puntos_deseado / suma_caps_interior_esc
+            venta_cap2_canalizacion = venta_cap2_canalizacion_esc * factor_ajuste_puntos
+            venta_cap3_cableado = venta_cap3_cableado_esc * factor_ajuste_puntos
+            venta_cap4_mecanismos = venta_cap4_mecanismos_esc * factor_ajuste_puntos
+        else:
+            venta_cap2_canalizacion = venta_cap2_canalizacion_esc
+            venta_cap3_cableado = venta_cap3_cableado_esc
+            venta_cap4_mecanismos = venta_cap4_mecanismos_esc
+
         venta_cap5_boletin = float(precio_boletin_cie)
         venta_cap6_manuales = sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', []))
 
@@ -2543,6 +2584,134 @@ def app():
                 st.markdown("---")
 
                 # =========================================================================
+                # KIT INTELIGENTE DE DERIVACIÓN INDIVIDUAL (DI) - TARIFA DE CALLE & REBT
+                # =========================================================================
+                with st.expander("⚡ Kit Inteligente: Derivación Individual DI (ITC-BT-15) — Tarifa de Calle y Motor REBT", expanded=False):
+                    st.markdown("""
+                    **Calcula y cotiza la Derivación Individual con rigor de ingeniería y la realidad del instalador de calle:**  
+                    Dimensiona automáticamente la sección de cobre (10 o 16 mm²), tubo reglamentario y caída de tensión según ITC-BT-15, aplicando la tarifa de mercado (tutor de prácticas: 200 - 250 € base sin rozas, suplementos por metros, sección y obra) con semáforo de rentabilidad en directo.
+                    """)
+                    
+                    col_di_k1, col_di_k2, col_di_k3 = st.columns(3)
+                    with col_di_k1:
+                        di_k_long = st.number_input(
+                            "Longitud DI (m):",
+                            min_value=3.0,
+                            max_value=80.0,
+                            value=18.0,
+                            step=1.0,
+                            key="di_kit_long_in",
+                            help="Distancia desde la centralización de contadores hasta el CGMP de la vivienda (habitual: 15 a 20 m)."
+                        )
+                        di_k_pot = st.number_input(
+                            "Potencia Prevista (W):",
+                            min_value=3450.0,
+                            max_value=30000.0,
+                            value=float(pot_w_val) if pot_w_val else 5750.0,
+                            step=1150.0,
+                            key="di_kit_pot_in",
+                            help="Potencia contratada/prevista. 5.750 W (Básica) o 9.200 W (Elevada)."
+                        )
+                    with col_di_k2:
+                        di_k_metodo_sel = st.selectbox(
+                            "Método de Instalación:",
+                            [
+                                "Superficie bajo tubo con abrazaderas (Sin rozas)",
+                                "Aprovecha tubo existente (Sustitución de conductores)",
+                                "Empotrado con rozas en pared y tapado de yeso"
+                            ],
+                            index=0,
+                            key="di_kit_metodo_sel"
+                        )
+                        metodo_clave = "existente" if "existente" in di_k_metodo_sel else ("roza" if "rozas" in di_k_metodo_sel else "superficie")
+                        
+                        di_k_entorno_sel = st.selectbox(
+                            "Entorno de Trabajo:",
+                            [
+                                "Particular / Vivienda terminada",
+                                "Obra nueva / Reforma integral (+20% coordinación)"
+                            ],
+                            index=0,
+                            key="di_kit_entorno_sel"
+                        )
+                        es_obra_di = "Obra nueva" in di_k_entorno_sel
+                    with col_di_k3:
+                        di_k_boletin = st.checkbox("¿Incluir tramitación / ensayos CIE para la DI?", value=False, key="di_kit_chk_bol")
+                        with st.popover("⚙️ Parámetros de Tarifa de Calle"):
+                            p_base_20m_in = st.number_input("Precio base hasta 20 m (€):", min_value=150.0, max_value=400.0, value=225.0, step=10.0, key="di_kit_pbase")
+                            p_m_extra_in = st.number_input("Metro extra > 20 m (€/m):", min_value=3.0, max_value=25.0, value=9.0, step=0.5, key="di_kit_pmextra")
+                            suple_16_in = st.number_input("Suplemento si exige 16 mm² (€):", min_value=20.0, max_value=150.0, value=75.0, step=5.0, key="di_kit_s16")
+                            suple_roza_in = st.number_input("Suplemento roza (€/m):", min_value=3.0, max_value=20.0, value=8.5, step=0.5, key="di_kit_sroza")
+
+                    # Cotización y cálculo con módulo tarifas_obra
+                    tarifa_di_calc = tarifas_obra.cotizar_tarifa_calle_di(
+                        longitud_m=di_k_long,
+                        potencia_w=di_k_pot,
+                        es_trifasico=False,
+                        metodo_montaje=metodo_clave,
+                        es_obra=es_obra_di,
+                        incluir_boletin=di_k_boletin,
+                        precio_base_20m=p_base_20m_in,
+                        precio_metro_extra=p_m_extra_in,
+                        suple_16mm=suple_16_in,
+                        suple_roza_m=suple_roza_in,
+                        precio_hora_coste=precio_hora
+                    )
+
+                    tec_di = tarifa_di_calc["tecnica"]
+                    coste_di = tarifa_di_calc["coste"]
+                    pvp_di = tarifa_di_calc["pvp_venta_neto"]
+
+                    col_rdi1, col_rdi2, col_rdi3 = st.columns(3)
+                    with col_rdi1:
+                        with st.container(border=True):
+                            st.markdown("##### 📐 Ingeniería REBT (ITC-BT-15)")
+                            st.markdown(f"- **Cable Fase + N:** `{int(tec_di['seccion_fase'])} mm² Cu RZ1-K CPR`")
+                            st.markdown(f"- **Tierra PE + Mando:** `TT {int(tec_di['seccion_pe'])}mm² + 1x1.5mm² rojo`")
+                            st.markdown(f"- **Tubo Protector:** `{tec_di['tubo_diam']} libre halógenos`")
+                            st.markdown(f"- **Caída de Tensión:** `{tec_di['cdt_real_pct']:.2f}%` *(límite {tec_di['cdt_max_pct']}%)*")
+                            st.markdown(f"- **Protección CGMP:** `IGA {tec_di['in_iga']} A Curva C`")
+
+                    with col_rdi2:
+                        with st.container(border=True):
+                            st.markdown("##### 💼 Tarifa de Calle (A Cobrar)")
+                            desg_di = tarifa_di_calc["desglose_tarifa"]
+                            st.markdown(f"- **Base hasta 20m:** `{desg_di['base_20m']:.2f} €`")
+                            if desg_di["importe_metros_extra"] > 0:
+                                st.markdown(f"- **Metros extra ({desg_di['metros_extra']:.1f} m):** `+{desg_di['importe_metros_extra']:.2f} €`")
+                            if desg_di["suple_seccion"] > 0:
+                                st.markdown(f"- **Suplemento {int(tec_di['seccion_fase'])} mm²:** `+{desg_di['suple_seccion']:.2f} €`")
+                            if desg_di["suple_rozas"] > 0:
+                                st.markdown(f"- **Suplemento Rozas:** `+{desg_di['suple_rozas']:.2f} €`")
+                            if desg_di["suple_obra"] > 0:
+                                st.markdown(f"- **Recargo Obra:** `+{desg_di['suple_obra']:.2f} €`")
+                            st.markdown(f"### **PVP Venta: {pvp_di:,.2f} €** *(S/IVA)*")
+
+                    with col_rdi3:
+                        with st.container(border=True):
+                            st.markdown("##### ⚖️ Auditoría de Rentabilidad")
+                            st.markdown(f"- **Coste Materiales:** `{coste_di['coste_materiales']:.2f} €`")
+                            st.markdown(f"- **Coste Mano de Obra:** `{coste_di['coste_mo']:.2f} €` *({coste_di['horas_mo']:.1f} h)*")
+                            st.markdown(f"- **Coste Real Directo:** `{coste_di['coste_directo_total']:.2f} €`")
+                            st.markdown(f"- **Beneficio Neto Instalador:** `+{tarifa_di_calc['beneficio_neto']:.2f} €`")
+                            st.markdown(f"<div style='font-size:16px; font-weight:bold; color:{tarifa_di_calc['color_hex']}; margin-top:4px;'>{tarifa_di_calc['semaforo']} ({tarifa_di_calc['margen_sobre_venta_pct']:.1f}%)</div>", unsafe_allow_html=True)
+
+                    if tarifa_di_calc["margen_sobre_venta_pct"] < 12.0:
+                        st.warning(f"⚠️ **Aviso de Rentabilidad:** {tarifa_di_calc['diagnostico']}")
+                    else:
+                        st.success(f"✅ **Evaluación:** {tarifa_di_calc['diagnostico']}")
+
+                    if st.button("📥 Incorporar Derivación Individual al Presupuesto", type="primary", key="btn_add_di_presupuesto"):
+                        partida_di_creada = tarifas_obra.generar_partida_presupuesto_di(tarifa_di_calc)
+                        partida_di_creada["id"] = f"PM-{len(st.session_state.partidas_manuales) + 1:02d}"
+                        st.session_state.partidas_manuales.append(partida_di_creada)
+                        st.session_state.presupuesto_calculado = True
+                        st.success(f"✅ Partida '{partida_di_creada['concepto']}' añadida con éxito (+{pvp_di:.2f} €)")
+                        st.rerun()
+
+                st.markdown("---")
+
+                # =========================================================================
                 # GESTOR INTERACTIVO DE TRABAJOS ADICIONALES Y PARTIDAS MANUALES
                 # =========================================================================
                 with st.expander("➕ Añadir / Gestionar Trabajos Adicionales y Partidas Manuales", expanded=bool(st.session_state.get('partidas_manuales', []))):
@@ -2553,6 +2722,7 @@ def app():
 
                     preset_opciones = [
                         "Personalizada (Escribir concepto a medida)",
+                        "Derivación Individual DI Completa (ITC-BT-15)",
                         "Línea de Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
                         "Instalación Downlights LED Extraplanos 18W",
                         "Toma de Corriente Estanca IP65 en Terraza / Exterior",
@@ -2568,7 +2738,13 @@ def app():
                     def_unid = "ud"
                     def_pvp = 50.0
 
-                    if "IRVE" in preset_sel:
+                    if "Derivación" in preset_sel or "DI" in preset_sel:
+                        def_conc = "Derivación Individual DI Monofásica (ITC-BT-15)"
+                        def_desc = "Tendido de DI con cables RZ1-K 0.6/1kV CPR libre de halógenos (2x10mm² + TT 1x10mm² + mando 1.5mm²), tubo M40 libre de halógenos 750N y conexiones."
+                        def_cant = 1.0
+                        def_unid = "partida"
+                        def_pvp = 225.0
+                    elif "IRVE" in preset_sel:
                         def_conc = "Línea de Alimentación IRVE para Vehículo Eléctrico (ITC-BT-52)"
                         def_desc = "Tendido de línea dedicada desde CGMP con cable libre de halógenos 3x6mm², tubo M25, IGA 32A y diferencial superinmunizado clase A."
                         def_cant = 1.0
@@ -2914,6 +3090,59 @@ def app():
                     with col_dp3:
                         st.markdown(f"• **Tomas Fuerza 25A y RJ45:** `{tot_otros_puntos_global} puntos` = **`{tot_otros_puntos_global} puntos`**")
                         st.markdown(f"• **Total Mecanismos Físicos:** `{tot_tomas_simples_global + (tot_tomas_dobles_global * 2) + tot_luces_simples_global + (tot_luces_dobles_global * 2) + tot_otros_puntos_global} uds`")
+
+                with st.container(border=True):
+                    st.markdown("#### 💡 Auditoría de Mercado: Rentabilidad de la Tarifa por Punto (25 a 30 €/pto)")
+                    st.markdown("""
+                    Compara el rendimiento real de cobrar por punto de mercado frente al coste directo de adquisición de materiales y horas de trabajo en tu obra:
+                    """)
+                    
+                    coste_dir_pto_calc = ((total_mat_global_neto + coste_mano_obra_bruto) / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+                    
+                    col_tpto1, col_tpto2, col_tpto3, col_tpto4 = st.columns(4)
+                    
+                    # Escenario 25 €/pto
+                    b_25 = 25.0 - coste_dir_pto_calc
+                    m_25 = (b_25 / 25.0 * 100.0) if 25.0 > 0 else 0.0
+                    col_25 = "#16a34a" if m_25 >= 25 else ("#ca8a04" if m_25 >= 10 else "#dc2626")
+                    with col_tpto1:
+                        st.markdown("**A 25.00 € / punto** *(Económico)*")
+                        st.markdown(f"• Total Puntos: `{25.0 * total_puntos_mecanismos:,.2f} €`")
+                        st.markdown(f"• Beneficio Neto: `{b_25:+.2f} €/pto`")
+                        st.markdown(f"<span style='color:{col_25}; font-weight:bold;'>Margen: {m_25:.1f}%</span>", unsafe_allow_html=True)
+                        st.caption("Ideal: tabiquería pladur o sin rozas")
+
+                    # Escenario 28 €/pto
+                    b_28 = 28.0 - coste_dir_pto_calc
+                    m_28 = (b_28 / 28.0 * 100.0) if 28.0 > 0 else 0.0
+                    col_28 = "#16a34a" if m_28 >= 25 else ("#ca8a04" if m_28 >= 10 else "#dc2626")
+                    with col_tpto2:
+                        st.markdown("**A 28.00 € / punto** *(Estándar Tutor)*")
+                        st.markdown(f"• Total Puntos: `{28.0 * total_puntos_mecanismos:,.2f} €`")
+                        st.markdown(f"• Beneficio Neto: `{b_28:+.2f} €/pto`")
+                        st.markdown(f"<span style='color:{col_28}; font-weight:bold;'>Margen: {m_28:.1f}%</span>", unsafe_allow_html=True)
+                        st.caption("Recomendado: ladrillo estándar")
+
+                    # Escenario 30 €/pto
+                    b_30 = 30.0 - coste_dir_pto_calc
+                    m_30 = (b_30 / 30.0 * 100.0) if 30.0 > 0 else 0.0
+                    col_30 = "#16a34a" if m_30 >= 25 else ("#ca8a04" if m_30 >= 10 else "#dc2626")
+                    with col_tpto3:
+                        st.markdown("**A 30.00 € / punto** *(Obra / Reforma)*")
+                        st.markdown(f"• Total Puntos: `{30.0 * total_puntos_mecanismos:,.2f} €`")
+                        st.markdown(f"• Beneficio Neto: `{b_30:+.2f} €/pto`")
+                        st.markdown(f"<span style='color:{col_30}; font-weight:bold;'>Margen: {m_30:.1f}%</span>", unsafe_allow_html=True)
+                        st.caption("Recomendado: termoarcilla o techos macizos")
+
+                    # Escenario actual
+                    m_act = ((precio_medio_por_punto_neto - coste_dir_pto_calc) / precio_medio_por_punto_neto * 100.0) if precio_medio_por_punto_neto > 0 else 0.0
+                    col_act = "#16a34a" if m_act >= 25 else ("#ca8a04" if m_act >= 10 else "#dc2626")
+                    with col_tpto4:
+                        st.markdown("**Tu Oferta Actual**")
+                        st.markdown(f"• Tarifa: `{precio_medio_por_punto_neto:.2f} €/pto`")
+                        st.markdown(f"• Beneficio Neto: `{precio_medio_por_punto_neto - coste_dir_pto_calc:+.2f} €/pto`")
+                        st.markdown(f"<span style='color:{col_act}; font-weight:bold;'>Margen: {m_act:.1f}%</span>", unsafe_allow_html=True)
+                        st.caption(f"Modalidad: {'Tarifa por Punto' if es_modo_tarifa_puntos else 'Escandallo Analítico'}")
 
                 st.markdown("---")
 

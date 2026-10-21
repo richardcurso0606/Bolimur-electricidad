@@ -119,6 +119,12 @@ except Exception as e:
     control_salida = None
     errores_import["control_salida"] = traceback.format_exc()
 
+try:
+    from modulos import unifilar_foto
+except Exception as e:
+    unifilar_foto = None
+    errores_import["unifilar_foto"] = traceback.format_exc()
+
 # =========================================================================
 # CONTROL DE SALIDA Y PROTECCIÓN CONTRA CIERRES (TECLA ESCAPE / NAVEGADOR)
 # =========================================================================
@@ -1974,6 +1980,7 @@ with st.sidebar:
             "categoria": "📁 GESTIÓN & EXPEDIENTES",
             "items": [
                 ("🏠 Menú Principal", "🏠 Menú Principal"),
+                ("📸 Unifilar por Foto (IA)", "📸 Unifilar por Foto (IA)"),
                 ("👥 Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
                 ("🏛️ Memoria Técnica & Planos (MTD)", "🏛️ Memoria Técnica (MTD 30)"),
                 ("🏡 Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
@@ -2092,6 +2099,18 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
         st.markdown(f"**Bienvenido, {usuario_actual.get('nombre_instalador', 'Instalador')}** | {usuario_actual.get('nombre_empresa', '')}")
     
     st.write("Selecciona un módulo en el menú lateral o en los accesos rápidos inferiores para realizar cálculos técnicos, resolver dudas reglamentarias con la IA o tramitar memorias oficiales:")
+
+    # BANNER NOVEDAD: EXTRACTOR DE ESQUEMA UNIFILAR POR FOTO (IA)
+    with st.container(border=True):
+        col_uni_txt, col_uni_btn = st.columns([3, 1])
+        with col_uni_txt:
+            st.markdown("### 📸 Extractor de Esquema Unifilar por Foto (Visión IA REBT)")
+            st.write("Saca el esquema unifilar completo a partir de una foto del cuadro eléctrico. La IA reconoce el **IGA, protector de sobretensiones, diferenciales y magnetotérmicos (PIAs)** con sus calibres y rótulos, audita el límite de 5 circuitos/ID según ITC-BT-25 y genera el unifilar descargable en **PDF oficial** y **PNG**.")
+        with col_uni_btn:
+            st.write("")
+            st.write("")
+            if st.button("📸 Abrir Unifilar por Foto", key="btn_home_unifilar_foto", type="primary", use_container_width=True):
+                navegar_a_modulo("📸 Unifilar por Foto (IA)")
 
     # BANNER DESTACADO 1: CONSULTOR IA EXPERTO REBT
     with st.container(border=True):
@@ -2291,4 +2310,12 @@ elif "Tablas" in seleccion_modulo or "📚" in seleccion_modulo:
         st.error("Módulo de Tablas Normativas no disponible.")
         if "tablas_normativas" in errores_import:
             st.code(errores_import["tablas_normativas"])
+
+elif "Unifilar" in seleccion_modulo or "📸" in seleccion_modulo:
+    if unifilar_foto:
+        unifilar_foto.render_modulo_unifilar_foto()
+    else:
+        st.error("Módulo Unifilar por Foto no disponible.")
+        if "unifilar_foto" in errores_import:
+            st.code(errores_import["unifilar_foto"])
 
