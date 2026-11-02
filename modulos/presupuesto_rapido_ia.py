@@ -15,10 +15,58 @@ import base64
 import json
 import re
 import os
+import io
 import unicodedata
 import requests
 from modulos import auditor_ia_rebt
 from modulos import asistente_ia_rebt
+
+
+def generar_excel_orden_compra(filas_compra: list, nom_cliente: str, concepto_obra: str) -> bytes:
+    """Genera un archivo Excel (.xlsx) estructurado con la Orden de Compra y Acopio agrupado por proveedor."""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_export = pd.DataFrame([
+            {
+                "Proveedor / Tienda": f.get("proveedor", "Obramat"),
+                "Descripción del Material": f.get("mat", ""),
+                "Cantidad": f.get("cant", 1.0),
+                "Unidad": f.get("unid", "ud"),
+                "P. Unitario S/IVA (€)": round(float(f.get("p_u", 0.0)), 2),
+                "Subtotal S/IVA (€)": round(float(f.get("subtotal", 0.0)), 2),
+                "Origen de Tarifa": f.get("origen", "Base de Datos"),
+                "Estado de Compra": "⏳ Pendiente"
+            }
+            for f in filas_compra
+        ])
+        if not df_export.empty:
+            df_export = df_export.sort_values(by=["Proveedor / Tienda", "Descripción del Material"])
+        df_export.to_excel(writer, sheet_name="Orden de Compra Bolimur", index=False)
+    return output.getvalue()
+
+
+def generar_texto_whatsapp_compra(filas_compra: list, nom_cliente: str, concepto_obra: str, total_mat: float) -> str:
+    """Genera un mensaje de texto formateado listo para enviar por WhatsApp o SMS con la lista de compras."""
+    texto = f"📋 *ORDEN DE COMPRA & ACOPIO - BOLIMUR*\n"
+    texto += f"📅 Fecha: {datetime.date.today().strftime('%d/%m/%Y')}\n"
+    texto += f"👤 Cliente / Aviso: {nom_cliente}\n"
+    texto += f"⚡ Trabajo: {concepto_obra}\n"
+    texto += f"-----------------------------------------\n"
+
+    por_prov = {}
+    for f in filas_compra:
+        p = f.get("proveedor", "Obramat")
+        por_prov.setdefault(p, []).append(f)
+
+    for prov_name, items in por_prov.items():
+        sub_p = sum(float(x.get("subtotal", 0.0)) for x in items)
+        texto += f"\n🏬 *{prov_name.upper()}* (Total: {sub_p:,.2f} €):\n"
+        for it in items:
+            texto += f"  • {float(it.get('cant', 1.0)):.1f} {it.get('unid', 'ud')} - {it.get('mat', '')} (~{float(it.get('subtotal', 0.0)):,.2f} €)\n"
+
+    texto += f"\n-----------------------------------------\n"
+    texto += f"💰 *Total Coste Materiales:* {total_mat:,.2f} € (S/IVA) | {total_mat * 1.21:,.2f} € (C/IVA 21%)\n"
+    return texto
 
 
 @st.cache_data
@@ -874,3 +922,42 @@ def renderizar():
                     })
                     st.session_state.presupuesto_calculado = True
                     st.success(f"✅ Trabajo '{res.get('concepto')}' transferido con su memoria completa al Presupuesto de Vivienda.")
+
+            # 6. Orden Oficial de Compra y Acopio para Almacén / Tienda
+            st.markdown("---")
+            st.markdown("### 🛒 Orden Oficial de Compra y Acopio de Materiales")
+            st.caption("Detalle consolidado de compras organizado por proveedor y listo para mostrador de tienda o almacén:")
+
+            # Acciones rápidas: Descargar Excel y WhatsApp
+            c_ord_btn1, c_ord_btn2 = st.columns([1, 1])
+            with c_ord_btn1:
+                excel_bytes = generar_excel_orden_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso Urgente"))
+                st.download_button(
+                    label="📥 Descargar Orden de Compra en Excel (.xlsx)",
+                    data=excel_bytes,
+                    file_name=f"Orden_Compra_{datetime.date.today().strftime('%Y%m%d')}_{nom_cliente[:15].replace(' ', '_')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    type="primary",
+                    key="btn_descargar_orden_compra_xlsx"
+                )
+            with c_ord_btn2:
+                txt_wsp = generar_texto_whatsapp_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"), total_mat_calc)
+                with st.popover("📱 Ver y Copiar Lista para WhatsApp / Mostrador", use_container_width=True):
+                    st.text_area("Copia este texto y pégalo en WhatsApp o SMS:", value=txt_wsp, height=220, key="pr_wsp_txt_area")
+                    st.caption("💡 Formato listo para enviar al compañero de furgoneta o al dependiente del almacén.")
+
+            # Tabla formal completa de orden de compra
+            df_orden_view = pd.DataFrame([
+                {
+                    "🏬 Tienda / Proveedor": f["proveedor"],
+                    "📦 Material / Elemento": f["mat"],
+                    "Cant.": f"{f['cant']:.1f} {f['unid']}",
+                    "P. Unit (€)": f"{f['p_u']:.2f} €",
+                    "Subtotal (€)": f"{f['subtotal']:.2f} €",
+                    "Origen Tarifa": f["origen"],
+                    "Estado Acopio": "⏳ Pendiente"
+                }
+                for f in filas_mats_edit
+            ])
+            st.dataframe(df_orden_view, use_container_width=True, hide_index=True)
