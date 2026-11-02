@@ -1420,16 +1420,67 @@ def app():
                             st.rerun()
 
                     with st.expander(f"⚙️ Puntos Extra y Tomas/Luces Dobles en: {est['nombre']}"):
-                        st.info(f"⚡ **Circuitos REBT Asignados:** `{circuitos_asociados}` | 📏 **Distancia al Cuadro:** `{est['distancia_cuadro']} m`")
-                    
-                        st.markdown("**➕ Puntos Extra sobre dotación mínima REBT:**")
+                        # Cálculo de dotación mínima reglamentaria ITC-BT-25
+                        if es_cocina:
+                            base_min_luz = 1
+                            base_min_sch = 5 if desdoblar_c4 else 4
+                            base_min_rj = 0
+                            tipo_rebt_desc = "Cocina (C1 Luz + C3 Vitro/Horno + C4 Lav/Termo + C5 Tomas cocina)"
+                        elif es_banio:
+                            base_min_luz = 1
+                            base_min_sch = 2
+                            base_min_rj = 0
+                            tipo_rebt_desc = "Baño / Aseo (C1 Luz + C5 Enchufe junto a lavabo / auxiliar)"
+                        elif "salón" in nombre_est or "comedor" in nombre_est:
+                            base_min_luz = 2 if est["m2"] >= 10 else 1
+                            base_min_sch = 6 if est["m2"] >= 10 else 3
+                            base_min_rj = 2
+                            tipo_rebt_desc = "Salón / Comedor (C1 Luz conmutada + C2 Enchufes + Telecomunicaciones)"
+                        elif "dormitorio" in nombre_est or "habitación" in nombre_est:
+                            base_min_luz = 2 if est["m2"] >= 10 else 1
+                            base_min_sch = 3
+                            base_min_rj = 1
+                            tipo_rebt_desc = "Dormitorio (C1 Puntos conmutados cama/puerta + C2 Enchufes cabecero/mesa)"
+                        elif "pasillo" in nombre_est or "distribuidor" in nombre_est or "hall" in nombre_est or "recibidor" in nombre_est:
+                            base_min_luz = 2 if est["m2"] >= 5 else 1
+                            base_min_sch = 2 if est["m2"] >= 5 else 1
+                            base_min_rj = 1 if ("hall" in nombre_est or "recibidor" in nombre_est) else 0
+                            tipo_rebt_desc = "Pasillo / Entrada (C1 Luz cruzamiento/conmutada + C2 Enchufe servicio)"
+                        else:
+                            base_min_luz = 1
+                            base_min_sch = 2
+                            base_min_rj = 0
+                            tipo_rebt_desc = "Estancia auxiliar / Terraza / Balcón / Trastero"
+
+                        tot_sch = base_min_sch + est.get("extra_schuko", 0)
+                        tot_luz = base_min_luz + est.get("extra_luz", 0)
+                        tot_rj = base_min_rj + est.get("extra_rj45", 0)
+
+                        st.info(f"⚡ **Dotación Base REBT (ITC-BT-25):** `{tipo_rebt_desc}` | 📏 **Distancia Cuadro:** `{est['distancia_cuadro']} m`")
+
+                        # Panel comparativo: Mínimo REBT vs Total Resultante
+                        c_dot1, c_dot2, c_dot3 = st.columns(3)
+                        with c_dot1:
+                            estado_sch = "🟢 Cumple REBT" if tot_sch >= base_min_sch else "🟡 < Mínimo (Reforma)"
+                            st.caption(f"**Enchufes Schuko 16A/25A:** Base Mín: **{base_min_sch}** ud → **Total: {tot_sch} ud** ({estado_sch})")
+                        with c_dot2:
+                            estado_luz = "🟢 Cumple REBT" if tot_luz >= base_min_luz else "🟡 < Mínimo (Reforma)"
+                            st.caption(f"**Puntos de Luz:** Base Mín: **{base_min_luz}** ud → **Total: {tot_luz} ud** ({estado_luz})")
+                        with c_dot3:
+                            estado_rj = "🟢 Cumple" if tot_rj >= base_min_rj else "🟡 < Mínimo"
+                            st.caption(f"**Tomas RJ45 / TV:** Base Mín: **{base_min_rj}** ud → **Total: {tot_rj} ud** ({estado_rj})")
+
+                        if tot_sch < base_min_sch or tot_luz < base_min_luz:
+                            st.warning("⚠️ **Atención:** Has configurado menos tomas/luces que la dotación mínima reglamentaria (ITC-BT-25). Esto es perfectamente admisible en **reformas parciales** donde se conservan tomas existentes, pero si se tramita un **CIE / Boletín para nueva alta integral**, Industria (DGEAIM) exigirá el mínimo.", icon="⚠️")
+
+                        st.markdown("**➕ Puntos Extra / Variación sobre dotación base REBT:**")
                         col_p1, col_p2, col_p3 = st.columns(3)
                         with col_p1:
-                            est["extra_schuko"] = st.number_input(f"Schukos Extra", min_value=-5, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
+                            est["extra_schuko"] = st.number_input(f"Schukos Extra (Mín base: {base_min_sch})", min_value=-base_min_sch, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
                         with col_p2:
-                            est["extra_luz"] = st.number_input(f"Puntos Luz Extra", min_value=-3, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
+                            est["extra_luz"] = st.number_input(f"Puntos Luz Extra (Mín base: {base_min_luz})", min_value=-base_min_luz, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
                         with col_p3:
-                            est["extra_rj45"] = st.number_input(f"Tomas Red/TV Extra", min_value=-2, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
+                            est["extra_rj45"] = st.number_input(f"Tomas Red/TV Extra (Mín base: {base_min_rj})", min_value=-base_min_rj, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
 
                         st.markdown("**🔌 Configuración de Tomas y Luces Dobles en esta Estancia:**")
                         col_d1, col_d2 = st.columns(2)
