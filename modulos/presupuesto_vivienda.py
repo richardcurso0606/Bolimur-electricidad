@@ -2113,7 +2113,7 @@ def app():
         lista_mecanismos_ordenados = sorted(mecanismos_agrupados.items(), key=lambda x: (x[0][5], x[0][0]))
 
         for (nom_std, desc_m, p_m, prov_m, ok_m, _), cant_tot in lista_mecanismos_ordenados:
-            categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
+            categorias_orden_compra["🎛️ 1. Mecanismos y Marcos"].append({
                 "articulo": nom_std,
                 "desc_exacta": desc_m,
                 "proveedor": prov_m,
@@ -2127,7 +2127,7 @@ def app():
             })
 
         if global_marcos_uds > 0:
-            categorias_orden_compra["🔲 1. Mecanismos y Marcos"].append({
+            categorias_orden_compra["🎛️ 1. Mecanismos y Marcos"].append({
                 "articulo": "Marcos Embellecedores 1 Elemento",
                 "desc_exacta": desc_marco,
                 "proveedor": prov_marco,
@@ -2264,7 +2264,7 @@ def app():
         ]
         for nom_t, desc_t, prov_t, m_t, p_t, rollos_t, ok_t in tubos_items:
             if m_t > 0:
-                categorias_orden_compra["📏 4. Tubos y Canalizaciones"].append({
+                categorias_orden_compra["📏 5. Tubos y Canalizaciones"].append({
                     "articulo": nom_t,
                     "desc_exacta": f"{desc_t} [Acopio: {rollos_t} rollo(s) de 50m]",
                     "proveedor": prov_t,
@@ -2285,7 +2285,7 @@ def app():
         ]
         for nom_cj, desc_cj, prov_cj, cant_cj, unid_cj, p_cj, ok_cj, cat_cj in cajas_items:
             if cant_cj > 0:
-                categorias_orden_compra["📦 5. Cajas y Conexiones"].append({
+                categorias_orden_compra["📦 6. Cajas y Conexiones"].append({
                     "articulo": nom_cj,
                     "desc_exacta": desc_cj,
                     "proveedor": prov_cj,
