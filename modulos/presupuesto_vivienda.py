@@ -3171,129 +3171,558 @@ def app():
                 cuota_iva_calc = round(base_calc * (iva_sel / 100.0), 2)
                 total_calc = round(base_calc + cuota_iva_calc, 2)
                 
-                # Render de las 2 Ecuaciones
-                col_eq1, col_eq2 = st.columns(2)
-                with col_eq1:
-                    with st.container(border=True):
-                        st.markdown("#### 1️⃣ Ecuación SIN IVA (Base Imponible a Cobrar)")
-                        st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras}")
-                        extra_txt_eq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
-                        st.markdown(f"""
-                        $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo:,.2f}€}}_{{G_{{mo}}}}{extra_txt_eq} = \\mathbf{{{base_calc:,.2f}€}}$$
-                        """)
-                        st.caption("✅ **Igualdad comprobada:** Coste Materiales + Margen Seg. + Utilidad Mat. + Coste MO + Ganancia MO + Extras = Base Imponible al céntimo.")
-                
-                with col_eq2:
-                    with st.container(border=True):
-                        st.markdown("#### 2️⃣ Ecuación CON IVA (Total a Cobrar al Cliente)")
-                        st.latex(r"\text{Cobro (C/IVA)} = \left[ C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras} \right] \times \left(1 + \frac{\text{IVA}}{100}\right)")
-                        st.markdown(f"""
-                        $$\\mathbf{{{base_calc:,.2f}€}} \\times \\left(1 + \\frac{{{iva_sel}}}{{100}}\\right) = \\mathbf{{{base_calc:,.2f}€}} + \\mathbf{{{cuota_iva_calc:,.2f}€}} = \\mathbf{{{total_calc:,.2f}€}}$$
-                        """)
-                        st.caption(f"✅ **Facturación Total:** Base Imponible con IVA ({iva_sel}%) conforme a la Agencia Tributaria.")
+                # Render con pestañas comparativas: Empresa vs Autónomo Tutor
+                tab_mod_empresa, tab_mod_autonomo, tab_mod_comparativa = st.tabs([
+                    "🏢 1. Modelo Empresa (Con Margen MO G_mo)",
+                    "👤 2. Simulador Autónomo / Tutor (Sin Margen MO)",
+                    "⚖️ 3. Comparativa Empresa vs Autónomo"
+                ])
 
-                # Tabla Cuadrada de Rentabilidad con Porcentajes
-                st.markdown("##### 📊 Cuadro de Rentabilidad y Relación de Porcentajes (%) Cuadrado al Céntimo:")
-                filas_rent = [
-                    {
-                        "Concepto Económico": "📦 Coste Materiales de Adquisición (C_mat)",
-                        "Importe (€)": f"{c_mat:,.2f} €",
-                        "% s/ Base Imponible": f"{(c_mat / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(c_mat / total_calc * 100):.2f}%",
-                        "Clasificación": "Coste Directo"
-                    },
-                    {
-                        "Concepto Económico": "🛡️ Margen de Seguridad / Imprevistos Materiales (M_seg)",
-                        "Importe (€)": f"{m_seg:,.2f} €",
-                        "% s/ Base Imponible": f"{(m_seg / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(m_seg / total_calc * 100):.2f}%",
-                        "Clasificación": f"Colchón Garantía ({porc_garantia}%)"
-                    },
-                    {
-                        "Concepto Económico": "📈 Utilidad / Beneficio en Materiales (U_mat)",
-                        "Importe (€)": f"{u_mat:,.2f} €",
-                        "% s/ Base Imponible": f"{(u_mat / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(u_mat / total_calc * 100):.2f}%",
-                        "Clasificación": "Beneficio Neto Empresa"
-                    },
-                    {
-                        "Concepto Económico": "⏱️ Coste Directo Mano de Obra (C_mo)",
-                        "Importe (€)": f"{c_mo:,.2f} €",
-                        "% s/ Base Imponible": f"{(c_mo / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(c_mo / total_calc * 100):.2f}%",
-                        "Clasificación": f"Coste Mano de Obra ({horas_totales_obra:.1f} h)"
-                    },
-                    {
-                        "Concepto Económico": "💼 Ganancia Mano de Obra para la Empresa (G_mo)",
-                        "Importe (€)": f"{g_mo:,.2f} €",
-                        "% s/ Base Imponible": f"{(g_mo / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(g_mo / total_calc * 100):.2f}%",
-                        "Clasificación": f"Margen MO Empresa ({margen_comercial}%)"
-                    },
-                    {
-                        "Concepto Económico": "📋 Ensayos ITC-BT-05, MTD y Tramitación CIE",
-                        "Importe (€)": f"{v_bol:,.2f} €",
-                        "% s/ Base Imponible": f"{(v_bol / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(v_bol / total_calc * 100):.2f}%",
-                        "Clasificación": "Honorarios Técnicos Oficiales"
-                    }
-                ]
-                
-                if v_part > 0:
+                # =====================================================================
+                # SUB-PESTAÑA 1: MODELO EMPRESA (ESTÁNDAR CON MARGEN MO)
+                # =====================================================================
+                with tab_mod_empresa:
+                    st.markdown("##### 🏢 Desglose Económico Modelo Empresa Constructora / Instaladora:")
+                    st.caption("Aplica margen comercial tanto sobre materiales como sobre el coste de mano de obra para cubrir gastos de estructura, personal contratado y beneficio industrial.")
+
+                    col_eq1, col_eq2 = st.columns(2)
+                    with col_eq1:
+                        with st.container(border=True):
+                            st.markdown("#### 1️⃣ Ecuación SIN IVA (Base Imponible Empresa)")
+                            st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras}")
+                            extra_txt_eq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
+                            st.markdown(f"""
+                            $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo:,.2f}€}}_{{G_{{mo}}}}{extra_txt_eq} = \\mathbf{{{base_calc:,.2f}€}}$$
+                            """)
+                            st.caption("✅ **Igualdad comprobada:** Coste Materiales + Margen Seg. + Utilidad Mat. + Coste MO + Ganancia MO + Extras = Base Imponible al céntimo.")
+                    
+                    with col_eq2:
+                        with st.container(border=True):
+                            st.markdown("#### 2️⃣ Ecuación CON IVA (Total a Cobrar al Cliente)")
+                            st.latex(r"\text{Cobro (C/IVA)} = \left[ C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras} \right] \times \left(1 + \frac{\text{IVA}}{100}\right)")
+                            st.markdown(f"""
+                            $$\\mathbf{{{base_calc:,.2f}€}} \times \left(1 + \frac{{{iva_sel}}}{{100}}\right) = \\mathbf{{{base_calc:,.2f}€}} + \\mathbf{{{cuota_iva_calc:,.2f}€}} = \\mathbf{{{total_calc:,.2f}€}}$$
+                            """)
+                            st.caption(f"✅ **Facturación Total:** Base Imponible con IVA ({iva_sel}%) conforme a la Agencia Tributaria.")
+
+                    st.markdown("##### 📊 Cuadro de Rentabilidad y Relación de Porcentajes (%) Cuadrado al Céntimo:")
+                    filas_rent = [
+                        {
+                            "Concepto Económico": "📦 Coste Materiales de Adquisición (C_mat)",
+                            "Importe (€)": f"{c_mat:,.2f} €",
+                            "% s/ Base Imponible": f"{(c_mat / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(c_mat / total_calc * 100):.2f}%",
+                            "Clasificación": "Coste Directo"
+                        },
+                        {
+                            "Concepto Económico": "🛡️ Margen de Seguridad / Imprevistos Materiales (M_seg)",
+                            "Importe (€)": f"{m_seg:,.2f} €",
+                            "% s/ Base Imponible": f"{(m_seg / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(m_seg / total_calc * 100):.2f}%",
+                            "Clasificación": f"Colchón Garantía ({porc_garantia}%)"
+                        },
+                        {
+                            "Concepto Económico": "📈 Utilidad / Beneficio en Materiales (U_mat)",
+                            "Importe (€)": f"{u_mat:,.2f} €",
+                            "% s/ Base Imponible": f"{(u_mat / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(u_mat / total_calc * 100):.2f}%",
+                            "Clasificación": "Beneficio Neto Empresa"
+                        },
+                        {
+                            "Concepto Económico": "⏱️ Coste Directo Mano de Obra (C_mo)",
+                            "Importe (€)": f"{c_mo:,.2f} €",
+                            "% s/ Base Imponible": f"{(c_mo / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(c_mo / total_calc * 100):.2f}%",
+                            "Clasificación": f"Coste Mano de Obra ({horas_totales_obra:.1f} h)"
+                        },
+                        {
+                            "Concepto Económico": "💼 Ganancia Mano de Obra para la Empresa (G_mo)",
+                            "Importe (€)": f"{g_mo:,.2f} €",
+                            "% s/ Base Imponible": f"{(g_mo / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(g_mo / total_calc * 100):.2f}%",
+                            "Clasificación": f"Margen MO Empresa ({margen_comercial}%)"
+                        },
+                        {
+                            "Concepto Económico": "📋 Ensayos ITC-BT-05, MTD y Tramitación CIE",
+                            "Importe (€)": f"{v_bol:,.2f} €",
+                            "% s/ Base Imponible": f"{(v_bol / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(v_bol / total_calc * 100):.2f}%",
+                            "Clasificación": "Honorarios Técnicos Oficiales"
+                        }
+                    ]
+                    
+                    if v_part > 0:
+                        filas_rent.append({
+                            "Concepto Económico": "➕ Trabajos Adicionales y Partidas a Medida",
+                            "Importe (€)": f"{v_part:,.2f} €",
+                            "% s/ Base Imponible": f"{(v_part / base_calc * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(v_part / total_calc * 100):.2f}%",
+                            "Clasificación": "Partidas Extras Presupuesto"
+                        })
+                    
                     filas_rent.append({
-                        "Concepto Económico": "➕ Trabajos Adicionales y Partidas a Medida",
-                        "Importe (€)": f"{v_part:,.2f} €",
-                        "% s/ Base Imponible": f"{(v_part / base_calc * 100):.2f}%",
-                        "% s/ Total Cliente (C/IVA)": f"{(v_part / total_calc * 100):.2f}%",
-                        "Clasificación": "Partidas Extras Presupuesto"
+                        "Concepto Económico": "🏁 TOTAL BASE IMPONIBLE (A COBRAR SIN IVA)",
+                        "Importe (€)": f"{base_calc:,.2f} €",
+                        "% s/ Base Imponible": "100.00%",
+                        "% s/ Total Cliente (C/IVA)": f"{(base_calc / total_calc * 100):.2f}%",
+                        "Clasificación": "Ecuación 1 (S/IVA)"
                     })
-                
-                filas_rent.append({
-                    "Concepto Económico": "🏁 TOTAL BASE IMPONIBLE (A COBRAR SIN IVA)",
-                    "Importe (€)": f"{base_calc:,.2f} €",
-                    "% s/ Base Imponible": "100.00%",
-                    "% s/ Total Cliente (C/IVA)": f"{(base_calc / total_calc * 100):.2f}%",
-                    "Clasificación": "Ecuación 1 (S/IVA)"
-                })
-                
-                filas_rent.append({
-                    "Concepto Económico": f"🏛️ Cuota IVA ({iva_sel}%)",
-                    "Importe (€)": f"{cuota_iva_calc:,.2f} €",
-                    "% s/ Base Imponible": f"{(cuota_iva_calc / base_calc * 100):.2f}%",
-                    "% s/ Total Cliente (C/IVA)": f"{(cuota_iva_calc / total_calc * 100):.2f}%",
-                    "Clasificación": "Impuesto Hacienda AEAT"
-                })
-                
-                filas_rent.append({
-                    "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
-                    "Importe (€)": f"{total_calc:,.2f} €",
-                    "% s/ Base Imponible": "—",
-                    "% s/ Total Cliente (C/IVA)": "100.00%",
-                    "Clasificación": "Ecuación 2 (C/IVA)"
-                })
+                    
+                    filas_rent.append({
+                        "Concepto Económico": f"🏛️ Cuota IVA ({iva_sel}%)",
+                        "Importe (€)": f"{cuota_iva_calc:,.2f} €",
+                        "% s/ Base Imponible": f"{(cuota_iva_calc / base_calc * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(cuota_iva_calc / total_calc * 100):.2f}%",
+                        "Clasificación": "Impuesto Hacienda AEAT"
+                    })
+                    
+                    filas_rent.append({
+                        "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
+                        "Importe (€)": f"{total_calc:,.2f} €",
+                        "% s/ Base Imponible": "—",
+                        "% s/ Total Cliente (C/IVA)": "100.00%",
+                        "Clasificación": "Ecuación 2 (C/IVA)"
+                    })
 
-                df_rentabilidad = pd.DataFrame(filas_rent)
-                st.dataframe(df_rentabilidad, use_container_width=True, hide_index=True)
+                    df_rentabilidad = pd.DataFrame(filas_rent)
+                    st.dataframe(df_rentabilidad, use_container_width=True, hide_index=True)
 
-                benef_total_empresa = round(m_seg + u_mat + g_mo + v_bol + v_part, 2)
-                costes_directos_tot = round(c_mat + c_mo, 2)
-                rent_sobre_ventas = (benef_total_empresa / base_calc * 100.0) if base_calc > 0 else 0.0
-                rent_sobre_coste = (benef_total_empresa / costes_directos_tot * 100.0) if costes_directos_tot > 0 else 0.0
+                    benef_total_empresa = round(m_seg + u_mat + g_mo + v_bol + v_part, 2)
+                    costes_directos_tot = round(c_mat + c_mo, 2)
+                    rent_sobre_ventas = (benef_total_empresa / base_calc * 100.0) if base_calc > 0 else 0.0
+                    rent_sobre_coste = (benef_total_empresa / costes_directos_tot * 100.0) if costes_directos_tot > 0 else 0.0
 
-                col_kpr1, col_kpr2, col_kpr3, col_kpr4 = st.columns(4)
-                with col_kpr1:
-                    st.metric("📦 Costes Directos (Mat + MO)", f"{costes_directos_tot:,.2f} €")
-                    st.caption("Gastos de adquisición y personal")
-                with col_kpr2:
-                    st.metric("🚀 Beneficio Neto Empresa", f"+{benef_total_empresa:,.2f} €")
-                    st.caption("Margen + Utilidad + Colchón + CIE")
-                with col_kpr3:
-                    st.metric("📈 Margen s/ Ventas", f"{rent_sobre_ventas:.1f}%")
-                    st.caption("Beneficio / Base Imponible")
-                with col_kpr4:
-                    st.metric("💼 Margen s/ Costes Directos", f"{rent_sobre_coste:.1f}%")
-                    st.caption("Beneficio / Coste Real")
+                    col_kpr1, col_kpr2, col_kpr3, col_kpr4 = st.columns(4)
+                    with col_kpr1:
+                        st.metric("📦 Costes Directos (Mat + MO)", f"{costes_directos_tot:,.2f} €")
+                        st.caption("Gastos de adquisición y personal")
+                    with col_kpr2:
+                        st.metric("🚀 Beneficio Neto Empresa", f"+{benef_total_empresa:,.2f} €")
+                        st.caption("Margen + Utilidad + Colchón + CIE")
+                    with col_kpr3:
+                        st.metric("📈 Margen s/ Ventas", f"{rent_sobre_ventas:.1f}%")
+                        st.caption("Beneficio / Base Imponible")
+                    with col_kpr4:
+                        st.metric("💼 Margen s/ Costes Directos", f"{rent_sobre_coste:.1f}%")
+                        st.caption("Beneficio / Coste Real")
 
+                # =====================================================================
+                # SUB-PESTAÑA 2: SIMULADOR AUTÓNOMO / TUTOR (SIN MARGEN MO O AJUSTABLE)
+                # =====================================================================
+                with tab_mod_autonomo:
+                    st.markdown("##### 👤 Simulador para Instalador Autónomo (Modo Tutor de Prácticas)")
+                    st.info("""
+                    💡 **¿Por qué los electricistas autónomos suprimen la ganancia sobre la mano de obra ($G_{mo}$)?**  
+                    A diferencia de una constructora o empresa con cuadrillas contratadas, el **instalador autónomo ejecuta la obra personalmente con sus propias manos**.  
+                    Por lo tanto, su retribución profesional completa ya queda satisfecha con el coste horario de mano de obra ($C_{mo}$ = sueldo / jornal directo). Al eliminar o ajustar $G_{mo}$, obtiene una oferta mucho más atractiva para el cliente, conservando intacto su jornal íntegro y los beneficios en materiales.
+                    """)
+
+                    col_cauto1, col_cauto2 = st.columns([3, 2])
+                    with col_cauto1:
+                        pct_margen_mo_auto = st.slider(
+                            "🔧 % Margen Comercial sobre Mano de Obra ($G_{mo}$) para Autónomo:",
+                            min_value=0.0,
+                            max_value=float(margen_comercial),
+                            value=0.0,
+                            step=5.0,
+                            format="%.0f%%",
+                            key="slider_margen_mo_auto",
+                            help="0% = Modo Tutor Autónomo Puro (Solo cobra sus horas sin recargo comercial adicional)."
+                        )
+                    with col_cauto2:
+                        st.markdown(f"""
+                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-top: 5px;">
+                            <div style="font-size: 13px; color: #475569;"><b>Margen Empresa Original:</b> {margen_comercial:.0f}% (+{g_mo:,.2f} €)</div>
+                            <div style="font-size: 13px; color: #0284c7; font-weight: bold; margin-top: 3px;"><b>Margen Autónomo Seleccionado:</b> {pct_margen_mo_auto:.0f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    # Cálculos dinámicos en directo para el autónomo
+                    g_mo_auto = round(c_mo * (pct_margen_mo_auto / 100.0), 2)
+                    base_calc_auto = round(c_mat + m_seg + u_mat + c_mo + g_mo_auto + v_bol + v_part, 2)
+                    cuota_iva_auto = round(base_calc_auto * (iva_sel / 100.0), 2)
+                    total_calc_auto = round(base_calc_auto + cuota_iva_auto, 2)
+
+                    dif_base = round(base_calc - base_calc_auto, 2)
+                    dif_total = round(total_calc - total_calc_auto, 2)
+
+                    precio_pto_neto_auto = (base_calc_auto / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+                    precio_pto_total_auto = (total_calc_auto / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
+
+                    # Ingreso real del autónomo: Jornal MO íntegro + Margen MO opcional + Beneficio materiales + Colchón garantía + CIE + extras
+                    ingreso_real_autonomo = round(c_mo + g_mo_auto + u_mat + m_seg + v_bol + v_part, 2)
+
+                    # Tarjetas KPI de impacto para el autónomo
+                    col_akpi1, col_akpi2, col_akpi3, col_akpi4 = st.columns(4)
+                    with col_akpi1:
+                        st.metric(
+                            "💶 Total Cliente (C/IVA)",
+                            f"{total_calc_auto:,.2f} €",
+                            delta=f"-{dif_total:,.2f} € vs Empresa" if dif_total > 0 else None,
+                            delta_color="inverse"
+                        )
+                        st.caption("Presupuesto final cliente")
+                    with col_akpi2:
+                        st.metric(
+                            "📦 Base Imponible (S/IVA)",
+                            f"{base_calc_auto:,.2f} €",
+                            delta=f"-{dif_base:,.2f} € Ahorro" if dif_base > 0 else None,
+                            delta_color="inverse"
+                        )
+                        st.caption(f"Descuento: {(dif_base / base_calc * 100) if base_calc > 0 else 0:.1f}%")
+                    with col_akpi3:
+                        delta_pto = precio_medio_por_punto - precio_pto_total_auto
+                        st.metric(
+                            "🔌 Tarifa por Punto",
+                            f"{precio_pto_total_auto:.2f} €/pto",
+                            delta=f"-{delta_pto:.2f} €/pto" if delta_pto > 0.01 else None,
+                            delta_color="inverse"
+                        )
+                        st.caption(f"{precio_pto_neto_auto:.2f} €/pto S/IVA")
+                    with col_akpi4:
+                        st.metric(
+                            "💰 Ingreso Real Instalador",
+                            f"+{ingreso_real_autonomo:,.2f} €",
+                            help="Suma de tu jornal garantizado de mano de obra (C_mo), beneficio en materiales (U_mat), colchón de imprevistos (M_seg) y honorarios CIE."
+                        )
+                        st.caption(f"Jornal MO ({c_mo:,.2f} €) + Beneficios")
+
+                    # Ecuaciones de cobro del modo autónomo
+                    col_aeq1, col_aeq2 = st.columns(2)
+                    with col_aeq1:
+                        with st.container(border=True):
+                            st.markdown("#### 1️⃣ Ecuación SIN IVA (Modo Autónomo)")
+                            st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}}^{\text{auto}} + \text{Extras}")
+                            extra_txt_aeq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
+                            st.markdown(f"""
+                            $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}€}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}€}}$$
+                            """)
+                            if pct_margen_mo_auto == 0:
+                                st.caption("✅ **Modo Tutor Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
+                            else:
+                                st.caption(f"✅ **Margen MO Personalizado ({pct_margen_mo_auto:.0f}%):** Ajuste comercial flexible.")
+
+                    with col_aeq2:
+                        with st.container(border=True):
+                            st.markdown("#### 2️⃣ Ecuación CON IVA (Modo Autónomo)")
+                            st.latex(r"\text{Cobro (C/IVA)} = \text{Base}_{\text{auto}} \times \left(1 + \frac{\text{IVA}}{100}\right)")
+                            st.markdown(f"""
+                            $$\\mathbf{{{base_calc_auto:,.2f}€}} \times \left(1 + \frac{{{iva_sel}}}{{100}}\right) = \\mathbf{{{base_calc_auto:,.2f}€}} + \\mathbf{{{cuota_iva_auto:,.2f}€}} = \\mathbf{{{total_calc_auto:,.2f}€}}$$
+                            """)
+                            st.caption(f"✅ **Facturación Legal:** Cuota de IVA oficial ({iva_sel}%) aplicable según normativa.")
+
+                    # Tabla detallada del modo autónomo
+                    st.markdown("##### 📊 Cuadro de Rentabilidad Modo Autónomo Cuadrado al Céntimo:")
+                    filas_rent_auto = [
+                        {
+                            "Concepto Económico": "📦 Coste Materiales de Adquisición (C_mat)",
+                            "Importe (€)": f"{c_mat:,.2f} €",
+                            "% s/ Base Imponible": f"{(c_mat / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(c_mat / total_calc_auto * 100):.2f}%",
+                            "Clasificación": "Coste Directo"
+                        },
+                        {
+                            "Concepto Económico": "🛡️ Margen de Seguridad / Imprevistos Materiales (M_seg)",
+                            "Importe (€)": f"{m_seg:,.2f} €",
+                            "% s/ Base Imponible": f"{(m_seg / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(m_seg / total_calc_auto * 100):.2f}%",
+                            "Clasificación": f"Colchón Garantía ({porc_garantia}%)"
+                        },
+                        {
+                            "Concepto Económico": "📈 Utilidad / Beneficio en Materiales (U_mat)",
+                            "Importe (€)": f"{u_mat:,.2f} €",
+                            "% s/ Base Imponible": f"{(u_mat / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(u_mat / total_calc_auto * 100):.2f}%",
+                            "Clasificación": "Beneficio Neto Instalador"
+                        },
+                        {
+                            "Concepto Económico": "⏱️ Jornal / Mano de Obra Directa del Instalador (C_mo)",
+                            "Importe (€)": f"{c_mo:,.2f} €",
+                            "% s/ Base Imponible": f"{(c_mo / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(c_mo / total_calc_auto * 100):.2f}%",
+                            "Clasificación": f"Sueldo Íntegro ({horas_totales_obra:.1f} h)"
+                        },
+                        {
+                            "Concepto Económico": "💼 Ganancia Adicional sobre Mano de Obra (G_mo)",
+                            "Importe (€)": f"{g_mo_auto:,.2f} €",
+                            "% s/ Base Imponible": f"{(g_mo_auto / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(g_mo_auto / total_calc_auto * 100):.2f}%",
+                            "Clasificación": f"Margen MO ({pct_margen_mo_auto:.0f}%)"
+                        },
+                        {
+                            "Concepto Económico": "📋 Ensayos ITC-BT-05, MTD y Tramitación CIE",
+                            "Importe (€)": f"{v_bol:,.2f} €",
+                            "% s/ Base Imponible": f"{(v_bol / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(v_bol / total_calc_auto * 100):.2f}%",
+                            "Clasificación": "Honorarios Técnicos Oficiales"
+                        }
+                    ]
+                    if v_part > 0:
+                        filas_rent_auto.append({
+                            "Concepto Económico": "➕ Trabajos Adicionales y Partidas a Medida",
+                            "Importe (€)": f"{v_part:,.2f} €",
+                            "% s/ Base Imponible": f"{(v_part / base_calc_auto * 100):.2f}%",
+                            "% s/ Total Cliente (C/IVA)": f"{(v_part / total_calc_auto * 100):.2f}%",
+                            "Clasificación": "Partidas Extras Presupuesto"
+                        })
+                    filas_rent_auto.append({
+                        "Concepto Económico": "🏁 TOTAL BASE IMPONIBLE MODO AUTÓNOMO (S/IVA)",
+                        "Importe (€)": f"{base_calc_auto:,.2f} €",
+                        "% s/ Base Imponible": "100.00%",
+                        "% s/ Total Cliente (C/IVA)": f"{(base_calc_auto / total_calc_auto * 100):.2f}%",
+                        "Clasificación": "Ecuación 1 (S/IVA)"
+                    })
+                    filas_rent_auto.append({
+                        "Concepto Económico": f"🏛️ Cuota IVA ({iva_sel}%)",
+                        "Importe (€)": f"{cuota_iva_auto:,.2f} €",
+                        "% s/ Base Imponible": f"{(cuota_iva_auto / base_calc_auto * 100):.2f}%",
+                        "% s/ Total Cliente (C/IVA)": f"{(cuota_iva_auto / total_calc_auto * 100):.2f}%",
+                        "Clasificación": "Impuesto Hacienda AEAT"
+                    })
+                    filas_rent_auto.append({
+                        "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
+                        "Importe (€)": f"{total_calc_auto:,.2f} €",
+                        "% s/ Base Imponible": "—",
+                        "% s/ Total Cliente (C/IVA)": "100.00%",
+                        "Clasificación": "Ecuación 2 (C/IVA)"
+                    })
+                    st.dataframe(pd.DataFrame(filas_rent_auto), use_container_width=True, hide_index=True)
+
+                    # =================================================================
+                    # GENERACIÓN DEL PRESUPUESTO OFICIAL (PDF & EXCEL) MODO AUTÓNOMO
+                    # =================================================================
+                    st.markdown("---")
+                    st.markdown("#### 📄 Presupuesto Oficial para Entregar al Cliente (Modo Autónomo):")
+                    st.markdown("Descarga el documento comercial formal con todos los capítulos, estancias y firmas ya recalculados con la tarifa ajustada:")
+
+                    # Ajuste proporcional de los capítulos de obra para cuadrar exactamente con base_calc_auto
+                    capitulos_auto = []
+                    caps_obra = [c for c in capitulos_presupuesto if c.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"]]
+                    suma_caps_obra = sum(c.get("importe", 0.0) for c in caps_obra)
+                    resto_fijo = sum(c.get("importe", 0.0) for c in capitulos_presupuesto if c.get("cap") not in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"])
+                    nuevo_objetivo_obra = round(base_calc_auto - resto_fijo, 2)
+
+                    acum_obra_auto = 0.0
+                    idx_obra = 0
+                    for c_orig in capitulos_presupuesto:
+                        c_dict = dict(c_orig)
+                        if c_orig.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"] and suma_caps_obra > 0:
+                            idx_obra += 1
+                            if idx_obra == len(caps_obra):
+                                c_dict["importe"] = round(nuevo_objetivo_obra - acum_obra_auto, 2)
+                            else:
+                                prop = c_orig.get("importe", 0.0) / suma_caps_obra
+                                c_imp_adj = round(nuevo_objetivo_obra * prop, 2)
+                                acum_obra_auto += c_imp_adj
+                                c_dict["importe"] = c_imp_adj
+                        capitulos_auto.append(c_dict)
+
+                    # Ajuste proporcional de estancias
+                    df_comercial_auto = []
+                    total_est_orig = sum(float(r.get("Importe Venta (€)", 0.0)) for r in comercial_estancias)
+                    suma_est_nueva = sum(c["importe"] for c in capitulos_auto if c["cap"] in ["CAP. 02", "CAP. 03", "CAP. 04"])
+                    if total_est_orig > 0:
+                        factor_est = suma_est_nueva / total_est_orig
+                        for r_orig in comercial_estancias:
+                            r_dict = dict(r_orig)
+                            r_dict["Importe Venta (€)"] = round(float(r_orig.get("Importe Venta (€)", 0.0)) * factor_est, 2)
+                            df_comercial_auto.append(r_dict)
+                    else:
+                        df_comercial_auto = comercial_estancias
+
+                    # Generación PDF Autónomo
+                    pdf_bytes_auto = pdf_presupuesto.generar_pdf_presupuesto(
+                        proyecto_info={
+                            "empresa": empresa_nombre,
+                            "proyectista": instalador_nombre,
+                            "licencia": n_licencia,
+                            "localidad": localidad,
+                            "telefono": telefono,
+                            "expediente": "PRES-AUTO-2026",
+                            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                        },
+                        presupuesto_data={
+                            "capitulos": capitulos_auto,
+                            "df_comercial": df_comercial_auto,
+                            "partidas_manuales": st.session_state.get('partidas_manuales', []),
+                            "materiales_pvp": materiales_pvp,
+                            "incluir_catalogo_pvp": incluir_catalogo_pvp,
+                            "subtotal_neto": base_calc_auto,
+                            "iva_pct": iva_sel,
+                            "cuota_iva": cuota_iva_auto,
+                            "total_cliente": total_calc_auto,
+                            "total_puntos": total_puntos_mecanismos,
+                            "precio_medio_punto": precio_pto_total_auto,
+                            "precio_medio_punto_neto": precio_pto_neto_auto,
+                            "serie_mecanismos": serie_mecanismos,
+                            "marca_protecciones": marca_protecciones,
+                            "potencia_kw": potencia_prevista_kw,
+                            "grado_electr": grado_electr,
+                            "plazo_dias": dias_estimados,
+                            "num_operarios": num_operarios
+                        }
+                    )
+
+                    # Generación Excel Autónomo
+                    excel_auto_bytes = exportar_excel_presupuesto(
+                        df_comercial_auto, base_calc_auto, iva_sel, cuota_iva_auto, total_calc_auto,
+                        {
+                            "empresa": empresa_nombre,
+                            "instalador": instalador_nombre,
+                            "licencia": n_licencia,
+                            "localidad": localidad,
+                            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                        },
+                        df_orden_compra=df_orden_compra,
+                        total_compra_neto=total_mat_global_neto,
+                        total_compra_con_iva=total_mat_con_iva,
+                        capitulos=capitulos_auto,
+                        partidas_manuales=st.session_state.get('partidas_manuales', []),
+                        materiales_pvp=materiales_pvp if incluir_catalogo_pvp else None
+                    )
+
+                    col_dauto1, col_dauto2 = st.columns(2)
+                    with col_dauto1:
+                        st.download_button(
+                            label="📄 Descargar Presupuesto Oficial Modo Autónomo (PDF)",
+                            data=pdf_bytes_auto,
+                            file_name=f"Presupuesto_Oficial_Autonomo_{localidad.replace(' ', '_')}.pdf",
+                            mime="application/pdf",
+                            type="primary",
+                            key="btn_descarga_pdf_auto",
+                            use_container_width=True
+                        )
+                    with col_dauto2:
+                        st.download_button(
+                            label="📊 Descargar Oferta Modo Autónomo (Excel)",
+                            data=excel_auto_bytes,
+                            file_name=f"Presupuesto_Autonomo_{localidad.replace(' ', '_')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key="btn_descarga_excel_auto",
+                            use_container_width=True
+                        )
+
+                    with st.expander("👁️ Vista Previa del Presupuesto en PDF (Modo Autónomo)", expanded=False):
+                        try:
+                            import pymupdf
+                            doc_a = pymupdf.open(stream=pdf_bytes_auto, filetype="pdf")
+                            for num_pag, pagina in enumerate(doc_a, start=1):
+                                pix = pagina.get_pixmap(dpi=140)
+                                if len(doc_a) > 1:
+                                    st.caption(f"📄 Página {num_pag} de {len(doc_a)}")
+                                st.image(pix.tobytes("png"), use_container_width=True)
+                        except Exception:
+                            import base64
+                            b64_a = base64.b64encode(pdf_bytes_auto).decode('utf-8')
+                            st.markdown(f'<iframe src="data:application/pdf;base64,{b64_a}" width="100%" height="600" type="application/pdf"></iframe>', unsafe_allow_html=True)
+
+                # =====================================================================
+                # SUB-PESTAÑA 3: COMPARATIVA DIRECTA CARA A CARA (EMPRESA VS AUTÓNOMO)
+                # =====================================================================
+                with tab_mod_comparativa:
+                    st.markdown("##### ⚖️ Comparativa Directa Cara a Cara: Empresa vs Instalador Autónomo:")
+                    st.caption("Visualiza el impacto exacto en el bolsillo del cliente y en tu rentabilidad como profesional:")
+
+                    filas_comp = [
+                        {
+                            "Concepto Económico": "📦 Coste Materiales de Compra (C_mat)",
+                            "🏢 Modelo Empresa": f"{c_mat:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{c_mat:,.2f} €",
+                            "Diferencia (€)": "0,00 €",
+                            "Impacto / Análisis": "Coste idéntico en almacén"
+                        },
+                        {
+                            "Concepto Económico": "🛡️ Margen Seguridad Materiales (M_seg)",
+                            "🏢 Modelo Empresa": f"{m_seg:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{m_seg:,.2f} €",
+                            "Diferencia (€)": "0,00 €",
+                            "Impacto / Análisis": f"Colchón {porc_garantia}% conservado"
+                        },
+                        {
+                            "Concepto Económico": "📈 Beneficio en Materiales (U_mat)",
+                            "🏢 Modelo Empresa": f"{u_mat:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{u_mat:,.2f} €",
+                            "Diferencia (€)": "0,00 €",
+                            "Impacto / Análisis": "Ganancia íntegra conservada"
+                        },
+                        {
+                            "Concepto Económico": "⏱️ Jornal / Mano de Obra Directa (C_mo)",
+                            "🏢 Modelo Empresa": f"{c_mo:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{c_mo:,.2f} €",
+                            "Diferencia (€)": "0,00 €",
+                            "Impacto / Análisis": f"Sueldo garantizado ({horas_totales_obra:.1f} h)"
+                        },
+                        {
+                            "Concepto Económico": "💼 Ganancia Comercial Mano de Obra (G_mo)",
+                            "🏢 Modelo Empresa": f"{g_mo:,.2f} € ({margen_comercial:.0f}%)",
+                            "👤 Modo Autónomo (Tutor)": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
+                            "Diferencia (€)": f"-{g_mo - g_mo_auto:,.2f} €",
+                            "Impacto / Análisis": "Sobrecoste retirado por el autónomo"
+                        },
+                        {
+                            "Concepto Económico": "📋 Ensayos ITC-BT-05 y CIE DGEAIM",
+                            "🏢 Modelo Empresa": f"{v_bol:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{v_bol:,.2f} €",
+                            "Diferencia (€)": "0,00 €",
+                            "Impacto / Análisis": "Honorarios técnicos de boletín"
+                        }
+                    ]
+
+                    if v_part > 0:
+                        filas_comp.append({
+                            "Concepto Económico": "➕ Partidas Adicionales y Extras",
+                            "🏢 Modelo Empresa": f"{v_part:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{v_part:,.2f} €",
+                            "Diferencia (€)": "0,00 €",
+                            "Impacto / Análisis": "Trabajos adicionales valorados"
+                        })
+
+                    filas_comp.extend([
+                        {
+                            "Concepto Económico": "🏁 BASE IMPONIBLE TOTAL (S/IVA)",
+                            "🏢 Modelo Empresa": f"{base_calc:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{base_calc_auto:,.2f} €",
+                            "Diferencia (€)": f"-{dif_base:,.2f} €",
+                            "Impacto / Análisis": f"Descuento comercial de -{(dif_base / base_calc * 100) if base_calc > 0 else 0:.1f}%"
+                        },
+                        {
+                            "Concepto Económico": f"🏛️ Cuota IVA Oficial ({iva_sel}%)",
+                            "🏢 Modelo Empresa": f"{cuota_iva_calc:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{cuota_iva_auto:,.2f} €",
+                            "Diferencia (€)": f"-{cuota_iva_calc - cuota_iva_auto:,.2f} €",
+                            "Impacto / Análisis": "Menos impuestos a pagar por cliente"
+                        },
+                        {
+                            "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
+                            "🏢 Modelo Empresa": f"{total_calc:,.2f} €",
+                            "👤 Modo Autónomo (Tutor)": f"{total_calc_auto:,.2f} €",
+                            "Diferencia (€)": f"-{dif_total:,.2f} €",
+                            "Impacto / Análisis": f"Ahorro total para el cliente (-{(dif_total / total_calc * 100) if total_calc > 0 else 0:.1f}%)"
+                        },
+                        {
+                            "Concepto Económico": "🔌 Precio Medio por Punto (C/IVA)",
+                            "🏢 Modelo Empresa": f"{precio_medio_por_punto:,.2f} €/pto",
+                            "👤 Modo Autónomo (Tutor)": f"{precio_pto_total_auto:,.2f} €/pto",
+                            "Diferencia (€)": f"-{delta_pto:,.2f} €/pto",
+                            "Impacto / Análisis": "Precio de mercado altamente competitivo"
+                        },
+                        {
+                            "Concepto Económico": "💰 Ingreso Real en el Bolsillo del Instalador",
+                            "🏢 Modelo Empresa": f"{benef_total_empresa:,.2f} € (Solo beneficio)",
+                            "👤 Modo Autónomo (Tutor)": f"{ingreso_real_autonomo:,.2f} € (Sueldo + Beneficios)",
+                            "Diferencia (€)": f"+{ingreso_real_autonomo - benef_total_empresa:,.2f} €",
+                            "Impacto / Análisis": "El autónomo cobra su sueldo directo íntegro"
+                        }
+                    ])
+
+                    st.dataframe(pd.DataFrame(filas_comp), use_container_width=True, hide_index=True)
+
+                    st.success(f"""
+                    🎯 **Conclusión Estratégica para el Instalador Autónomo:**  
+                    - **Competitividad:** Reduciendo el margen MO al {pct_margen_mo_auto:.0f}%, tu presupuesto baja de **{total_calc:,.2f} €** a **{total_calc_auto:,.2f} €** (el cliente se ahorra **{dif_total:,.2f} €** con IVA).  
+                    - **Seguridad Financiera:** Tu retribución como profesional instalador sigue siendo de **{ingreso_real_autonomo:,.2f} €** (tus **{coste_mano_obra_bruto:,.2f} €** de horas trabajadas + los márgenes comerciales de materiales y boletín).  
+                    - **Cierre de Obra:** Es la herramienta perfecta para ganar obras a particulares cuando hay presupuestos competidores ajustados en la calle.
+                    """)
                 st.markdown("---")
 
                 # =========================================================================
