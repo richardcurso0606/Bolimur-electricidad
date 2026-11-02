@@ -1267,11 +1267,12 @@ def app():
                 tipo_pared = st.selectbox(
                     "Tipo de Pared / Soporte",
                     [
+                        "Pladur / Panel de Yeso Laminado (Obra seca - Sin rozas, corte con sierra de vaso)",
                         "Ladrillo Hueco / Tabiquería seca (Fácil picado)", 
                         "Ladrillo Perforado / Termoarcilla (Dureza media)", 
-                        "Hormigón / Estructura (Requiere rozadora y martillo pesado)",
-                        "Pladur / Panel de Yeso Laminado (Obra seca - Sin rozas, corte con sierra de vaso)"
-                    ]
+                        "Hormigón / Estructura (Requiere rozadora y martillo pesado)"
+                    ],
+                    index=0
                 )
 
             tipo_techo = st.selectbox(
