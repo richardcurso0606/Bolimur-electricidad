@@ -70,12 +70,14 @@ def generar_texto_whatsapp_compra(filas_compra: list, nom_cliente: str, concepto
     return texto
 
 
-def generar_texto_whatsapp_presupuesto(nom_cliente: str, concepto_obra: str, subtotal_siva: float, total_civa: float, iva_pct: float, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, filas_mats: list) -> str:
+def generar_texto_whatsapp_presupuesto(nom_cliente: str, concepto_obra: str, subtotal_siva: float, total_civa: float, iva_pct: float, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, filas_mats: list, desplazamiento: float = 0.0, tipo_tarifa: str = "Estándar") -> str:
     """Genera un mensaje formal de presupuesto para enviar al cliente por WhatsApp."""
     texto = "⚡ *PRESUPUESTO ELÉCTRICO OFICIAL - BOLIMUR*\n"
     texto += f"📅 Fecha: {datetime.date.today().strftime('%d/%m/%Y')}\n"
     texto += f"👤 Cliente: {nom_cliente}\n"
     texto += f"🛠️ Trabajo: {concepto_obra}\n"
+    if tipo_tarifa:
+        texto += f"🏷️ Régimen / Tarifa: {tipo_tarifa}\n"
     texto += "-----------------------------------------\n"
     texto += f"📦 *Materiales y Aparamenta:* {total_mat:,.2f} €\n"
     for it in filas_mats[:6]:
@@ -83,6 +85,8 @@ def generar_texto_whatsapp_presupuesto(nom_cliente: str, concepto_obra: str, sub
     if len(filas_mats) > 6:
         texto += f"  • ... y {len(filas_mats) - 6} partidas adicionales de instalación.\n"
     texto += f"\n⏱️ *Mano de Obra Instalador REBT:* {horas_mo:.1f}h × {precio_mo:.2f} €/h = {coste_mo:,.2f} €\n"
+    if desplazamiento > 0:
+        texto += f"🚗 *Desplazamiento / Salida:* {desplazamiento:,.2f} €\n"
     texto += "-----------------------------------------\n"
     texto += f"💶 *Base Imponible (S/IVA):* {subtotal_siva:,.2f} €\n"
     if iva_pct == 0.0:
@@ -141,7 +145,7 @@ def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concep
     return pdf_presupuesto.generar_pdf_orden_compra(proyecto_info, oc_data)
 
 
-def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: str, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, subtotal_siva: float, total_civa: float, iva_pct: float, usuario: dict = None) -> bytes:
+def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: str, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, subtotal_siva: float, total_civa: float, iva_pct: float, usuario: dict = None, desplazamiento: float = 0.0, tipo_tarifa: str = "Estándar") -> bytes:
     """Genera el presupuesto oficial comercial en PDF con desglose REBT completo."""
     from modulos import pdf_presupuesto
     usuario = usuario or {}
@@ -165,11 +169,18 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         },
         {
             'cap': 'CAP-02',
-            'titulo': 'Mano de Obra e Instalación Profesional',
-            'desc': f"Montaje técnico ({horas_mo:.1f} h), tendido, conexionado, timbrado y ensayos reglamentarios según {res.get('norma', 'REBT RD 842/2002')}.",
+            'titulo': f"Mano de Obra e Instalación Profesional ({tipo_tarifa})",
+            'desc': f"Montaje técnico ({horas_mo:.1f} h a {precio_mo:.2f} €/h), tendido, conexionado, timbrado y ensayos reglamentarios según {res.get('norma', 'REBT RD 842/2002')}.",
             'importe': coste_mo
         }
     ]
+    if desplazamiento > 0:
+        capitulos.append({
+            'cap': 'CAP-03',
+            'titulo': 'Desplazamiento y Salida de Furgón Taller',
+            'desc': f"Transporte técnico, kilometraje y puesta a disposición de furgón taller e instrumental reglamentario ({tipo_tarifa}).",
+            'importe': desplazamiento
+        })
 
     # Partidas desglosadas completas para que el cliente vea cada artículo en el PDF
     partidas_desglose = [
@@ -184,13 +195,22 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         for f in filas_compra
     ]
     partidas_desglose.append({
-        'concepto': 'Mano de Obra Instalador Autorizado REBT',
+        'concepto': f"Mano de Obra Oficial REBT ({tipo_tarifa})",
         'descripcion': f"Ejecución técnica ({horas_mo:.1f} h), fijaciones, conexionado, verificación y ensayos reglamentarios.",
         'cantidad': horas_mo,
         'unidad': 'h',
         'precio_unitario': precio_mo,
         'subtotal': coste_mo
     })
+    if desplazamiento > 0:
+        partidas_desglose.append({
+            'concepto': f"Desplazamiento / Salida Furgón Taller ({tipo_tarifa})",
+            'descripcion': "Transporte técnico, desplazamiento de personal especializado e instrumental de verificación de averías.",
+            'cantidad': 1.0,
+            'unidad': 'salida',
+            'precio_unitario': desplazamiento,
+            'subtotal': desplazamiento
+        })
 
     cuota = round(subtotal_siva * (iva_pct / 100.0), 2)
     pres_data = {
@@ -726,6 +746,28 @@ def renderizar():
         st.session_state["pr_texto_input"] = ""
     if "pr_last_audio_bytes" not in st.session_state:
         st.session_state["pr_last_audio_bytes"] = None
+    if "pr_precio_hora" not in st.session_state:
+        st.session_state["pr_precio_hora"] = 25.0
+    if "pr_desplazamiento" not in st.session_state:
+        st.session_state["pr_desplazamiento"] = 0.0
+    if "pr_tipo_tarifa_sel" not in st.session_state:
+        st.session_state["pr_tipo_tarifa_sel"] = "☀️ Estándar Laboral"
+
+    # Callback para cambio automático de precios según la tarifa seleccionada
+    def cb_cambio_tarifa():
+        t = st.session_state.get("pr_tipo_tarifa_sel", "")
+        if "Nocturno" in t:
+            st.session_state["pr_precio_hora"] = 38.0
+            st.session_state["pr_desplazamiento"] = 35.0
+        elif "Urgencias" in t:
+            st.session_state["pr_precio_hora"] = 50.0
+            st.session_state["pr_desplazamiento"] = 45.0
+        elif "RyC" in t:
+            st.session_state["pr_precio_hora"] = 30.0
+            st.session_state["pr_desplazamiento"] = 25.0
+        elif "Estándar" in t:
+            st.session_state["pr_precio_hora"] = 25.0
+            st.session_state["pr_desplazamiento"] = 0.0
 
     # Estado de la API de Gemini
     api_key = auditor_ia_rebt.obtener_gemini_api_key()
@@ -742,14 +784,38 @@ def renderizar():
                     st.success("✅ Clave API guardada con éxito en secrets.toml de forma permanente.")
                     st.rerun()
 
-    # 1. Configuración de Mano de Obra y Cliente Rápido
-    col_cfg1, col_cfg2, col_cfg3 = st.columns([2.5, 1.5, 1.5])
+    # 1. Configuración de Tarifa, Mano de Obra, Desplazamiento y Cliente Rápido
+    col_cfg1, col_cfg2, col_cfg3, col_cfg4, col_cfg5 = st.columns([2.0, 1.8, 1.1, 1.1, 1.2])
     with col_cfg1:
         nom_cliente = st.text_input("👤 Cliente / Referencia:", value="Cliente Particular / Urgencia", key="pr_cliente_nom")
     with col_cfg2:
-        precio_hora_mo = st.number_input("⏱️ Precio Mano de Obra (€/h):", min_value=15.0, max_value=80.0, value=25.0, step=1.0, key="pr_precio_hora")
+        tipo_tarifa = st.selectbox(
+            "⚡ Régimen / Tarifa:",
+            [
+                "☀️ Estándar Laboral",
+                "🔧 RyC (Averías y Reparación)",
+                "🌙 Nocturno (22:00-06:00)",
+                "🚨 Urgencias 24h / Festivo",
+                "⚙️ Tarifa Personalizada"
+            ],
+            key="pr_tipo_tarifa_sel",
+            on_change=cb_cambio_tarifa
+        )
     with col_cfg3:
-        iva_pct = st.selectbox("🏛️ Régimen de IVA:", [21.0, 10.0, 0.0], format_func=lambda x: f"{x:.0f}% (General)" if x == 21.0 else (f"{x:.0f}% (Reducido)" if x == 10.0 else "0% (Inversión Sujeto Pasivo / Subcontrata)"), key="pr_iva_sel")
+        precio_hora_mo = st.number_input("⏱️ M.O. (€/h):", min_value=15.0, max_value=150.0, step=1.0, key="pr_precio_hora")
+    with col_cfg4:
+        desplazamiento_val = st.number_input("🚗 Salida (€):", min_value=0.0, max_value=300.0, step=5.0, key="pr_desplazamiento")
+    with col_cfg5:
+        iva_pct = st.selectbox("🏛️ Régimen IVA:", [21.0, 10.0, 0.0], format_func=lambda x: f"{x:.0f}% (General)" if x == 21.0 else (f"{x:.0f}% (Reducido)" if x == 10.0 else "0% (ISP)"), key="pr_iva_sel")
+
+    desc_tarifa = {
+        "☀️ Estándar Laboral": "Horario ordinario L-V (08:00 a 19:00). Tarifa base de instalador autorizado sin recargos.",
+        "🔧 RyC (Averías y Reparación)": "Reparación y Conservación de averías. Incluye salida de furgón taller con reposición y mano de obra ágil.",
+        "🌙 Nocturno (22:00-06:00)": "Trabajos nocturnos reglamentarios (+50% mano de obra y plus por salida nocturna).",
+        "🚨 Urgencias 24h / Festivo": "Atención prioritaria inmediata (< 2h), festivos y fines de semana (+100% recargo urgente y guardia).",
+        "⚙️ Tarifa Personalizada": "Precios libres configurados directamente por el instalador para este presupuesto."
+    }
+    st.caption(f"ℹ️ **{tipo_tarifa}:** {desc_tarifa.get(tipo_tarifa, '')}")
 
     st.markdown("---")
 
@@ -1114,15 +1180,18 @@ def renderizar():
 
             with col_esc2:
                 with st.container(border=True):
-                    st.markdown("##### ⏱️ Mano de Obra y Totales:")
+                    st.markdown("##### ⏱️ Mano de Obra, Desplazamiento y Totales:")
                     horas_default = float(res.get("horas", 2.5))
                     horas_mo_val = st.number_input("Horas de Mano de Obra (h):", value=horas_default, min_value=0.5, step=0.5, key="pr_horas_mo_in")
                     coste_mo_calc = round(horas_mo_val * precio_hora_mo, 2)
+                    desp_calc = float(desplazamiento_val)
 
-                    st.markdown(f"- **Mano de Obra:** `{horas_mo_val:.1f} h` × `{precio_hora_mo:.2f} €/h` = **`{coste_mo_calc:,.2f} €`**")
+                    st.markdown(f"- **Mano de Obra ({tipo_tarifa.split('(')[0].strip()}):** `{horas_mo_val:.1f} h` × `{precio_hora_mo:.2f} €/h` = **`{coste_mo_calc:,.2f} €`**")
                     st.markdown(f"- **Total Materiales:** **`{total_mat_calc:,.2f} €`**")
+                    if desp_calc > 0:
+                        st.markdown(f"- **🚗 Salida / Desplazamiento:** **`{desp_calc:,.2f} €`**")
 
-                    subtotal_siva = round(total_mat_calc + coste_mo_calc, 2)
+                    subtotal_siva = round(total_mat_calc + coste_mo_calc + desp_calc, 2)
                     cuota_iva = round(subtotal_siva * (iva_pct / 100.0), 2)
                     total_civa = round(subtotal_siva + cuota_iva, 2)
 
@@ -1155,7 +1224,7 @@ def renderizar():
                     st.session_state.partidas_manuales.append({
                         "id": f"PM-{len(st.session_state.partidas_manuales) + 1:02d}",
                         "concepto": res.get("concepto", "Trabajo Eléctrico"),
-                        "descripcion": res.get("descripcion_detallada", f"Instalación según {res.get('norma', 'REBT')}: {res.get('consulta_orig', '')}"),
+                        "descripcion": res.get("descripcion_detallada", f"Instalación según {res.get('norma', 'REBT')}: {res.get('consulta_orig', '')}") + (f" [Tarifa: {tipo_tarifa}]" if tipo_tarifa else ""),
                         "cantidad": 1.0,
                         "unidad": "partida",
                         "precio_unitario": sub_final_siva,
@@ -1177,7 +1246,8 @@ def renderizar():
             with c_pdf1:
                 pdf_pres_bytes = generar_pdf_presupuesto_rapido(
                     res, filas_mats_edit, nom_cliente, horas_mo_val, precio_hora_mo,
-                    coste_mo_calc, total_mat_calc, subtotal_siva, total_civa, iva_pct, usuario_actual
+                    coste_mo_calc, total_mat_calc, subtotal_siva, total_civa, iva_pct, usuario_actual,
+                    desplazamiento=desp_calc, tipo_tarifa=tipo_tarifa
                 )
                 st.download_button(
                     label="📄 Descargar Presupuesto (PDF)",
@@ -1219,7 +1289,11 @@ def renderizar():
                 st.caption("Introduce el número de teléfono móvil al que deseas enviar la orden de compra o el presupuesto (puedes poner los 9 dígitos o incluir prefijo internacional):")
                 
                 txt_wsp_compra = generar_texto_whatsapp_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"), total_mat_calc)
-                txt_wsp_presup = generar_texto_whatsapp_presupuesto(nom_cliente, res.get("concepto", "Aviso"), subtotal_siva, total_civa, iva_pct, horas_mo_val, precio_hora_mo, coste_mo_calc, total_mat_calc, filas_mats_edit)
+                txt_wsp_presup = generar_texto_whatsapp_presupuesto(
+                    nom_cliente, res.get("concepto", "Aviso"), subtotal_siva, total_civa, iva_pct,
+                    horas_mo_val, precio_hora_mo, coste_mo_calc, total_mat_calc, filas_mats_edit,
+                    desplazamiento=desp_calc, tipo_tarifa=tipo_tarifa
+                )
                 
                 col_w_tel, col_w_b1, col_w_b2 = st.columns([1.8, 1.3, 1.3])
                 with col_w_tel:
