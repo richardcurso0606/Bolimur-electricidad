@@ -27,8 +27,31 @@ def obtener_gemini_api_key() -> str:
     return os.environ.get("GEMINI_API_KEY", "").strip()
 
 def guardar_gemini_api_key(api_key: str):
-    """Guarda la clave API de Gemini en la sesión activa."""
-    st.session_state["gemini_api_key"] = api_key.strip()
+    """Guarda la clave API de Gemini en la sesión activa y de forma permanente en secrets.toml."""
+    clean_key = api_key.strip()
+    st.session_state["gemini_api_key"] = clean_key
+
+    # Persistencia en .streamlit/secrets.toml para que no vuelva a pedirla nunca
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    secrets_path = os.path.join(base_dir, ".streamlit", "secrets.toml")
+    try:
+        os.makedirs(os.path.dirname(secrets_path), exist_ok=True)
+        content = ""
+        if os.path.exists(secrets_path):
+            with open(secrets_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+        if "[gemini]" in content:
+            content = re.sub(r'\[gemini\]\s*api_key\s*=\s*"[^"]*"', f'[gemini]\napi_key = "{clean_key}"', content)
+        else:
+            if content and not content.endswith("\n"):
+                content += "\n"
+            content += f'\n[gemini]\napi_key = "{clean_key}"\n'
+
+        with open(secrets_path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except Exception:
+        pass
 
 def _limpiar_b64_imagen(b64_str: str) -> tuple[str, str]:
     """Extrae mime_type y datos base64 puros de un data URI."""
