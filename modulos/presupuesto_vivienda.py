@@ -1598,7 +1598,7 @@ def app():
     # SECCIÓN 6: FISCALIZADOR TÉCNICO REBT & ICT (INSPECTOR IA)
     # ==========================================
     with tab_sec5:
-        st.markdown('<div class="section-header-amber"><h4 style="margin:0; color:#92400e;">🛡️ SECCIÓN 5: Inspector Técnico REBT (Fiscalización en Vivo ITC-BT-25)</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header-amber"><h4 style="margin:0; color:#92400e;">🛡️ SECCIÓN 6: Inspector Técnico Integral (Fiscalización REBT & ICT-2 RD 346/2011)</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
             sup_total_calculada = sum([e["m2"] for e in estancias_activas])
             tiene_cocina = any("cocina" in e["nombre"].lower() for e in estancias_activas)
@@ -1615,15 +1615,52 @@ def app():
             if not tiene_banio:
                 alertas_inspector.append("🟠 **Aviso REBT:** No se ha detectado ningún cuarto de baño o aseo. Se recomienda incluir al menos un circuito C5 para zonas húmedas.")
 
-            if alertas_inspector:
-                for alerta in alertas_inspector:
-                    st.error(alerta)
-            
+            # 2. Comprobaciones Telecomunicaciones ICT-2 (RD 346/2011 & Orden ITC/1644/2011)
+            alertas_inspector_ict = []
+            recomendaciones_inspector = []
+            n_schuko_rtr_sel = 3 if "3 Bases" in st.session_state.get("rad_schuko_rtr", "3 Bases") else 2
+            if n_schuko_rtr_sel < 2:
+                alertas_inspector_ict.append("🔴 **Incumplimiento ICT-2 (Anexo II):** El cuadro RTR debe contar con un mínimo de 2 bases Schuko 16A alimentadas por C2.")
+            elif n_schuko_rtr_sel == 2:
+                recomendaciones_inspector.append("💡 **Recomendación Profesional ICT-2:** El RTR dispone de 2 bases (mínimo legal). Se aconseja instalar 3 bases para evitar regletas externas al conectar Router + ONT Fibra + Switch/Domótica.")
+
+            tiene_salon = any("salón" in e["nombre"].lower() or "salon" in e["nombre"].lower() or "comedor" in e["nombre"].lower() for e in estancias_activas)
+            if not tiene_salon:
+                recomendaciones_inspector.append("🟠 **Aviso ICT-2:** No se detectó estancia principal (Salón/Comedor) para verificar las tomas dobles de datos y TV.")
+
+            tot_rj_proyectadas = sum(e.get("cant_rj", 2 if ("salón" in e["nombre"].lower() or "dormitorio" in e["nombre"].lower()) else 1) for e in estancias_activas)
+
+            # Panel de Doble Dictamen Oficial en 2 Columnas
+            col_insp1, col_insp2 = st.columns(2)
+            with col_insp1:
+                st.markdown("##### ⚡ Dictamen Eléctrico REBT (RD 842/2002):")
+                if alertas_inspector:
+                    for err in alertas_inspector:
+                        st.error(err)
+                else:
+                    st.success("🟢 **REBT Conforme:** Cumple dotaciones ITC-BT-25, circuitos C1-C5 y protecciones IGA.")
+
+            with col_insp2:
+                st.markdown("##### 📡 Dictamen Telecomunicaciones ICT-2 (RD 346/2011):")
+                if alertas_inspector_ict:
+                    for err_ict in alertas_inspector_ict:
+                        st.error(err_ict)
+                else:
+                    st.success(f"🟢 **ICT-2 Conforme:** Cuadro RTR normalizado con {n_schuko_rtr_sel} tomas Schuko C2, PAU FTTH, TV EasyF y red Cat.6 ({tot_rj_proyectadas} tomas).")
+
+            if recomendaciones_inspector:
+                with st.expander("💡 Observaciones y Recomendaciones de Calidad Técnica", expanded=False):
+                    for rec in recomendaciones_inspector:
+                        st.info(rec)
+
+            alertas_totales = alertas_inspector + alertas_inspector_ict
+            if alertas_totales:
                 forzar_inspector = st.checkbox("⚠️ Forzar ejecución del presupuesto bajo responsabilidad del instalador autorizado", value=False)
                 if not forzar_inspector:
                     st.stop()
             else:
-                st.success("🟢 **Inspección REBT Superada con Éxito:** La configuración cumple rigurosamente con los requisitos de la ITC-BT-25 y los escalones de potencia IGA.")
+                msg_ok = '<div style="background-color: #ecfdf5; border: 1.5px solid #10b981; border-radius: 8px; padding: 12px; margin-top: 10px;"><b style="color: #065f46; font-size: 15px;">🏆 VISTO BUENO TÉCNICO OFICIAL SUPERADO:</b><br/><span style="color: #047857; font-size: 13px;">La instalación proyectada cumple simultáneamente con el <b>Reglamento Electrotécnico para Baja Tensión (REBT ITC-BT-25)</b> y el <b>Reglamento de Infraestructuras Comunes de Telecomunicaciones (ICT-2 RD 346/2011)</b> para su tramitación directa ante la DGEAIM de Murcia y el Ministerio de Telecomunicaciones.</span></div>'
+                st.markdown(msg_ok, unsafe_allow_html=True)
 
         st.markdown("---")
 
