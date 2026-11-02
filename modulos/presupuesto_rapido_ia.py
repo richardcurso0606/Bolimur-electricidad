@@ -466,19 +466,27 @@ def renderizar():
             # Procesamiento de audio capturado
             if audio_in is not None:
                 raw_bytes = audio_in.getvalue()
-                if st.session_state["pr_last_audio_bytes"] != raw_bytes:
-                    st.session_state["pr_last_audio_bytes"] = raw_bytes
+                audio_hash = hash(raw_bytes)
+                btn_transcribir_manual = st.button("🎙️ Transcribir este audio a texto con IA", type="primary", use_container_width=True, key="btn_transcribir_force")
+
+                # Transcribir si es un audio nuevo o si se pulsa el botón
+                debe_transcribir = (st.session_state.get("pr_audio_transcrito_hash") != audio_hash) or btn_transcribir_manual
+
+                if debe_transcribir:
                     if tiene_gemini:
-                        with st.spinner("🎧 Escuchando y transcribiendo tu voz a texto..."):
+                        with st.spinner("🎧 Escuchando y transcribiendo tu voz a texto con IA Gemini..."):
                             res_trans = transcribir_audio_gemini(raw_bytes, audio_in.type or "audio/wav", api_key)
                             if res_trans.get("exito"):
                                 texto_transcrito = res_trans.get("texto", "")
+                                st.session_state["pr_audio_transcrito_hash"] = audio_hash
                                 st.session_state["pr_texto_input"] = texto_transcrito
                                 st.session_state["pr_texto_area"] = texto_transcrito
                                 st.toast("✅ ¡Dictado transcrito con éxito!", icon="🎙️")
                                 st.rerun()
                             else:
                                 st.error(f"Error al transcribir: {res_trans.get('error')}")
+                    else:
+                        st.warning("⚠️ Clave Gemini no detectada. Por favor introduce tu clave de Google Gemini abajo para activar la transcripción.")
 
             if not tiene_gemini:
                 st.markdown("---")
@@ -522,6 +530,7 @@ def renderizar():
                 st.session_state["pr_texto_input"] = ""
                 st.session_state["pr_texto_area"] = ""
                 st.session_state["pr_last_audio_bytes"] = None
+                st.session_state["pr_audio_transcrito_hash"] = None
                 st.rerun()
 
     # Atajos de 1 Clic para avisos habituales
