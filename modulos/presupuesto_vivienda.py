@@ -2026,7 +2026,7 @@ def app():
             if m_c > 0:
                 categorias_orden_compra["⚡ 2. Cables y Conductores"].append({
                     "articulo": nom_c,
-                    "desc_exacta": f"{desc_c} [📦 {rollos_c} rollo(s) de 100m]",
+                    "desc_exacta": f"{desc_c} [Acopio: {rollos_c} rollo(s) de 100m]",
                     "proveedor": prov_c,
                     "cantidad": int(round(m_c)),
                     "unidad": "m",
@@ -2116,7 +2116,7 @@ def app():
             if m_t > 0:
                 categorias_orden_compra["📏 4. Tubos y Canalizaciones"].append({
                     "articulo": nom_t,
-                    "desc_exacta": f"{desc_t} [📦 {rollos_t} rollo(s) de 50m]",
+                    "desc_exacta": f"{desc_t} [Acopio: {rollos_t} rollo(s) de 50m]",
                     "proveedor": prov_t,
                     "cantidad": int(round(m_t)),
                     "unidad": "m",
