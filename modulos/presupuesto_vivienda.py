@@ -3186,9 +3186,9 @@ def app():
                     with st.container(border=True):
                         st.markdown("#### 1️⃣ Ecuación SIN IVA (Modo Autónomo)")
                         st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}}^{\text{auto}} + \text{Extras}")
-                        extra_txt_aeq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
+                        extra_txt_aeq = f" + {v_bol:,.2f}\text{{ €}}" + (f" + {v_part:,.2f}\text{{ €}}" if v_part > 0 else "")
                         st.markdown(f"""
-                        $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}€}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}€}}$$
+                        $$\\underbrace{{{c_mat:,.2f}\text{{ €}}}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}\text{{ €}}}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}\text{{ €}}}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}\text{{ €}}}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}\text{{ €}}}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}\text{{ €}}}}$$
                         """)
                         if pct_margen_mo_auto == 0:
                             st.caption("✅ **Modo Tutor Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
@@ -3200,7 +3200,7 @@ def app():
                         st.markdown("#### 2️⃣ Ecuación CON IVA (Modo Autónomo)")
                         st.latex(r"\text{Cobro (C/IVA)} = \text{Base}_{\text{auto}} \times \left(1 + \frac{\text{IVA}}{100}\right)")
                         st.markdown(f"""
-                        $$\\mathbf{{{base_calc_auto:,.2f}€}} \times \left(1 + \frac{{{iva_sel}}}{{100}}\right) = \\mathbf{{{base_calc_auto:,.2f}€}} + \\mathbf{{{cuota_iva_auto:,.2f}€}} = \\mathbf{{{total_calc_auto:,.2f}€}}$$
+                        $$\\mathbf{{{base_calc_auto:,.2f}\\text{{ €}}}} \\times \\left(1 + \\frac{{{iva_sel}}}{{100}}\\right) = \\mathbf{{{base_calc_auto:,.2f}\\text{{ €}}}} + \\mathbf{{{cuota_iva_auto:,.2f}\\text{{ €}}}} = \\mathbf{{{total_calc_auto:,.2f}\\text{{ €}}}}$$
                         """)
                         st.caption(f"✅ **Facturación Legal:** Cuota de IVA oficial ({iva_sel}%) conforme a la Agencia Tributaria.")
 
@@ -3582,9 +3582,9 @@ def app():
                         with st.container(border=True):
                             st.markdown("#### 1️⃣ Ecuación SIN IVA (Base Imponible Empresa)")
                             st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras}")
-                            extra_txt_eq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
+                            extra_txt_eq = f" + {v_bol:,.2f}\text{{ €}}" + (f" + {v_part:,.2f}\text{{ €}}" if v_part > 0 else "")
                             st.markdown(f"""
-                            $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo:,.2f}€}}_{{G_{{mo}}}}{extra_txt_eq} = \\mathbf{{{base_calc:,.2f}€}}$$
+                            $$\\underbrace{{{c_mat:,.2f}\text{{ €}}}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}\text{{ €}}}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}\text{{ €}}}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}\text{{ €}}}}_{{C_{{mo}}}} + \\underbrace{{{g_mo:,.2f}\text{{ €}}}}_{{G_{{mo}}}}{extra_txt_eq} = \\mathbf{{{base_calc:,.2f}\text{{ €}}}}$$
                             """)
                             st.caption("✅ **Igualdad comprobada:** Coste Materiales + Margen Seg. + Utilidad Mat. + Coste MO + Ganancia MO + Extras = Base Imponible al céntimo.")
                     
@@ -3593,7 +3593,7 @@ def app():
                             st.markdown("#### 2️⃣ Ecuación CON IVA (Total a Cobrar al Cliente)")
                             st.latex(r"\text{Cobro (C/IVA)} = \left[ C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}} + \text{Extras} \right] \times \left(1 + \frac{\text{IVA}}{100}\right)")
                             st.markdown(f"""
-                            $$\\mathbf{{{base_calc:,.2f}€}} \times \left(1 + \frac{{{iva_sel}}}{{100}}\right) = \\mathbf{{{base_calc:,.2f}€}} + \\mathbf{{{cuota_iva_calc:,.2f}€}} = \\mathbf{{{total_calc:,.2f}€}}$$
+                            $$\\mathbf{{{base_calc:,.2f}\\text{{ €}}}} \\times \\left(1 + \\frac{{{iva_sel}}}{{100}}\\right) = \\mathbf{{{base_calc:,.2f}\\text{{ €}}}} + \\mathbf{{{cuota_iva_calc:,.2f}\\text{{ €}}}} = \\mathbf{{{total_calc:,.2f}\\text{{ €}}}}$$
                             """)
                             st.caption(f"✅ **Facturación Total:** Base Imponible con IVA ({iva_sel}%) conforme a la Agencia Tributaria.")
 
@@ -3785,9 +3785,9 @@ def app():
                         with st.container(border=True):
                             st.markdown("#### 1️⃣ Ecuación SIN IVA (Modo Autónomo)")
                             st.latex(r"\text{Cobro (S/IVA)} = C_{\text{mat}} + M_{\text{seg}} + U_{\text{mat}} + C_{\text{mo}} + G_{\text{mo}}^{\text{auto}} + \text{Extras}")
-                            extra_txt_aeq = f" + {v_bol:,.2f}€" + (f" + {v_part:,.2f}€" if v_part > 0 else "")
+                            extra_txt_aeq = f" + {v_bol:,.2f}\text{{ €}}" + (f" + {v_part:,.2f}\text{{ €}}" if v_part > 0 else "")
                             st.markdown(f"""
-                            $$\\underbrace{{{c_mat:,.2f}€}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}€}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}€}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}€}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}€}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}€}}$$
+                            $$\\underbrace{{{c_mat:,.2f}\text{{ €}}}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}\text{{ €}}}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}\text{{ €}}}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}\text{{ €}}}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}\text{{ €}}}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}\text{{ €}}}}$$
                             """)
                             if pct_margen_mo_auto == 0:
                                 st.caption("✅ **Modo Tutor Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
@@ -3799,7 +3799,7 @@ def app():
                             st.markdown("#### 2️⃣ Ecuación CON IVA (Modo Autónomo)")
                             st.latex(r"\text{Cobro (C/IVA)} = \text{Base}_{\text{auto}} \times \left(1 + \frac{\text{IVA}}{100}\right)")
                             st.markdown(f"""
-                            $$\\mathbf{{{base_calc_auto:,.2f}€}} \times \left(1 + \frac{{{iva_sel}}}{{100}}\right) = \\mathbf{{{base_calc_auto:,.2f}€}} + \\mathbf{{{cuota_iva_auto:,.2f}€}} = \\mathbf{{{total_calc_auto:,.2f}€}}$$
+                            $$\\mathbf{{{base_calc_auto:,.2f}\\text{{ €}}}} \\times \\left(1 + \\frac{{{iva_sel}}}{{100}}\\right) = \\mathbf{{{base_calc_auto:,.2f}\\text{{ €}}}} + \\mathbf{{{cuota_iva_auto:,.2f}\\text{{ €}}}} = \\mathbf{{{total_calc_auto:,.2f}\\text{{ €}}}}$$
                             """)
                             st.caption(f"✅ **Facturación Legal:** Cuota de IVA oficial ({iva_sel}%) aplicable según normativa.")
 
