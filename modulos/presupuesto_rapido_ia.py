@@ -60,6 +60,7 @@ def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api
     }
 
     modelos = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]
+    ultimo_error = "Error desconocido de conexión."
     for modelo in modelos:
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
         try:
@@ -73,10 +74,18 @@ def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api
                         texto = partes[0].get("text", "").strip()
                         if texto:
                             return {"exito": True, "texto": texto}
-        except Exception:
+            else:
+                try:
+                    err_json = resp.json()
+                    err_msg = err_json.get("error", {}).get("message", resp.text[:250])
+                except Exception:
+                    err_msg = resp.text[:250]
+                ultimo_error = f"HTTP {resp.status_code} ({modelo}): {err_msg}"
+        except Exception as e:
+            ultimo_error = str(e)
             continue
 
-    return {"exito": False, "error": "No se pudo transcribir el audio mediante la API de Gemini."}
+    return {"exito": False, "error": ultimo_error}
 
 
 def analizar_trabajo_ia_gemini(descripcion: str, api_key: str, precio_hora: float = 25.0) -> dict:
