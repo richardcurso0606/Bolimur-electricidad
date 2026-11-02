@@ -17,6 +17,7 @@ import re
 import os
 import io
 import unicodedata
+import urllib.parse
 import requests
 from modulos import auditor_ia_rebt
 from modulos import asistente_ia_rebt
@@ -843,16 +844,21 @@ def renderizar():
                         key_n = f"prm_n_{idx_m}"
                         val_n = st.session_state.get(key_n, m_item.get("mat", ""))
                         n_mat = st.text_input(f"Mat {idx_m}", value=val_n, key=key_n, label_visibility="collapsed")
+                        prov_sel_actual = st.session_state.get(f"prm_prov_{idx_m}", info_bd.get("proveedor", "Obramat"))
+                        query_q = urllib.parse.quote(f"precio {n_mat} {prov_sel_actual}")
+                        url_search = f"https://www.google.com/search?q={query_q}"
+
                         if info_bd["en_bd"]:
+                            art_tit = info_bd.get("art_bd", "")
                             st.markdown(
-                                f"<div style='margin-top:-6px; font-size:11px; color:#15803d; font-weight:700;'>"
-                                f"🏷️ BD Oficial Bolimur ({info_bd['proveedor']})</div>",
+                                f"<div style='margin-top:-6px; font-size:11px; color:#15803d; font-weight:700;' title='Artículo en BD: {art_tit}'>"
+                                f"🏷️ BD Oficial Bolimur ({info_bd['proveedor']}) · <a href='{url_search}' target='_blank' style='color:#15803d; text-decoration:underline;'>🔍 Comprobar en web</a></div>",
                                 unsafe_allow_html=True
                             )
                         else:
                             st.markdown(
                                 f"<div style='margin-top:-6px; font-size:11px; color:#0284c7; font-weight:600;'>"
-                                f"🤖 Estimación Mercado IA</div>",
+                                f"🤖 Estimación Mercado IA · <a href='{url_search}' target='_blank' style='color:#0284c7; text-decoration:underline;'>🔍 Verificar en la red</a></div>",
                                 unsafe_allow_html=True
                             )
 
