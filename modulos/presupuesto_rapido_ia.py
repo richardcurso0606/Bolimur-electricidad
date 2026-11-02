@@ -14,9 +14,91 @@ import datetime
 import base64
 import json
 import re
+import os
+import unicodedata
 import requests
 from modulos import auditor_ia_rebt
 from modulos import asistente_ia_rebt
+
+
+@st.cache_data
+def cargar_df_bd_oficial():
+    """Carga la base de datos oficial maestra de precios y proveedores de Bolimur."""
+    posibles = [
+        "base_datos_precio_oficial.xlsx",
+        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy_v2.xlsx",
+        "Base_Datos_Precios_Master_Exhaustiva_Obramat_Leroy.xlsx"
+    ]
+    for f in posibles:
+        if os.path.exists(f):
+            try:
+                return pd.read_excel(f)
+            except Exception:
+                pass
+    return None
+
+
+def normalizar_texto(s: str) -> str:
+    """Normaliza texto eliminando tildes y caracteres especiales para búsqueda tolerante."""
+    return "".join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower()
+
+
+def contrastar_con_bd_oficial(nombre_mat: str, df_bd: pd.DataFrame = None) -> dict:
+    """Contrasta un material con la base de datos oficial y determina proveedor y origen."""
+    if df_bd is None:
+        df_bd = cargar_df_bd_oficial()
+
+    mat_norm = normalizar_texto(nombre_mat)
+    prov_defecto = "Obramat"
+    if any(k in mat_norm for k in ["mecanismo", "schuko", "canaleta", "marco", "enchufe", "embellecedor", "pulsador"]):
+        prov_defecto = "Leroy Merlin"
+    elif any(k in mat_norm for k in ["reloj", "contactor", "telegestion", "pop+dps", "sobretensiones", "horario"]):
+        prov_defecto = "Sumidelec"
+    elif any(k in mat_norm for k in ["cable", "manguera", "rz1-k", "h07z1-k", "tubo", "magnetotermico", "diferencial", "iga", "peine", "pica", "caja", "cuadro"]):
+        prov_defecto = "Obramat"
+
+    if df_bd is None or df_bd.empty:
+        return {
+            "en_bd": False,
+            "origen": "🤖 Estimación IA",
+            "proveedor": prov_defecto,
+            "art_bd": "",
+            "precio_bd": None
+        }
+
+    tokens = [t for t in re.sub(r'[^a-z0-9]', ' ', mat_norm).split() if len(t) >= 2 and t not in ["para", "con", "del", "las", "los", "una", "uno", "curva", "tipo", "cobre"]]
+
+    candidatos = []
+    for idx, row in df_bd.iterrows():
+        desc = normalizar_texto(row.get('Descripción Exacta del Artículo', ''))
+        score = sum(1 for t in tokens if t in desc)
+        if score >= 2:
+            try:
+                p = float(row.get('Precio S/IVA (€)', 0.0))
+                prov = str(row.get('Proveedor / Tienda', prov_defecto))
+                art = str(row.get('Descripción Exacta del Artículo', ''))
+                candidatos.append((score, prov, p, art))
+            except Exception:
+                pass
+
+    if candidatos:
+        candidatos.sort(key=lambda x: -x[0])
+        best = candidatos[0]
+        return {
+            "en_bd": True,
+            "origen": "🏷️ BD Oficial Bolimur",
+            "proveedor": best[1],
+            "art_bd": best[3],
+            "precio_bd": best[2]
+        }
+
+    return {
+        "en_bd": False,
+        "origen": "🤖 Estimación IA",
+        "proveedor": prov_defecto,
+        "art_bd": "",
+        "precio_bd": None
+    }
 
 
 def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api_key: str = "") -> dict:
@@ -641,33 +723,105 @@ def renderizar():
             st.markdown("---")
             st.markdown("#### 📦 Escandallo Económico Desglosado")
 
-            col_esc1, col_esc2 = st.columns([3, 2])
+            col_esc1, col_esc2 = st.columns([3.3, 1.7])
 
             with col_esc1:
-                st.markdown("##### Materiales Desglosados (Modificables en tiempo real):")
+                st.markdown("##### 📦 Materiales, Dónde Comprar y Origen de Tarifas:")
+                df_bd = cargar_df_bd_oficial()
                 mats = res.get("materiales", [])
                 total_mat_calc = 0.0
 
+                # Encabezados visuales
+                c_h1, c_h2, c_h3, c_h4, c_h5 = st.columns([2.6, 1.8, 0.9, 1.1, 1.1])
+                with c_h1:
+                    st.caption("Descripción Material y Origen")
+                with c_h2:
+                    st.caption("Dónde Comprar / Tienda")
+                with c_h3:
+                    st.caption("Cant.")
+                with c_h4:
+                    st.caption("P.U. (€)")
+                with c_h5:
+                    st.caption("Subtotal")
+
                 filas_mats_edit = []
+                acopio_por_tienda = {}
+
                 for idx_m, m_item in enumerate(mats):
-                    c_m1, c_m2, c_m3, c_m4 = st.columns([3, 1, 1.2, 1.2])
+                    info_bd = contrastar_con_bd_oficial(m_item.get("mat", ""), df_bd)
+
+                    c_m1, c_m2, c_m3, c_m4, c_m5 = st.columns([2.6, 1.8, 0.9, 1.1, 1.1])
                     with c_m1:
                         key_n = f"prm_n_{idx_m}"
                         val_n = st.session_state.get(key_n, m_item.get("mat", ""))
                         n_mat = st.text_input(f"Mat {idx_m}", value=val_n, key=key_n, label_visibility="collapsed")
+                        if info_bd["en_bd"]:
+                            st.markdown(
+                                f"<div style='margin-top:-6px; font-size:11px; color:#15803d; font-weight:700;'>"
+                                f"🏷️ BD Oficial Bolimur ({info_bd['proveedor']})</div>",
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(
+                                f"<div style='margin-top:-6px; font-size:11px; color:#0284c7; font-weight:600;'>"
+                                f"🤖 Estimación Mercado IA</div>",
+                                unsafe_allow_html=True
+                            )
+
                     with c_m2:
+                        key_prov = f"prm_prov_{idx_m}"
+                        opciones_tiendas = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico", "Suministro Especializado"]
+                        tienda_detectada = info_bd.get("proveedor", "Obramat")
+                        idx_sel = 0
+                        for i_op, op in enumerate(opciones_tiendas):
+                            if tienda_detectada.lower() in op.lower() or op.lower() in tienda_detectada.lower():
+                                idx_sel = i_op
+                                break
+                        prov_sel = st.selectbox(f"Prov {idx_m}", opciones_tiendas, index=idx_sel, key=key_prov, label_visibility="collapsed")
+
+                    with c_m3:
                         key_c = f"prm_c_{idx_m}"
                         val_c = float(st.session_state.get(key_c, m_item.get("cant", 1.0)))
                         n_cnt = st.number_input(f"Cant {idx_m}", value=val_c, min_value=0.1, step=1.0, key=key_c, label_visibility="collapsed")
-                    with c_m3:
-                        key_p = f"prm_p_{idx_m}"
-                        val_p = float(st.session_state.get(key_p, m_item.get("p_u", 10.0)))
-                        n_pu = st.number_input(f"P.U {idx_m}", value=val_p, step=1.0, format="%.2f", key=key_p, label_visibility="collapsed")
+
                     with c_m4:
+                        key_p = f"prm_p_{idx_m}"
+                        p_default = info_bd["precio_bd"] if (info_bd["en_bd"] and info_bd["precio_bd"] and key_p not in st.session_state) else float(m_item.get("p_u", 10.0))
+                        val_p = float(st.session_state.get(key_p, p_default))
+                        n_pu = st.number_input(f"P.U {idx_m}", value=val_p, step=0.5, format="%.2f", key=key_p, label_visibility="collapsed")
+
+                    with c_m5:
                         sub_m = round(n_cnt * n_pu, 2)
                         st.markdown(f"<div style='margin-top:6px; font-weight:bold;'>{sub_m:,.2f} €</div>", unsafe_allow_html=True)
                         total_mat_calc += sub_m
-                    filas_mats_edit.append({"mat": n_mat, "cant": n_cnt, "unid": m_item.get("unid", "ud"), "p_u": n_pu, "subtotal": sub_m})
+
+                    filas_mats_edit.append({
+                        "mat": n_mat,
+                        "cant": n_cnt,
+                        "unid": m_item.get("unid", "ud"),
+                        "p_u": n_pu,
+                        "subtotal": sub_m,
+                        "proveedor": prov_sel,
+                        "en_bd": info_bd["en_bd"],
+                        "origen": info_bd["origen"]
+                    })
+
+                    if prov_sel not in acopio_por_tienda:
+                        acopio_por_tienda[prov_sel] = []
+                    acopio_por_tienda[prov_sel].append({"mat": n_mat, "cant": n_cnt, "unid": m_item.get("unid", "ud"), "subtotal": sub_m})
+
+                # Lista de Acopio y Compra por Proveedor
+                st.markdown("")
+                with st.container(border=True):
+                    st.markdown("##### 🛒 Lista de la Compra y Acopio por Proveedor:")
+                    st.caption("Materiales organizados por tienda recomendada para facilitar la compra:")
+                    cols_tiendas = st.columns(min(len(acopio_por_tienda), 3) or 1)
+                    for idx_t, (tienda_k, items_t) in enumerate(acopio_por_tienda.items()):
+                        subt_tienda = sum(x["subtotal"] for x in items_t)
+                        with cols_tiendas[idx_t % len(cols_tiendas)]:
+                            st.markdown(f"**🏬 {tienda_k}** (`{subt_tienda:,.2f} €`)")
+                            for it_c in items_t:
+                                st.markdown(f"• `{it_c['cant']:.0f} {it_c['unid']}` {it_c['mat'][:32]}")
 
             with col_esc2:
                 with st.container(border=True):
