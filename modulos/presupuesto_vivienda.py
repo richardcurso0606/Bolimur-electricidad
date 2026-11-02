@@ -2559,6 +2559,13 @@ def app():
         with tab_sec6:
             st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 6: Selector de Documentos Oficiales y Paneles de Resultados</h4></div>', unsafe_allow_html=True)
 
+            if items_no_catalogados:
+                with st.expander(f"⚠️ Alerta de Catálogo: Hay {len(items_no_catalogados)} artículo(s) sin registrar en el Excel de precios (Calculados con tarifa estimada)", expanded=False):
+                    st.warning("Los siguientes artículos no se encontraron con referencia exacta en `base_datos_precio_oficial.xlsx`. El sistema les ha asignado una tarifa estimada de mercado para no paralizar tu presupuesto:")
+                    for it_nc in items_no_catalogados:
+                        st.markdown(f"- 🔸 **{it_nc['articulo']}**: `{it_nc['precio_unitario']:.2f} €/{it_nc.get('unidad', 'ud')}` *(Tarifa estimada)*")
+                    st.info("💡 **¿Cómo registrarlos con su precio real?** Dirígete a la pestaña **`🛒 5. Orden de Compra y Acopio`** donde dispones del actualizador web en 1 clic y del formulario manual, o indícamelo en el chat y los incorporo directamente al archivo Excel.")
+
             tab_doc_com, tab_doc_auto, tab_doc_comp, tab_doc_int, tab_doc_oc, tab_doc_uni = st.tabs([
                 "🏢 1. Presupuesto Empresa (PVP)",
                 "🧑‍🔧 2. Presupuesto Autónomo / Tutor (Sin Margen MO)",
