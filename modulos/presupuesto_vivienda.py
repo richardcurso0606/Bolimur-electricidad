@@ -2034,14 +2034,15 @@ def app():
         total_mat_con_iva = total_mat_global_neto * 1.21
         cuota_iva_mat = total_mat_global_neto * 0.21
 
-        categorias_orden_compra = {
+        from collections import defaultdict
+        categorias_orden_compra = defaultdict(list, {
             "🎛️ 1. Mecanismos y Marcos": [],
             "⚡ 2. Cables y Conductores": [],
             "🛡️ 3. Cuadro Eléctrico y Protecciones": [],
             "📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)": [],
             "📏 5. Tubos y Canalizaciones": [],
             "📦 6. Cajas y Conexiones": []
-        }
+        })
 
         # 0. Construcción del Desglose de Materiales Asignados por Estancia
         materiales_por_estancia = []
