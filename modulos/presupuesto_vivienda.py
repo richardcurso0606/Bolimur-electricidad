@@ -3620,6 +3620,8 @@ def app():
                 base_calc = round(c_mat + m_seg + u_mat + c_mo + g_mo + v_bol + v_part, 2)
                 cuota_iva_calc = round(base_calc * (iva_sel / 100.0), 2)
                 total_calc = round(base_calc + cuota_iva_calc, 2)
+                benef_total_empresa = round(m_seg + u_mat + g_mo + v_bol + v_part, 2)
+                costes_directos_tot = round(c_mat + c_mo, 2)
                 
                 # Render con pestañas comparativas: Empresa vs Autónomo Tutor
                 tab_mod_empresa, tab_mod_autonomo, tab_mod_comparativa = st.tabs([
