@@ -164,7 +164,7 @@ def _auditar_con_gemini_vision(
         "Analiza minuciosamente la imagen adjunta y genera el dictamen de auditoría oficial REBT en formato JSON."
     )
 
-    modelos = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]
+    modelos = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.8-flash"]
     
     for modelo in modelos:
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
