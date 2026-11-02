@@ -3086,6 +3086,8 @@ def app():
                 base_calc = round(c_mat + m_seg + u_mat + c_mo + g_mo + v_bol + v_part, 2)
                 cuota_iva_calc = round(base_calc * (iva_sel / 100.0), 2)
                 total_calc = round(base_calc + cuota_iva_calc, 2)
+                benef_total_empresa = round(m_seg + u_mat + g_mo + v_bol + v_part, 2)
+                costes_directos_tot = round(c_mat + c_mo, 2)
 
                 col_cauto1, col_cauto2 = st.columns([3, 2])
                 with col_cauto1:
@@ -3118,6 +3120,7 @@ def app():
                 precio_pto_neto_auto = (base_calc_auto / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
                 precio_pto_total_auto = (total_calc_auto / total_puntos_mecanismos) if total_puntos_mecanismos > 0 else 0.0
                 ingreso_real_autonomo = round(c_mo + g_mo_auto + u_mat + m_seg + v_bol + v_part, 2)
+                delta_pto = round(precio_medio_por_punto - precio_pto_total_auto, 2)
 
                 # Tarjeta de Encabezado Oficial
                 st.markdown(f"""
