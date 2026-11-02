@@ -14,44 +14,116 @@ import requests
 import streamlit as st
 
 def obtener_gemini_api_key() -> str:
-    """Recupera la clave API de Gemini desde session_state, st.secrets o variables de entorno."""
+    """Recupera la clave API de Gemini desde session_state, SQLite, config_gemini.json, st.secrets o env."""
+    # 1. Sesión activa en memoria
     if st.session_state.get("gemini_api_key"):
         return st.session_state["gemini_api_key"].strip()
+
+    # 2. Secrets de Streamlit (Streamlit Cloud dashboard o secrets.toml local)
     try:
         if "gemini" in st.secrets and "api_key" in st.secrets["gemini"]:
-            return st.secrets["gemini"]["api_key"].strip()
+            k = st.secrets["gemini"]["api_key"].strip()
+            if k:
+                st.session_state["gemini_api_key"] = k
+                return k
         if "GEMINI_API_KEY" in st.secrets:
-            return st.secrets["GEMINI_API_KEY"].strip()
+            k = st.secrets["GEMINI_API_KEY"].strip()
+            if k:
+                st.session_state["gemini_api_key"] = k
+                return k
     except Exception:
         pass
-    return os.environ.get("GEMINI_API_KEY", "").strip()
+
+    # 3. Base de datos SQLite persistente (configuraciones globales)
+    try:
+        from modulos import db_manager
+        k_db = db_manager.obtener_configuracion("gemini_api_key")
+        if k_db:
+            st.session_state["gemini_api_key"] = k_db
+            return k_db
+    except Exception:
+        pass
+
+    # 4. Perfil del instalador autenticado en SQLite
+    try:
+        usr = st.session_state.get("usuario_autenticado")
+        if usr and usr.get("gemini_api_key"):
+            k_usr = usr["gemini_api_key"].strip()
+            if k_usr:
+                st.session_state["gemini_api_key"] = k_usr
+                return k_usr
+    except Exception:
+        pass
+
+    # 5. Archivo de configuración local JSON
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        cfg_file = os.path.join(base_dir, "config_gemini.json")
+        if os.path.exists(cfg_file):
+            with open(cfg_file, "r", encoding="utf-8") as f:
+                d_cfg = json.load(f)
+                k_json = d_cfg.get("gemini_api_key", "").strip()
+                if k_json:
+                    st.session_state["gemini_api_key"] = k_json
+                    return k_json
+    except Exception:
+        pass
+
+    # 6. Variables de entorno del sistema
+    env_k = os.environ.get("GEMINI_API_KEY", "").strip()
+    if env_k:
+        st.session_state["gemini_api_key"] = env_k
+        return env_k
+    return ""
+
 
 def guardar_gemini_api_key(api_key: str):
-    """Guarda la clave API de Gemini en la sesión activa y de forma permanente en secrets.toml."""
+    """Guarda la clave API de Gemini en la sesión activa, SQLite, JSON y secrets.toml."""
     clean_key = api_key.strip()
     st.session_state["gemini_api_key"] = clean_key
 
-    # Persistencia en .streamlit/secrets.toml para que no vuelva a pedirla nunca
+    # 1. Base de datos SQLite persistente
+    try:
+        from modulos import db_manager
+        db_manager.guardar_configuracion("gemini_api_key", clean_key)
+        usr = st.session_state.get("usuario_autenticado")
+        if usr and usr.get("id"):
+            db_manager.actualizar_perfil_instalador(usr["id"], {"gemini_api_key": clean_key})
+            usr["gemini_api_key"] = clean_key
+            st.session_state["usuario_autenticado"] = usr
+    except Exception:
+        pass
+
+    # 2. Archivo de configuración local JSON (resistente a reinicios)
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        cfg_file = os.path.join(base_dir, "config_gemini.json")
+        with open(cfg_file, "w", encoding="utf-8") as f:
+            json.dump({"gemini_api_key": clean_key}, f, indent=2)
+    except Exception:
+        pass
+
+    # 3. Persistencia en .streamlit/secrets.toml
     secrets_path = os.path.join(base_dir, ".streamlit", "secrets.toml")
     try:
         os.makedirs(os.path.dirname(secrets_path), exist_ok=True)
-        content = ""
+        txt = ""
         if os.path.exists(secrets_path):
             with open(secrets_path, "r", encoding="utf-8") as f:
-                content = f.read()
+                txt = f.read()
 
-        if "[gemini]" in content:
-            content = re.sub(r'\[gemini\]\s*api_key\s*=\s*"[^"]*"', f'[gemini]\napi_key = "{clean_key}"', content)
+        if "[gemini]" in txt:
+            txt = re.sub(r'\[gemini\]\s*api_key\s*=\s*"[^"]*"', f'[gemini]\napi_key = "{clean_key}"', txt)
         else:
-            if content and not content.endswith("\n"):
-                content += "\n"
-            content += f'\n[gemini]\napi_key = "{clean_key}"\n'
+            if txt and not txt.endswith("\n"):
+                txt += "\n"
+            txt += f'\n[gemini]\napi_key = "{clean_key}"\n'
 
         with open(secrets_path, "w", encoding="utf-8") as f:
-            f.write(content)
+            f.write(txt)
     except Exception:
         pass
+
 
 def _limpiar_b64_imagen(b64_str: str) -> tuple[str, str]:
     """Extrae mime_type y datos base64 puros de un data URI."""

@@ -61,6 +61,20 @@ def inicializar_bd():
             cursor.execute("ALTER TABLE usuarios ADD COLUMN avatar_url TEXT")
         except Exception:
             pass
+    if "gemini_api_key" not in cols_existentes:
+        try:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN gemini_api_key TEXT")
+        except Exception:
+            pass
+
+    # Tabla de Configuraciones Globales (Claves API, Preferencias)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS configuraciones_globales (
+        clave TEXT PRIMARY KEY,
+        valor TEXT,
+        fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
     
     # Tabla de Clientes
     cursor.execute("""
@@ -310,12 +324,53 @@ def actualizar_perfil_instalador(usuario_id: int, datos: Dict[str, Any]) -> bool
             datos.get("iban", ""),
             usuario_id
         ))
+        if "gemini_api_key" in datos and datos["gemini_api_key"]:
+            try:
+                cursor.execute("UPDATE usuarios SET gemini_api_key = ? WHERE id = ?", (datos["gemini_api_key"], usuario_id))
+            except Exception:
+                pass
+            guardar_configuracion("gemini_api_key", datos["gemini_api_key"])
         conn.commit()
         conn.close()
         return True
     except Exception:
         conn.close()
         return False
+
+def guardar_configuracion(clave: str, valor: str) -> bool:
+    """Guarda una clave-valor en la tabla de configuraciones globales."""
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS configuraciones_globales (
+            clave TEXT PRIMARY KEY,
+            valor TEXT,
+            fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        cursor.execute("INSERT OR REPLACE INTO configuraciones_globales (clave, valor) VALUES (?, ?)", (clave, valor))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+def obtener_configuracion(clave: str) -> str:
+    """Recupera un valor de la tabla de configuraciones globales."""
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='configuraciones_globales'")
+        if not cursor.fetchone():
+            conn.close()
+            return ""
+        cursor.execute("SELECT valor FROM configuraciones_globales WHERE clave = ?", (clave,))
+        row = cursor.fetchone()
+        conn.close()
+        return str(row[0]).strip() if row and row[0] else ""
+    except Exception:
+        return ""
 
 def obtener_usuario_por_email(email: str) -> Optional[Dict[str, Any]]:
     """Busca un usuario por su dirección de correo electrónico (case-insensitive)"""

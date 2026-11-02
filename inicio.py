@@ -1896,6 +1896,13 @@ else:
         "google_id": "google_richardcurso0606@gmail.com"
     }
 
+# Sincronizar clave Gemini global para todos los módulos
+try:
+    from modulos import auditor_ia_rebt
+    auditor_ia_rebt.obtener_gemini_api_key()
+except Exception:
+    pass
+
 # =========================================================================
 # MENÚ LATERAL
 # =========================================================================
@@ -1958,6 +1965,47 @@ with st.sidebar:
                     control_salida.mostrar_dialogo_confirmacion_salida(auth_manager)
                 elif auth_manager:
                     auth_manager.cerrar_sesion()
+
+        # Configuración Persistente Clave IA Gemini en el perfil lateral
+        clave_gemini_act = ""
+        try:
+            from modulos import auditor_ia_rebt
+            clave_gemini_act = auditor_ia_rebt.obtener_gemini_api_key()
+        except Exception:
+            pass
+
+        with st.expander("🤖 Clave IA (Google Gemini)", expanded=(not bool(clave_gemini_act))):
+            if clave_gemini_act and len(clave_gemini_act) > 8:
+                enmascarada = f"{clave_gemini_act[:4]}...{clave_gemini_act[-4:]}"
+                st.markdown(
+                    f"<div style='font-size:11px; color:#15803d; font-weight:700; margin-bottom:4px;'>"
+                    f"🟢 Conectada: <code>{enmascarada}</code></div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    "<div style='font-size:11px; color:#b45309; font-weight:600; margin-bottom:4px;'>"
+                    "⚠️ Sin clave configurada</div>",
+                    unsafe_allow_html=True
+                )
+            in_key_side = st.text_input(
+                "API Key Gemini:",
+                value=clave_gemini_act,
+                type="password",
+                key="input_sidebar_gemini_key",
+                help="Clave gratuita de Google AI Studio para dictado por voz y presupuestos"
+            )
+            if st.button("💾 Guardar Clave IA", key="btn_side_save_gemini", use_container_width=True, type="primary"):
+                if in_key_side.strip():
+                    try:
+                        from modulos import auditor_ia_rebt
+                        auditor_ia_rebt.guardar_gemini_api_key(in_key_side.strip())
+                        st.success("✅ ¡Clave guardada!")
+                        st.rerun()
+                    except Exception as ex_k:
+                        st.error(f"Error: {ex_k}")
+                else:
+                    st.warning("Escribe o pega tu clave.")
 
     st.markdown("<h4 style='color: #334155; margin-bottom: 2px; font-size: 15px;'>📂 Panel de Módulos</h4>", unsafe_allow_html=True)
 

@@ -61,6 +61,21 @@ def renderizar():
                     idx_cat = categorias_disp.index(cat_actual) if cat_actual in categorias_disp else 0
                     categoria_rebt = st.selectbox("Categoría Profesional REBT:", categorias_disp, index=idx_cat)
 
+                st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🤖 Inteligencia Artificial & Dictado por Voz (Google Gemini)</h4></div>', unsafe_allow_html=True)
+                key_gem_actual = usuario.get("gemini_api_key", "")
+                if not key_gem_actual:
+                    try:
+                        from modulos import auditor_ia_rebt
+                        key_gem_actual = auditor_ia_rebt.obtener_gemini_api_key()
+                    except Exception:
+                        pass
+                gemini_api_key_val = st.text_input(
+                    "Clave API Google Gemini:",
+                    value=key_gem_actual,
+                    type="password",
+                    help="Tu clave gratuita de Google AI Studio para activar dictado por voz y generación de presupuestos con IA."
+                )
+
                 btn_guardar_perfil = st.form_submit_button("💾 Guardar Cambios en mi Perfil", type="primary", use_container_width=True)
                 if btn_guardar_perfil:
                     nuevos_datos = {
@@ -75,8 +90,15 @@ def renderizar():
                         "num_licencia_rebt": num_licencia,
                         "registro_industrial": registro_ind,
                         "categoria_rebt": categoria_rebt,
-                        "logo_base64": usuario.get("logo_base64", "")
+                        "logo_base64": usuario.get("logo_base64", ""),
+                        "gemini_api_key": gemini_api_key_val.strip()
                     }
+                    if gemini_api_key_val.strip():
+                        try:
+                            from modulos import auditor_ia_rebt
+                            auditor_ia_rebt.guardar_gemini_api_key(gemini_api_key_val.strip())
+                        except Exception:
+                            pass
                     if db_manager.actualizar_perfil_instalador(usuario_id, nuevos_datos):
                         st.session_state["usuario_autenticado"] = db_manager.obtener_usuario_por_id(usuario_id)
                         st.success("✅ ¡Datos del instalador actualizados correctamente!")
