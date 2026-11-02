@@ -501,7 +501,7 @@ def procesar_archivo_camara_o_adjunto(uploaded_file) -> str:
 
 def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b64: str = None, audio_b64: str = None, audio_mime: str = "audio/wav") -> str:
     """Consulta al modelo Google Gemini con el system prompt de Ingeniero Eléctrico e Instalador REBT, con soporte multimodal (texto, imágenes y audio de voz)."""
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={api_key}"
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
     
     # Construir contenido
     contents = []
@@ -569,7 +569,7 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b
         pass
         
     # Fallback a gemini-flash-latest
-    endpoint_fb = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+    endpoint_fb = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
     try:
         resp = requests.post(endpoint_fb, json=payload, timeout=30)
         if resp.status_code == 200:

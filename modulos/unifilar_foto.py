@@ -313,7 +313,7 @@ No añadas texto conversacional fuera del JSON.
         }
     }
 
-    modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    modelos = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
     errores_detalle = []
     for modelo in modelos:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"

@@ -230,12 +230,12 @@ def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api
         }
     }
 
-    modelos = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.8-flash"]
+    modelos = ["gemini-3.5-transcribe", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3.8-flash"]
     ultimo_error = "Error desconocido de conexión."
     for modelo in modelos:
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
         try:
-            resp = requests.post(endpoint, json=payload, timeout=25)
+            resp = requests.post(endpoint, json=payload, timeout=8)
             if resp.status_code == 200:
                 data = resp.json()
                 cands = data.get("candidates", [])
@@ -302,11 +302,11 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura exact
         }
     }
 
-    modelos = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.8-flash"]
+    modelos = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
     for modelo in modelos:
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
         try:
-            resp = requests.post(endpoint, json=payload, timeout=25)
+            resp = requests.post(endpoint, json=payload, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
                 cands = data.get("candidates", [])
