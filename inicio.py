@@ -2227,7 +2227,17 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
 
 elif "Presupuesto Rápido" in seleccion_modulo or "🎙️" in seleccion_modulo or "IA & Voz" in seleccion_modulo or "Rapido" in seleccion_modulo:
     if presupuesto_rapido_ia:
-        presupuesto_rapido_ia.renderizar()
+        try:
+            presupuesto_rapido_ia.renderizar()
+        except Exception as e:
+            st.error(f"⚠️ Ocurrió una incidencia en el módulo de Presupuesto Rápido: {e}")
+            import traceback
+            st.code(traceback.format_exc())
+            if st.button("🔄 Reiniciar módulo de presupuesto rápido", key="btn_reset_pr_error"):
+                for k in list(st.session_state.keys()):
+                    if k.startswith("pr_") or k.startswith("prm_"):
+                        del st.session_state[k]
+                st.rerun()
     else:
         st.error("Error: El módulo presupuesto_rapido_ia no se pudo importar correctamente.")
         if "presupuesto_rapido_ia" in errores_import:
