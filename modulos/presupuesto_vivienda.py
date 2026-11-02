@@ -683,6 +683,7 @@ def app():
             'interruptor': ['interruptor', 'conmutador'],
             'schuko': ['schuko', 'enchufe'],
             'rj45': ['rj45', 'datos'],
+            'tv': ['toma de televisión', 'toma tv', 'tv/r', 'tv-fm', 'coaxial'],
             'marco': ['marco 1 elemento', 'marco']
         }
         keywords = kw_map.get(tipo, ['interruptor'])
@@ -1467,20 +1468,24 @@ def app():
                         tot_sch = base_min_sch + est.get("extra_schuko", 0)
                         tot_luz = base_min_luz + est.get("extra_luz", 0)
                         tot_rj = base_min_rj + est.get("extra_rj45", 0)
+                        tot_tv = base_min_rj + est.get("extra_tv", 0)
 
-                        st.info(f"⚡ **Desglose Reglamentario REBT & Telecomunicaciones:** `{tipo_rebt_desc}` | 📏 **Distancia Cuadro:** `{est['distancia_cuadro']} m`")
+                        st.info(f"⚡ **Desglose Reglamentario REBT & Telecomunicaciones (ICT-2):** `{tipo_rebt_desc}` | 📏 **Distancia Cuadro:** `{est['distancia_cuadro']} m`")
 
-                        # Panel comparativo: Mínimo REBT vs Total Resultante
-                        c_dot1, c_dot2, c_dot3 = st.columns(3)
+                        # Panel comparativo: Mínimo REBT e ICT-2 vs Total Resultante
+                        c_dot1, c_dot2, c_dot3, c_dot4 = st.columns(4)
                         with c_dot1:
                             estado_sch = "🟢 Cumple REBT" if tot_sch >= base_min_sch else "🟡 < Mínimo (Reforma)"
-                            st.caption(f"**Enchufes Schuko (C2/C5/C3/C4):** Base: **{base_min_sch}** ud → **Total: {tot_sch} ud** ({estado_sch})")
+                            st.caption(f"**Enchufes Schuko (C2/C5):** Base: **{base_min_sch}** → **{tot_sch} ud** ({estado_sch})")
                         with c_dot2:
                             estado_luz = "🟢 Cumple REBT" if tot_luz >= base_min_luz else "🟡 < Mínimo (Reforma)"
-                            st.caption(f"**Puntos de Luz (C1):** Base: **{base_min_luz}** ud → **Total: {tot_luz} ud** ({estado_luz})")
+                            st.caption(f"**Puntos de Luz (C1):** Base: **{base_min_luz}** → **{tot_luz} ud** ({estado_luz})")
                         with c_dot3:
                             estado_rj = "🟢 Cumple ICT-2" if tot_rj >= base_min_rj else "🟡 < Mínimo ICT"
-                            st.caption(f"**Tomas RJ45 / TV (ICT-2):** Base: **{base_min_rj}** ud → **Total: {tot_rj} ud** ({estado_rj})")
+                            st.caption(f"**Tomas Red RJ45 (Cat.6):** Base: **{base_min_rj}** → **{tot_rj} ud** ({estado_rj})")
+                        with c_dot4:
+                            estado_tv = "🟢 Cumple ICT-2" if tot_tv >= base_min_rj else "🟡 < Mínimo ICT"
+                            st.caption(f"**Tomas TV Coaxial (RTV):** Base: **{base_min_rj}** → **{tot_tv} ud** ({estado_tv})")
 
                         if es_cocina:
                             with st.container(border=True):
@@ -1498,14 +1503,16 @@ def app():
                         if tot_sch < base_min_sch or tot_luz < base_min_luz:
                             st.warning("⚠️ **Atención:** Has configurado menos tomas/luces que la dotación mínima reglamentaria (ITC-BT-25). Esto es perfectamente admisible en **reformas parciales** donde se conservan tomas existentes, pero si se tramita un **CIE / Boletín para nueva alta integral**, Industria (DGEAIM) exigirá el mínimo.", icon="⚠️")
 
-                        st.markdown("**➕ Puntos Extra / Variación sobre dotación base REBT:**")
-                        col_p1, col_p2, col_p3 = st.columns(3)
+                        st.markdown("**➕ Puntos Extra / Variación sobre dotaciones base REBT & ICT-2:**")
+                        col_p1, col_p2, col_p3, col_p4 = st.columns(4)
                         with col_p1:
-                            est["extra_schuko"] = st.number_input(f"Schukos Extra (Mín base: {base_min_sch})", min_value=-base_min_sch, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
+                            est["extra_schuko"] = st.number_input(f"Schukos Extra (Base: {base_min_sch})", min_value=-base_min_sch, max_value=15, value=est.get("extra_schuko", 0), key=f"ex_sch_{i}")
                         with col_p2:
-                            est["extra_luz"] = st.number_input(f"Puntos Luz Extra (Mín base: {base_min_luz})", min_value=-base_min_luz, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
+                            est["extra_luz"] = st.number_input(f"Puntos Luz Extra (Base: {base_min_luz})", min_value=-base_min_luz, max_value=10, value=est.get("extra_luz", 0), key=f"ex_luz_{i}")
                         with col_p3:
-                            est["extra_rj45"] = st.number_input(f"Tomas Red/TV Extra (Mín base: {base_min_rj})", min_value=-base_min_rj, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
+                            est["extra_rj45"] = st.number_input(f"Tomas Red RJ45 Extra (Base: {base_min_rj})", min_value=-base_min_rj, max_value=5, value=est.get("extra_rj45", 0), key=f"ex_rj_{i}")
+                        with col_p4:
+                            est["extra_tv"] = st.number_input(f"Tomas TV Coaxial Extra (Base: {base_min_rj})", min_value=-base_min_rj, max_value=5, value=est.get("extra_tv", 0), key=f"ex_tv_{i}")
 
                         st.markdown("**🔌 Configuración de Tomas y Luces Dobles en esta Estancia:**")
                         col_d1, col_d2 = st.columns(2)
@@ -1715,6 +1722,7 @@ def app():
         p_int, prov_int, desc_int, ok_int, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
         p_schuko, prov_schuko, desc_schuko, ok_schuko, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
         p_rj45, prov_rj45, desc_rj45, ok_rj45, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
+        p_tv, prov_tv, desc_tv, ok_tv, fila_tv = buscar_mecanismo_por_filtro(df_precios, 'tv', modo_seleccion, serie_mecanismos)
         p_marco, prov_marco, desc_marco, ok_marco, fila_marco = buscar_mecanismo_por_filtro(df_precios, 'marco', modo_seleccion, serie_mecanismos)
 
         p_iga, prov_iga, desc_iga, ok_iga, fila_iga = buscar_proteccion_por_marca(df_precios, 'iga', marca_protecciones, amperaje=iga_amperaje)
@@ -1817,7 +1825,8 @@ def app():
                     {"nombre": "Bases Schuko 16A uso general cocina (C2)", "desc_real": desc_schuko, "cant": cant_c2_cocina, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
                     {"nombre": "Base fuerza 25A Horno/Vitro (C3)", "desc_real": desc_schuko, "cant": cant_c3_horno, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
                     {"nombre": "Bases Schuko lavavajillas/lavadora/termo (C4)", "desc_real": desc_schuko, "cant": cant_c4_electro, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
-                    {"nombre": "Toma de datos RJ45 Cat.6 cocina (ICT-2)", "desc_real": desc_rj45, "cant": cant_rj_coc, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45}
+                    {"nombre": "Toma de datos RJ45 Cat.6 cocina (ICT-2)", "desc_real": desc_rj45, "cant": cant_rj_coc, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45},
+                    {"nombre": "Toma de Televisión RTV/SAT Coaxial cocina (ICT-2)", "desc_real": desc_tv, "cant": (1 + max(0, est.get("extra_tv", 0))), "precio": p_tv, "prov": prov_tv, "fila": fila_tv, "en_bd": ok_tv}
                 ]
             elif "baño" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
@@ -1827,21 +1836,32 @@ def app():
                     {"nombre": "Base Schuko tapa estanca IP44", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko * 1.2, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko}
                 ]
             elif "salón" in nombre_est or "comedor" in nombre_est:
+                ex_tv = est.get("extra_tv", 0)
                 cant_int = 2 + max(0, ex_luz)
                 cant_sch = 6 + max(0, ex_sch)
                 cant_rj = 2 + max(0, ex_rj45)
+                cant_tv_est = 2 + max(0, ex_tv)
                 mecanismos_est = [
                     {"nombre": "Conmutador / Cruzamiento", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
                     {"nombre": "Bases Schuko zona TV/Sofá", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
-                    {"nombre": "Toma de datos RJ45", "desc_real": desc_rj45, "cant": cant_rj, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45}
+                    {"nombre": "Toma de datos RJ45 Cat.6 (Red Ethernet)", "desc_real": desc_rj45, "cant": cant_rj, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45},
+                    {"nombre": "Toma de Televisión RTV/SAT Coaxial", "desc_real": desc_tv, "cant": cant_tv_est, "precio": p_tv, "prov": prov_tv, "fila": fila_tv, "en_bd": ok_tv}
                 ]
             else:
+                ex_tv = est.get("extra_tv", 0)
                 cant_int = 2 + max(0, ex_luz)
                 cant_sch = 3 + max(0, ex_sch)
+                es_dorm = "dormitorio" in nombre_est or "habitación" in nombre_est
+                cant_rj_d = (1 + max(0, ex_rj45)) if es_dorm else max(0, ex_rj45)
+                cant_tv_d = (1 + max(0, ex_tv)) if es_dorm else max(0, ex_tv)
                 mecanismos_est = [
                     {"nombre": "Conmutador / Interruptor", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
                     {"nombre": "Bases Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko}
                 ]
+                if cant_rj_d > 0:
+                    mecanismos_est.append({"nombre": "Toma de datos RJ45 Cat.6 (Red Ethernet)", "desc_real": desc_rj45, "cant": cant_rj_d, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45})
+                if cant_tv_d > 0:
+                    mecanismos_est.append({"nombre": "Toma de Televisión RTV/SAT Coaxial", "desc_real": desc_tv, "cant": cant_tv_d, "precio": p_tv, "prov": prov_tv, "fila": fila_tv, "en_bd": ok_tv})
 
             total_mecanismos = sum([m["cant"] for m in mecanismos_est])
             
@@ -3031,13 +3051,21 @@ def app():
 
                     preset_opciones = [
                         "Personalizada (Escribir concepto a medida)",
+                        "Línea General de Alimentación LGA (ITC-BT-14)",
                         "Derivación Individual DI Completa (ITC-BT-15)",
+                        "Instalación de Puesta a Tierra y Pica de Cobre (ITC-BT-18)",
+                        "Sustitución / Reforma Integral de Cuadro CGMP Antiguo",
                         "Línea de Recarga Vehículo Eléctrico IRVE (ITC-BT-52)",
+                        "Instalación Solar Fotovoltaica Autoconsumo AC/DC (ITC-BT-40)",
+                        "Acometida Eléctrica y Caja General de Protección CGP (ITC-BT-13)",
+                        "Línea Coaxial TV y Distribución RTV Adicional (ICT-2)",
+                        "Red Cableada Datos Ethernet UTP Cat.6 Adicional (ICT-2)",
                         "Instalación Downlights LED Extraplanos 18W",
                         "Toma de Corriente Estanca IP65 en Terraza / Exterior",
                         "Instalación de Timbre / Zumbador Modular en Cuadro",
                         "Canaleta embellecedora y acometida auxiliar",
-                        "Detector de Movimiento / Presencia 360° Techo"
+                        "Detector de Movimiento / Presencia 360° Techo",
+                        "Tramitación Oficial Boletín CIE DGEAIM Murcia (Suelto)"
                     ]
                     preset_sel = st.selectbox("📌 Seleccionar Plantilla o Crear Partida Personalizada:", preset_opciones, key="sel_preset_partida")
 
@@ -3083,6 +3111,54 @@ def app():
                         def_cant = 5.0
                         def_unid = "m"
                         def_pvp = 18.0
+                    elif "LGA" in preset_sel or "General de Alimentación" in preset_sel:
+                        def_conc = "Línea General de Alimentación LGA Centralizada (ITC-BT-14)"
+                        def_desc = "Suministro e instalación de conductores unipolares de cobre RZ1-K 0.6/1kV CPR libre de halógenos bajo canal protectora/tubo desde CGP hasta centralización de contadores."
+                        def_cant = 1.0
+                        def_unid = "partida"
+                        def_pvp = 650.0
+                    elif "Puesta a Tierra" in preset_sel or "Pica" in preset_sel:
+                        def_conc = "Instalación de Red de Puesta a Tierra con Pica de Cobre (ITC-BT-18)"
+                        def_desc = "Hincado de pica de acero-cobre de 2m x 14mm, arqueta de registro con puente de prueba y cable de tierra desnudo Cu 35 mm² / aislado 16 mm² con medición de resistencia Rt."
+                        def_cant = 1.0
+                        def_unid = "ud"
+                        def_pvp = 145.0
+                    elif "Reforma Integral de Cuadro" in preset_sel or "Sustitución" in preset_sel:
+                        def_conc = "Sustitución Integral de Cuadro Eléctrico Antiguo por CGMP Normalizado"
+                        def_desc = "Desmontaje de cuadro antiguo, instalación de envolvente empotrada con IGA, POP+DPS sobretensiones, diferenciales 40A/30mA y PIAs magnetotérmicos con conexionado, peinado y pruebas."
+                        def_cant = 1.0
+                        def_unid = "ud"
+                        def_pvp = 380.0
+                    elif "Solar" in preset_sel or "Fotovoltaica" in preset_sel:
+                        def_conc = "Cuadro de Protecciones y Enlace Solar Fotovoltaica (ITC-BT-40)"
+                        def_desc = "Instalación de cuadro de protecciones DC (fusibles gPV 1000V + DPS) y AC (PIA + diferencial superinmunizado clase A) con cableado solar H1Z2Z2-K y conexionado a red interior."
+                        def_cant = 1.0
+                        def_unid = "partida"
+                        def_pvp = 480.0
+                    elif "Acometida" in preset_sel or "CGP" in preset_sel:
+                        def_conc = "Instalación / Reforma de Caja General de Protección CGP (ITC-BT-13)"
+                        def_desc = "Montaje de CGP normalizada según compañía distribuidora, con bases seccionables BUC y fusibles de protección tipo cuchilla NH-00."
+                        def_cant = 1.0
+                        def_unid = "ud"
+                        def_pvp = 240.0
+                    elif "Coaxial" in preset_sel:
+                        def_conc = "Tendido de Línea Coaxial RG6 y Toma TV-SAT Adicional (ICT-2)"
+                        def_desc = "Tendido de cable coaxial RG6 Cu/Cu alta cobertura desde repartidor PAU en RTR hasta nueva toma de usuario TV-FM/SAT con conector F."
+                        def_cant = 1.0
+                        def_unid = "punto"
+                        def_pvp = 48.0
+                    elif "Ethernet" in preset_sel or "Datos" in preset_sel:
+                        def_conc = "Tendido de Cable de Red UTP Cat.6 y Toma RJ45 Adicional (ICT-2)"
+                        def_desc = "Tendido de cable UTP Cat.6 LSZH desde cuadro RTR hasta estancia, crimpado y conectorización de toma mural RJ45 con certificación de continuidad."
+                        def_cant = 1.0
+                        def_unid = "punto"
+                        def_pvp = 52.0
+                    elif "Boletín" in preset_sel or "CIE" in preset_sel:
+                        def_conc = "Tramitación Oficial de Certificado de Instalación Eléctrica (CIE / Boletín)"
+                        def_desc = "Ensayos ITC-BT-05 (aislamiento, disparo diferencial y continuidad), redacción de MTD y tramitación telemática con pago de tasas ante DGEAIM de Murcia."
+                        def_cant = 1.0
+                        def_unid = "ud"
+                        def_pvp = 150.0
                     elif "Detector" in preset_sel:
                         def_conc = "Detector de Presencia PIR 360° Techo"
                         def_desc = "Instalación de sensor crepuscular y de movimiento para encendido automático en pasillos/zonas comunes."
