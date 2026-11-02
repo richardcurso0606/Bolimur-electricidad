@@ -70,6 +70,112 @@ def generar_texto_whatsapp_compra(filas_compra: list, nom_cliente: str, concepto
     return texto
 
 
+def generar_texto_whatsapp_presupuesto(nom_cliente: str, concepto_obra: str, subtotal_siva: float, total_civa: float, iva_pct: float, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, filas_mats: list) -> str:
+    """Genera un mensaje formal de presupuesto para enviar al cliente por WhatsApp."""
+    texto = "⚡ *PRESUPUESTO ELÉCTRICO OFICIAL - BOLIMUR*\n"
+    texto += f"📅 Fecha: {datetime.date.today().strftime('%d/%m/%Y')}\n"
+    texto += f"👤 Cliente: {nom_cliente}\n"
+    texto += f"🛠️ Trabajo: {concepto_obra}\n"
+    texto += "-----------------------------------------\n"
+    texto += f"📦 *Materiales y Aparamenta:* {total_mat:,.2f} €\n"
+    for it in filas_mats[:6]:
+        texto += f"  • {float(it.get('cant', 1.0)):.1f} {it.get('unid', 'ud')} {it.get('mat', '')[:30]} ({float(it.get('subtotal', 0.0)):,.2f} €)\n"
+    if len(filas_mats) > 6:
+        texto += f"  • ... y {len(filas_mats) - 6} partidas adicionales de instalación.\n"
+    texto += f"\n⏱️ *Mano de Obra Instalador REBT:* {horas_mo:.1f}h × {precio_mo:.2f} €/h = {coste_mo:,.2f} €\n"
+    texto += "-----------------------------------------\n"
+    texto += f"💶 *Base Imponible (S/IVA):* {subtotal_siva:,.2f} €\n"
+    if iva_pct == 0.0:
+        texto += f"💰 *TOTAL FACTURA (0% IVA ISP):* {subtotal_siva:,.2f} €\n"
+    else:
+        texto += f"💰 *TOTAL CLIENTE (IVA {iva_pct:.0f}% Inc.):* {total_civa:,.2f} €\n"
+    texto += "-----------------------------------------\n"
+    texto += "✅ Instalación realizada según normativa REBT (RD 842/2002) con garantía oficial.\n"
+    texto += "📞 Bolimur Instalaciones Eléctricas Autorizadas."
+    return texto
+
+
+def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concepto: str, total_mat: float, iva_pct: float, usuario: dict = None) -> bytes:
+    """Genera el PDF oficial de la Orden de Compra clasificado por proveedor."""
+    from modulos import pdf_presupuesto
+    usuario = usuario or {}
+    proyecto_info = {
+        'empresa': usuario.get('nombre_empresa', 'BOLIMUR INSTALACIONES Y REFORMAS'),
+        'proyectista': usuario.get('nombre_instalador', 'Richard Orlando Choque Tejerina'),
+        'nif_cif': usuario.get('nif_cif', 'B-73000000'),
+        'num_licencia_rebt': usuario.get('num_licencia_rebt', 'REBT-30/15892'),
+        'telefono': usuario.get('telefono', '+34 600 000 000'),
+        'cliente': nom_cliente,
+        'direccion': usuario.get('direccion', 'Murcia, España'),
+        'expediente': f"{datetime.date.today().strftime('%Y%m%d')}-OC",
+        'fecha': datetime.date.today().strftime('%d/%m/%Y')
+    }
+    cats = {}
+    for f in filas_compra:
+        p_name = f.get('proveedor', 'Obramat')
+        cat_key = f"PROVEEDOR / TIENDA: {p_name.upper()}"
+        if cat_key not in cats:
+            cats[cat_key] = []
+        cats[cat_key].append({
+            'cant': float(f.get('cant', 1.0)),
+            'unidad': f.get('unid', 'ud'),
+            'descripcion': f.get('mat', ''),
+            'tienda': p_name,
+            'p_unit': float(f.get('p_u', 0.0)),
+            'subtotal': float(f.get('subtotal', 0.0))
+        })
+    cuota = round(total_mat * (iva_pct / 100.0), 2)
+    oc_data = {
+        'total_neto': total_mat,
+        'iva_pct': iva_pct,
+        'cuota_iva': cuota,
+        'total_con_iva': round(total_mat + cuota, 2),
+        'categorias': cats
+    }
+    return pdf_presupuesto.generar_pdf_orden_compra(proyecto_info, oc_data)
+
+
+def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: str, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, subtotal_siva: float, total_civa: float, iva_pct: float, usuario: dict = None) -> bytes:
+    """Genera el presupuesto oficial comercial en PDF con desglose REBT."""
+    from modulos import pdf_presupuesto
+    usuario = usuario or {}
+    proyecto_info = {
+        'empresa': usuario.get('nombre_empresa', 'BOLIMUR INSTALACIONES Y REFORMAS'),
+        'proyectista': usuario.get('nombre_instalador', 'Richard Orlando Choque Tejerina'),
+        'nif_cif': usuario.get('nif_cif', 'B-73000000'),
+        'num_licencia_rebt': usuario.get('num_licencia_rebt', 'REBT-30/15892'),
+        'telefono': usuario.get('telefono', '+34 600 000 000'),
+        'cliente': nom_cliente,
+        'direccion': usuario.get('direccion', 'Murcia, España'),
+        'expediente': f"{datetime.date.today().strftime('%Y%m%d')}-PR",
+        'fecha': datetime.date.today().strftime('%d/%m/%Y')
+    }
+    capitulos = [
+        {
+            'cap': 'CAP-01',
+            'titulo': 'Materiales y Suministro Eléctrico Certificado',
+            'desc': f"Suministro de {len(filas_compra)} partidas normalizadas de conductores, protecciones y canalizaciones.",
+            'importe': total_mat
+        },
+        {
+            'cap': 'CAP-02',
+            'titulo': 'Mano de Obra e Instalación Profesional',
+            'desc': f"Montaje técnico ({horas_mo:.1f} h), tendido, conexionado, timbrado y ensayos reglamentarios según {res.get('norma', 'REBT RD 842/2002')}.",
+            'importe': coste_mo
+        }
+    ]
+    cuota = round(subtotal_siva * (iva_pct / 100.0), 2)
+    pres_data = {
+        'total_neto': subtotal_siva,
+        'iva_pct': iva_pct,
+        'cuota_iva': cuota,
+        'total_con_iva': total_civa,
+        'potencia_kw': 9.2,
+        'capitulos': capitulos
+    }
+    return pdf_presupuesto.generar_pdf_presupuesto(proyecto_info, pres_data)
+
+
 @st.cache_data
 def cargar_df_bd_oficial():
     """Carga la base de datos oficial maestra de precios y proveedores de Bolimur."""
@@ -836,64 +942,77 @@ def renderizar():
                 filas_mats_edit = []
                 acopio_por_tienda = {}
 
+                def cb_cambiar_tienda(idx: int, p_base_calculado: float):
+                    t_sel = st.session_state.get(f"prm_prov_{idx}", "Obramat")
+                    m_txt = st.session_state.get(f"prm_n_{idx}", "")
+                    df_local = cargar_df_bd_oficial()
+                    n_p, n_org = obtener_precio_por_tienda(m_txt, t_sel, p_base_calculado, df_local)
+                    st.session_state[f"prm_p_{idx}"] = float(n_p)
+                    st.session_state[f"prm_orig_{idx}"] = n_org
+
                 for idx_m, m_item in enumerate(mats):
                     info_bd = contrastar_con_bd_oficial(m_item.get("mat", ""), df_bd)
 
+                    key_n = f"prm_n_{idx_m}"
+                    key_prov = f"prm_prov_{idx_m}"
+                    key_c = f"prm_c_{idx_m}"
+                    key_p = f"prm_p_{idx_m}"
+                    key_orig = f"prm_orig_{idx_m}"
+
+                    base_p = float(info_bd["precio_bd"]) if (info_bd["en_bd"] and info_bd["precio_bd"]) else float(m_item.get("p_u", 10.0))
+
+                    if key_n not in st.session_state:
+                        st.session_state[key_n] = m_item.get("mat", "")
+                    if key_c not in st.session_state:
+                        st.session_state[key_c] = float(m_item.get("cant", 1.0))
+                    if key_prov not in st.session_state:
+                        st.session_state[key_prov] = info_bd.get("proveedor", "Obramat")
+                    if key_p not in st.session_state:
+                        st.session_state[key_p] = float(base_p)
+                    if key_orig not in st.session_state:
+                        st.session_state[key_orig] = info_bd["origen"]
+
                     c_m1, c_m2, c_m3, c_m4, c_m5 = st.columns([2.6, 1.8, 0.9, 1.1, 1.1])
                     with c_m1:
-                        key_n = f"prm_n_{idx_m}"
-                        val_n = st.session_state.get(key_n, m_item.get("mat", ""))
-                        n_mat = st.text_input(f"Mat {idx_m}", value=val_n, key=key_n, label_visibility="collapsed")
-                        prov_sel_actual = st.session_state.get(f"prm_prov_{idx_m}", info_bd.get("proveedor", "Obramat"))
-                        query_q = urllib.parse.quote(f"precio {n_mat} {prov_sel_actual}")
+                        n_mat = st.text_input(f"Mat {idx_m}", key=key_n, label_visibility="collapsed")
+                        prov_actual = st.session_state.get(key_prov, "Obramat")
+                        origen_actual = st.session_state.get(key_orig, info_bd["origen"])
+                        pu_actual = float(st.session_state.get(key_p, base_p))
+                        query_q = urllib.parse.quote(f"precio {n_mat} {prov_actual}")
                         url_search = f"https://www.google.com/search?q={query_q}"
 
-                        if info_bd["en_bd"]:
+                        if "BD Oficial" in origen_actual or info_bd["en_bd"]:
                             art_tit = info_bd.get("art_bd", "")
                             st.markdown(
                                 f"<div style='margin-top:-6px; font-size:11px; color:#15803d; font-weight:700;' title='Artículo en BD: {art_tit}'>"
-                                f"🏷️ BD Oficial Bolimur ({info_bd['proveedor']}) · <a href='{url_search}' target='_blank' style='color:#15803d; text-decoration:underline;'>🔍 Comprobar en web</a></div>",
+                                f"🏷️ {origen_actual} ({prov_actual}) · {pu_actual:.2f} € · <a href='{url_search}' target='_blank' style='color:#15803d; text-decoration:underline;'>🔍 Comprobar en web</a></div>",
                                 unsafe_allow_html=True
                             )
                         else:
                             st.markdown(
                                 f"<div style='margin-top:-6px; font-size:11px; color:#0284c7; font-weight:600;'>"
-                                f"🤖 Estimación Mercado IA · <a href='{url_search}' target='_blank' style='color:#0284c7; text-decoration:underline;'>🔍 Verificar en la red</a></div>",
+                                f"🤖 {origen_actual} ({prov_actual}) · {pu_actual:.2f} € · <a href='{url_search}' target='_blank' style='color:#0284c7; text-decoration:underline;'>🔍 Verificar en la red</a></div>",
                                 unsafe_allow_html=True
                             )
 
                     with c_m2:
-                        key_prov = f"prm_prov_{idx_m}"
                         opciones_tiendas = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico", "Suministro Especializado"]
-                        tienda_detectada = info_bd.get("proveedor", "Obramat")
-                        idx_sel = 0
-                        for i_op, op in enumerate(opciones_tiendas):
-                            if tienda_detectada.lower() in op.lower() or op.lower() in tienda_detectada.lower():
-                                idx_sel = i_op
-                                break
-                        prov_sel = st.selectbox(f"Prov {idx_m}", opciones_tiendas, index=idx_sel, key=key_prov, label_visibility="collapsed")
-
-                        # Detección de cambio de tienda para actualizar precio unitario en tiempo real
-                        prev_prov_key = f"prm_prev_prov_{idx_m}"
-                        if prev_prov_key in st.session_state and st.session_state[prev_prov_key] != prov_sel:
-                            base_p = float(info_bd["precio_bd"]) if (info_bd["en_bd"] and info_bd["precio_bd"]) else float(m_item.get("p_u", 10.0))
-                            nuevo_p, _ = obtener_precio_por_tienda(n_mat, prov_sel, base_p, df_bd)
-                            st.session_state[f"prm_p_{idx_m}"] = float(nuevo_p)
-                            st.session_state[prev_prov_key] = prov_sel
-                            st.rerun()
-                        else:
-                            st.session_state[prev_prov_key] = prov_sel
+                        if st.session_state[key_prov] not in opciones_tiendas:
+                            st.session_state[key_prov] = "Obramat"
+                        prov_sel = st.selectbox(
+                            f"Prov {idx_m}",
+                            opciones_tiendas,
+                            key=key_prov,
+                            label_visibility="collapsed",
+                            on_change=cb_cambiar_tienda,
+                            args=(idx_m, base_p)
+                        )
 
                     with c_m3:
-                        key_c = f"prm_c_{idx_m}"
-                        val_c = float(st.session_state.get(key_c, m_item.get("cant", 1.0)))
-                        n_cnt = st.number_input(f"Cant {idx_m}", value=val_c, min_value=0.1, step=1.0, key=key_c, label_visibility="collapsed")
+                        n_cnt = st.number_input(f"Cant {idx_m}", min_value=0.1, step=1.0, key=key_c, label_visibility="collapsed")
 
                     with c_m4:
-                        key_p = f"prm_p_{idx_m}"
-                        p_default = info_bd["precio_bd"] if (info_bd["en_bd"] and info_bd["precio_bd"] and key_p not in st.session_state) else float(m_item.get("p_u", 10.0))
-                        val_p = float(st.session_state.get(key_p, p_default))
-                        n_pu = st.number_input(f"P.U {idx_m}", value=val_p, step=0.5, format="%.2f", key=key_p, label_visibility="collapsed")
+                        n_pu = st.number_input(f"P.U {idx_m}", min_value=0.01, step=0.5, format="%.2f", key=key_p, label_visibility="collapsed")
 
                     with c_m5:
                         sub_m = round(n_cnt * n_pu, 2)
@@ -907,8 +1026,8 @@ def renderizar():
                         "p_u": n_pu,
                         "subtotal": sub_m,
                         "proveedor": prov_sel,
-                        "en_bd": info_bd["en_bd"],
-                        "origen": info_bd["origen"]
+                        "en_bd": ("BD Oficial" in origen_actual),
+                        "origen": origen_actual
                     })
 
                     if prov_sel not in acopio_por_tienda:
@@ -985,26 +1104,94 @@ def renderizar():
             st.markdown("### 🛒 Orden Oficial de Compra y Acopio de Materiales")
             st.caption("Detalle consolidado de compras organizado por proveedor y listo para mostrador de tienda o almacén:")
 
-            # Acciones rápidas: Descargar Excel y WhatsApp
-            c_ord_btn1, c_ord_btn2 = st.columns([1, 1])
-            with c_ord_btn1:
+            usuario_actual = st.session_state.get("usuario_autenticado") or {}
+
+            # Descargas en PDF y Excel
+            st.markdown("##### 📥 Descargas Oficiales en PDF y Excel:")
+            c_pdf1, c_pdf2, c_xlsx = st.columns(3)
+            with c_pdf1:
+                pdf_pres_bytes = generar_pdf_presupuesto_rapido(
+                    res, filas_mats_edit, nom_cliente, horas_mo_val, precio_hora_mo,
+                    coste_mo_calc, total_mat_calc, subtotal_siva, total_civa, iva_pct, usuario_actual
+                )
+                st.download_button(
+                    label="📄 Descargar Presupuesto (PDF)",
+                    data=pdf_pres_bytes,
+                    file_name=f"Presupuesto_{datetime.date.today().strftime('%Y%m%d')}_{nom_cliente[:15].replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="primary",
+                    key="btn_descargar_presupuesto_pdf_rapido"
+                )
+            with c_pdf2:
+                pdf_oc_bytes = generar_pdf_orden_compra_rapida(
+                    filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"),
+                    total_mat_calc, iva_pct, usuario_actual
+                )
+                st.download_button(
+                    label="📦 Descargar Orden Compra (PDF)",
+                    data=pdf_oc_bytes,
+                    file_name=f"Orden_Compra_{datetime.date.today().strftime('%Y%m%d')}_{nom_cliente[:15].replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="btn_descargar_orden_compra_pdf_rapido"
+                )
+            with c_xlsx:
                 excel_bytes = generar_excel_orden_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso Urgente"))
                 st.download_button(
-                    label="📥 Descargar Orden de Compra en Excel (.xlsx)",
+                    label="📊 Descargar Compra (Excel)",
                     data=excel_bytes,
                     file_name=f"Orden_Compra_{datetime.date.today().strftime('%Y%m%d')}_{nom_cliente[:15].replace(' ', '_')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True,
-                    type="primary",
-                    key="btn_descargar_orden_compra_xlsx"
+                    key="btn_descargar_orden_compra_xlsx_rapido"
                 )
-            with c_ord_btn2:
-                txt_wsp = generar_texto_whatsapp_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"), total_mat_calc)
-                with st.popover("📱 Ver y Copiar Lista para WhatsApp / Mostrador", use_container_width=True):
-                    st.text_area("Copia este texto y pégalo en WhatsApp o SMS:", value=txt_wsp, height=220, key="pr_wsp_txt_area")
-                    st.caption("💡 Formato listo para enviar al compañero de furgoneta o al dependiente del almacén.")
 
-            # Tabla formal completa de orden de compra
+            # Envío Directo por WhatsApp solicitando teléfono
+            st.markdown("")
+            with st.container(border=True):
+                st.markdown("##### 📲 Enviar por WhatsApp con 1 Clic:")
+                st.caption("Introduce el número de teléfono móvil al que deseas enviar la orden de compra o el presupuesto (puedes poner los 9 dígitos o incluir prefijo internacional):")
+                
+                txt_wsp_compra = generar_texto_whatsapp_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"), total_mat_calc)
+                txt_wsp_presup = generar_texto_whatsapp_presupuesto(nom_cliente, res.get("concepto", "Aviso"), subtotal_siva, total_civa, iva_pct, horas_mo_val, precio_hora_mo, coste_mo_calc, total_mat_calc, filas_mats_edit)
+                
+                col_w_tel, col_w_b1, col_w_b2 = st.columns([1.8, 1.3, 1.3])
+                with col_w_tel:
+                    tel_wsp_in = st.text_input(
+                        "📱 Número de Teléfono / WhatsApp de Destino:",
+                        placeholder="Ej: 600123456 (o vacío para elegir chat)",
+                        key="pr_tel_wsp_input_box",
+                        help="Escribe el móvil del compañero, tienda de suministros o cliente."
+                    )
+                
+                num_digits = re.sub(r'[^0-9]', '', str(tel_wsp_in).strip())
+                if len(num_digits) == 9 and not num_digits.startswith("34"):
+                    num_digits = "34" + num_digits
+
+                url_wa_compra = f"https://api.whatsapp.com/send?phone={num_digits}&text={urllib.parse.quote(txt_wsp_compra)}" if num_digits else f"https://api.whatsapp.com/send?text={urllib.parse.quote(txt_wsp_compra)}"
+                url_wa_presup = f"https://api.whatsapp.com/send?phone={num_digits}&text={urllib.parse.quote(txt_wsp_presup)}" if num_digits else f"https://api.whatsapp.com/send?text={urllib.parse.quote(txt_wsp_presup)}"
+
+                with col_w_b1:
+                    st.markdown(
+                        f"<a href='{url_wa_compra}' target='_blank' style='display:block; text-align:center; background-color:#25D366; color:white; font-weight:bold; padding:8px 10px; border-radius:6px; text-decoration:none; margin-top:24px; box-shadow:0 1px 3px rgba(0,0,0,0.12);'>"
+                        f"🛒 Enviar Compra a WhatsApp</a>",
+                        unsafe_allow_html=True
+                    )
+                with col_w_b2:
+                    st.markdown(
+                        f"<a href='{url_wa_presup}' target='_blank' style='display:block; text-align:center; background-color:#0284c7; color:white; font-weight:bold; padding:8px 10px; border-radius:6px; text-decoration:none; margin-top:24px; box-shadow:0 1px 3px rgba(0,0,0,0.12);'>"
+                        f"⚡ Enviar Presupuesto al Cliente</a>",
+                        unsafe_allow_html=True
+                    )
+
+                with st.popover("📋 Ver texto formateado de WhatsApp para copiar", use_container_width=True):
+                    st.text_area("Texto Orden de Compra para Tienda / Mostrador:", value=txt_wsp_compra, height=180, key="pr_wsp_compra_copy")
+                    st.text_area("Texto Presupuesto Oficial para Cliente:", value=txt_wsp_presup, height=180, key="pr_wsp_presup_copy")
+
+            # Tabla formal consolidada de la orden de compra ordenada por proveedor
+            st.markdown("")
+            filas_orden_ordenadas = sorted(filas_mats_edit, key=lambda x: (x.get("proveedor", ""), x.get("mat", "")))
             df_orden_view = pd.DataFrame([
                 {
                     "🏬 Tienda / Proveedor": f["proveedor"],
@@ -1015,6 +1202,6 @@ def renderizar():
                     "Origen Tarifa": f["origen"],
                     "Estado Acopio": "⏳ Pendiente"
                 }
-                for f in filas_mats_edit
+                for f in filas_orden_ordenadas
             ])
             st.dataframe(df_orden_view, use_container_width=True, hide_index=True)
