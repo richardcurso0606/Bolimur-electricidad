@@ -78,6 +78,12 @@ except Exception as e:
     errores_import["presupuesto_vivienda"] = traceback.format_exc()
 
 try:
+    from modulos import presupuesto_rapido_ia
+except Exception as e:
+    presupuesto_rapido_ia = None
+    errores_import["presupuesto_rapido_ia"] = traceback.format_exc()
+
+try:
     from modulos import rebt_tablas as rebt
 except Exception as e:
     rebt = None
@@ -1980,6 +1986,7 @@ with st.sidebar:
             "categoria": "📁 GESTIÓN & EXPEDIENTES",
             "items": [
                 ("🏠 Menú Principal", "🏠 Menú Principal"),
+                ("🎙️ Presupuesto Rápido IA & Voz", "🎙️ Presupuesto Rápido IA & Voz"),
                 ("📸 Unifilar por Foto (IA)", "📸 Unifilar por Foto (IA)"),
                 ("👥 Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
                 ("🏛️ Memoria Técnica & Planos (MTD)", "🏛️ Memoria Técnica (MTD 30)"),
@@ -2164,6 +2171,12 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
     c1, c2 = st.columns(2)
     with c1:
         with st.container(border=True):
+            st.subheader("🎙️ Presupuesto Rápido (IA & Dictado por Voz)")
+            st.write("Presupuesta avisos urgentes, reparaciones y obras dictando por micrófono o escribiendo el trabajo. Desglose inmediato de materiales, mano de obra y ajuste con/sin IVA.")
+            if st.button("Abrir Presupuesto Rápido IA", key="btn_home_pres_rapido", type="primary", use_container_width=True):
+                navegar_a_modulo("🎙️ Presupuesto Rápido IA & Voz")
+
+        with st.container(border=True):
             st.subheader("👥 Gestión de Clientes (CRM) y Proyectos")
             st.write("Administra las fichas de tus clientes, datos del suministro, CUPS y asocia proyectos para recuperarlos en 1 clic.")
             if st.button("Abrir Gestión de Clientes", key="btn_home_crm", use_container_width=True):
@@ -2211,6 +2224,14 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("Configura tus datos fiscales, número de carnet REBT, logotipo corporativo y copias de seguridad en la nube.")
             if st.button("Abrir Perfil del Instalador", key="btn_home_prof", use_container_width=True):
                 navegar_a_modulo("👤 Perfil del Instalador")
+
+elif "Presupuesto Rápido" in seleccion_modulo or "🎙️" in seleccion_modulo or "IA & Voz" in seleccion_modulo or "Rapido" in seleccion_modulo:
+    if presupuesto_rapido_ia:
+        presupuesto_rapido_ia.renderizar()
+    else:
+        st.error("Error: El módulo presupuesto_rapido_ia no se pudo importar correctamente.")
+        if "presupuesto_rapido_ia" in errores_import:
+            st.code(errores_import["presupuesto_rapido_ia"])
 
 elif "Consultor IA" in seleccion_modulo or "🤖" in seleccion_modulo:
     if asistente_ia_rebt:
@@ -2280,7 +2301,7 @@ elif "Previsión" in seleccion_modulo or "🏢" in seleccion_modulo or "(Pt)" in
         if "prevision_cargas" in errores_import:
             st.code(errores_import["prevision_cargas"])
 
-elif "LGA" in seleccion_modulo or "Línea General" in seleccion_modulo or "⚡" in seleccion_modulo:
+elif "LGA" in seleccion_modulo or "Línea General" in seleccion_modulo:
     if lga:
         lga.renderizar()
     else:
