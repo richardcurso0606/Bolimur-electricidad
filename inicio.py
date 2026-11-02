@@ -1984,6 +1984,7 @@ with st.sidebar:
                 ("👥 Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
                 ("🏛️ Memoria Técnica & Planos (MTD)", "🏛️ Memoria Técnica (MTD 30)"),
                 ("🏡 Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
+                ("🧑‍🔧 Presupuesto Autónomo (Tutor)", "🧑‍🔧 Presupuesto Autónomo (Tutor)"),
             ]
         },
         {
@@ -2295,7 +2296,17 @@ elif "DI" in seleccion_modulo or "Derivación" in seleccion_modulo or "🔌" in 
         if "di" in errores_import:
             st.code(errores_import["di"])
 
+elif "Autónomo" in seleccion_modulo or "Autonomo" in seleccion_modulo or "🧑‍🔧" in seleccion_modulo:
+    st.session_state['perfil_tarifa_autonomo'] = True
+    if presupuesto_vivienda:
+        presupuesto_vivienda.renderizar()
+    else:
+        st.error("Error: El módulo presupuesto_vivienda no se pudo importar correctamente.")
+        if "presupuesto_vivienda" in errores_import:
+            st.code(errores_import["presupuesto_vivienda"])
+
 elif "Presupuesto" in seleccion_modulo or "🏡" in seleccion_modulo or "Vivienda" in seleccion_modulo:
+    st.session_state['perfil_tarifa_autonomo'] = False
     if presupuesto_vivienda:
         presupuesto_vivienda.renderizar()
     else:
