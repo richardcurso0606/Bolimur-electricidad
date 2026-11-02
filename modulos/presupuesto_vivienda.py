@@ -58,7 +58,8 @@ def exportar_excel_presupuesto(df_comercial, subtotal, iva_pct, cuota_iva, total
             ])
             df_cap.to_excel(writer, sheet_name='Capítulos REBT Presupuesto', index=False)
 
-        df_comercial.to_excel(writer, sheet_name='Desglose por Estancias', index=False)
+        df_est_export = df_comercial if isinstance(df_comercial, pd.DataFrame) else pd.DataFrame(df_comercial)
+        df_est_export.to_excel(writer, sheet_name='Desglose por Estancias', index=False)
 
         if partidas_manuales:
             df_pman = pd.DataFrame([
