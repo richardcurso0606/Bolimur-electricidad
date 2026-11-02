@@ -415,15 +415,15 @@ def renderizar():
     api_key = auditor_ia_rebt.obtener_gemini_api_key()
     tiene_gemini = bool(api_key and len(api_key) > 10)
 
-    # Panel plegable de Configuración de Clave API si no está configurada
+    # Panel de Configuración de Clave API si no está configurada
     if not tiene_gemini:
-        with st.expander("🔑 Activar Transcripción de Voz IA Directa con Google Gemini (Gratuito)", expanded=False):
+        with st.expander("🔑 Activar Transcripción de Voz IA Directa con Google Gemini (Gratuito)", expanded=True):
             st.info("Para que la IA transcriba directamente tu voz a texto en la pantalla, introduce tu clave gratuita de Google Gemini (se obtiene gratis en 1 minuto en [Google AI Studio](https://aistudio.google.com/)).")
-            nueva_key = st.text_input("Clave API de Gemini:", type="password", key="pr_input_gemini_key")
-            if st.button("💾 Guardar Clave API", key="btn_save_gemini_pr"):
+            nueva_key = st.text_input("Pega tu Clave API de Gemini aquí:", type="password", placeholder="AIzaSy...", key="pr_input_gemini_key")
+            if st.button("💾 Guardar Clave API para Siempre", key="btn_save_gemini_pr", type="primary"):
                 if nueva_key.strip():
                     auditor_ia_rebt.guardar_gemini_api_key(nueva_key.strip())
-                    st.success("✅ Clave API guardada con éxito.")
+                    st.success("✅ Clave API guardada con éxito en secrets.toml de forma permanente.")
                     st.rerun()
 
     # 1. Configuración de Mano de Obra y Cliente Rápido
@@ -470,8 +470,21 @@ def renderizar():
                                 st.rerun()
                             else:
                                 st.error(f"Error al transcribir: {res_trans.get('error')}")
-                    else:
-                        st.warning("⚠️ **Clave Gemini no detectada:** Para transcribir audio grabado automáticamente, añade tu clave gratuita de Google Gemini en el panel superior, o utiliza el dictado de Windows (`Win + H`).")
+
+            if not tiene_gemini:
+                st.markdown("---")
+                with st.container(border=True):
+                    st.markdown("🔑 **Pega tu clave gratuita de Google Gemini aquí:**")
+                    st.caption("Obtén tu clave gratis en 1 minuto en [Google AI Studio](https://aistudio.google.com/)")
+                    c_k1, c_k2 = st.columns([2.5, 1.2])
+                    with c_k1:
+                        inline_key = st.text_input("Clave Gemini:", type="password", placeholder="AIzaSy...", key="pr_inline_key_box", label_visibility="collapsed")
+                    with c_k2:
+                        if st.button("💾 Guardar", key="btn_save_inline_box", type="primary", use_container_width=True):
+                            if inline_key.strip():
+                                auditor_ia_rebt.guardar_gemini_api_key(inline_key.strip())
+                                st.success("✅ ¡Guardada para siempre!")
+                                st.rerun()
 
             st.markdown(
                 """
