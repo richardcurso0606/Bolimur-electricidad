@@ -439,6 +439,12 @@ def renderizar():
 
     # 2. Entrada Multimodal: Micrófono de Voz y Texto
     st.markdown("#### 🎙️ Paso 1: Dicta o escribe el trabajo a realizar")
+    st.info(
+        "💡 **Dictado directo por voz más rápido y fiable:**\n\n"
+        "• **En PC (Windows):** Haz clic en la caja de texto izquierda de abajo y pulsa **`Tecla Windows + H`**. Windows activará el micrófono y escribirá en tiempo real lo que digas.\n"
+        "• **En Móvil o Tablet:** Toca la caja de texto y pulsa el **icono de micrófono del teclado** de tu teléfono.\n"
+        "• **Con el grabador web (`Graba tu voz`):** Si usas el botón web inferior, accede mediante `http://localhost:8501` para que el navegador autorice la subida del audio sin restricciones de seguridad de red."
+    )
 
     col_input1, col_input2 = st.columns([3, 2])
 

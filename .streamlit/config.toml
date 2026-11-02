@@ -8,4 +8,5 @@ textColor = "#1e293b"
 [server]
 enableCORS = false
 enableXsrfProtection = false
-maxUploadSize = 50
+maxUploadSize = 200
+maxMessageSize = 200
