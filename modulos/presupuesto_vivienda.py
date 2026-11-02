@@ -2461,7 +2461,7 @@ def app():
         venta_cap6_manuales = sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', []))
 
         # Capítulo de Telecomunicaciones (ICT-2 RD 346/2011)
-        coste_teleco_mat = sum(it["subtotal"] for it in lista_compra_teleco)
+        coste_teleco_mat = sum(it["subtotal"] for it in categorias_orden_compra.get("📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)", []))
         horas_teleco = 3.0  # Instalación y conectorización de RTR, PAUs y tomas
         venta_cap_teleco = (coste_teleco_mat * mult_comercial * mult_garantia_mat) + (horas_teleco * precio_hora * mult_comercial)
 
