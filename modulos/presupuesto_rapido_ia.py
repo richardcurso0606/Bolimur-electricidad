@@ -100,13 +100,13 @@ def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concep
     from modulos import pdf_presupuesto
     usuario = usuario or {}
     proyecto_info = {
-        'empresa': usuario.get('nombre_empresa', 'BOLIMUR INSTALACIONES Y REFORMAS'),
-        'proyectista': usuario.get('nombre_instalador', 'Richard Orlando Choque Tejerina'),
-        'nif_cif': usuario.get('nif_cif', 'B-73000000'),
-        'num_licencia_rebt': usuario.get('num_licencia_rebt', 'REBT-30/15892'),
-        'telefono': usuario.get('telefono', '+34 600 000 000'),
-        'cliente': nom_cliente,
-        'direccion': usuario.get('direccion', 'Murcia, España'),
+        'empresa': usuario.get('nombre_empresa') or 'BOLIMUR INSTALACIONES Y REFORMAS',
+        'proyectista': usuario.get('nombre_instalador') or 'Richard Orlando Choque Tejerina',
+        'nif_cif': usuario.get('nif_cif') or 'B-73000000',
+        'num_licencia_rebt': usuario.get('num_licencia_rebt') or 'REBT-30/15892',
+        'telefono': usuario.get('telefono') or '+34 600 000 000',
+        'cliente': nom_cliente or 'Cliente Particular',
+        'direccion': usuario.get('direccion') or 'Murcia, España',
         'expediente': f"{datetime.date.today().strftime('%Y%m%d')}-OC",
         'fecha': datetime.date.today().strftime('%d/%m/%Y')
     }
@@ -117,10 +117,16 @@ def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concep
         if cat_key not in cats:
             cats[cat_key] = []
         cats[cat_key].append({
+            'cantidad': float(f.get('cant', 1.0)),
             'cant': float(f.get('cant', 1.0)),
             'unidad': f.get('unid', 'ud'),
-            'descripcion': f.get('mat', ''),
+            'desc_exacta': f.get('mat', 'Material Eléctrico'),
+            'articulo': f.get('mat', 'Material Eléctrico'),
+            'descripcion': f.get('mat', 'Material Eléctrico'),
+            'mat': f.get('mat', 'Material Eléctrico'),
+            'proveedor': p_name,
             'tienda': p_name,
+            'precio_unitario': float(f.get('p_u', 0.0)),
             'p_unit': float(f.get('p_u', 0.0)),
             'subtotal': float(f.get('subtotal', 0.0))
         })
@@ -136,17 +142,17 @@ def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concep
 
 
 def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: str, horas_mo: float, precio_mo: float, coste_mo: float, total_mat: float, subtotal_siva: float, total_civa: float, iva_pct: float, usuario: dict = None) -> bytes:
-    """Genera el presupuesto oficial comercial en PDF con desglose REBT."""
+    """Genera el presupuesto oficial comercial en PDF con desglose REBT completo."""
     from modulos import pdf_presupuesto
     usuario = usuario or {}
     proyecto_info = {
-        'empresa': usuario.get('nombre_empresa', 'BOLIMUR INSTALACIONES Y REFORMAS'),
-        'proyectista': usuario.get('nombre_instalador', 'Richard Orlando Choque Tejerina'),
-        'nif_cif': usuario.get('nif_cif', 'B-73000000'),
-        'num_licencia_rebt': usuario.get('num_licencia_rebt', 'REBT-30/15892'),
-        'telefono': usuario.get('telefono', '+34 600 000 000'),
-        'cliente': nom_cliente,
-        'direccion': usuario.get('direccion', 'Murcia, España'),
+        'empresa': usuario.get('nombre_empresa') or 'BOLIMUR INSTALACIONES Y REFORMAS',
+        'proyectista': usuario.get('nombre_instalador') or 'Richard Orlando Choque Tejerina',
+        'nif_cif': usuario.get('nif_cif') or 'B-73000000',
+        'num_licencia_rebt': usuario.get('num_licencia_rebt') or 'REBT-30/15892',
+        'telefono': usuario.get('telefono') or '+34 600 000 000',
+        'cliente': nom_cliente or 'Cliente Particular',
+        'direccion': usuario.get('direccion') or 'Murcia, España',
         'expediente': f"{datetime.date.today().strftime('%Y%m%d')}-PR",
         'fecha': datetime.date.today().strftime('%d/%m/%Y')
     }
@@ -164,6 +170,28 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
             'importe': coste_mo
         }
     ]
+
+    # Partidas desglosadas completas para que el cliente vea cada artículo en el PDF
+    partidas_desglose = [
+        {
+            'concepto': f.get('mat', 'Material Eléctrico'),
+            'descripcion': f"Suministro oficial ({f.get('proveedor', 'Obramat')}) - {f.get('origen', 'Tarifa Oficial')}",
+            'cantidad': float(f.get('cant', 1.0)),
+            'unidad': f.get('unid', 'ud'),
+            'precio_unitario': float(f.get('p_u', 0.0)),
+            'subtotal': float(f.get('subtotal', 0.0))
+        }
+        for f in filas_compra
+    ]
+    partidas_desglose.append({
+        'concepto': 'Mano de Obra Instalador Autorizado REBT',
+        'descripcion': f"Ejecución técnica ({horas_mo:.1f} h), fijaciones, conexionado, verificación y ensayos reglamentarios.",
+        'cantidad': horas_mo,
+        'unidad': 'h',
+        'precio_unitario': precio_mo,
+        'subtotal': coste_mo
+    })
+
     cuota = round(subtotal_siva * (iva_pct / 100.0), 2)
     pres_data = {
         'total_neto': subtotal_siva,
@@ -171,7 +199,9 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         'cuota_iva': cuota,
         'total_con_iva': total_civa,
         'potencia_kw': 9.2,
-        'capitulos': capitulos
+        'capitulos': capitulos,
+        'partidas_manuales': partidas_desglose,
+        'partidas_adicionales': partidas_desglose
     }
     return pdf_presupuesto.generar_pdf_presupuesto(proyecto_info, pres_data)
 
@@ -927,7 +957,7 @@ def renderizar():
                 total_mat_calc = 0.0
 
                 # Encabezados visuales
-                c_h1, c_h2, c_h3, c_h4, c_h5 = st.columns([2.6, 1.8, 0.9, 1.1, 1.1])
+                c_h1, c_h2, c_h3, c_h4, c_h5, c_h6 = st.columns([2.5, 1.7, 0.8, 1.0, 1.0, 0.4])
                 with c_h1:
                     st.caption("Descripción Material y Origen")
                 with c_h2:
@@ -938,6 +968,8 @@ def renderizar():
                     st.caption("P.U. (€)")
                 with c_h5:
                     st.caption("Subtotal")
+                with c_h6:
+                    st.caption("Borrar")
 
                 filas_mats_edit = []
                 acopio_por_tienda = {}
@@ -972,7 +1004,7 @@ def renderizar():
                     if key_orig not in st.session_state:
                         st.session_state[key_orig] = info_bd["origen"]
 
-                    c_m1, c_m2, c_m3, c_m4, c_m5 = st.columns([2.6, 1.8, 0.9, 1.1, 1.1])
+                    c_m1, c_m2, c_m3, c_m4, c_m5, c_m6 = st.columns([2.5, 1.7, 0.8, 1.0, 1.0, 0.4])
                     with c_m1:
                         n_mat = st.text_input(f"Mat {idx_m}", key=key_n, label_visibility="collapsed")
                         prov_actual = st.session_state.get(key_prov, "Obramat")
@@ -1019,6 +1051,24 @@ def renderizar():
                         st.markdown(f"<div style='margin-top:6px; font-weight:bold;'>{sub_m:,.2f} €</div>", unsafe_allow_html=True)
                         total_mat_calc += sub_m
 
+                    with c_m6:
+                        if st.button("🗑️", key=f"btn_del_mat_{idx_m}", help="Eliminar partida"):
+                            mats.pop(idx_m)
+                            for k in list(st.session_state.keys()):
+                                if k.startswith("prm_"):
+                                    del st.session_state[k]
+                            res["materiales"] = mats
+                            st.session_state["pr_resultado_escandallo"] = res
+                            st.rerun()
+
+                    # Sincronización continua con la lista maestra
+                    m_item["mat"] = n_mat
+                    m_item["cant"] = n_cnt
+                    m_item["p_u"] = n_pu
+                    m_item["subtotal"] = sub_m
+                    m_item["proveedor"] = prov_sel
+                    m_item["origen"] = origen_actual
+
                     filas_mats_edit.append({
                         "mat": n_mat,
                         "cant": n_cnt,
@@ -1032,7 +1082,22 @@ def renderizar():
 
                     if prov_sel not in acopio_por_tienda:
                         acopio_por_tienda[prov_sel] = []
-                    acopio_por_tienda[prov_sel].append({"mat": n_mat, "cant": n_cnt, "unid": m_item.get("unid", "ud"), "subtotal": sub_m})
+                    acopio_por_tienda[prov_sel].append({"mat": n_mat, "cant": n_cnt, "unid": m_item.get("unid", "ud"), "p_u": n_pu, "subtotal": sub_m})
+
+                # Botón interactivo para añadir nuevas líneas al escandallo
+                st.markdown("")
+                c_ins1, _ = st.columns([2.5, 4.5])
+                with c_ins1:
+                    if st.button("➕ Insertar Nueva Partida de Material", key="btn_add_mat_row", use_container_width=True):
+                        mats.append({
+                            "mat": "Nueva Partida de Material Eléctrico",
+                            "cant": 1.0,
+                            "unid": "ud",
+                            "p_u": 10.00
+                        })
+                        res["materiales"] = mats
+                        st.session_state["pr_resultado_escandallo"] = res
+                        st.rerun()
 
                 # Lista de Acopio y Compra por Proveedor
                 st.markdown("")

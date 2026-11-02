@@ -739,15 +739,15 @@ def generar_pdf_orden_compra(proyecto_info, orden_compra_data):
         subtotal_cat = 0.0
 
         for art in articulos:
-            cant_val = art.get("cantidad", 1)
+            cant_val = art.get("cantidad") if art.get("cantidad") is not None else art.get("cant", 1)
             cant_txt = f"{cant_val:.2f}" if isinstance(cant_val, float) and not cant_val.is_integer() else f"{int(cant_val)}"
             unidad_txt = str(art.get("unidad", "ud"))
-            desc_txt = str(art.get("desc_exacta", art.get("articulo", "")))
+            desc_txt = str(art.get("desc_exacta") or art.get("articulo") or art.get("descripcion") or art.get("mat") or "")
             if not art.get("en_bd", True) or "NO ENCONTRADO" in desc_txt or "⚠️" in desc_txt:
                 clean_desc = desc_txt.replace("⚠️", "").strip()
                 desc_txt = f"<font color='#b45309'><b>[⚠️ No en BD / Estimado]</b></font> {clean_desc}"
-            tienda_txt = str(art.get("proveedor", "Obramat"))
-            p_unit = float(art.get("precio_unitario", 0.0))
+            tienda_txt = str(art.get("proveedor") or art.get("tienda") or "Obramat")
+            p_unit = float(art.get("precio_unitario") if art.get("precio_unitario") is not None else art.get("p_unit", art.get("p_u", 0.0)))
             subt = float(art.get("subtotal", p_unit * float(cant_val)))
             subtotal_cat += subt
 
