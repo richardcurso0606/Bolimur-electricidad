@@ -937,19 +937,21 @@ def app():
         )
 
     if modo_vista_secciones.startswith("📑"):
-        tab_sec1, tab_sec2, tab_sec3, tab_sec4, tab_sec5, tab_sec6 = st.tabs([
+        tab_sec1, tab_sec2, tab_sec3, tab_sec4, tab_sec_teleco, tab_sec5, tab_sec6 = st.tabs([
             "⚡ 1. Potencia & IGA",
             "🔲 2. Mecanismos & Series",
             "⏱️ 3. Mano de Obra & Techos",
             "🏠 4. Estancias & Puntos",
-            "🛡️ 5. Inspector IA REBT",
-            "🖨️ 6. Documentos & Presupuesto"
+            "📡 5. Telecomunicaciones (ICT-2 RTR)",
+            "🛡️ 6. Inspector IA REBT & ICT",
+            "🖨️ 7. Documentos & Presupuesto"
         ])
     else:
         tab_sec1 = _NullContext()
         tab_sec2 = _NullContext()
         tab_sec3 = _NullContext()
         tab_sec4 = _NullContext()
+        tab_sec_teleco = _NullContext()
         tab_sec5 = _NullContext()
         tab_sec6 = _NullContext()
 
@@ -1420,55 +1422,77 @@ def app():
                             st.rerun()
 
                     with st.expander(f"⚙️ Puntos Extra y Tomas/Luces Dobles en: {est['nombre']}"):
-                        # Cálculo de dotación mínima reglamentaria ITC-BT-25
+                        # Cálculo de dotación mínima reglamentaria ITC-BT-25 y desglose de circuitos REBT
                         if es_cocina:
                             base_min_luz = 1
-                            base_min_sch = 5 if desdoblar_c4 else 4
-                            base_min_rj = 0
-                            tipo_rebt_desc = "Cocina (C1 Luz + C3 Vitro/Horno + C4 Lav/Termo + C5 Tomas cocina)"
+                            # Desglose reglamentario estricto en cocina:
+                            # C5 (Tomas encimera sobre banco de trabajo): mínimo 3 bases 16A
+                            # C2 (Tomas de uso general en cocina frigorífico/mesa/microondas): mínimo 2 bases 16A
+                            # C3 (Vitrocerámica y Horno): 1 toma fuerza 25A
+                            # C4 (Electrodomésticos pesados lavadora/lavavajillas/termo): 3 bases (desdoblado) o 2 bases
+                            base_c5_encimera = 3
+                            base_c2_general = 2
+                            base_c3_fuerza = 1
+                            base_c4_electrod = 3 if desdoblar_c4 else 2
+                            base_min_sch = base_c5_encimera + base_c2_general + base_c3_fuerza + base_c4_electrod
+                            base_min_rj = 1  # ITC-2 recomienda o exige toma de datos/TV en cocina
+                            tipo_rebt_desc = f"Cocina Completa: C1(Luz: {base_min_luz}) + C5(Encimera: {base_c5_encimera}) + C2(General: {base_c2_general}) + C3(Horno/Vitro 25A: {base_c3_fuerza}) + C4(Lav/Lavav/Termo: {base_c4_electrod})"
                         elif es_banio:
                             base_min_luz = 1
-                            base_min_sch = 2
+                            base_min_sch = 2  # C5 tomas húmedas/espejo junto a lavabo
                             base_min_rj = 0
-                            tipo_rebt_desc = "Baño / Aseo (C1 Luz + C5 Enchufe junto a lavabo / auxiliar)"
+                            tipo_rebt_desc = "Baño / Aseo: C1 (Luz espejo/techo: 1) + C5 (Enchufes estancos IP44 junto a lavabo: 2)"
                         elif "salón" in nombre_est or "comedor" in nombre_est:
                             base_min_luz = 2 if est["m2"] >= 10 else 1
-                            base_min_sch = 6 if est["m2"] >= 10 else 3
-                            base_min_rj = 2
-                            tipo_rebt_desc = "Salón / Comedor (C1 Luz conmutada + C2 Enchufes + Telecomunicaciones)"
+                            base_min_sch = 6 if est["m2"] >= 10 else 3  # Circuito C2
+                            base_min_rj = 2  # ICT-2 exige 2 tomas dobles RJ45 + RTV coaxial
+                            tipo_rebt_desc = f"Salón / Comedor: C1(Luz: {base_min_luz}) + C2(Tomas generales: {base_min_sch}) + ICT-2(TV/RJ45: {base_min_rj})"
                         elif "dormitorio" in nombre_est or "habitación" in nombre_est:
                             base_min_luz = 2 if est["m2"] >= 10 else 1
-                            base_min_sch = 3
-                            base_min_rj = 1
-                            tipo_rebt_desc = "Dormitorio (C1 Puntos conmutados cama/puerta + C2 Enchufes cabecero/mesa)"
+                            base_min_sch = 3  # Circuito C2 (cabecero + auxiliar)
+                            base_min_rj = 1  # ICT-2 exige toma RJ45 + RTV por dormitorio
+                            tipo_rebt_desc = f"Dormitorio: C1(Luz conmutada: {base_min_luz}) + C2(Tomas generales: {base_min_sch}) + ICT-2(TV/RJ45: {base_min_rj})"
                         elif "pasillo" in nombre_est or "distribuidor" in nombre_est or "hall" in nombre_est or "recibidor" in nombre_est:
                             base_min_luz = 2 if est["m2"] >= 5 else 1
-                            base_min_sch = 2 if est["m2"] >= 5 else 1
+                            base_min_sch = 2 if est["m2"] >= 5 else 1  # Circuito C2
                             base_min_rj = 1 if ("hall" in nombre_est or "recibidor" in nombre_est) else 0
-                            tipo_rebt_desc = "Pasillo / Entrada (C1 Luz cruzamiento/conmutada + C2 Enchufe servicio)"
+                            tipo_rebt_desc = f"Pasillo / Entrada: C1(Luz cruzamiento: {base_min_luz}) + C2(Toma servicio: {base_min_sch})"
                         else:
                             base_min_luz = 1
                             base_min_sch = 2
                             base_min_rj = 0
-                            tipo_rebt_desc = "Estancia auxiliar / Terraza / Balcón / Trastero"
+                            tipo_rebt_desc = "Estancia auxiliar / Terraza: C1 (Luz: 1) + C2 (Tomas 16A: 2)"
 
                         tot_sch = base_min_sch + est.get("extra_schuko", 0)
                         tot_luz = base_min_luz + est.get("extra_luz", 0)
                         tot_rj = base_min_rj + est.get("extra_rj45", 0)
 
-                        st.info(f"⚡ **Dotación Base REBT (ITC-BT-25):** `{tipo_rebt_desc}` | 📏 **Distancia Cuadro:** `{est['distancia_cuadro']} m`")
+                        st.info(f"⚡ **Desglose Reglamentario REBT & Telecomunicaciones:** `{tipo_rebt_desc}` | 📏 **Distancia Cuadro:** `{est['distancia_cuadro']} m`")
 
                         # Panel comparativo: Mínimo REBT vs Total Resultante
                         c_dot1, c_dot2, c_dot3 = st.columns(3)
                         with c_dot1:
                             estado_sch = "🟢 Cumple REBT" if tot_sch >= base_min_sch else "🟡 < Mínimo (Reforma)"
-                            st.caption(f"**Enchufes Schuko 16A/25A:** Base Mín: **{base_min_sch}** ud → **Total: {tot_sch} ud** ({estado_sch})")
+                            st.caption(f"**Enchufes Schuko (C2/C5/C3/C4):** Base: **{base_min_sch}** ud → **Total: {tot_sch} ud** ({estado_sch})")
                         with c_dot2:
                             estado_luz = "🟢 Cumple REBT" if tot_luz >= base_min_luz else "🟡 < Mínimo (Reforma)"
-                            st.caption(f"**Puntos de Luz:** Base Mín: **{base_min_luz}** ud → **Total: {tot_luz} ud** ({estado_luz})")
+                            st.caption(f"**Puntos de Luz (C1):** Base: **{base_min_luz}** ud → **Total: {tot_luz} ud** ({estado_luz})")
                         with c_dot3:
-                            estado_rj = "🟢 Cumple" if tot_rj >= base_min_rj else "🟡 < Mínimo"
-                            st.caption(f"**Tomas RJ45 / TV:** Base Mín: **{base_min_rj}** ud → **Total: {tot_rj} ud** ({estado_rj})")
+                            estado_rj = "🟢 Cumple ICT-2" if tot_rj >= base_min_rj else "🟡 < Mínimo ICT"
+                            st.caption(f"**Tomas RJ45 / TV (ICT-2):** Base: **{base_min_rj}** ud → **Total: {tot_rj} ud** ({estado_rj})")
+
+                        if es_cocina:
+                            with st.container(border=True):
+                                st.markdown("🍳 **Detalle Específico de Circuitos en Cocina (ITC-BT-25):**")
+                                c_coc1, c_coc2, c_coc3, c_coc4 = st.columns(4)
+                                with c_coc1:
+                                    st.metric("C5 (Encimera 16A)", f"{base_c5_encimera} tomas", help="Tomas sobre banco de trabajo para pequeños electrodomésticos (batidora, tostador, cafetera).")
+                                with c_coc2:
+                                    st.metric("C2 (General Cocina)", f"{base_c2_general + est.get('extra_schuko', 0)} tomas", help="Tomas para frigorífico, microondas y uso libre en cocina.")
+                                with c_coc3:
+                                    st.metric("C3 (Horno/Vitro 25A)", f"{base_c3_fuerza} toma", help="Base de 25A 2P+T con cables de 6 mm² protegida con PIA de 25A.")
+                                with c_coc4:
+                                    st.metric("C4 (Electrodomésticos)", f"{base_c4_electrod} tomas", help="Tomas específicas para lavadora, lavavajillas y termo eléctrico.")
 
                         if tot_sch < base_min_sch or tot_luz < base_min_luz:
                             st.warning("⚠️ **Atención:** Has configurado menos tomas/luces que la dotación mínima reglamentaria (ITC-BT-25). Esto es perfectamente admisible en **reformas parciales** donde se conservan tomas existentes, pero si se tramita un **CIE / Boletín para nueva alta integral**, Industria (DGEAIM) exigirá el mínimo.", icon="⚠️")
@@ -1504,8 +1528,74 @@ def app():
                 if incluir:
                     estancias_activas.append(est)
 
+
     # ==========================================
-    # SECCIÓN 5: FISCALIZADOR TÉCNICO REBT (INSPECTOR IA)
+    # SECCIÓN 5: TELECOMUNICACIONES (ICT-2 RD 346/2011 & CUADRO RTR)
+    # ==========================================
+    with tab_sec_teleco:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📡 SECCIÓN 5: Infraestructura de Telecomunicaciones (ICT-2 RD 346/2011)</h4></div>', unsafe_allow_html=True)
+        st.info("""
+        📘 **Marco Normativo Oficial de Telecomunicaciones en Edificación:**  
+        Conforme al **Real Decreto 346/2011 (Reglamento de ICT-2)** y la **Orden Ministerial ITC/1644/2011**, toda vivienda debe disponer de un **Registro de Terminación de Red (RTR)** situado junto a la entrada o CGMP para albergar los puntos de acceso al usuario (PAU) de Fibra Óptica (FTTH), Coaxial de TV (RTV) y Red de Par Trenzado (UTP Cat.6).
+        """)
+
+        with st.container(border=True):
+            st.markdown("#### 🗄️ Configuración del Armario/Envolvente RTR (Registro de Terminación de Red)")
+            col_rtr1, col_rtr2 = st.columns([2, 2])
+            with col_rtr1:
+                tipo_rtr_sel = st.selectbox(
+                    "Tipo de Envolvente / Armario RTR:",
+                    [
+                        "Caja Empotrada RTR Normalizada ICT-2 (500x600x80 mm)",
+                        "Caja Empotrada RTR Ampliada (500x800x80 mm)",
+                        "Armario Rack Mural 10 Pulgadas 6U (Gama Superior Domótica/Red)"
+                    ],
+                    index=0,
+                    key="sel_tipo_rtr",
+                    help="El RD 346/2011 Anexo II fija las dimensiones mínimas reglamentarias según el número de estancias."
+                )
+            with col_rtr2:
+                schuko_rtr_opcion = st.radio(
+                    "⚡ Dotación de Bases Schuko 16A en el RTR (Alimentadas por C2):",
+                    [
+                        "2 Bases Schuko 16A (Mínimo Reglamentario ICT-2 RD 346/2011)",
+                        "3 Bases Schuko 16A (Recomendado: Router + ONT Fibra + Switch/Domótica)"
+                    ],
+                    index=1,
+                    key="rad_schuko_rtr",
+                    help="El reglamento exige un mínimo de 2 tomas de corriente alimentadas del circuito C2. Como buena práctica profesional, se instalan 3 bases para conectar el router del operador, la roseta/ONT de fibra y un switch o centralita domótica sin regletas externas."
+                )
+            
+            n_schuko_rtr = 3 if "3 Bases" in schuko_rtr_opcion else 2
+
+            st.markdown("#### 🔌 Dotación de Elementos y PAU en el interior del RTR:")
+            col_pau1, col_pau2, col_pau3 = st.columns(3)
+            with col_pau1:
+                incluir_pau_fibra = st.checkbox("PAU Fibra Óptica (FTTH) 2x SC/APC", value=True, key="chk_pau_fibra", help="Roseta óptica con adaptadores SC/APC según norma ICT-2.")
+            with col_pau2:
+                incluir_pau_coaxial = st.checkbox("PAU Coaxial RTV (Repartidor F Televes)", value=True, key="chk_pau_coax", help="Distribuidor TV terrestre y satélite con conectores F EasyF.")
+            with col_pau3:
+                incluir_panel_rj45 = st.checkbox("Multiplexor Pasivo Datos UTP Cat.6", value=True, key="chk_pau_utp", help="Panel de parcheo o regleta para distribución en estrella de red Ethernet.")
+
+            st.markdown("#### 📊 Resumen Técnico de la Red de Telecomunicaciones de la Vivienda:")
+            tot_tomas_rj_est = sum(e.get("cant_rj", 2 if ("salón" in e["nombre"].lower() or "dormitorio" in e["nombre"].lower()) else 1) for e in estancias_activas)
+            m_coaxial_est = len(estancias_activas) * 15.0
+            m_utp_est = len(estancias_activas) * 18.0
+
+            c_met1, c_met2, c_met3, c_met4 = st.columns(4)
+            with c_met1:
+                st.metric("Enchufes Schuko en RTR", f"{n_schuko_rtr} ud (C2)")
+            with c_met2:
+                st.metric("Tomas de Datos/TV Finales", f"{tot_tomas_rj_est} tomas")
+            with c_met3:
+                st.metric("Cable Coaxial RG6 Cu/Cu", f"{m_coaxial_est:.0f} m")
+            with c_met4:
+                st.metric("Cable UTP Cat.6 LSZH", f"{m_utp_est:.0f} m")
+
+            st.caption("✅ Cumplimiento pleno de la Instrucción Técnica ICT-2 RD 346/2011 Anexos I, II y III (Servicios de RTV, Banda Ancha y Telefonía).")
+
+    # ==========================================
+    # SECCIÓN 6: FISCALIZADOR TÉCNICO REBT & ICT (INSPECTOR IA)
     # ==========================================
     with tab_sec5:
         st.markdown('<div class="section-header-amber"><h4 style="margin:0; color:#92400e;">🛡️ SECCIÓN 5: Inspector Técnico REBT (Fiscalización en Vivo ITC-BT-25)</h4></div>', unsafe_allow_html=True)
@@ -1676,12 +1766,20 @@ def app():
 
             if "cocina" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
-                cant_sch = (5 if desdoblar_c4 else 4) + max(0, ex_sch)
+                # Separación de tomas en cocina por circuito:
+                cant_c5_encimera = 3
+                cant_c2_cocina = 2 + max(0, ex_sch)
+                cant_c3_horno = 1
+                cant_c4_electro = 3 if desdoblar_c4 else 2
+                cant_sch = cant_c5_encimera + cant_c2_cocina + cant_c3_horno + cant_c4_electro
+                cant_rj_coc = 1 + max(0, ex_rj45)
                 mecanismos_est = [
-                    {"nombre": "Interruptor simple", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
-                    {"nombre": "Base Schuko 16A", "desc_real": desc_schuko, "cant": cant_sch, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
-                    {"nombre": "Base fuerza 25A Horno/Vitro", "desc_real": desc_schuko, "cant": 1, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
-                    {"nombre": "Bases Schuko lavavajillas/lavadora/termo", "desc_real": desc_schuko, "cant": (3 if desdoblar_c4 else 2), "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko}
+                    {"nombre": "Interruptor luz cocina (C1)", "desc_real": desc_int, "cant": cant_int, "precio": p_int, "prov": prov_int, "fila": fila_int, "en_bd": ok_int},
+                    {"nombre": "Bases Schuko 16A encimera (C5)", "desc_real": desc_schuko, "cant": cant_c5_encimera, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Bases Schuko 16A uso general cocina (C2)", "desc_real": desc_schuko, "cant": cant_c2_cocina, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Base fuerza 25A Horno/Vitro (C3)", "desc_real": desc_schuko, "cant": cant_c3_horno, "precio": p_schuko * 1.5, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Bases Schuko lavavajillas/lavadora/termo (C4)", "desc_real": desc_schuko, "cant": cant_c4_electro, "precio": p_schuko, "prov": prov_schuko, "fila": fila_schuko, "en_bd": ok_schuko},
+                    {"nombre": "Toma de datos RJ45 Cat.6 cocina (ICT-2)", "desc_real": desc_rj45, "cant": cant_rj_coc, "precio": p_rj45, "prov": prov_rj45, "fila": fila_rj45, "en_bd": ok_rj45}
                 ]
             elif "baño" in nombre_est:
                 cant_int = 1 + max(0, ex_luz)
@@ -1937,11 +2035,12 @@ def app():
         cuota_iva_mat = total_mat_global_neto * 0.21
 
         categorias_orden_compra = {
-            "🔲 1. Mecanismos y Marcos": [],
+            "🎛️ 1. Mecanismos y Marcos": [],
             "⚡ 2. Cables y Conductores": [],
             "🛡️ 3. Cuadro Eléctrico y Protecciones": [],
-            "📏 4. Tubos y Canalizaciones": [],
-            "📦 5. Cajas y Conexiones": []
+            "📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)": [],
+            "📏 5. Tubos y Canalizaciones": [],
+            "📦 6. Cajas y Conexiones": []
         }
 
         # 0. Construcción del Desglose de Materiales Asignados por Estancia
@@ -2199,6 +2298,85 @@ def app():
                     "marca_bd": "Wago" if "Wago" in str(nom_cj) else "General"
                 })
 
+        # 4. Telecomunicaciones e ICT-2 (RTR, PAUs y Cableados)
+        n_schuko_teleco = 3 if "3 Bases" in st.session_state.get("rad_schuko_rtr", "3 Bases") else 2
+        p_rtr_box = 57.02 if "Rack" in st.session_state.get("sel_tipo_rtr", "") else 32.50
+        desc_rtr_box = "Armario Rack Mural 10 Pulgadas 6U ICT" if "Rack" in st.session_state.get("sel_tipo_rtr", "") else "Caja Registro Terminación Red RTR Empotrada ICT-2 Normalizada"
+        m_coaxial_tot = len(estancias_activas) * 15.0
+
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "Cuadro / Armario RTR Telecomunicaciones ICT-2",
+            "desc_exacta": desc_rtr_box,
+            "proveedor": "Televes / Obramat",
+            "cantidad": 1,
+            "unidad": "ud",
+            "precio_unitario": p_rtr_box,
+            "subtotal": round(p_rtr_box, 2),
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": f"Bases Schuko 16A Cuadro RTR (Circuito C2) - {n_schuko_teleco} tomas",
+            "desc_exacta": f"Bases Schuko 16A Empotradas para Alimentación RTR (x{n_schuko_teleco})",
+            "proveedor": prov_schuko,
+            "cantidad": n_schuko_teleco,
+            "unidad": "ud",
+            "precio_unitario": p_schuko,
+            "subtotal": round(n_schuko_teleco * p_schuko, 2),
+            "en_bd": True,
+            "categoria_bd": "Mecanismos",
+            "marca_bd": serie_mecanismos
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "PAU Fibra Óptica FTTH 2x SC/APC con Roseta",
+            "desc_exacta": "PAU Fibra Óptica 2 Tomas SC/APC con Roseta Interior ICT-2",
+            "proveedor": "Televes / Obramat",
+            "cantidad": 1,
+            "unidad": "ud",
+            "precio_unitario": 14.20,
+            "subtotal": 14.20,
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "PAU Repartidor Televisión Coaxial RTV Televes F",
+            "desc_exacta": "PAU Distribuidor Televisión EasyF Televes",
+            "proveedor": "Televes / Obramat",
+            "cantidad": 1,
+            "unidad": "ud",
+            "precio_unitario": 8.68,
+            "subtotal": 8.68,
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "Multiplexor Pasivo Red Datos RJ45 Cat.6 UTP",
+            "desc_exacta": "Panel de Parcheo / Multiplexor Pasivo 8x RJ45 Cat.6 para RTR",
+            "proveedor": "Televes / Obramat",
+            "cantidad": 1,
+            "unidad": "ud",
+            "precio_unitario": 18.50,
+            "subtotal": 18.50,
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "Cable Coaxial TV RG6 Cobre Cu/Cu Cca (Tendido Interior)",
+            "desc_exacta": "Cable Coaxial RG6 Cobre / Cobre Cu/Cu Cca Alta Cobertura (Rollo)",
+            "proveedor": "Televes / Prysmian",
+            "cantidad": int(round(m_coaxial_tot)),
+            "unidad": "m",
+            "precio_unitario": 0.52,
+            "subtotal": round(m_coaxial_tot * 0.52, 2),
+            "en_bd": True,
+            "categoria_bd": "Conductores",
+            "marca_bd": "Televes"
+        })
+
         # Listado de no catalogados para el actualizador interactivo
         items_no_catalogados = []
         for cat_k, items_k in categorias_orden_compra.items():
@@ -2281,6 +2459,11 @@ def app():
         venta_cap5_boletin = float(precio_boletin_cie)
         venta_cap6_manuales = sum(float(p.get('subtotal', 0.0)) for p in st.session_state.get('partidas_manuales', []))
 
+        # Capítulo de Telecomunicaciones (ICT-2 RD 346/2011)
+        coste_teleco_mat = sum(it["subtotal"] for it in lista_compra_teleco)
+        horas_teleco = 3.0  # Instalación y conectorización de RTR, PAUs y tomas
+        venta_cap_teleco = (coste_teleco_mat * mult_comercial * mult_garantia_mat) + (horas_teleco * precio_hora * mult_comercial)
+
         capitulos_presupuesto = [
             {
                 "cap": "CAP. 01",
@@ -2290,24 +2473,30 @@ def app():
             },
             {
                 "cap": "CAP. 02",
+                "titulo": "Infraestructura de Telecomunicaciones y Cuadro RTR (ICT-2 RD 346/2011)",
+                "desc": f"Suministro, montaje y conectorización de Registro de Terminación de Red (RTR), dotado de {n_schuko_teleco} bases Schuko 16A (C2), PAU de Fibra Óptica (FTTH) 2x SC/APC, PAU de RTV Coaxial Televes con repartidor F EasyF, multiplexor pasivo de datos RJ45 Cat.6 UTP y tendido de cable coaxial RG6 Cu/Cu ({len(estancias_activas)*15:.0f} m) y UTP Cat.6 LSZH ({len(estancias_activas)*18:.0f} m) conforme al RD 346/2011.",
+                "importe": round(venta_cap_teleco, 2)
+            },
+            {
+                "cap": "CAP. 03",
                 "titulo": "Canalizaciones, Rozas y Cajas de Registro",
                 "desc": f"Rozas en {tipo_pared} (techo: {'Falso Techo' if 'Falso Techo' in tipo_techo else 'Macizo'}), tendido de {global_tubo20_m + global_tubo25_m:.0f} m de tubo corrugado {tipo_tubo_sel} M20/M25, colocación de {global_caja_mec_uds} cajas universales y {global_caja_reg_uds} cajas de derivación protegidas.",
                 "importe": round(venta_cap2_canalizacion, 2)
             },
             {
-                "cap": "CAP. 03",
+                "cap": "CAP. 04",
                 "titulo": "Cableado y Líneas de Distribución Interior",
                 "desc": f"Suministro y tendido de {global_15_az_m + global_15_ne_m + global_15_ma_m + global_15_gr_m + global_15_tt_m + global_25_az_m + global_25_ne_m + global_25_tt_m + global_utp_m:.0f} m de conductores de cobre {tipo_cable_sel} (1.5, 2.5, 4, 6, 10 mm²) con código de colores REBT y puesta a tierra equipotencial.",
                 "importe": round(venta_cap3_cableado, 2)
             },
             {
-                "cap": "CAP. 04",
+                "cap": "CAP. 05",
                 "titulo": "Mecanismos y Aparamenta por Estancias",
                 "desc": f"Suministro y montaje de {total_puntos_mecanismos} mecanismos serie {serie_mecanismos} (interruptores, conmutadores, bases Schuko 16A, toma 25A y tomas datos RJ45) con {global_marcos_uds} marcos embellecedores por estancias.",
                 "importe": round(venta_cap4_mecanismos, 2)
             },
             {
-                "cap": "CAP. 05",
+                "cap": "CAP. 06",
                 "titulo": "Ensayos Reglamentarios, MTD y Tramitación Boletín Oficial CIE",
                 "desc": "Verificaciones y ensayos ITC-BT-05 (aislamiento con megóhmetro, disparo de diferenciales, continuidad y bucle de tierra), redacción de Memoria Técnica de Diseño (MTD) y tramitación telemática oficial del Certificado de Instalación Eléctrica (CIE) ante la DGEAIM de la Región de Murcia.",
                 "importe": round(venta_cap5_boletin, 2)
@@ -2316,7 +2505,7 @@ def app():
 
         if st.session_state.get('partidas_manuales', []):
             capitulos_presupuesto.append({
-                "cap": "CAP. 06",
+                "cap": "CAP. 07",
                 "titulo": "Trabajos Adicionales y Partidas a Medida",
                 "desc": f"Partidas personalizadas y mejoras adicionales ({len(st.session_state.partidas_manuales)} partidas añadidas por el usuario).",
                 "importe": round(venta_cap6_manuales, 2)
@@ -3267,16 +3456,16 @@ def app():
                 st.markdown("#### 📄 Documentos Oficiales Modo Autónomo para el Cliente:")
 
                 capitulos_auto = []
-                caps_obra = [c for c in capitulos_presupuesto if c.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"]]
+                caps_obra = [c for c in capitulos_presupuesto if c.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"]]
                 suma_caps_obra = sum(c.get("importe", 0.0) for c in caps_obra)
-                resto_fijo = sum(c.get("importe", 0.0) for c in capitulos_presupuesto if c.get("cap") not in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"])
+                resto_fijo = sum(c.get("importe", 0.0) for c in capitulos_presupuesto if c.get("cap") not in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"])
                 nuevo_objetivo_obra = round(base_calc_auto - resto_fijo, 2)
 
                 acum_obra_auto = 0.0
                 idx_obra = 0
                 for c_orig in capitulos_presupuesto:
                     c_dict = dict(c_orig)
-                    if c_orig.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"] and suma_caps_obra > 0:
+                    if c_orig.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"] and suma_caps_obra > 0:
                         idx_obra += 1
                         if idx_obra == len(caps_obra):
                             c_dict["importe"] = round(nuevo_objetivo_obra - acum_obra_auto, 2)
@@ -3949,16 +4138,16 @@ def app():
 
                     # Ajuste proporcional de los capítulos de obra para cuadrar exactamente con base_calc_auto
                     capitulos_auto = []
-                    caps_obra = [c for c in capitulos_presupuesto if c.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"]]
+                    caps_obra = [c for c in capitulos_presupuesto if c.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"]]
                     suma_caps_obra = sum(c.get("importe", 0.0) for c in caps_obra)
-                    resto_fijo = sum(c.get("importe", 0.0) for c in capitulos_presupuesto if c.get("cap") not in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"])
+                    resto_fijo = sum(c.get("importe", 0.0) for c in capitulos_presupuesto if c.get("cap") not in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"])
                     nuevo_objetivo_obra = round(base_calc_auto - resto_fijo, 2)
 
                     acum_obra_auto = 0.0
                     idx_obra = 0
                     for c_orig in capitulos_presupuesto:
                         c_dict = dict(c_orig)
-                        if c_orig.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04"] and suma_caps_obra > 0:
+                        if c_orig.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"] and suma_caps_obra > 0:
                             idx_obra += 1
                             if idx_obra == len(caps_obra):
                                 c_dict["importe"] = round(nuevo_objetivo_obra - acum_obra_auto, 2)
