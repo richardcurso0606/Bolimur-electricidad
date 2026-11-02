@@ -3304,49 +3304,82 @@ def app():
                                     st.rerun()
 
                     # -------------------------------------------------------------
-                    # SUB-PESTAÑA 3: AJUSTADOR A PRESUPUESTO OBJETIVO DEL CLIENTE
+                    # SUB-PESTAÑA 3: AJUSTADOR A PRESUPUESTO OBJETIVO (CON IVA O SIN IVA)
                     # -------------------------------------------------------------
                     with tab_p_target:
                         st.markdown("##### 🎯 Ajustar a Presupuesto Objetivo de Venta (Negociación Comercial):")
-                        st.caption("Si el cliente te pide un precio cerrado (ej: 2.500 €), introduce el valor y el sistema calculará el ajuste y factor de descuento exacto:")
+                        st.caption("Negocia con el cliente en precio cerrado ya sea **Base Imponible (Sin IVA)** o **Total Factura (Con IVA)**:")
+
+                        modo_ajuste_iva = st.radio(
+                            "Modalidad de Negociación del Precio Objetivo:",
+                            [
+                                "💰 Precio Objetivo CON IVA (Total a pagar por cliente particular)",
+                                "💼 Precio Objetivo SIN IVA / Base Imponible (Facturación entre empresas / autónomos / subcontrata)"
+                            ],
+                            index=0,
+                            key="rad_modo_ajuste_iva"
+                        )
+                        es_modo_con_iva = "CON IVA" in modo_ajuste_iva
 
                         col_tar1, col_tar2 = st.columns([2, 2])
                         with col_tar1:
-                            target_total_civa = st.number_input(
-                                "Total Objetivo Deseado (Con IVA €):",
-                                min_value=100.0,
-                                value=float(round(total_cliente, 2)),
-                                step=50.0,
-                                format="%.2f",
-                                key="num_target_civa_in"
-                            )
+                            if es_modo_con_iva:
+                                target_val = st.number_input(
+                                    "Total Objetivo Deseado (CON IVA €):",
+                                    min_value=50.0,
+                                    value=float(round(total_cliente, 2)),
+                                    step=50.0,
+                                    format="%.2f",
+                                    key="num_target_civa_in",
+                                    help="Importe final cerrado con impuestos incluidos."
+                                )
+                                actual_ref = total_cliente
+                                dif_objetivo = target_val - actual_ref
+                                sub_dif_siva = round(dif_objetivo / (1 + (iva_sel / 100.0)), 2)
+                                txt_ref_actual = f"Presupuesto Actual (C/IVA): {actual_ref:,.2f} €"
+                                txt_target_desc = f"precio cerrado de {target_val:,.2f} € (IVA incl.)"
+                            else:
+                                target_val = st.number_input(
+                                    "Total Objetivo Deseado (SIN IVA / Base Imponible €):",
+                                    min_value=50.0,
+                                    value=float(round(subtotal_general_neto, 2)),
+                                    step=50.0,
+                                    format="%.2f",
+                                    key="num_target_siva_in",
+                                    help="Base imponible antes de impuestos (inversión de sujeto pasivo o empresa)."
+                                )
+                                actual_ref = subtotal_general_neto
+                                dif_objetivo = target_val - actual_ref
+                                sub_dif_siva = round(dif_objetivo, 2)
+                                txt_ref_actual = f"Base Imponible Actual (S/IVA): {actual_ref:,.2f} €"
+                                txt_target_desc = f"precio cerrado de {target_val:,.2f} € (Sin IVA / Base Imponible)"
+
                         with col_tar2:
-                            dif_objetivo = target_total_civa - total_cliente
-                            pct_dif_obj = (dif_objetivo / total_cliente * 100.0) if total_cliente > 0 else 0.0
+                            pct_dif_obj = (dif_objetivo / actual_ref * 100.0) if actual_ref > 0 else 0.0
                             color_obj = "#10b981" if dif_objetivo >= 0 else "#f59e0b"
                             st.markdown(f"""
                             <div style="background-color: #f8fafc; border: 1.5px solid {color_obj}; border-radius: 8px; padding: 10px; margin-top: 5px;">
-                                <div style="font-size: 13px; color: #475569;"><b>Presupuesto Actual Calculado:</b> {total_cliente:,.2f} €</div>
+                                <div style="font-size: 13px; color: #475569;"><b>{txt_ref_actual}</b></div>
                                 <div style="font-size: 14px; color: {color_obj}; font-weight: bold; margin-top: 2px;">
-                                    Diferencia Comercial: {dif_objetivo:+,.2f} € ({pct_dif_obj:+.1f}%)
+                                    Diferencia a Ajustar: {dif_objetivo:+,.2f} € ({pct_dif_obj:+.1f}%)
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
 
                         if abs(dif_objetivo) >= 1.0:
-                            if st.button("⚖️ Aplicar Ajuste Automático al Presupuesto como Descuento/Bonificación", type="primary", key="btn_apply_target_partida"):
-                                sub_dif_siva = round(dif_objetivo / (1 + (iva_sel / 100.0)), 2)
+                            tipo_ajuste_btn = "Bonificación / Descuento" if dif_objetivo < 0 else "Partida de Ajuste / Incremento"
+                            if st.button(f"⚖️ Aplicar Ajuste Automático al Presupuesto ({sub_dif_siva:+,.2f} € S/IVA)", type="primary", key="btn_apply_target_partida"):
                                 st.session_state.partidas_manuales.append({
                                     "id": f"PM-{len(st.session_state.partidas_manuales) + 1:02d}",
                                     "concepto": "Ajuste Comercial / Descuento Negociado en Obra",
-                                    "descripcion": f"Bonificación / ajuste comercial acordado con el cliente para precio cerrado de {target_total_civa:,.2f} € (IVA incl.)",
+                                    "descripcion": f"Ajuste comercial acordado con el cliente para {txt_target_desc}",
                                     "cantidad": 1.0,
                                     "unidad": "partida",
                                     "precio_unitario": sub_dif_siva,
                                     "subtotal": sub_dif_siva
                                 })
                                 st.session_state.presupuesto_calculado = True
-                                st.success(f"✅ Ajuste comercial de {sub_dif_siva:+,.2f} € aplicado al presupuesto para cuadrar a {target_total_civa:,.2f} €!")
+                                st.success(f"✅ Ajuste de {sub_dif_siva:+,.2f} € (S/IVA) aplicado con éxito al presupuesto!")
                                 st.rerun()
 
                     # -------------------------------------------------------------
