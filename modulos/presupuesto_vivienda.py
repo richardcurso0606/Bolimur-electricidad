@@ -3043,7 +3043,7 @@ def app():
                 # =========================================================================
                 # GESTOR INTERACTIVO DE TRABAJOS ADICIONALES Y PARTIDAS MANUALES
                 # =========================================================================
-                with st.expander("➕ Añadir / Gestionar Trabajos Adicionales y Partidas Manuales", expanded=bool(st.session_state.get('partidas_manuales', []))):
+                with st.expander("➕ 🛠️ GESTOR DE TRABAJOS, REDACTOR IA Y CATÁLOGO DE PARTIDAS (LGA, DI, Puesta a Tierra, IRVE...)", expanded=True):
                     st.markdown("""
                     **Personaliza la oferta para el cliente:**  
                     Añade partidas a medida (ej. downlights LED, punto de recarga de coche eléctrico IRVE, tomas exteriores IP65, timbres, etc.) con recálculo automático del total comercial:
