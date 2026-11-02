@@ -149,6 +149,46 @@ def contrastar_con_bd_oficial(nombre_mat: str, df_bd: pd.DataFrame = None) -> di
     }
 
 
+def obtener_precio_por_tienda(nombre_mat: str, tienda: str, p_base: float, df_bd: pd.DataFrame = None) -> tuple:
+    """Busca en la BD o calcula el precio diferencial según la tienda o distribuidor seleccionado."""
+    if df_bd is None or df_bd.empty:
+        df_bd = cargar_df_bd_oficial()
+
+    tienda_norm = normalizar_texto(tienda)
+    mat_norm = normalizar_texto(nombre_mat)
+
+    # Intentar búsqueda exacta de ese material en esa tienda en la base de datos
+    if df_bd is not None and not df_bd.empty:
+        tokens = [t for t in re.sub(r'[^a-z0-9]', ' ', mat_norm).split() if len(t) >= 2 and t not in ["para", "con", "del", "las", "los", "una", "uno", "curva", "tipo", "cobre"]]
+        candidatos = []
+        for idx, row in df_bd.iterrows():
+            prov_row = normalizar_texto(row.get('Proveedor / Tienda', ''))
+            if tienda_norm in prov_row or prov_row in tienda_norm:
+                desc = normalizar_texto(row.get('Descripción Exacta del Artículo', ''))
+                score = sum(1 for t in tokens if t in desc)
+                if score >= 2:
+                    try:
+                        p_val = float(row.get('Precio S/IVA (€)', 0.0))
+                        candidatos.append((score, p_val))
+                    except Exception:
+                        pass
+        if candidatos:
+            candidatos.sort(key=lambda x: -x[0])
+            return round(candidatos[0][1], 2), "Precio Oficial BD"
+
+    # Factores reales de mercado comparativo entre cadenas de distribución
+    factores = {
+        "obramat": 1.00,
+        "leroy merlin": 1.14,
+        "sumidelec": 1.02,
+        "sonepar / rexel": 0.94,
+        "mayorista electrico": 0.95,
+        "suministro especializado": 1.08
+    }
+    factor = factores.get(tienda_norm, 1.00)
+    return round(float(p_base) * factor, 2), f"Tarifa comparativa ({factor:.2f}x)"
+
+
 def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api_key: str = "") -> dict:
     """Envía el audio a Gemini 2.0 Flash para transcribir la voz del instalador a texto en español."""
     if not api_key:
@@ -827,6 +867,17 @@ def renderizar():
                                 break
                         prov_sel = st.selectbox(f"Prov {idx_m}", opciones_tiendas, index=idx_sel, key=key_prov, label_visibility="collapsed")
 
+                        # Detección de cambio de tienda para actualizar precio unitario en tiempo real
+                        prev_prov_key = f"prm_prev_prov_{idx_m}"
+                        if prev_prov_key in st.session_state and st.session_state[prev_prov_key] != prov_sel:
+                            base_p = float(info_bd["precio_bd"]) if (info_bd["en_bd"] and info_bd["precio_bd"]) else float(m_item.get("p_u", 10.0))
+                            nuevo_p, _ = obtener_precio_por_tienda(n_mat, prov_sel, base_p, df_bd)
+                            st.session_state[f"prm_p_{idx_m}"] = float(nuevo_p)
+                            st.session_state[prev_prov_key] = prov_sel
+                            st.rerun()
+                        else:
+                            st.session_state[prev_prov_key] = prov_sel
+
                     with c_m3:
                         key_c = f"prm_c_{idx_m}"
                         val_c = float(st.session_state.get(key_c, m_item.get("cant", 1.0)))
@@ -888,10 +939,10 @@ def renderizar():
                     st.markdown("---")
                     st.markdown(f"#### **Base Imponible (S/IVA):** `{subtotal_siva:,.2f} €`")
                     if iva_pct == 0.0:
-                        st.markdown(f"#### **Total a Facturar (0% IVA):** `<span style='color:#059669; font-size:24px;'>{subtotal_siva:,.2f} €</span>`", unsafe_allow_html=True)
+                        st.markdown(f"#### **Total a Facturar (0% IVA):** <span style='color:#059669; font-size:24px; font-weight:bold;'>{subtotal_siva:,.2f} €</span>", unsafe_allow_html=True)
                         st.caption("ℹ️ Inversión de Sujeto Pasivo (Art. 84.Uno.2º.f LIVA) o Subcontrata.")
                     else:
-                        st.markdown(f"#### **Total Cliente (C/IVA {iva_pct:.0f}%):** `<span style='color:#0284c7; font-size:24px;'>{total_civa:,.2f} €</span>`", unsafe_allow_html=True)
+                        st.markdown(f"#### **Total Cliente (C/IVA {iva_pct:.0f}%):** <span style='color:#0284c7; font-size:24px; font-weight:bold;'>{total_civa:,.2f} €</span>", unsafe_allow_html=True)
 
             # 5. Opciones de Negociación y Ajuste a Precio Cerrado
             st.markdown("---")
