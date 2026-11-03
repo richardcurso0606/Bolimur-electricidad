@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import os
+import re
 import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -11,6 +12,17 @@ from reportlab.graphics.shapes import Drawing, Rect, Line, String, Circle, Group
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
+
+def limpiar_texto_pdf(texto: str) -> str:
+    """Elimina emojis y caracteres suplementarios no soportados por las fuentes PDF estándar (Type 1 / Helvetica)."""
+    if not texto:
+        return ""
+    t = str(texto)
+    # Emojis y símbolos Unicode suplementarios que ReportLab renderiza como cuadrados negros
+    t = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', t)
+    t = re.sub(r' +', ' ', t)
+    t = t.replace('( ', '(').replace(' )', ')').replace('[ ', '[').replace(' ]', ']').strip()
+    return t
 
 class NumberedCanvasUnifilar(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -245,28 +257,74 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     story.append(meta_table)
     story.append(Spacer(1, 6))
 
-    subtotal_neto = float(presupuesto_data.get("subtotal_neto", 0.0))
+    subtotal_neto = float(presupuesto_data.get("subtotal_neto") or presupuesto_data.get("total_neto") or 0.0)
+    capitulos = presupuesto_data.get("capitulos", [])
+    if subtotal_neto <= 0.0 and capitulos:
+        subtotal_neto = sum(float(c.get("importe", 0.0)) for c in capitulos)
+
     iva_pct = float(presupuesto_data.get("iva_pct", 21.0))
-    cuota_iva = float(presupuesto_data.get("cuota_iva", 0.0))
-    total_cliente = float(presupuesto_data.get("total_cliente", 0.0))
-    total_puntos = presupuesto_data.get("total_puntos", 0)
+    cuota_iva = float(presupuesto_data.get("cuota_iva") or round(subtotal_neto * (iva_pct / 100.0), 2))
+    total_cliente = float(presupuesto_data.get("total_cliente") or presupuesto_data.get("total_con_iva") or round(subtotal_neto + cuota_iva, 2))
+    if total_cliente <= 0.0:
+        total_cliente = round(subtotal_neto + cuota_iva, 2)
+
+    df_comercial = presupuesto_data.get("df_comercial", [])
+    if hasattr(df_comercial, 'to_dict'):
+        records_est = df_comercial.to_dict('records')
+    else:
+        records_est = df_comercial or []
+
+    partidas_man = presupuesto_data.get("partidas_manuales", [])
+
+    total_puntos = int(presupuesto_data.get("total_puntos") or 0)
+    if not total_puntos:
+        if records_est:
+            total_puntos = sum(int(r.get("Puntos", r.get("Puntos Mecanismos", 1))) for r in records_est)
+        elif partidas_man:
+            total_puntos = len(partidas_man)
+
     precio_medio_punto = float(presupuesto_data.get("precio_medio_punto", 0.0))
+    if precio_medio_punto <= 0.0 and total_puntos:
+        precio_medio_punto = round(total_cliente / total_puntos, 2)
+
     precio_medio_punto_neto = float(presupuesto_data.get(
         "precio_medio_punto_neto",
         (subtotal_neto / total_puntos) if total_puntos else 0.0
     ))
-    plazo_dias = presupuesto_data.get("plazo_dias", 0.0)
+    if precio_medio_punto_neto <= 0.0 and total_puntos:
+        precio_medio_punto_neto = round(subtotal_neto / total_puntos, 2)
+
+    plazo_dias = float(presupuesto_data.get("plazo_dias", 0.0))
+    if plazo_dias <= 0.0:
+        horas_est = sum(float(p.get("cantidad", 1.0)) for p in partidas_man if str(p.get("unidad", "")).lower() in ["h", "horas", "hora"])
+        if horas_est > 0:
+            plazo_dias = max(1.0, round(horas_est / 8.0, 1))
+        elif subtotal_neto > 0:
+            plazo_dias = max(1.0, round(subtotal_neto / 350.0, 1))
+        else:
+            plazo_dias = 1.0
 
     resumen_title = Paragraph("<b>TOTAL PRESUPUESTO OFERTA (CON IVA):</b>", ParagraphStyle('ResTitle', parent=body_style, fontSize=10.5, textColor=c_primary, fontName='Helvetica-Bold'))
     resumen_val = Paragraph(f"<b>{total_cliente:,.2f} €</b>", ParagraphStyle('ResVal', parent=body_style, fontSize=13.5, textColor=c_accent, fontName='Helvetica-Bold', alignment=2))
+
+    if records_est:
+        linea_unidades = (
+            f"• Puntos de Mecanismos Totales: <b>{total_puntos} uds</b> &nbsp;|&nbsp; "
+            f"• Precio medio por punto: <b>{precio_medio_punto_neto:,.2f} €/punto sin IVA</b> &nbsp;/&nbsp; "
+            f"<b>{precio_medio_punto:,.2f} €/punto con IVA</b> (instalación completa)<br/>"
+        )
+    else:
+        linea_unidades = (
+            f"• Partidas Técnicas Totales: <b>{total_puntos} partidas</b> &nbsp;|&nbsp; "
+            f"• Importe medio por partida: <b>{precio_medio_punto_neto:,.2f} € s/IVA</b> &nbsp;/&nbsp; "
+            f"<b>{precio_medio_punto:,.2f} € c/IVA</b><br/>"
+        )
 
     desglose_resumen = Paragraph(
         f"<b>Resumen Económico de la Propuesta:</b><br/>"
         f"• Base Imponible Neta (Sin IVA): <b>{subtotal_neto:,.2f} €</b> &nbsp;|&nbsp; "
         f"• Impuesto sobre el Valor Añadido (IVA {iva_pct:.0f}%): <b>{cuota_iva:,.2f} €</b><br/>"
-        f"• Puntos de Mecanismos Totales: <b>{total_puntos} uds</b> &nbsp;|&nbsp; "
-        f"• Precio medio por punto: <b>{precio_medio_punto_neto:,.2f} €/punto sin IVA</b> &nbsp;/&nbsp; "
-        f"<b>{precio_medio_punto:,.2f} €/punto con IVA</b> (instalación completa)<br/>"
+        f"{linea_unidades}"
         f"• Plazo Estimado de Ejecución: <b>{plazo_dias:.1f} días laborables</b> &nbsp;|&nbsp; "
         f"• Garantía Oficial: <b>3 Años</b> en mano de obra y materiales",
         body_style
@@ -289,10 +347,11 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     # =========================================================================
     # SECCIÓN 1: RESUMEN POR CAPÍTULOS DE OBRA REBT
     # =========================================================================
-    capitulos = presupuesto_data.get("capitulos", [])
+    sec_idx = 1
     if capitulos:
-        story.append(Paragraph("1. Cuadro Resumen de Capítulos REBT (Memoria Valorada)", h1_style))
+        story.append(Paragraph(f"{sec_idx}. Cuadro Resumen de Capítulos REBT (Memoria Valorada)", h1_style))
         story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
+        sec_idx += 1
 
         cap_header = [
             Paragraph("Capítulo", th_style),
@@ -302,9 +361,9 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         cap_rows = [cap_header]
 
         for cap in capitulos:
-            c_num = str(cap.get("cap", cap.get("capitulo", "")))
-            c_tit = str(cap.get("titulo", ""))
-            c_desc = str(cap.get("desc", cap.get("descripcion", "")))
+            c_num = limpiar_texto_pdf(str(cap.get("cap", cap.get("capitulo", ""))))
+            c_tit = limpiar_texto_pdf(str(cap.get("titulo", "")))
+            c_desc = limpiar_texto_pdf(str(cap.get("desc", cap.get("descripcion", ""))))
             c_imp = float(cap.get("importe", 0.0))
 
             desc_block = f"<b>{c_tit}</b><br/>{c_desc}" if c_desc else f"<b>{c_tit}</b>"
@@ -346,16 +405,10 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     # =========================================================================
     # SECCIÓN 2: DESGLOSE DETALLADO POR ESTANCIAS
     # =========================================================================
-    df_comercial = presupuesto_data.get("df_comercial", [])
-    if hasattr(df_comercial, 'to_dict'):
-        records_est = df_comercial.to_dict('records')
-    else:
-        records_est = df_comercial
-
     if records_est:
-        sec_num = "2" if capitulos else "1"
-        story.append(Paragraph(f"{sec_num}. Desglose de Instalación por Estancias de la Vivienda", h1_style))
+        story.append(Paragraph(f"{sec_idx}. Desglose de Instalación por Estancias de la Vivienda", h1_style))
         story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
+        sec_idx += 1
 
         table_p_header = [
             Paragraph("Estancia / Zona", th_style),
@@ -365,8 +418,8 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         table_p_rows = [table_p_header]
 
         for row in records_est:
-            estancia = str(row.get('Estancia / Partida', row.get('Estancia', '')))
-            detalle = str(row.get('Detalle Comercial', row.get('Detalle de Mecanismos / Equipamiento', row.get('Detalle', ''))))
+            estancia = limpiar_texto_pdf(str(row.get('Estancia / Partida', row.get('Estancia', ''))))
+            detalle = limpiar_texto_pdf(str(row.get('Detalle Comercial', row.get('Detalle de Mecanismos / Equipamiento', row.get('Detalle', '')))))
             importe = row.get('Importe Venta (€)', row.get('Importe (€)', '0.00'))
             if isinstance(importe, (int, float)):
                 importe_str = f"{float(importe):,.2f} €"
@@ -394,10 +447,10 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     # =========================================================================
     # SECCIÓN 3: PARTIDAS MANUALES / TRABAJOS ADICIONALES
     # =========================================================================
-    partidas_man = presupuesto_data.get("partidas_manuales", [])
     if partidas_man:
-        story.append(Paragraph("3. Partidas y Trabajos Adicionales Personalizados", h1_style))
+        story.append(Paragraph(f"{sec_idx}. Partidas y Trabajos Desglosados de Instalación", h1_style))
         story.append(HRFlowable(width="100%", thickness=0.8, color=c_primary, spaceBefore=1, spaceAfter=4))
+        sec_idx += 1
 
         pman_header = [
             Paragraph("Concepto", th_style),
@@ -409,8 +462,8 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         pman_rows = [pman_header]
 
         for p in partidas_man:
-            c_nom = str(p.get("concepto", ""))
-            c_desc = str(p.get("descripcion", ""))
+            c_nom = limpiar_texto_pdf(str(p.get("concepto", "")))
+            c_desc = limpiar_texto_pdf(str(p.get("descripcion", "")))
             c_cant = f"{p.get('cantidad', 1)} {p.get('unidad', 'ud')}"
             c_pu = f"{float(p.get('precio_unitario', 0.0)):,.2f} €"
             c_sub = f"{float(p.get('subtotal', 0.0)):,.2f} €"

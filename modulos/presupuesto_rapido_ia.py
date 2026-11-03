@@ -160,6 +160,7 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         'expediente': f"{datetime.date.today().strftime('%Y%m%d')}-PR",
         'fecha': datetime.date.today().strftime('%d/%m/%Y')
     }
+    tarifa_limpia = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', str(tipo_tarifa)).strip()
     capitulos = [
         {
             'cap': 'CAP-01',
@@ -169,7 +170,7 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         },
         {
             'cap': 'CAP-02',
-            'titulo': f"Mano de Obra e Instalación Profesional ({tipo_tarifa})",
+            'titulo': f"Mano de Obra e Instalación Profesional ({tarifa_limpia})" if tarifa_limpia else "Mano de Obra e Instalación Profesional",
             'desc': f"Montaje técnico ({horas_mo:.1f} h a {precio_mo:.2f} €/h), tendido, conexionado, timbrado y ensayos reglamentarios según {res.get('norma', 'REBT RD 842/2002')}.",
             'importe': coste_mo
         }
@@ -178,24 +179,26 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         capitulos.append({
             'cap': 'CAP-03',
             'titulo': 'Desplazamiento y Salida de Furgón Taller',
-            'desc': f"Transporte técnico, kilometraje y puesta a disposición de furgón taller e instrumental reglamentario ({tipo_tarifa}).",
+            'desc': f"Transporte técnico, kilometraje y puesta a disposición de furgón taller e instrumental reglamentario ({tarifa_limpia})." if tarifa_limpia else "Transporte técnico, kilometraje y puesta a disposición de furgón taller.",
             'importe': desplazamiento
         })
 
     # Partidas desglosadas completas para que el cliente vea cada artículo en el PDF
-    partidas_desglose = [
-        {
-            'concepto': f.get('mat', 'Material Eléctrico'),
-            'descripcion': f"Suministro oficial ({f.get('proveedor', 'Obramat')}) - {f.get('origen', 'Tarifa Oficial')}",
+    partidas_desglose = []
+    for f in filas_compra:
+        origen_limpio = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', str(f.get('origen', 'Tarifa Oficial'))).strip()
+        mat_limpio = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', str(f.get('mat', 'Material Eléctrico'))).strip()
+        partidas_desglose.append({
+            'concepto': mat_limpio,
+            'descripcion': f"Suministro oficial ({f.get('proveedor', 'Obramat')}) - {origen_limpio}",
             'cantidad': float(f.get('cant', 1.0)),
             'unidad': f.get('unid', 'ud'),
             'precio_unitario': float(f.get('p_u', 0.0)),
             'subtotal': float(f.get('subtotal', 0.0))
-        }
-        for f in filas_compra
-    ]
+        })
+
     partidas_desglose.append({
-        'concepto': f"Mano de Obra Oficial REBT ({tipo_tarifa})",
+        'concepto': f"Mano de Obra Oficial REBT ({tarifa_limpia})" if tarifa_limpia else "Mano de Obra Oficial REBT",
         'descripcion': f"Ejecución técnica ({horas_mo:.1f} h), fijaciones, conexionado, verificación y ensayos reglamentarios.",
         'cantidad': horas_mo,
         'unidad': 'h',
@@ -204,7 +207,7 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
     })
     if desplazamiento > 0:
         partidas_desglose.append({
-            'concepto': f"Desplazamiento / Salida Furgón Taller ({tipo_tarifa})",
+            'concepto': f"Desplazamiento / Salida Furgón Taller ({tarifa_limpia})" if tarifa_limpia else "Desplazamiento / Salida Furgón Taller",
             'descripcion': "Transporte técnico, desplazamiento de personal especializado e instrumental de verificación de averías.",
             'cantidad': 1.0,
             'unidad': 'salida',
@@ -215,10 +218,17 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
     cuota = round(subtotal_siva * (iva_pct / 100.0), 2)
     pres_data = {
         'total_neto': subtotal_siva,
+        'subtotal_neto': subtotal_siva,
         'iva_pct': iva_pct,
         'cuota_iva': cuota,
         'total_con_iva': total_civa,
-        'potencia_kw': 9.2,
+        'total_cliente': total_civa,
+        'potencia_kw': '9.2 kW',
+        'grado_electr': 'Básica',
+        'plazo_dias': max(1.0, round(horas_mo / 8.0, 1)),
+        'total_puntos': len(filas_compra),
+        'precio_medio_punto': round(total_civa / len(filas_compra), 2) if filas_compra else 0.0,
+        'precio_medio_punto_neto': round(subtotal_siva / len(filas_compra), 2) if filas_compra else 0.0,
         'capitulos': capitulos,
         'partidas_manuales': partidas_desglose,
         'partidas_adicionales': partidas_desglose
