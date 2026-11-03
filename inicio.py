@@ -2056,7 +2056,7 @@ with st.sidebar:
         {
             "categoria": "🤖 INTELIGENCIA & NORMATIVA",
             "items": [
-                ("🤖 Consultor IA REBT", "🤖 Consultor IA REBT"),
+                ("🤖 Consultor IA REBT & Telecom", "🤖 Consultor IA REBT & Telecom"),
                 ("🛰️ Radar Normativo BOE", "🛰️ Radar Normativo BOE"),
                 ("📚 Tablas REBT", "📚 Tablas REBT"),
             ]
@@ -2168,17 +2168,17 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             if st.button("📸 Abrir Unifilar por Foto", key="btn_home_unifilar_foto", type="primary", use_container_width=True):
                 navegar_a_modulo("📸 Unifilar por Foto (IA)")
 
-    # BANNER DESTACADO 1: CONSULTOR IA EXPERTO REBT
+    # BANNER DESTACADO 1: CONSULTOR IA EXPERTO REBT & TELECOM
     with st.container(border=True):
         col_ia_txt, col_ia_btn = st.columns([3, 1])
         with col_ia_txt:
-            st.markdown("### 🤖 Consultor IA: Experto REBT & Ingeniero Eléctrico")
-            st.write("Tu asesor técnico 24/7 con doble visión de **Ingeniero Eléctrico** y **Maestro Instalador de Campo**. Resuelve cualquier duda reglamentaria del REBT, cálculos de caídas de tensión, coordinación de protecciones, límites de MTD vs Proyecto de Ingeniero y requisitos de Industria en Murcia.")
+            st.markdown("### 🤖 Consultor IA: Experto REBT & Telecomunicaciones (ICT-2)")
+            st.write("Tu asesor técnico 24/7 con doble visión de **Ingeniero (Eléctrico y Telecomunicaciones)** y **Maestro Instalador de Campo**. Resuelve cualquier duda reglamentaria del REBT, ICT-2 (RD 346/2011), antenas RTV, fibra óptica FTTH, cableado de datos Cat6/Cat6A, videoporteros, caídas de tensión y tramitaciones oficiales ante Industria y SETSI.")
         with col_ia_btn:
             st.write("")
             st.write("")
             if st.button("💬 Consultar a la IA", key="btn_home_ia_consultor", type="primary", use_container_width=True):
-                navegar_a_modulo("🤖 Consultor IA REBT")
+                navegar_a_modulo("🤖 Consultor IA REBT & Telecom")
 
     # BANNER DESTACADO 2: SOLAR FOTOVOLTAICA
     with st.container(border=True):

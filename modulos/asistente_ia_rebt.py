@@ -12,24 +12,50 @@ import requests
 from modulos import auditor_ia_rebt
 
 SYSTEM_PROMPT_INGENIERO_INSTALADOR = """
-Eres el Consultor Senior de Ingeniería Eléctrica y Maestro Instalador Habilitado de Bolimur.
-Combinas dos perfiles complementarios:
-1. Vista de Ingeniero Eléctrico: Riguroso en el Reglamento Electrotécnico para Baja Tensión (REBT 2002 - RD 842/2002),
-   sus Instrucciones Técnicas Complementarias (ITC-BT-01 a ITC-BT-52), normativa de Generación y Autoconsumo (ITC-BT-40,
-   Real Decreto 244/2019, UNE-EN 62548, UNE-EN 50549-1), Guías Técnicas de Aplicación del Ministerio
-   y criterios de la Dirección General de Energía y Actividad Industrial y Minera (DGEAIM - Región de Murcia).
-2. Maestro Instalador y Experto de Mantenimiento de Campo: Práctico, con 25 años de experiencia a pie de obra tanto en
-   baja tensión convencional (cuadros, tubos, tierras, derivaciones, IRVE) como en ENERGÍA SOLAR FOTOVOLTAICA:
-   - Instalaciones Conectadas a Red (RD 244/2019): Autoconsumo individual/colectivo, con/sin excedentes, inyección cero (anti-vertido),
-     compensación simplificada, ratio DC/AC, protecciones anti-isla y caídas de tensión AC <= 1.0% para evitar sobretensión > 253V.
-   - Instalaciones Aisladas de Red (Off-Grid): Cálculo por consumo diario (Wh/día), autonomía en días (2 a 4 días), dimensionamiento
-     para el mes más desfavorable de invierno (diciembre HSP ~2.8 h/día en Murcia), banco de baterías (Litio LiFePO4 DOD 85-90% vs
-     Gel/AGM/OPzS DOD 50%), reguladores de carga MPPT (etapas Bulk, Absorción, Flotación, Ecualización), inversores-cargadores de onda
-     senoidal pura y grupos electrógenos de apoyo con contacto seco.
-   - Montaje de calle y Mantenimiento: Anclajes en teja, sándwich o lastre de hormigón (CTE DB-SE-AE), crimpado profesional MC4 con
-     tenaza de carraca para evitar arcos eléctricos DC, puesta a tierra de marcos y perfiles (Cu >= 6 mm², Rt <= 15 Ω), ensayos previos
-     ITC-BT-05 (aislamiento DC 1000V >= 1 MΩ, aislamiento AC 500V >= 0.5 MΩ) y resolución rápida de averías en campo (Isolation Fault,
-     Grid Overvoltage, disparos de diferencial con fugas de 6 mA DC, y termografía de puntos calientes/hotspots).
+Eres el Consultor Senior de Ingeniería (Eléctrica y Telecomunicaciones) y Maestro Instalador Habilitado de Bolimur.
+Combinas con máxima excelencia los siguientes perfiles:
+
+1. Vista de Ingeniero Eléctrico e Ingeniero de Telecomunicación (Colegiado COIT / COITT):
+   - Riguroso en el Reglamento Electrotécnico para Baja Tensión (REBT 2002 - RD 842/2002) y sus 52 ITCs (ITC-BT-01 a ITC-BT-52).
+   - Experto en Infraestructuras Comunes de Telecomunicaciones (ICT-2 - Real Decreto 346/2011 y Orden ITC/1644/2011).
+   - Normativa de Generación y Autoconsumo (ITC-BT-40, Real Decreto 244/2019, UNE-EN 62548, UNE-EN 50549-1).
+   - Normas europeas de cableado estructurado y compatibilidad electromagnética (UNE-EN 50173, UNE-EN 50174-2 sobre separación mínima de 20 cm entre cables de energía y datos, IEC 60794 para fibra monomodo G.657A2, y DVB-T2 / DVB-S2 para RTV).
+   - Criterios de tramitación técnica y administrativa ante la Dirección General de Energía y Actividad Industrial y Minera (DGEAIM Murcia) y ante la Secretaría de Estado de Telecomunicaciones e Infraestructuras Digitales (SETSI).
+
+2. Maestro Instalador y Especialista de Telecomunicaciones a Pie de Obra (25 años en calle):
+   A) TELECOMUNICACIONES EN VIVIENDAS, LOCALES Y COMUNIDADES (ICT-2):
+      - RTV (TDT y Satélite FI): Captación en mástil con antenas UHF preparadas para el 2º Dividendo Digital con filtro de corte LTE 700 MHz (canales 21 al 48, corte a 694 MHz para evitar saturación 5G). Parábolas offset orientadas a Astra 19.2ºE o Hispasat 30ºW con LNB universal (conmutación 13/18V y tono 22 kHz). Centrales amplificadoras programables digitales (Televes Avant X, Ikusi ONE) con CAG. Niveles reglamentarios obligatorios en toma de usuario:
+        * TDT (DVB-T / DVB-T2 COFDM): 45 dBµV a 70 dBµV (MER >= 21 dB, BER < 1e-4).
+        * Satélite FI (DVB-S / DVB-S2): 47 dBµV a 77 dBµV (C/N > 11 dB).
+        * Radio FM: 40 a 70 dBµV. Radio DAB: 35 a 70 dBµV.
+        * Distribución con cable coaxial clase A+ (Televes T-100plus), atenuación <= 18 dB/100m en UHF y <= 30 dB/100m en FI.
+      - Fibra Óptica FTTH: Fibra monomodo ITU-T G.657.A2 (baja sensibilidad a curvatura, R_min = 7.5 mm), conectores SC/APC verde (pérdidas de retorno > 60 dB). Fusionadora de fibra óptica por arco voltaico (<0.05 dB por empalme). PAU óptico en RTR de vivienda con 2 fibras monomodo. Atenuación máxima permitida de la red interior de usuario: <= 2.0 dB a 1310, 1490 y 1550 nm (medida con emisor láser y medidor de potencia óptica o reflectómetro OTDR).
+      - Redes de Datos y Cableado Estructurado (Cat6, Cat6A, Cat7):
+        * Viviendas: Mínimo Cat6 UTP (250 MHz, 1 Gbps hasta 100m).
+        * Locales y Oficinas: Cat6A F/UTP o U/FTP (500 MHz, 10 Gbps a 100m, blindaje contra diafonía exógena).
+        * Conectorización en rosetas RJ45 y patch panels bajo el estándar uniforme TIA/EIA-568-B.
+        * Alimentación PoE (802.3af 15.4W, 802.3at 30W PoE+, 802.3bt 60W/90W PoE++) para puntos de acceso Wi-Fi 6/7, cámaras IP y pantallas.
+        * Racks de 19 pulgadas murales (6U-12U) o de suelo (24U-42U), organizadores de cables, latiguillos y puesta a tierra obligatoria del chasis con cable verde/amarillo de 16 mm² Cu conectado a la borna principal de tierra del edificio.
+        * Separación crítica con cables de 230V/400V: Según norma UNE-EN 50174-2, mantener al menos 20 cm de distancia entre cables de fuerza y datos sin apantallar, o 5 cm si hay tabique metálico continuo conectado a tierra. ¡JAMÁS compartir tubo o corrugado entre cables eléctricos de 230V y cables de telecomunicación UTP/coaxial (prohibición terminante REBT e ICT-2)!
+      - Registros y Recintos ICT:
+        * En edificio: RITS (superior en cubierta), RITI (inferior), RITU (único para <= 10 PAUs o 3 plantas).
+        * En vivienda / local: Registro de Terminación de Red (RTR) en la entrada, dimensiones mínimas 500x600x80 mm (o 2 de 500x300x80 contiguos), equipado obligatoriamente con 2 tomas schuko 16A/230V con tierra para alimentar router/ONT y borna de equipotencialidad (Cu >= 6 mm²). Dotación mínima por estancias: salón (2 tomas dobles RJ45 + 2 RTV + FO), dormitorio ppal (1 doble RJ45 + 1 RTV), otros dormitorios y cocina (1 RJ45 + 1 RTV).
+      - Videoporteros y Control de Acceso:
+        * Sistemas digitales 2 hilos no polarizados (Fermax DUOX PLUS, Tegui 2 Hilos): Ideales para renovaciones y reformas sin cambiar canalizaciones preexistentes, transmisión digital de audio/vídeo hasta 300 metros.
+        * Sistemas IP / SIP (Fermax MEET, Dahua, Hikvision): Cableado Cat6 PoE con conexión a red local y desvío de llamada a móviles vía app.
+        * Abrepuertas: 12V AC o DC con protección varistor o diodo para amortiguar picos inductivos que averíen la placa electrónica.
+      - Tramitación Legal SETSI vs Proyecto ICT:
+        * Edificios comunitarios (> 1 vivienda o locales): Exigen Proyecto de Telecomunicaciones visado por Ingeniero de Telecomunicación + Dirección de Obra + Certificado Fin de Obra + Protocolo de Pruebas visado.
+        * Viviendas unifamiliares / locales independientes sin comunidad: Se tramitan con Boletín de Telecomunicaciones emitido por Instalador Autorizado registrado en la SETSI (Tipos A, C o F).
+
+   B) BAJA TENSIÓN, SOLAR FOTOVOLTAICA E IRVE (REBT):
+      - Criterios de caída de tensión (1.5% DI, 3% alumbrado, 5% fuerza).
+      - Límite de 5 circuitos por diferencial de 30 mA (ITC-BT-25).
+      - Sobretensiones permanentes y transitorias obligatorias en Murcia (ITC-BT-23).
+      - Autoconsumo solar conectado a red (RD 244/2019) y aisladas off-grid con baterías (LiFePO4 DOD 90% vs Gel 50%, HSP Diciembre Murcia 2.8 h/día).
+      - Resolución de averías: 'Isolation Fault' (localización por tensión DC a tierra) y 'Grid Overvoltage' (evitar caídas > 1% en AC).
+      - Recarga de Vehículo Eléctrico IRVE (ITC-BT-52, Esquema 2, cables AS Cca, diferencial Clase A con 6mA DC según IEC 62955).
+      - Locales de Pública Concurrencia (ITC-BT-28: cables libres de halógenos, doble línea de luz, emergencias, OCA obligatoria).
 
 3. Asesor Experto en Elección de Plantillas e Instalaciones en la Región de Murcia:
    Conoces a la perfección el catálogo oficial de plantillas técnicas de Bolimur y sabes orientar al instalador:
@@ -37,18 +63,14 @@ Combinas dos perfiles complementarios:
    - Vehículo Eléctrico IRVE (ITC-BT-52): Garaje comunitario Esquema 2 (7.36 kW, cables libres de halógenos AS, tubo IK08, diferencial clase A 6mA DC), IRVE Trifásico 22 kW, y Vivienda con IRVE integrado (circuito C13 con modulación dinámica de carga SPL).
    - Autoconsumo Fotovoltaico (ITC-BT-40 / RD 244/2019): Solar 5 kW e Híbrido Vivienda + Solar + IRVE.
    - Locales Comerciales Ordinarios: Monofásico 9.2 kW y Trifásico 17.32 kW (cálculo de 100 W/m² según ITC-BT-10.3.3 con mínimo de 3.450 W).
-   - Locales de Pública Concurrencia (LPC - ITC-BT-28): Bar/Restaurante 27.71 kW (IGA 40A 400V con enclavamiento de gas en campana), Academia/Clínica 17.32 kW (>50 personas), Gimnasio con duchas 20.78 kW. Recuerda siempre que en LPC son obligatorios los cables libres de halógenos AS, doble línea de alumbrado, emergencias e inspección inicial por OCA.
+   - Locales de Pública Concurrencia (LPC - ITC-BT-28): Bar/Restaurante 27.71 kW (IGA 40A 400V con enclavamiento de gas en campana), Academia/Clínica 17.32 kW (>50 personas), Gimnasio con duchas 20.78 kW.
    - Cuadros de Obra (ITC-BT-33): 15 kW con tomas CETAC y pulsador exterior de parada de emergencia.
-   - Límite de tramitación: Hasta 100 kW se tramita por MTD del instalador; más de 100 kW exige Proyecto Técnico visado por Ingeniero.
+   - Límites de tramitación: Hasta 100 kW se tramita por MTD del instalador; más de 100 kW exige Proyecto Técnico visado por Ingeniero.
 
 Tus principios de respuesta:
-- Cita siempre la ITC-BT exacta (ej. ITC-BT-04, ITC-BT-10, ITC-BT-15, ITC-BT-17, ITC-BT-18, ITC-BT-25, ITC-BT-28, ITC-BT-40, ITC-BT-52, RD 244/2019).
-- Diferencia claramente si la consulta es sobre CONEXIÓN A RED (RD 244/2019) o AISLADA CON BATERÍAS (Off-Grid).
-- Si la potencia del inversor fotovoltaico supera los 10 kW (ITC-BT-04 Grupo F) o la instalación supera 100 kW, advierte claramente
-  que requiere PROYECTO TÉCNICO visado por Ingeniero Colegiado y Dirección de Obra.
-- Explica de forma pedagógica y práctica al instalador qué plantilla elegir y cómo justificar los cálculos ante Industria (DGEAIM Murcia).
-- Sé claro, directo y estructurado (utiliza viñetas, tablas markdown y fórmulas KaTeX cuando haya cálculos técnicos o económicos).
+- Cita siempre la norma técnica y legal exacta (ej. RD 346/2011 ICT-2, ITC-BT correspondiente, UNE-EN 50174-2, etc.).
 - Aporta tanto la fórmula y el artículo legal como el consejo práctico de taller o montaje para que el instalador resuelva la obra sin incidencias.
+- Sé claro, directo y estructurado (utiliza viñetas, tablas markdown y fórmulas KaTeX cuando haya cálculos técnicos o económicos).
 - Responde siempre en español profesional, técnico y motivador.
 """
 
@@ -406,6 +428,177 @@ La hostelería es una de las instalaciones más habituales del instalador eléct
 3. **Trámite Legal y Puesta en Servicio en Murcia:**
    - **MTD vs Proyecto:** Hasta **$100\\text{ kW}$** se tramita mediante **Memoria Técnica de Diseño (MTD)** emitida por el Instalador Autorizado.
    - **Inspección Inicial por OCA OBLIGATORIA:** Es un requisito legal indispensable previo a que Iberdrola / i-DE enganche el contador definitivo. El instalador debe coordinar la inspección con el organismo de control."""
+    },
+    {
+        "keywords": ["ict", "ict-2", "telecomunicaciones", "rd 346/2011", "orden itc/1644/2011", "reglamento telecomunicaciones", "setsi"],
+        "pregunta": "¿Qué es la ICT-2 (RD 346/2011) y qué redes y recintos comprende en edificios y viviendas?",
+        "respuesta": """### 📡 Infraestructuras Comunes de Telecomunicaciones (ICT-2) - RD 346/2011 y Orden ITC/1644/2011
+
+La **ICT-2** regula las instalaciones de telecomunicación para garantizar el acceso ultrarrápido a los servicios de telecomunicación en edificios y viviendas. Comprende 3 redes principales y recintos normalizados:
+
+1. **Redes Técnicas Obligatorias:**
+   - **RTV (Radiodifusión Sonora y Televisión):** TDT terrestre (canales 21 al 48, con filtro LTE 700 5G a 694 MHz) y Satélite FI (950-2150 MHz).
+   - **TBA (Telecomunicaciones de Banda Ancha):** Red de fibra óptica (FTTH) con 2 fibras monomodo por vivienda y red de par trenzado (Cat6).
+   - **Servicios de Hogar Digital y Telefonía:** Tomas RJ45 y videoportero digital.
+
+2. **Recintos de Telecomunicación en el Edificio:**
+   - **RITS (Recinto Superior):** En azotea para cabeceras RTV y enlaces de radio.
+   - **RITI (Recinto Inferior):** En planta baja o sótano para acometidas de operadores (fibra óptica, pares, coaxial).
+   - **RITU (Recinto Único):** Permitido en edificios pequeños de hasta 10 viviendas o 3 plantas.
+
+3. **En la Vivienda / Local:**
+   - **RTR (Registro de Terminación de Red):** Registro central empotrado en la entrada de la vivienda ($500 \\times 600 \\times 80\\text{ mm}$), con 2 tomas de corriente Schuko con tierra y borna equipotencial de puesta a tierra."""
+    },
+    {
+        "keywords": ["proyecto telecomunicacion", "proyecto ict", "boletin telecomunicaciones", "boletin ict", "setsi", "coit", "coitt", "tipo a", "tipo f", "cuando proyecto telecomunicaciones"],
+        "pregunta": "¿Cuándo se necesita Proyecto de Ingeniero de Telecomunicación vs Boletín Oficial de Telecomunicaciones?",
+        "respuesta": """### ⚖️ Proyecto de Ingeniero de Telecomunicación vs Boletín de Instalador (SETSI)
+
+El régimen legal de telecomunicaciones (RD 346/2011 y Ley General de Telecomunicaciones) distingue claramente:
+
+1. **Cuándo es OBLIGATORIO Proyecto Técnico de Telecomunicaciones:**
+   - **Edificios en régimen de propiedad horizontal:** Con más de **1 vivienda o local comercial**. Requiere:
+     * **Proyecto Técnico** visado por Ingeniero de Telecomunicación o Ingeniero Técnico (COIT / COITT).
+     * **Acta de Replanteo** inicial.
+     * **Dirección de Obra** y **Certificado de Fin de Obra** visado.
+     * **Protocolo de Pruebas** con medidas reales de señal (TDT, SAT, atenuación fibra óptica y datos).
+
+2. **Cuándo basta con Boletín de Instalador de Telecomunicaciones:**
+   - **Viviendas unifamiliares aisladas** o locales independientes que no formen parte de una comunidad en propiedad horizontal.
+   - **Reformas o adecuaciones puntuales** dentro de una vivienda o local donde no se altere la infraestructura común del edificio.
+   - Debe ser emitido por un Instalador Autorizado registrado en la **SETSI (Secretaría de Estado de Telecomunicaciones e Infraestructuras Digitales)**:
+     * **Tipo A:** Infraestructuras en edificios (coaxial, pares, fibra).
+     * **Tipo C:** Instalaciones audiovisuales (antenas RTV, megafonía, CCTV).
+     * **Tipo F:** Redes de nueva generación (fibra óptica y redes ultrarrápidas completas ICT-2)."""
+    },
+    {
+        "keywords": ["tdt", "satelite", "rtv", "nivel de senal", "dbuv", "mer", "ber", "lte 700", "5g", "antena tv", "segundo dividendo digital", "amplificador televes"],
+        "pregunta": "¿Cuáles son los niveles de señal reglamentarios en toma para TDT y Satélite según la ICT-2 y cómo filtrar el 5G?",
+        "respuesta": """### 📺 Niveles de Señal Reglamentarios RTV en Toma de Usuario - RD 346/2011 (Anexo I)
+
+El instalador debe verificar con un medidor de campo homologado (Televes MosaiQ, Promax HD Ranger o similar) los siguientes valores en **cada toma de usuario**:
+
+1. **Televisión Digital Terrestre (TDT - DVB-T / DVB-T2 COFDM):**
+   - **Nivel de Potencia:** Entre **$45\\text{ dB}\\mu\\text{V}$ y $70\\text{ dB}\\mu\\text{V}$** (óptimo de trabajo en toma: $52 - 62\\text{ dB}\\mu\\text{V}$).
+   - **MER (Tasa de Error de Modulación):** Mínimo legal $\\ge 21\\text{ dB}$ (en la práctica profesional buscar siempre **$\\ge 26\\text{ dB}$** para margen de guarda).
+   - **BER (Bit Error Rate):** $\\text{CBER} < 1 \\times 10^{-4}$ y $\\text{VBER} < 1 \\times 10^{-7}$ (señal cuasi-libre de errores).
+
+2. **Satélite FI (DVB-S / DVB-S2 QPSK/8PSK - 950 a 2.150 MHz):**
+   - **Nivel de Potencia:** Entre **$47\\text{ dB}\\mu\\text{V}$ y $77\\text{ dB}\\mu\\text{V}$**.
+   - **C/N (Relación Portadora/Ruido):** $\\ge 11\\text{ dB}$.
+
+3. **Radio:**
+   - **FM (87.5 - 108 MHz):** $40\\text{ dB}\\mu\\text{V}$ a $70\\text{ dB}\\mu\\text{V}$.
+   - **DAB (Radio Digital):** $35\\text{ dB}\\mu\\text{V}$ a $70\\text{ dB}\\mu\\text{V}$.
+
+4. **Filtro LTE 700 MHz (5G / Segundo Dividendo Digital):**
+   - Las bandas de telefonía móvil 5G ocupan desde 694 MHz hacia arriba (antiguos canales UHF 49 al 69).
+   - **Solución en obra:** Utilizar antena UHF con filtro SAW incorporado cortando en el **canal 48 (694 MHz)** o intercalar un filtro de rechazo LTE700 en mástil. Si la señal 5G entra al amplificador, satura los transistores y pixela los canales de TDT aunque la antena marque señal alta."""
+    },
+    {
+        "keywords": ["fibra optica", "ftth", "g657a2", "sc/apc", "fusionadora", "atenuacion fibra", "pau fibra", "2 db", "monomodo", "red interior fibra"],
+        "pregunta": "¿Qué exigencias técnicas tiene la instalación de fibra óptica FTTH (ICT-2) y cómo medir la atenuación?",
+        "respuesta": """### 💡 Fibra Óptica FTTH en Viviendas y Locales - RD 346/2011
+
+1. **Tipo de Fibra Obligatoria:**
+   - Fibra **Monomodo ITU-T G.657.A2** (fibra insensible a curvaturas con radio mínimo admisible de **$7,5\\text{ mm}$**). Es la única que permite giros cerrados en cajas de mecanismos y tubos corrugados de 20-25 mm sin romperse ni sufrir pérdidas por macrocurvatura.
+
+2. **Conectores y Pulido:**
+   - Conectores **SC/APC** (cuerpo verde, pulido angular a 8º). El corte en ángulo evita que la luz reflejada retorne al láser del transmisor, garantizando pérdidas de retorno (Return Loss) $> 60\\text{ dB}$.
+
+3. **Empalmes y Fusiones:**
+   - Realizados con **fusionadora por arco voltaico**.
+   - Pérdida máxima por fusión: **$< 0,05\\text{ dB}$** por empalme.
+
+4. **Punto de Acceso al Usuario (PAU) y Dotación:**
+   - La ICT-2 exige tender **2 fibras monomodo** desde el RITI hasta el PAU óptico del RTR de cada vivienda. Una queda en servicio para la operadora y la otra en reserva fría.
+
+5. **Límite de Atenuación de la Red Interior de Usuario:**
+   - La atenuación óptica total de la instalación interior (desde el PAU hasta la toma de usuario más lejana) no debe superar **$2,0\\text{ dB}$** medidos a las longitudes de onda de $1.310\\text{ nm}$, $1.490\\text{ nm}$ y $1.550\\text{ nm}$ con fuente de luz calibrada y medidor de potencia (Power Meter)."""
+    },
+    {
+        "keywords": ["cable red", "cat6", "cat6a", "utp", "ftp", "rj45", "t568b", "rack", "poe", "red local", "cableado estructurado", "tomas datos"],
+        "pregunta": "¿Cómo instalar y certificar cableado estructurado Cat6 / Cat6A y racks en viviendas, locales y oficinas?",
+        "respuesta": """### 🌐 Cableado Estructurado y Redes de Datos - UNE-EN 50173 e ICT-2
+
+1. **Categoría según el Ámbito:**
+   - **Viviendas (ICT-2):** Mínimo **Categoría 6 UTP** (frecuencia hasta $250\\text{ MHz}$, velocidad 1 Gbps hasta $100\\text{ m}$).
+   - **Locales Comerciales, Oficinas y Despachos:** **Categoría 6A F/UTP o U/FTP** (frecuencia hasta $500\\text{ MHz}$, velocidad garantizada **$10\\text{ Gbps}$ hasta $100\\text{ m}$** con apantallamiento contra diafonía exógena o Alien Crosstalk).
+
+2. **Patrón de Conectorización RJ45:**
+   - Usar siempre el estándar **TIA/EIA-568-B** de forma idéntica en ambos extremos (roseta y patch panel):
+     1. Blanco/Naranja | 2. Naranja
+     3. Blanco/Verde | 4. Azul
+     5. Blanco/Azul | 6. Verde
+     7. Blanco/Marrón | 8. Marrón
+   - *Truco de montaje:* Destrenzar el par un máximo de **$13\\text{ mm}$** antes de la crimpadora para no degradar el parámetro NEXT (diafonía cercana).
+
+3. **Alimentación PoE (Power over Ethernet):**
+   - **PoE (802.3af):** Hasta $15,4\\text{ W}$ (teléfonos IP, sensores).
+   - **PoE+ (802.3at):** Hasta $30\\text{ W}$ (puntos de acceso Wi-Fi 6, videoporteros IP).
+   - **PoE++ (802.3bt):** Hasta $60\\text{ W}$ (Tipo 3) o $90\\text{ W}$ (Tipo 4) para cámaras PTZ con calefactor o pantallas táctiles.
+
+4. **Armarios Rack de 19 Pulgadas:**
+   - Murales de $6\\text{U}$ a $12\\text{U}$ para viviendas unifamiliares y pequeños comercios; suelo de $24\\text{U}$ a $42\\text{U}$ para oficinas.
+   - **Puesta a tierra obligatoria:** Conectar el bastidor metálico del rack a la borna principal de tierra con conductor de cobre verde/amarillo de **$\\ge 16\\text{ mm}^2$**."""
+    },
+    {
+        "keywords": ["separacion cables", "cables datos y 230v", "interferencias", "une-en 50174-2", "tubo compartido", "distancia baja tension telecomunicaciones"],
+        "pregunta": "¿Qué separación debe mantenerse entre conductores de electricidad de 230V y cables de telecomunicaciones?",
+        "respuesta": """### ⚡ Distancias de Separación entre Electricidad (230V/400V) y Telecomunicaciones - UNE-EN 50174-2 y REBT
+
+La convivencia de cables de energía y cables de datos/coaxial está regulada estrictamente para evitar ruidos electromagnéticos e inducciones peligrosas:
+
+1. **Prohibición Taxativa de Tubo Compartido:**
+   - **¡JAMÁS deben pasar cables de 230V/400V y cables de telecomunicaciones (UTP, fibra, coaxial) por el mismo tubo corrugado o canalización sin tabique!** (Infracción grave según REBT ITC-BT-19/21 y RD 346/2011).
+
+2. **Distancias Mínimas de Separación Física (UNE-EN 50174-2):**
+   - **Cables sin apantallar (UTP Cat6):** Separación mínima de **$200\\text{ mm}$ (20 cm)** en recorridos paralelos de más de 10 metros.
+   - **Con tabique separador metálico puesto a tierra:** La distancia puede reducirse a **$50\\text{ mm}$ (5 cm)**.
+   - **Cables apantallados (FTP / STP Cat6A):** Separación mínima de **$50\\text{ mm}$** sin tabique.
+
+3. **Cruces de Canalizaciones:**
+   - Si una canalización eléctrica debe cruzarse con una de telecomunicaciones, el cruce debe realizarse preferentemente en **ángulo de $90^\\circ$** para minimizar el acoplamiento magnético."""
+    },
+    {
+        "keywords": ["rtr", "registro terminacion red", "dimensiones rtr", "tomas vivienda", "pau", "cuantas tomas telecomunicaciones", "cuadro telecomunicaciones"],
+        "pregunta": "¿Qué dimensiones y tomas debe tener el Registro de Terminación de Red (RTR) y cuántas tomas tocan por habitación?",
+        "respuesta": """### 🏢 Registro de Terminación de Red (RTR) y Dotación Mínima de Tomas - ICT-2 RD 346/2011
+
+1. **Dimensiones Reglamentarias del RTR en Vivienda:**
+   - Registro único: Mínimo **$500 \\times 600 \\times 80\\text{ mm}$** (ancho x alto x profundidad).
+   - O dos registros contiguos de **$500 \\times 300 \\times 80\\text{ mm}$** comunicados por 2 tubos de $32\\text{ mm}$.
+   - Ubicación: En el interior de la vivienda, preferiblemente junto al cuadro eléctrico CGMP (a menos de $50\\text{ cm}$).
+
+2. **Equipamiento Interior Obligatorio del RTR:**
+   - **2 tomas de corriente tipo Schuko $16\\text{ A} / 230\\text{ V}$ con toma de tierra**, conectadas al circuito eléctrico de uso general (C2) para alimentar router, ONT y switch.
+   - **Borna de equipotencialidad de puesta a tierra** conectada a la tierra de la vivienda con cable de cobre $\\ge 6\\text{ mm}^2$.
+   - Espacio reservado para los PAUs: PAU coaxial RTV, PAU fibra óptica FTTH y multiplexor pasivo RJ45.
+
+3. **Tomas Mínimas Reglamentarias por Estancia (RD 346/2011 Anexo III):**
+   - **Salón / Estancia Principal:** Mínimo **2 tomas dobles RJ45 Cat6** + **2 tomas RTV** + toma de fibra óptica o previsión.
+   - **Dormitorio Principal:** Mínimo **1 toma doble RJ45 Cat6** + **1 toma RTV**.
+   - **Resto de Dormitorios:** Mínimo **1 toma RJ45 Cat6** + **1 toma RTV**.
+   - **Cocina:** Mínimo **1 toma RJ45 Cat6** + **1 toma RTV**.
+   - **Junto al RTR:** 1 toma RJ45 de datos adicional para configuración del instalador."""
+    },
+    {
+        "keywords": ["videoportero", "portero automatico", "2 hilos", "fermax duox", "tegui", "videoportero ip", "abrepuertas", "instalacion videoportero"],
+        "pregunta": "¿Cómo elegir e instalar un videoportero de 2 hilos (Fermax DUOX / Tegui) frente a uno IP / SIP?",
+        "respuesta": """### 🚪 Videoporteros y Control de Acceso: 2 Hilos Digital vs Sistema IP / SIP
+
+1. **Sistema Digital 2 Hilos No Polarizados (ej. Fermax DUOX PLUS, Tegui 2 Hilos):**
+   - **Cuándo elegirlo:** En **reformas y sustitución de porteros antiguos (4+N)** o unifamiliares donde ya existen tubos con 2 cables.
+   - **Ventajas:** Funciona sobre cualquier par de hilos ($0,5\\text{ mm}^2$ a $1\\text{ mm}^2$ o cable UTP), digitaliza audio, vídeo HD y datos sin polaridad (no importa cuál es polo 1 o polo 2). Alcance de hasta $300\\text{ metros}$.
+   - **Montaje:** Se alimenta con fuente central a carril DIN (18V - 24V DC). En cada vivienda se coloca el monitor y se programa con el switch DIP o menú de display con el número de vivienda asignado.
+
+2. **Sistema IP / SIP (ej. Fermax MEET, Dahua, Hikvision, Akuvox):**
+   - **Cuándo elegirlo:** En **obra nueva, chalets modernos, oficinas y naves comerciales**.
+   - **Ventajas:** Conexión directa a la red local Ethernet con cable **Cat6 PoE (802.3af)**. Permite desvío instantáneo de llamada al smartphone del cliente sin costes mensuales, integración con cámaras CCTV y apertura remota desde cualquier lugar del mundo.
+
+3. **Consejo Profesional para el Abrepuertas:**
+   - La cerradura eléctrica de 12V genera **picos inductivos de alta tensión** al desenergizarse la bobina.
+   - Para no bloquear la placa exterior, coloca siempre un **varistor o diodo volante (flyback)** en paralelo con los bornes del abrepuertas."""
     }
 ]
 
@@ -499,29 +692,151 @@ def procesar_archivo_camara_o_adjunto(uploaded_file) -> str:
         st.error(f"Error procesando imagen para la IA: {e}")
         return ""
 
-def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b64: str = None, audio_b64: str = None, audio_mime: str = "audio/wav") -> str:
-    """Consulta al modelo Google Gemini con el system prompt de Ingeniero Eléctrico e Instalador REBT, con soporte multimodal (texto, imágenes y audio de voz)."""
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
-    
-    # Construir contenido
+def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api_key: str = "") -> dict:
+    """Transcribe audio de voz a texto técnico usando los modelos de Google Gemini optimizados para audio."""
+    if not api_key:
+        return {"exito": False, "error": "Falta la clave API de Google Gemini."}
+
+    b64_data = base64.b64encode(raw_bytes).decode("utf-8")
+    clean_mime = mime_type or "audio/wav"
+    if ";" in clean_mime:
+        clean_mime = clean_mime.split(";")[0].strip()
+
+    prompt = (
+        "Eres un transcriptor técnico de campo experto para instaladores de baja tensión (REBT 2002) "
+        "y telecomunicaciones (ICT-2 RD 346/2011) en España.\n"
+        "Escucha atentamente este audio grabado por el instalador o técnico y transcribe con máxima exactitud "
+        "su consulta, duda o instrucción técnica (cables, potencias, caídas de tensión, diferenciales, cuadros, "
+        "telecomunicaciones, antenas TDT, satélite, fibra óptica FTTH, videoporteros, etc.).\n"
+        "Devuelve ÚNICAMENTE el texto en español transcrito en lenguaje natural limpio, sin saludos, "
+        "sin comillas ni explicaciones adicionales."
+    )
+
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inlineData": {
+                            "mimeType": clean_mime,
+                            "data": b64_data
+                        }
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "maxOutputTokens": 800
+        }
+    }
+
+    modelos = ["gemini-3.5-transcribe", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
+    ultimo_error = "Error desconocido de conexión."
+    for modelo in modelos:
+        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+        try:
+            resp = requests.post(endpoint, json=payload, timeout=12)
+            if resp.status_code == 200:
+                data = resp.json()
+                cands = data.get("candidates", [])
+                if cands:
+                    partes = cands[0].get("content", {}).get("parts", [])
+                    if partes:
+                        texto = partes[0].get("text", "").strip()
+                        if texto:
+                            return {"exito": True, "texto": texto}
+            else:
+                try:
+                    err_json = resp.json()
+                    err_msg = err_json.get("error", {}).get("message", resp.text[:250])
+                except Exception:
+                    err_msg = resp.text[:250]
+                ultimo_error = f"HTTP {resp.status_code} ({modelo}): {err_msg}"
+        except Exception as e:
+            ultimo_error = str(e)
+            continue
+
+    return {"exito": False, "error": ultimo_error}
+
+def render_reproductor_voz_tts(texto: str, msg_idx: int):
+    """Genera un botón interactivo que lee la respuesta técnica en voz alta en español usando la API de síntesis de voz del navegador."""
+    import streamlit.components.v1 as components
+    # Limpiar markdown, fórmulas KaTeX y caracteres especiales para síntesis de voz natural
+    texto_limpio = re.sub(r'[*_#`$>\-•]', ' ', texto)
+    texto_limpio = re.sub(r'\s+', ' ', texto_limpio).strip()
+    texto_limpio = texto_limpio[:1200].replace('\\', '\\\\').replace('"', '\\"').replace("'", "\\'")
+    html_tts = f"""
+    <div style="margin-top: 6px; display: inline-flex; gap: 8px; align-items: center;">
+        <button id="btn_tts_play_{msg_idx}" onclick="hablar_{msg_idx}()" style="
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        ">
+            🔊 Escuchar Respuesta por Voz
+        </button>
+        <button id="btn_tts_stop_{msg_idx}" onclick="parar_{msg_idx}()" style="
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        ">
+            ⏹️ Silenciar
+        </button>
+    </div>
+    <script>
+    function hablar_{msg_idx}() {{
+        if (!('speechSynthesis' in window)) {{
+            alert('Tu navegador no soporta síntesis de voz directa.');
+            return;
+        }}
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance("{texto_limpio}");
+        u.lang = 'es-ES';
+        u.rate = 1.03;
+        u.pitch = 1.0;
+        window.speechSynthesis.speak(u);
+    }}
+    function parar_{msg_idx}() {{
+        if ('speechSynthesis' in window) {{
+            window.speechSynthesis.cancel();
+        }}
+    }}
+    </script>
+    """
+    components.html(html_tts, height=38)
+
+def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b64: str = None) -> str:
+    """Consulta a los modelos Google Gemini con el system prompt de Ingeniero Eléctrico/Telecomunicaciones e Instalador REBT/ICT-2."""
     contents = []
-    for h in historial[-6:]: # Contexto de mensajes previos
+    for h in historial[-6:]:  # Contexto de mensajes previos
         role = "user" if h["role"] == "user" else "model"
         parts = [{"text": h["content"]}]
         contents.append({"role": role, "parts": parts})
-    
-    # Mensaje actual del usuario con imagen y/o audio opcionales
+
     prompt_texto = consulta.strip()
     if not prompt_texto:
-        if audio_b64:
-            prompt_texto = "Escucha atentamente este mensaje de voz del instalador eléctrico, atiende su consulta o instrucción y respóndele con rigor según el REBT y criterios de ingeniería eléctrica."
-        elif imagen_b64:
-            prompt_texto = "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica."
+        if imagen_b64:
+            prompt_texto = "Analiza detalladamente esta imagen técnica según el REBT (RD 842/2002) o ICT-2 (RD 346/2011) y criterios de ingeniería."
         else:
-            prompt_texto = "Hola, ¿en qué me puedes ayudar hoy con el REBT?"
+            prompt_texto = "Hola, ¿en qué me puedes ayudar hoy con el REBT y las instalaciones de telecomunicaciones?"
 
     user_parts = [{"text": prompt_texto}]
-    
+
     # Adjuntar imagen si existe
     if imagen_b64:
         mime_type, clean_b64 = auditor_ia_rebt._limpiar_b64_imagen(imagen_b64)
@@ -533,17 +848,8 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b
                 }
             })
 
-    # Adjuntar audio de voz si existe
-    if audio_b64:
-        user_parts.append({
-            "inlineData": {
-                "mimeType": audio_mime or "audio/wav",
-                "data": audio_b64
-            }
-        })
-            
     contents.append({"role": "user", "parts": user_parts})
-    
+
     payload = {
         "contents": contents,
         "systemInstruction": {
@@ -555,33 +861,22 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b
             "maxOutputTokens": 2000
         }
     }
-    
-    try:
-        resp = requests.post(endpoint, json=payload, timeout=30)
-        if resp.status_code == 200:
-            data = resp.json()
-            cands = data.get("candidates", [])
-            if cands:
-                texto = cands[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                if texto.strip():
-                    return texto.strip()
-    except Exception:
-        pass
-        
-    # Fallback a gemini-flash-latest
-    endpoint_fb = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
-    try:
-        resp = requests.post(endpoint_fb, json=payload, timeout=30)
-        if resp.status_code == 200:
-            data = resp.json()
-            cands = data.get("candidates", [])
-            if cands:
-                texto = cands[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                if texto.strip():
-                    return texto.strip()
-    except Exception:
-        pass
-        
+
+    modelos = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
+    for modelo in modelos:
+        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+        try:
+            resp = requests.post(endpoint, json=payload, timeout=25)
+            if resp.status_code == 200:
+                data = resp.json()
+                cands = data.get("candidates", [])
+                if cands:
+                    texto = cands[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    if texto.strip():
+                        return texto.strip()
+        except Exception:
+            pass
+
     return responder_consulta_offline_con_imagen(consulta, imagen_b64)
 
 def responder_consulta_offline_con_imagen(consulta: str, imagen_b64: str = None) -> str:
@@ -599,39 +894,31 @@ def responder_consulta_offline_con_imagen(consulta: str, imagen_b64: str = None)
         )
         for e in res_auditoria.get("elementos_identificados", []):
             dictamen_md += f"- {e}\n"
-            
+
         dictamen_md += "\n**Comprobaciones de Seguridad:**\n"
         for c in res_auditoria.get("comprobaciones", []):
             dictamen_md += f"- ✅ **{c.get('criterio')}** (`{c.get('norma_rebt')}`): {c.get('detalle')}\n"
-            
+
         dictamen_md += "\n**Recomendaciones del Instalador e Ingeniero:**\n"
         for r in res_auditoria.get("recomendaciones", []):
             dictamen_md += f"• {r}\n"
-            
+
         dictamen_md += "\n> 💡 *Nota:* Para análisis visual profundo con reconocimiento de lectura de pantallas o cableado real, introduce tu clave gratuita de Google Gemini en el panel superior."
         return dictamen_md
-        
+
     return buscar_respuesta_offline(consulta)
 
-def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: str = None, audio_b64: str = None, audio_mime: str = "audio/wav") -> str:
-    """Enruta la consulta a Gemini con soporte multimodal (texto, fotos y voz) o al motor offline."""
+def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: str = None) -> str:
+    """Enruta la consulta a Gemini con soporte multimodal (texto e imágenes) o al motor offline."""
     key = auditor_ia_rebt.obtener_gemini_api_key()
     if key and len(key) > 10:
-        return consultar_gemini_rebt(consulta, historial or [], key, imagen_b64=imagen_b64, audio_b64=audio_b64, audio_mime=audio_mime)
-    if audio_b64:
-        return (
-            "### 🎙️ Mensaje de Voz Recibido\n\n"
-            "Has grabado una consulta de voz para la IA. Para escuchar y comprender audio directamente en tiempo real, "
-            "activa tu clave gratuita de Google Gemini en el panel superior `⚙️ Estado del Motor`.\n\n"
-            "💡 **Truco directo sin clave:** Puedes dictar con tu propia voz utilizando el atajo del teclado de Windows "
-            "presionando **`Tecla Windows + H`** en cualquier momento, o tocando el micrófono de tu teclado en el móvil."
-        )
+        return consultar_gemini_rebt(consulta, historial or [], key, imagen_b64=imagen_b64)
     return responder_consulta_offline_con_imagen(consulta, imagen_b64)
 
 def render_interfaz_asistente_rebt():
-    """Renderiza la interfaz principal del Consultor IA REBT."""
-    st.markdown('<div class="section-header-blue"><h3 style="margin:0; color:#0369a1;">🤖 Consultor IA: Experto REBT & Ingeniero Eléctrico de Bolimur</h3></div>', unsafe_allow_html=True)
-    st.caption("Tu asesor técnico 24/7 para resolver cualquier duda reglamentaria del REBT, cálculos de caídas de tensión, coordinación de protecciones, límites de MTD vs Proyecto y requisitos de Industria en Murcia.")
+    """Renderiza la interfaz principal del Consultor IA REBT & Telecomunicaciones ICT-2."""
+    st.markdown('<div class="section-header-blue"><h3 style="margin:0; color:#0369a1;">🤖 Consultor IA: Experto REBT & Telecomunicaciones ICT-2 (Ingeniero & Instalador)</h3></div>', unsafe_allow_html=True)
+    st.caption("Asesor técnico integral 24/7 con doble titulación y visión práctica a pie de obra. Resuelve dudas reglamentarias de Electricidad (REBT 2002), Telecomunicaciones (ICT-2 RD 346/2011), Antenas RTV, Fibra Óptica FTTH, Cableado Estructurado Cat6/Cat6A, Racks, Videoporteros, Solar y tramitaciones en Murcia (DGEAIM) y SETSI.")
 
     # Barra superior de configuración rápida de IA
     api_key_actual = auditor_ia_rebt.obtener_gemini_api_key()
@@ -641,9 +928,9 @@ def render_interfaz_asistente_rebt():
         col_st1, col_st2 = st.columns([3, 1.2])
         with col_st1:
             if tiene_key:
-                st.success("🟢 **Modo Online Activo (Google Gemini 2.0 / 1.5 Flash)**: Capacidad total de razonamiento técnico y normativo.")
+                st.success("🟢 **Modo Online Activo (Google Gemini 3.5 Flash / Transcribe)**: Máxima capacidad de comprensión por voz, análisis visual y cálculo normativo en tiempo real.")
             else:
-                st.info("ℹ️ **Modo Offline Activo (Base Experta REBT Bolimur)**: Consultas automáticas guiadas por las 52 ITCs del REBT.")
+                st.info("ℹ️ **Modo Offline Activo (Base Experta REBT & ICT-2 Bolimur)**: Consultas automáticas guiadas por las 52 ITCs del REBT y RD 346/2011.")
             key_in = st.text_input("Clave API de Gemini (Gratuita en Google AI Studio):", value=api_key_actual if tiene_key else "", type="password", key="txt_ia_chat_key")
         with col_st2:
             st.write("")
@@ -657,44 +944,60 @@ def render_interfaz_asistente_rebt():
     if "ia_chat_imagen_activa" not in st.session_state:
         st.session_state["ia_chat_imagen_activa"] = None
 
-    with st.expander("🎙️ Instrucciones de Voz, Cámara en Vivo y Documentos", expanded=bool(st.session_state.get("ia_chat_imagen_activa"))):
-        tab_mic, tab_cam, tab_up = st.tabs(["🎙️ Hablar por Micrófono (Voz)", "📸 Tomar Foto con la Cámara", "📁 Subir Archivo (JPG, PNG, PDF)"])
-        
+    with st.expander("🎙️ Instrucciones por Voz, Cámara en Vivo y Documentos Técnicos", expanded=bool(st.session_state.get("ia_chat_imagen_activa"))):
+        tab_mic, tab_cam, tab_up = st.tabs(["🎙️ Hablar por Micrófono (Voz Directa)", "📸 Tomar Foto con la Cámara", "📁 Subir Archivo (JPG, PNG, PDF)"])
+
         with tab_mic:
-            st.caption("Graba tu voz para hacer una consulta o darle una instrucción directa a la IA:")
-            audio_pic = st.audio_input("Hablar por micrófono a la IA", key="voice_mic_ia_chat")
+            st.caption("Graba tu duda o instrucción técnica por el micrófono. La IA transcribirá tus palabras y las procesará al instante con criterio de Ingeniero e Instalador:")
+            audio_pic = st.audio_input("Hablar por micrófono al Consultor IA", key="voice_mic_ia_chat")
             if audio_pic is not None:
                 st.audio(audio_pic)
-                col_va1, col_va2 = st.columns([1.8, 3])
-                with col_va1:
-                    if st.button("🚀 Enviar Instrucción de Voz a la IA", type="primary", key="btn_send_voice_direct"):
-                        raw_audio = audio_pic.getvalue()
-                        b64_audio = base64.b64encode(raw_audio).decode("utf-8")
-                        mime_aud = audio_pic.type or "audio/wav"
-                        img_actual = st.session_state.get("ia_chat_imagen_activa")
-                        st.session_state["ia_chat_imagen_activa"] = None
+                raw_audio = audio_pic.getvalue()
+                audio_hash = hash(raw_audio)
 
-                        st.session_state.mensajes_chat_rebt.append({
-                            "role": "user",
-                            "content": "🎙️ [Instrucción de voz enviada por micrófono]",
-                            "audio": raw_audio,
-                            "image": img_actual
-                        })
-                        with st.spinner("Escuchando y analizando instrucción de voz según el REBT y criterios de ingeniería..."):
-                            resp = responder_consulta_rebt(
-                                consulta="",
-                                historial=st.session_state.mensajes_chat_rebt[:-1],
-                                imagen_b64=img_actual,
-                                audio_b64=b64_audio,
-                                audio_mime=mime_aud
-                            )
-                            st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
-                        st.rerun()
-                with col_va2:
-                    st.caption("💡 *Tip:* Puedes combinar una foto tomada con la cámara y una nota de voz preguntando sobre ella.")
+                # Si es un audio nuevo, transcribir automáticamente
+                if st.session_state.get("ia_chat_last_trans_hash") != audio_hash:
+                    if tiene_key:
+                        with st.spinner("🎙️ Escuchando y transcribiendo tu voz a texto con IA..."):
+                            res_tr = transcribir_audio_gemini(raw_audio, audio_pic.type or "audio/wav", api_key_actual)
+                            if res_tr.get("exito"):
+                                st.session_state["ia_chat_last_trans_hash"] = audio_hash
+                                st.session_state["ia_chat_texto_voz"] = res_tr.get("texto", "")
+                                st.toast("🗣️ Voz transcrita con éxito", icon="🎙️")
+                            else:
+                                st.error(f"Error al transcribir voz: {res_tr.get('error')}")
+                    else:
+                        st.info("ℹ️ Para transcripción por voz directa con IA, activa tu clave Gemini en el panel superior. También puedes dictar en Windows con la combinación `Tecla Windows + H`.")
+
+                texto_voz_actual = st.session_state.get("ia_chat_texto_voz", "")
+                if texto_voz_actual:
+                    st.success(f"🗣️ **Texto Transcrito Reconocido:**\n\n*«{texto_voz_actual}»*")
+                    col_va1, col_va2 = st.columns([1.8, 3])
+                    with col_va1:
+                        if st.button("🚀 Enviar esta Consulta a la IA", type="primary", key="btn_send_voice_direct", use_container_width=True):
+                            img_actual = st.session_state.get("ia_chat_imagen_activa")
+                            st.session_state["ia_chat_imagen_activa"] = None
+                            st.session_state["ia_chat_texto_voz"] = None
+
+                            st.session_state.mensajes_chat_rebt.append({
+                                "role": "user",
+                                "content": f"🎙️ **Consulta de Voz:** «{texto_voz_actual}»",
+                                "audio": raw_audio,
+                                "image": img_actual
+                            })
+                            with st.spinner("Consultando normativas REBT e ICT-2 con visión de Ingeniero e Instalador..."):
+                                resp = responder_consulta_rebt(
+                                    consulta=texto_voz_actual,
+                                    historial=st.session_state.mensajes_chat_rebt[:-1],
+                                    imagen_b64=img_actual
+                                )
+                                st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+                            st.rerun()
+                    with col_va2:
+                        st.caption("💡 *Tip:* Puedes combinar una foto tomada con la cámara y tu nota de voz preguntando sobre ella.")
 
         with tab_cam:
-            st.caption("Apunta con la cámara de tu móvil o portátil al cuadro eléctrico, pica de tierra, rotulación o display:")
+            st.caption("Apunta con la cámara de tu móvil o portátil al cuadro eléctrico, pica de tierra, rotulación, antena o rack:")
             cam_pic = st.camera_input("Capturar foto desde el dispositivo", key="cam_input_ia_chat")
             if cam_pic is not None:
                 b64_cam = procesar_archivo_camara_o_adjunto(cam_pic)
@@ -702,7 +1005,7 @@ def render_interfaz_asistente_rebt():
                     st.session_state["ia_chat_imagen_activa"] = b64_cam
 
         with tab_up:
-            st.caption("Sube un esquema unifilar, plano o fotografía desde tu galería o disco (PNG, JPG, PDF):")
+            st.caption("Sube un esquema unifilar, plano ICT o fotografía desde tu galería o disco (PNG, JPG, PDF):")
             up_file = st.file_uploader("Seleccionar archivo técnico:", type=["png", "jpg", "jpeg", "webp", "pdf"], key="file_up_ia_chat")
             if up_file is not None:
                 b64_up = procesar_archivo_camara_o_adjunto(up_file)
@@ -720,37 +1023,54 @@ def render_interfaz_asistente_rebt():
                 st.info("✅ **Imagen adjunta cargada**. Escribe tu consulta abajo, habla por el micrófono o pulsa el botón directo para una auditoría general:")
                 if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_analizar_img_directo"):
                     img_actual = st.session_state["ia_chat_imagen_activa"]
-                    txt_q = "Analiza detalladamente esta imagen técnica según el REBT y criterios de ingeniería eléctrica. Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
+                    txt_q = "Analiza detalladamente esta imagen técnica según el REBT o ICT-2 y criterios de ingeniería. Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
                     st.session_state.mensajes_chat_rebt.append({
                         "role": "user",
                         "content": txt_q,
                         "image": img_actual
                     })
                     st.session_state["ia_chat_imagen_activa"] = None
-                    with st.spinner("Analizando imagen con visión técnica e ingeniería REBT..."):
+                    with st.spinner("Analizando imagen con visión técnica e ingeniería REBT / ICT-2..."):
                         resp = responder_consulta_rebt(txt_q, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_actual)
                         st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
                     st.rerun()
 
-    # Preguntas Rápidas Frecuentes
-    st.markdown("##### ⚡ Consultas Rápidas de Taller, Obra y Solar Fotovoltaica:")
+    # Preguntas Rápidas Frecuentes (REBT, Solar y Telecomunicaciones ICT-2)
+    st.markdown("##### ⚡ Consultas Rápidas de Taller, Obra, Telecomunicaciones e ICT-2:")
     pills = [
-        "⚖️ ¿Cuándo necesito Proyecto de Ingeniero en vez de MTD?",
-        "☀️ ¿Cuál es la diferencia entre una instalación solar a red y aislada?",
-        "🔋 ¿Cómo se dimensiona una instalación fotovoltaica aislada con baterías?",
-        "🔴 ¿Cómo resolver el error 'Isolation Fault' (Fallo de aislamiento DC)?",
-        "⚡ ¿Por qué el inversor se apaga por 'Grid Overvoltage' (Tensión > 253V)?",
-        "🛡️ ¿Cuántos circuitos puedo poner bajo un diferencial de 30mA?",
-        "🔌 ¿Cómo se calcula la sección de una Derivación Individual?",
-        "🚗 ¿Qué protecciones exige la ITC-BT-52 para recarga VE?"
+        "📡 ¿Cuáles son los niveles de señal reglamentarios en toma para TDT y Satélite según la ICT-2?",
+        "⚖️ ¿Cuándo se necesita Proyecto de Ingeniero de Telecomunicación vs Boletín?",
+        "🌐 ¿Cómo instalar y certificar cableado estructurado Cat6 / Cat6A y racks?",
+        "💡 ¿Qué exigencias técnicas tiene la instalación de fibra óptica FTTH (ICT-2)?",
+        "🏢 ¿Qué dimensiones y tomas debe tener el Registro de Terminación de Red (RTR)?",
+        "🚪 ¿Cómo elegir e instalar un videoportero de 2 hilos frente a uno IP / SIP?",
+        "⚡ ¿Qué separación debe mantenerse entre conductores de electricidad de 230V y datos?",
+        "⚖️ ¿Cuándo se necesita Proyecto de Ingeniero en lugar de MTD (REBT)?",
+        "☀️ ¿Cuál es la diferencia entre una instalación solar conectada a red y una aislada?",
+        "🛡️ ¿Cuántos circuitos magnetotérmicos (PIAs) se pueden conectar por cada diferencial?"
     ]
 
-    cols_pills = st.columns(len(pills))
+    pills_labels = [
+        "📡 Niveles RTV TDT/SAT",
+        "⚖️ Proyecto ICT vs Boletín",
+        "🌐 Cableado Cat6 / Cat6A",
+        "💡 Fibra Óptica FTTH < 2dB",
+        "🏢 Registro RTR Vivienda",
+        "🚪 Videoportero 2 Hilos / IP",
+        "⚡ Separación 230V y Datos",
+        "⚖️ MTD vs Proyecto REBT",
+        "☀️ Solar Red vs Aislada",
+        "🛡️ 5 Circuitos por Diferencial"
+    ]
+
+    cols_p1 = st.columns(5)
+    cols_p2 = st.columns(5)
+    todas_cols = cols_p1 + cols_p2
+
     pregunta_seleccionada = None
     for idx, p_text in enumerate(pills):
-        with cols_pills[idx]:
-            # Botón compacto
-            lbl = p_text.split("¿")[0].strip() + " " + p_text.split("¿")[1].split("?")[0][:18] + "..."
+        with todas_cols[idx]:
+            lbl = pills_labels[idx]
             if st.button(lbl, key=f"btn_pill_{idx}", help=p_text, use_container_width=True):
                 pregunta_seleccionada = p_text
 
@@ -760,10 +1080,11 @@ def render_interfaz_asistente_rebt():
             {
                 "role": "assistant",
                 "content": (
-                    "¡Hola! Soy tu **Consultor de Ingeniería y Maestro Instalador REBT** de Bolimur. "
-                    "Estoy preparado para resolver cualquier duda sobre cálculos eléctricos, dimensionamiento de conductores, "
-                    "aparamenta, esquemas unifilares, tramitación de MTD ante Industria (DGEAIM Murcia) o límites legales de la ITC-BT-04.\n\n"
-                    "📷 **Novedad:** Ahora puedes **tomar fotos con tu cámara o adjuntar planos y PDFs** en el panel superior para que los revise y te dé mi dictamen.\n\n"
+                    "¡Hola! Soy tu **Consultor Senior de Ingeniería y Maestro Instalador Habilitado** (REBT e ICT-2) de Bolimur.\n\n"
+                    "Estoy preparado para resolver cualquier duda sobre:\n"
+                    "- ⚡ **Baja Tensión y Fotovoltaica (REBT):** Cálculos de caídas de tensión, secciones, coordinación de protecciones, esquemas unifilares, tramitación de MTD ante Industria (DGEAIM Murcia) y límites de Proyecto.\n"
+                    "- 📡 **Telecomunicaciones (ICT-2 RD 346/2011):** Niveles de señal RTV (TDT LTE 700 / Satélite FI), cableado estructurado Cat6/Cat6A, armarios rack, redes FTTH de fibra óptica insensible a curvatura (G.657A2), registros RTR y videoporteros digitales de 2 hilos e IP.\n\n"
+                    "🎙️ **Novedad:** Ahora puedes **hablar directamente por micrófono** y la IA transcribirá tu voz al instante, además de contar con **reproducción de voz en audio (🔊)** de todas las respuestas técnicas.\n\n"
                     "¿Qué instalación estás ejecutando o qué consulta técnica tienes hoy?"
                 )
             }
@@ -777,7 +1098,7 @@ def render_interfaz_asistente_rebt():
         if img_p:
             user_p["image"] = img_p
         st.session_state.mensajes_chat_rebt.append(user_p)
-        with st.spinner("Consultando normativa técnica REBT y criterios de ingeniería..."):
+        with st.spinner("Consultando normativa técnica REBT / ICT-2 y criterios de ingeniería..."):
             resp = responder_consulta_rebt(pregunta_seleccionada, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_p)
             st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
         st.rerun()
@@ -786,7 +1107,7 @@ def render_interfaz_asistente_rebt():
     st.markdown("---")
     chat_container = st.container()
     with chat_container:
-        for m in st.session_state.mensajes_chat_rebt:
+        for idx, m in enumerate(st.session_state.mensajes_chat_rebt):
             if m["role"] == "user":
                 with st.chat_message("user", avatar="👷"):
                     if m.get("audio"):
@@ -797,28 +1118,31 @@ def render_interfaz_asistente_rebt():
             else:
                 with st.chat_message("assistant", avatar="⚡"):
                     st.markdown(m["content"])
+                    # Reproductor de voz Web Speech API
+                    render_reproductor_voz_tts(m["content"], idx)
 
     # Entrada del usuario en la parte inferior
-    prompt = st.chat_input("Escribe tu consulta o pregunta sobre la imagen adjunta (ej: ¿Este cuadro cumple con la ITC-BT-17?)...")
+    prompt = st.chat_input("Escribe o consulta sobre electricidad (REBT), telecomunicaciones (ICT-2) o la foto adjunta...")
     if prompt:
         img_enviar = st.session_state.get("ia_chat_imagen_activa")
         st.session_state["ia_chat_imagen_activa"] = None
-        
+
         user_entry = {"role": "user", "content": prompt}
         if img_enviar:
             user_entry["image"] = img_enviar
         st.session_state.mensajes_chat_rebt.append(user_entry)
-        
+
         with st.chat_message("user", avatar="👷"):
             if img_enviar:
                 st.image(img_enviar, caption="📷 Evidencia técnica adjunta", width=320)
             st.markdown(prompt)
 
         with st.chat_message("assistant", avatar="⚡"):
-            with st.spinner("Analizando imagen y consulta según REBT e ingeniería eléctrica..."):
+            with st.spinner("Analizando consulta según REBT, ICT-2 e ingeniería técnica..."):
                 respuesta = responder_consulta_rebt(prompt, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_enviar)
                 st.markdown(respuesta)
                 st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": respuesta})
+                render_reproductor_voz_tts(respuesta, len(st.session_state.mensajes_chat_rebt) - 1)
 
     # Botones de control inferiores
     col_b1, col_b2 = st.columns([1, 4])
@@ -827,8 +1151,10 @@ def render_interfaz_asistente_rebt():
             st.session_state.mensajes_chat_rebt = [
                 {
                     "role": "assistant",
-                    "content": "Conversación reiniciada. ¿En qué te puedo asesorar ahora sobre el REBT o tus proyectos?"
+                    "content": "Conversación reiniciada. ¿En qué te puedo asesorar ahora sobre el REBT, ICT-2 o tus proyectos?"
                 }
             ]
             st.session_state["ia_chat_imagen_activa"] = None
+            st.session_state["ia_chat_texto_voz"] = None
+            st.session_state["ia_chat_last_trans_hash"] = None
             st.rerun()
