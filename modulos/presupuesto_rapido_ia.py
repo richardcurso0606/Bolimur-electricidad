@@ -1028,30 +1028,62 @@ def renderizar():
             ])
 
             with tab_mem1:
-                st.caption("Esta es la descripción exhaustiva formal generada por la IA. Puedes modificarla o adaptarla antes de imprimir o transferir al presupuesto:")
+                st.markdown("<div style='font-size: 15px; font-weight: 600; color: #334155; margin-bottom: 8px;'>Descripción exhaustiva formal generada por la IA para factura o memoria de presupuesto (editable):</div>", unsafe_allow_html=True)
                 memoria_val = st.text_area(
                     "Texto descriptivo formal para factura o presupuesto:",
                     value=res.get("descripcion_detallada", ""),
-                    height=160,
-                    key="pr_memoria_editable"
+                    height=200,
+                    key="pr_memoria_editable",
+                    label_visibility="collapsed"
                 )
                 res["descripcion_detallada"] = memoria_val
 
             with tab_mem2:
-                st.info(f"**Criterio Técnico y Reglamentario:**\n\n{res.get('justificacion_tecnica', 'Conforme a los criterios generales del REBT RD 842/2002.')}")
+                just_txt = res.get('justificacion_tecnica', 'Conforme a los criterios generales del REBT RD 842/2002.')
+                st.markdown(
+                    f"""
+                    <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; border-radius: 12px; padding: 24px 28px; margin: 10px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                        <div style="font-size: 20px; font-weight: 800; color: #1e40af; margin-bottom: 14px;">
+                            ⚖️ Criterio Técnico y Reglamentario Oficial (REBT RD 842/2002):
+                        </div>
+                        <div style="font-size: 17px; line-height: 1.85; color: #1e3a8a; font-weight: 500; text-align: justify;">
+                            {just_txt}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
             with tab_mem3:
                 c_pas1, c_pas2 = st.columns(2)
                 with c_pas1:
-                    st.markdown("**🔧 Pasos de Ejecución en Obra:**")
                     pasos_list = res.get("pasos_ejecucion", [])
-                    for idx_p, p_item in enumerate(pasos_list, 1):
-                        st.markdown(f"{idx_p}. {p_item}")
+                    items_pasos_html = ''.join(f'<div style="margin-bottom:10px;"><b>{idx_p}.</b> {p_item}</div>' for idx_p, p_item in enumerate(pasos_list, 1))
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 20px 22px; height: 100%;">
+                            <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">🔧 Pasos de Ejecución en Obra:</div>
+                            <div style="font-size: 16px; line-height: 1.75; color: #334155;">
+                                {items_pasos_html}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 with c_pas2:
-                    st.markdown("**✅ Ensayos Reglamentarios Obligatorios (ITC-BT-05):**")
                     pruebas_list = res.get("pruebas_rebt", [])
-                    for p_test in pruebas_list:
-                        st.markdown(f"- 🧪 {p_test}")
+                    items_pruebas_html = ''.join(f'<div style="margin-bottom:10px;">🧪 <b>{p_test}</b></div>' for p_test in pruebas_list)
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 20px 22px; height: 100%;">
+                            <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">✅ Ensayos Reglamentarios Obligatorios (ITC-BT-05):</div>
+                            <div style="font-size: 16px; line-height: 1.75; color: #334155;">
+                                {items_pruebas_html}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
             st.markdown("---")
             st.markdown("#### 📦 Escandallo Económico Desglosado")
@@ -1167,20 +1199,41 @@ def renderizar():
                         comp = comparar_precios_proveedores(n_mat, prov_sel, base_p, df_bd)
                         if comp["hay_ahorro"]:
                             ahorro_tot = round(comp["ahorro_ud"] * n_cnt, 2)
-                            c_ah1, c_ah2 = st.columns([4.0, 1.8])
+                            st.markdown(
+                                f"""
+                                <div style="background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); border: 2px solid #eab308; border-radius: 10px; padding: 14px 18px; margin: 10px 0;">
+                                    <div style="font-size: 16px; font-weight: 800; color: #854d0e;">
+                                        💡 ¡AVISO DE PRECIO MÁS BARATO DISPONIBLE!
+                                    </div>
+                                    <div style="font-size: 15px; color: #713f12; margin-top: 6px; line-height: 1.5;">
+                                        En <b>{prov_sel}</b> cuesta <b>{pu_actual:.2f} €/ud</b>, pero en <b>{comp['tienda_min']}</b> está disponible a <b>{comp['precio_min']:.2f} €/ud</b>.<br/>
+                                        👉 <b>Ahorras {comp['ahorro_ud']:.2f} € por unidad</b> (te ahorras <b>{ahorro_tot:,.2f} €</b> en total para las {n_cnt:.0f} unidades).
+                                    </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                            c_ah1, c_ah2 = st.columns([3.8, 2.2])
                             with c_ah1:
-                                st.info(
-                                    f"💡 **Aviso de Ahorro:** Este material está más barato en **{comp['tienda_min']}** a **`{comp['precio_min']:.2f} €/ud`** "
-                                    f"(ahorras **`{comp['ahorro_ud']:.2f} €/ud`** vs {prov_sel} · Ahorro total: **`{ahorro_tot:,.2f} €`**).",
-                                    icon="💡"
-                                )
+                                st.caption(f"¿Deseas comprar en {comp['tienda_min']} para optimizar el coste de este material?")
                             with c_ah2:
-                                st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-                                if st.button(f"⚡ Cambiar a {comp['tienda_min']}", key=f"btn_switch_store_{idx_m}", help=f"Cambiar proveedor a {comp['tienda_min']} y actualizar a {comp['precio_min']:.2f} €"):
+                                if st.button(
+                                    f"🛒 Sí, comprar en {comp['tienda_min']} ({comp['precio_min']:.2f} €)",
+                                    key=f"btn_switch_store_{idx_m}",
+                                    type="primary",
+                                    use_container_width=True,
+                                    help=f"Cambiar proveedor a {comp['tienda_min']} y actualizar precio a {comp['precio_min']:.2f} €"
+                                ):
                                     st.session_state[key_prov] = comp['tienda_min']
                                     st.session_state[key_p] = float(comp['precio_min'])
-                                    st.session_state[key_orig] = f"🏷️ BD Oficial ({comp['tienda_min']})"
+                                    st.session_state[key_orig] = f"🏷️ Tarifa Optimizada ({comp['tienda_min']})"
                                     st.rerun()
+                        else:
+                            st.markdown(
+                                f"<div style='font-size:13px; color:#15803d; font-weight:700; margin-top:6px;'>"
+                                f"✅ <b>{prov_sel}</b> es el proveedor con el mejor precio disponible para esta partida ({pu_actual:.2f} €/ud).</div>",
+                                unsafe_allow_html=True
+                            )
 
                     # Sincronización continua con la lista maestra
                     m_item["mat"] = n_mat
