@@ -1710,6 +1710,20 @@ def renderizar():
                     key="btn_descargar_orden_compra_xlsx_rapido"
                 )
 
+            # Vista Previa Interactiva en Pantalla del PDF Oficial
+            with st.expander("👁️ Vista Previa del Presupuesto Oficial en Pantalla antes de Descargar", expanded=True):
+                st.info("💡 **Vista previa en tiempo real.** Revisa que los importes, capítulos REBT y datos del instalador coinciden al 100%:")
+                try:
+                    import pymupdf
+                    doc_pv = pymupdf.open(stream=pdf_pres_bytes, filetype="pdf")
+                    for num_p, pag in enumerate(doc_pv, start=1):
+                        pix = pag.get_pixmap(dpi=140)
+                        if len(doc_pv) > 1:
+                            st.caption(f"📄 Página {num_p} de {len(doc_pv)}")
+                        st.image(pix.tobytes("png"), use_container_width=True)
+                except Exception:
+                    pass
+
             # Envío Directo por WhatsApp solicitando teléfono
             st.markdown("")
             with st.container(border=True):

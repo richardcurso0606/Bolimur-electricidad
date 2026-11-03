@@ -14,15 +14,28 @@ from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
 
 def limpiar_texto_pdf(texto: str) -> str:
-    """Elimina emojis y caracteres suplementarios no soportados por las fuentes PDF estándar (Type 1 / Helvetica)."""
+    """Garantiza que el texto solo contenga caracteres compatibles con ReportLab (Helvetica / Latin-1),
+    eliminando emojis, símbolos decorativos o caracteres de control que provocan cuadros negros (■■)."""
     if not texto:
         return ""
     t = str(texto)
-    # Emojis y símbolos Unicode suplementarios que ReportLab renderiza como cuadrados negros
-    t = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', t)
-    t = re.sub(r' +', ' ', t)
-    t = t.replace('( ', '(').replace(' )', ')').replace('[ ', '[').replace(' ]', ']').strip()
-    return t
+    # Eliminar bloques de símbolos Unicode suplementarios, emojis, variaciones de color y formas geométricas
+    t = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\u25a0-\u25ff\u2b00-\u2bff\ufe00-\ufe0f]', '', t)
+    
+    # Filtrar estrictamente a caracteres imprimibles occidentales (Latin-1 + Euro)
+    resultado = []
+    for char in t:
+        code = ord(char)
+        if code == 8364:  # Euro €
+            resultado.append(char)
+        elif 32 <= code < 256 or char in '\n\r\t':
+            resultado.append(char)
+        else:
+            pass
+    t_clean = "".join(resultado)
+    t_clean = re.sub(r' +', ' ', t_clean)
+    t_clean = t_clean.replace('( ', '(').replace(' )', ')').replace('[ ', '[').replace(' ]', ']').strip()
+    return t_clean
 
 class NumberedCanvasUnifilar(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -257,17 +270,6 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
     story.append(meta_table)
     story.append(Spacer(1, 6))
 
-    subtotal_neto = float(presupuesto_data.get("subtotal_neto") or presupuesto_data.get("total_neto") or 0.0)
-    capitulos = presupuesto_data.get("capitulos", [])
-    if subtotal_neto <= 0.0 and capitulos:
-        subtotal_neto = sum(float(c.get("importe", 0.0)) for c in capitulos)
-
-    iva_pct = float(presupuesto_data.get("iva_pct", 21.0))
-    cuota_iva = float(presupuesto_data.get("cuota_iva") or round(subtotal_neto * (iva_pct / 100.0), 2))
-    total_cliente = float(presupuesto_data.get("total_cliente") or presupuesto_data.get("total_con_iva") or round(subtotal_neto + cuota_iva, 2))
-    if total_cliente <= 0.0:
-        total_cliente = round(subtotal_neto + cuota_iva, 2)
-
     df_comercial = presupuesto_data.get("df_comercial", [])
     if hasattr(df_comercial, 'to_dict'):
         records_est = df_comercial.to_dict('records')
@@ -275,6 +277,25 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
         records_est = df_comercial or []
 
     partidas_man = presupuesto_data.get("partidas_manuales", [])
+    capitulos = presupuesto_data.get("capitulos", [])
+
+    subtotal_neto = float(presupuesto_data.get("subtotal_neto") or presupuesto_data.get("total_neto") or 0.0)
+    if subtotal_neto <= 0.0:
+        if capitulos:
+            subtotal_neto = sum(float(c.get("importe", 0.0)) for c in capitulos)
+        elif partidas_man:
+            subtotal_neto = sum(float(p.get("subtotal", 0.0)) for p in partidas_man)
+        elif records_est:
+            subtotal_neto = sum(float(r.get("Importe Venta (€)", r.get("Importe (€)", 0.0))) for r in records_est)
+
+    iva_pct = float(presupuesto_data.get("iva_pct", 21.0))
+    cuota_iva = float(presupuesto_data.get("cuota_iva") or 0.0)
+    if cuota_iva <= 0.0 and subtotal_neto > 0.0 and iva_pct > 0.0:
+        cuota_iva = round(subtotal_neto * (iva_pct / 100.0), 2)
+
+    total_cliente = float(presupuesto_data.get("total_cliente") or presupuesto_data.get("total_con_iva") or 0.0)
+    if total_cliente <= 0.0 and subtotal_neto > 0.0:
+        total_cliente = round(subtotal_neto + cuota_iva, 2)
 
     total_puntos = int(presupuesto_data.get("total_puntos") or 0)
     if not total_puntos:
@@ -282,6 +303,8 @@ def generar_pdf_presupuesto(proyecto_info, presupuesto_data):
             total_puntos = sum(int(r.get("Puntos", r.get("Puntos Mecanismos", 1))) for r in records_est)
         elif partidas_man:
             total_puntos = len(partidas_man)
+        elif capitulos:
+            total_puntos = len(capitulos)
 
     precio_medio_punto = float(presupuesto_data.get("precio_medio_punto", 0.0))
     if precio_medio_punto <= 0.0 and total_puntos:
