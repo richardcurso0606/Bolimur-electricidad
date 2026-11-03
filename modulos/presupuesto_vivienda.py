@@ -4287,7 +4287,7 @@ def app():
                         pct_margen_mo_auto = st.slider(
                             "🔧 % Margen Comercial sobre Mano de Obra ($G_{mo}$) para Autónomo:",
                             min_value=0.0,
-                            max_value=float(margen_comercial),
+                            max_value=float(max(margen_comercial, 50.0)),
                             value=0.0,
                             step=5.0,
                             format="%.0f%%",
