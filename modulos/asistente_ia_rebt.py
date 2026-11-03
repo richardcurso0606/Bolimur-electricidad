@@ -920,6 +920,50 @@ def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api
 
     return {"exito": False, "error": ultimo_error}
 
+def sintetizar_audio_voz(texto: str) -> bytes:
+    """Genera audio MP3 en español a partir del texto técnico usando gTTS para escucha en calle/furgoneta."""
+    try:
+        from gtts import gTTS
+        import io
+        t = texto
+        # Eliminar encabezados y estilos markdown
+        t = re.sub(r'#+\s*', '', t)
+        t = re.sub(r'\*\*(.*?)\*\*', r'\1', t)
+        t = re.sub(r'\*(.*?)\*', r'\1', t)
+        t = re.sub(r'`(.*?)`', r'\1', t)
+        # Reemplazar unidades y abreviaturas técnicas por pronunciación en español
+        t = t.replace('mm²', ' milímetros cuadrados ')
+        t = t.replace('kW', ' kilovatios ')
+        t = t.replace('kWh', ' kilovatios hora ')
+        t = t.replace('Wh', ' vatios hora ')
+        t = t.replace('Wp', ' vatios pico ')
+        t = t.replace('W', ' vatios ')
+        t = t.replace('V', ' voltios ')
+        t = t.replace('A', ' amperios ')
+        t = t.replace('mA', ' miliamperios ')
+        t = t.replace('Ω', ' ohmios ')
+        t = t.replace('Ohm', ' ohmios ')
+        t = t.replace('>=', ' mayor o igual que ')
+        t = t.replace('<=', ' menor o igual que ')
+        t = t.replace('dBµV', ' decibelios microvoltio ')
+        t = t.replace('dB', ' decibelios ')
+        # Quitar bloques KaTeX
+        t = re.sub(r'\$\$[\s\S]*?\$\$', ' ', t)
+        t = re.sub(r'\$[^$\n]+\$', ' ', t)
+        t = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', t)
+        t = re.sub(r'[-•*]\s+', '. ', t)
+        t = re.sub(r'\s+', ' ', t).strip()
+        # Primeros 650 caracteres para respuesta rápida, fluida y directa a pie de obra
+        texto_hablado = t[:650].strip()
+        if not texto_hablado:
+            return b""
+        fp = io.BytesIO()
+        tts = gTTS(text=texto_hablado, lang='es', tld='es', slow=False)
+        tts.write_to_fp(fp)
+        return fp.getvalue()
+    except Exception:
+        return b""
+
 def render_reproductor_voz_tts(texto: str, msg_idx: int):
     """Genera un botón interactivo que lee la respuesta técnica en voz alta en español usando la API de síntesis de voz del navegador."""
     import streamlit.components.v1 as components
@@ -943,7 +987,7 @@ def render_reproductor_voz_tts(texto: str, msg_idx: int):
             gap: 5px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         ">
-            🔊 Escuchar Respuesta por Voz
+            🔊 Escuchar por Voz (Web)
         </button>
         <button id="btn_tts_stop_{msg_idx}" onclick="parar_{msg_idx}()" style="
             background: #f1f5f9;
@@ -990,9 +1034,9 @@ def consultar_gemini_rebt(consulta: str, historial: list, api_key: str, imagen_b
     prompt_texto = consulta.strip()
     if not prompt_texto:
         if imagen_b64:
-            prompt_texto = "Analiza detalladamente esta imagen técnica según el REBT (RD 842/2002) o ICT-2 (RD 346/2011) y criterios de ingeniería."
+            prompt_texto = "Analiza detalladamente esta imagen técnica según el REBT, Solar Fotovoltaica, IRVE o ICT-2 y criterios de ingeniería."
         else:
-            prompt_texto = "Hola, ¿en qué me puedes ayudar hoy con el REBT y las instalaciones de telecomunicaciones?"
+            prompt_texto = "Hola, ¿en qué me puedes ayudar hoy con el REBT, la solar fotovoltaica, la recarga de vehículo eléctrico y las telecomunicaciones?"
 
     user_parts = [{"text": prompt_texto}]
 
@@ -1076,20 +1120,46 @@ def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: s
 
 def render_interfaz_asistente_rebt():
     """Renderiza la interfaz principal del Consultor IA REBT, Solar Fotovoltaica, IRVE & Telecomunicaciones ICT-2."""
-    st.markdown('<div class="section-header-blue"><h3 style="margin:0; color:#0369a1;">🤖 Consultor IA: Experto REBT, Solar Fotovoltaica, Vehículo Eléctrico & Telecomunicaciones (Ingeniero & Instalador)</h3></div>', unsafe_allow_html=True)
-    st.caption("Asesor técnico integral 24/7 con doble titulación de Ingeniería y 25 años de experiencia de campo. Resuelve consultas normativas y prácticas de Electricidad (REBT 2002), Autoconsumo y Mantenimiento Solar (RD 244/2019, UNE-EN 62446), Recarga de Vehículo Eléctrico (ITC-BT-52, IEC 62955), Telecomunicaciones (ICT-2 RD 346/2011) y trámites ante Industria (DGEAIM Murcia) y SETSI.")
+    st.markdown('<div class="section-header-blue"><h3 style="margin:0; color:#0369a1;">🤖 Consultor IA: Experto REBT, Solar Fotovoltaica, Vehículo Eléctrico & Telecomunicaciones</h3></div>', unsafe_allow_html=True)
+    st.caption("Asesor técnico integral 24/7 con doble titulación de Ingeniería y 25 años de experiencia a pie de obra. Resuelve dudas normativas y de campo sobre REBT 2002, Autoconsumo Solar (RD 244/2019, UNE-EN 62446), Puntos de Recarga VE (ITC-BT-52, IEC 62955) y Telecomunicaciones (ICT-2 RD 346/2011).")
 
-    # Barra superior de configuración rápida de IA
+    # Inicializar contadores y estados de sesión
+    if "mensajes_chat_rebt" not in st.session_state:
+        st.session_state.mensajes_chat_rebt = [
+            {
+                "role": "assistant",
+                "content": (
+                    "¡Hola! Soy tu **Consultor Senior de Ingeniería y Maestro Instalador Habilitado** de Bolimur.\n\n"
+                    "Estoy preparado para asesorarte con rigor de ingeniero y experiencia práctica a pie de obra en:\n"
+                    "- ⚡ **Baja Tensión (REBT):** Caídas de tensión, secciones, coordinación de protecciones, esquemas unifilares y MTD ante DGEAIM Murcia.\n"
+                    "- ☀️ **Solar Fotovoltaica (RD 244/2019, UNE-EN 62446):** Instalación y mantenimiento de paneles, termografía de puntos calientes, diodos bypass, fusibles gPV, inversores y aisladas con baterías LiFePO4.\n"
+                    "- 🚗 **Vehículo Eléctrico (ITC-BT-52):** Puntos de recarga Wallbox en garajes comunitarios (Esquema 2 y LPH 17.5), diferenciales Clase A con detección 6 mA DC (IEC 62955) y modulación de carga SPL.\n"
+                    "- 📡 **Telecomunicaciones (ICT-2 RD 346/2011):** Niveles RTV TDT/SAT, fibra óptica FTTH insensible a curvatura (<2 dB), cableado Cat6/Cat6A y videoporteros digitales de 2 hilos e IP.\n\n"
+                    "🎙️ **Modo Manos Libres Activo:** Pulsa el micrófono directamente en la ventana de conversación abajo para hablar. La IA transcribirá tus palabras, te responderá y **te hablará en voz alta (audio automático)** para que no tengas que leer en la calle."
+                )
+            }
+        ]
+
+    if "ia_chat_imagen_activa" not in st.session_state:
+        st.session_state["ia_chat_imagen_activa"] = None
+    if "ia_voice_counter" not in st.session_state:
+        st.session_state["ia_voice_counter"] = 0
+    if "ia_cam_counter" not in st.session_state:
+        st.session_state["ia_cam_counter"] = 0
+    if "ia_file_counter" not in st.session_state:
+        st.session_state["ia_file_counter"] = 0
+
     api_key_actual = auditor_ia_rebt.obtener_gemini_api_key()
     tiene_key = bool(api_key_actual and len(api_key_actual) > 10)
 
-    with st.expander("⚙️ Estado del Motor de Inteligencia Artificial", expanded=False):
+    # Barra compacta de estado del motor IA
+    with st.expander("⚙️ Estado del Motor de Inteligencia Artificial & Clave Gemini", expanded=False):
         col_st1, col_st2 = st.columns([3, 1.2])
         with col_st1:
             if tiene_key:
-                st.success("🟢 **Modo Online Activo (Google Gemini 3.5 Flash / Transcribe)**: Máxima capacidad de comprensión por voz, análisis visual y cálculo normativo en tiempo real.")
+                st.success("🟢 **Modo Online Activo (Google Gemini 3.5 Flash / Transcribe)**: Comprensión por voz, visión y cálculo en tiempo real.")
             else:
-                st.info("ℹ️ **Modo Offline Activo (Base Experta Bolimur)**: Consultas automáticas guiadas por las 52 ITCs del REBT, normativas solares, IRVE e ICT-2.")
+                st.info("ℹ️ **Modo Offline Activo (Base Experta Bolimur)**: Consultas automáticas guiadas por REBT, Solar, IRVE e ICT-2.")
             key_in = st.text_input("Clave API de Gemini (Gratuita en Google AI Studio):", value=api_key_actual if tiene_key else "", type="password", key="txt_ia_chat_key")
         with col_st2:
             st.write("")
@@ -1099,8 +1169,8 @@ def render_interfaz_asistente_rebt():
                 st.success("Clave guardada.")
                 st.rerun()
 
-    # Preguntas Rápidas Frecuentes (REBT, Solar Fotovoltaica, IRVE y Telecomunicaciones ICT-2)
-    st.markdown("##### ⚡ Consultas Rápidas de Taller, Obra, Solar, Vehículo Eléctrico e ICT-2:")
+    # Preguntas Rápidas Frecuentes (Píldoras)
+    st.markdown("##### ⚡ Consultas Rápidas de Campo:")
     pills = [
         "☀️ ¿Cómo se realiza el mantenimiento preventivo y correctivo de placas solares según la norma UNE-EN 62446?",
         "🛡️ ¿Qué protecciones de corriente continua (DC) son obligatorias en una instalación solar (UNE-EN 62548)?",
@@ -1138,29 +1208,7 @@ def render_interfaz_asistente_rebt():
             if st.button(lbl, key=f"btn_pill_{idx}", help=p_text, use_container_width=True):
                 pregunta_seleccionada = p_text
 
-    # Inicializar historial de chat
-    if "mensajes_chat_rebt" not in st.session_state:
-        st.session_state.mensajes_chat_rebt = [
-            {
-                "role": "assistant",
-                "content": (
-                    "¡Hola! Soy tu **Consultor Senior de Ingeniería y Maestro Instalador Habilitado** de Bolimur.\n\n"
-                    "Estoy preparado para asesorarte con rigor de ingeniero y experiencia a pie de obra en:\n"
-                    "- ⚡ **Baja Tensión (REBT):** Caídas de tensión, secciones, coordinación de protecciones, esquemas unifilares y MTD ante DGEAIM Murcia.\n"
-                    "- ☀️ **Solar Fotovoltaica (RD 244/2019, UNE-EN 62446):** Instalación y mantenimiento de placas, inspección termográfica de puntos calientes, diodos bypass, fusibles gPV, inversores a red y aisladas con baterías LiFePO4.\n"
-                    "- 🚗 **Vehículo Eléctrico (ITC-BT-52):** Puntos de recarga Wallbox en garajes comunitarios (Esquema 2 y LPH 17.5), diferenciales Clase A con detección 6 mA DC (IEC 62955) y modulación de carga SPL.\n"
-                    "- 📡 **Telecomunicaciones (ICT-2 RD 346/2011):** Niveles RTV TDT/SAT, fibra óptica FTTH insensible a curvatura (<2 dB), cableado Cat6/Cat6A y videoporteros digitales de 2 hilos e IP.\n\n"
-                    "🎙️ **Novedad Directa:** El micrófono, cámara y adjuntos están **integrados directamente abajo en la conversación** para que hables o subas fotos sin moverte de aquí.\n\n"
-                    "¿Qué instalación estás ejecutando o qué consulta técnica tienes hoy?"
-                )
-            }
-        ]
-
-    # Inicializar estado de imagen activa
-    if "ia_chat_imagen_activa" not in st.session_state:
-        st.session_state["ia_chat_imagen_activa"] = None
-
-    # Procesar si se seleccionó una píldora rápida
+    # Procesar píldora rápida si se pulsa
     if pregunta_seleccionada:
         img_p = st.session_state.get("ia_chat_imagen_activa")
         st.session_state["ia_chat_imagen_activa"] = None
@@ -1170,10 +1218,15 @@ def render_interfaz_asistente_rebt():
         st.session_state.mensajes_chat_rebt.append(user_p)
         with st.spinner("Consultando normativas técnicas y criterios de ingeniería..."):
             resp = responder_consulta_rebt(pregunta_seleccionada, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_p)
-            st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+            voz_mp3 = sintetizar_audio_voz(resp)
+            st.session_state.mensajes_chat_rebt.append({
+                "role": "assistant",
+                "content": resp,
+                "audio_respuesta": voz_mp3
+            })
         st.rerun()
 
-    # Mostrar mensajes del chat
+    # Historial de la Conversación
     st.markdown("---")
     chat_container = st.container()
     with chat_container:
@@ -1187,116 +1240,123 @@ def render_interfaz_asistente_rebt():
                     st.markdown(m["content"])
             else:
                 with st.chat_message("assistant", avatar="⚡"):
+                    # Si tiene audio sintetizado MP3, reproducirlo con reproductor estándar
+                    if m.get("audio_respuesta"):
+                        es_ultimo = (idx == len(st.session_state.mensajes_chat_rebt) - 1)
+                        st.audio(m["audio_respuesta"], format="audio/mp3", autoplay=es_ultimo)
                     st.markdown(m["content"])
-                    # Reproductor de voz Web Speech API
                     render_reproductor_voz_tts(m["content"], idx)
 
     # -------------------------------------------------------------
-    # ZONA DE ACCIÓN CONVERSACIONAL (Micrófono, Cámara, Adjuntos)
-    # Ubicada DIRECTAMENTE en la conversación, sin tener que ir a otro lado
+    # ZONA DE ACCIÓN CONVERSACIONAL INMEDIATA (DISEÑADA PARA LA CALLE)
+    # Todo ubicado aquí mismo al final del chat para no tener que buscarlo
     # -------------------------------------------------------------
-    
-    # Si hay una imagen cargada, mostrar su tarjeta de previsualización aquí mismo
+
+    # Si hay imagen activa, mostrar miniatura lista
     if st.session_state.get("ia_chat_imagen_activa"):
         with st.container(border=True):
             col_prev1, col_prev2 = st.columns([1.2, 4])
             with col_prev1:
-                st.image(st.session_state["ia_chat_imagen_activa"], caption="Evidencia lista para consultar", width=180)
+                st.image(st.session_state["ia_chat_imagen_activa"], caption="Evidencia cargada", width=160)
             with col_prev2:
-                st.info("✅ **Imagen técnica cargada.** Puedes formular tu pregunta abajo por texto, hablar por el micrófono o auditar la imagen directamente:")
-                c_btn1, c_btn2 = st.columns([2, 1.5])
-                with c_btn1:
-                    if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_auditar_directo_bar", use_container_width=True):
-                        img_actual = st.session_state["ia_chat_imagen_activa"]
-                        txt_q = "Analiza detalladamente esta imagen técnica según el REBT, Solar Fotovoltaica, Vehículo Eléctrico (ITC-BT-52) o Telecomunicaciones (ICT-2). Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
+                st.info("✅ **Imagen técnica lista para consultar.** Habla por el micrófono o escribe abajo:")
+                col_a1, col_a2 = st.columns([1.8, 1])
+                with col_a1:
+                    if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_auditar_dir", use_container_width=True):
+                        img_act = st.session_state["ia_chat_imagen_activa"]
+                        txt_q = "Analiza detalladamente esta imagen técnica según el REBT, Solar Fotovoltaica, Vehículo Eléctrico o Telecomunicaciones. Identifica componentes, comprueba cumplimiento y señala defectos o mejoras."
                         st.session_state.mensajes_chat_rebt.append({
                             "role": "user",
                             "content": txt_q,
-                            "image": img_actual
+                            "image": img_act
                         })
                         st.session_state["ia_chat_imagen_activa"] = None
-                        with st.spinner("Analizando evidencia con visión técnica e ingeniería..."):
-                            resp = responder_consulta_rebt(txt_q, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_actual)
-                            st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+                        with st.spinner("Analizando evidencia técnica..."):
+                            resp = responder_consulta_rebt(txt_q, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_act)
+                            voz_mp3 = sintetizar_audio_voz(resp)
+                            st.session_state.mensajes_chat_rebt.append({
+                                "role": "assistant",
+                                "content": resp,
+                                "audio_respuesta": voz_mp3
+                            })
                         st.rerun()
-                with c_btn2:
-                    if st.button("🗑️ Descartar Imagen", key="btn_del_chat_img_bar", use_container_width=True):
+                with col_a2:
+                    if st.button("🗑️ Descartar", key="btn_del_img_dir", use_container_width=True):
                         st.session_state["ia_chat_imagen_activa"] = None
                         st.rerun()
 
-    # Caja de herramientas multimedia directamente accesible en el diálogo
+    # Barra de Control Conversacional: Micrófono Visible Directo + Cámara + Adjuntos
     with st.container(border=True):
-        tab_mic, tab_cam, tab_up = st.tabs([
-            "🎙️ Hablar por Micrófono (Voz Directa)",
-            "📸 Tomar Foto con la Cámara",
-            "📁 Adjuntar Plano / PDF / Foto"
-        ])
+        col_mic_box, col_cam_box, col_file_box = st.columns([3.5, 1.2, 1.3])
 
-        with tab_mic:
-            col_v_in, col_v_act = st.columns([3, 2.5])
-            with col_v_in:
-                st.caption("🎙️ Pulsa el botón rojo para grabar tu voz y vuelve a pulsar para detener:")
-                audio_pic = st.audio_input("Hablar por micrófono al Consultor IA", key="voice_mic_ia_chat")
-            with col_v_act:
-                if audio_pic is not None:
-                    raw_audio = audio_pic.getvalue()
-                    audio_hash = hash(raw_audio)
+        with col_mic_box:
+            st.markdown("**🎙️ Hablar por Micrófono (Conversación Fluida Manos Libres):**")
+            v_key = f"voice_input_{st.session_state.get('ia_voice_counter', 0)}"
+            audio_pic = st.audio_input("Hablar por micrófono al Consultor IA", key=v_key, label_visibility="collapsed")
 
-                    if st.session_state.get("ia_chat_last_trans_hash") != audio_hash:
-                        if tiene_key:
-                            with st.spinner("🎙️ Escuchando y transcribiendo tu voz a texto con IA..."):
-                                res_tr = transcribir_audio_gemini(raw_audio, audio_pic.type or "audio/wav", api_key_actual)
-                                if res_tr.get("exito"):
-                                    st.session_state["ia_chat_last_trans_hash"] = audio_hash
-                                    st.session_state["ia_chat_texto_voz"] = res_tr.get("texto", "")
-                                    st.toast("🗣️ Voz transcrita con éxito", icon="🎙️")
-                                else:
-                                    st.error(f"Error al transcribir voz: {res_tr.get('error')}")
-                        else:
-                            st.info("ℹ️ Para transcripción directa con IA, activa tu clave Gemini en el panel superior. También puedes dictar en Windows con `Tecla Windows + H`.")
+        with col_cam_box:
+            st.write("")
+            with st.popover("📸 Cámara", use_container_width=True):
+                st.caption("Apunta con la cámara al cuadro, inversor o cargador:")
+                cam_pic = st.camera_input("Capturar foto", key=f"cam_{st.session_state.get('ia_cam_counter', 0)}")
+                if cam_pic is not None:
+                    b64_cam = procesar_archivo_camara_o_adjunto(cam_pic)
+                    if b64_cam:
+                        st.session_state["ia_chat_imagen_activa"] = b64_cam
+                        st.session_state["ia_cam_counter"] = st.session_state.get("ia_cam_counter", 0) + 1
+                        st.rerun()
 
-                    texto_voz_actual = st.session_state.get("ia_chat_texto_voz", "")
-                    if texto_voz_actual:
-                        st.success(f"🗣️ **Texto Transcrito Reconocido:**\n\n*«{texto_voz_actual}»*")
-                        if st.button("🚀 Enviar Consulta de Voz a la IA", type="primary", key="btn_send_voice_direct", use_container_width=True):
-                            img_actual = st.session_state.get("ia_chat_imagen_activa")
-                            st.session_state["ia_chat_imagen_activa"] = None
-                            st.session_state["ia_chat_texto_voz"] = None
+        with col_file_box:
+            st.write("")
+            with st.popover("📁 Adjuntar", use_container_width=True):
+                st.caption("Subir plano, esquema unifilar o foto:")
+                up_file = st.file_uploader("Seleccionar archivo", type=["png", "jpg", "jpeg", "pdf"], key=f"file_{st.session_state.get('ia_file_counter', 0)}")
+                if up_file is not None:
+                    b64_up = procesar_archivo_camara_o_adjunto(up_file)
+                    if b64_up:
+                        st.session_state["ia_chat_imagen_activa"] = b64_up
+                        st.session_state["ia_file_counter"] = st.session_state.get("ia_file_counter", 0) + 1
+                        st.rerun()
 
-                            st.session_state.mensajes_chat_rebt.append({
-                                "role": "user",
-                                "content": f"🎙️ **Consulta de Voz:** «{texto_voz_actual}»",
-                                "audio": raw_audio,
-                                "image": img_actual
-                            })
-                            with st.spinner("Analizando consulta según REBT, Solar, IRVE e ICT-2 con visión de Ingeniero e Instalador..."):
-                                resp = responder_consulta_rebt(
-                                    consulta=texto_voz_actual,
-                                    historial=st.session_state.mensajes_chat_rebt[:-1],
-                                    imagen_b64=img_actual
-                                )
-                                st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
-                            st.rerun()
+        # Procesamiento y respuesta inmediata al soltar el micrófono (Flujo continuo de calle)
+        if audio_pic is not None:
+            raw_audio = audio_pic.getvalue()
+            audio_hash = hash(raw_audio)
+            if st.session_state.get("ia_last_audio_hash") != audio_hash:
+                st.session_state["ia_last_audio_hash"] = audio_hash
 
-        with tab_cam:
-            st.caption("📸 Apunta con tu dispositivo al cuadro eléctrico, inversor solar, cargador VE, rotulación o rack:")
-            cam_pic = st.camera_input("Capturar foto desde el dispositivo", key="cam_input_ia_chat")
-            if cam_pic is not None:
-                b64_cam = procesar_archivo_camara_o_adjunto(cam_pic)
-                if b64_cam:
-                    st.session_state["ia_chat_imagen_activa"] = b64_cam
+                with st.spinner("🎙️ Escuchando y transcribiendo tu voz con IA..."):
+                    res_tr = transcribir_audio_gemini(raw_audio, audio_pic.type or "audio/wav", api_key_actual)
+
+                if res_tr.get("exito") and res_tr.get("texto"):
+                    texto_detectado = res_tr.get("texto").strip()
+                    img_actual = st.session_state.get("ia_chat_imagen_activa")
+                    st.session_state["ia_chat_imagen_activa"] = None
+
+                    st.session_state.mensajes_chat_rebt.append({
+                        "role": "user",
+                        "content": f"🎙️ **Consulta de Voz:** «{texto_detectado}»",
+                        "audio": raw_audio,
+                        "image": img_actual
+                    })
+
+                    with st.spinner("Analizando consulta y generando respuesta hablada..."):
+                        resp = responder_consulta_rebt(texto_detectado, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_actual)
+                        voz_mp3 = sintetizar_audio_voz(resp)
+                        st.session_state.mensajes_chat_rebt.append({
+                            "role": "assistant",
+                            "content": resp,
+                            "audio_respuesta": voz_mp3
+                        })
+
+                    # Incrementar contador de voz para resetear el micrófono y dejarlo listo para la siguiente pregunta
+                    st.session_state["ia_voice_counter"] = st.session_state.get("ia_voice_counter", 0) + 1
                     st.rerun()
+                else:
+                    err_txt = res_tr.get("error", "No se detectó audio comprensible")
+                    st.warning(f"⚠️ {err_txt}. Por favor, vuelve a pulsar el micrófono para hablar.")
 
-        with tab_up:
-            st.caption("📁 Sube un esquema unifilar, plano técnico, ficha de panel o fotografía (PNG, JPG, PDF):")
-            up_file = st.file_uploader("Seleccionar archivo técnico:", type=["png", "jpg", "jpeg", "webp", "pdf"], key="file_up_ia_chat")
-            if up_file is not None:
-                b64_up = procesar_archivo_camara_o_adjunto(up_file)
-                if b64_up:
-                    st.session_state["ia_chat_imagen_activa"] = b64_up
-                    st.rerun()
-
-    # Entrada de texto inferior estándar
+    # Entrada de texto estándar en la parte inferior
     prompt = st.chat_input("Escribe tu consulta sobre electricidad (REBT), solar fotovoltaica, vehículo eléctrico (ITC-BT-52) o telecomunicaciones...")
     if prompt:
         img_enviar = st.session_state.get("ia_chat_imagen_activa")
@@ -1315,9 +1375,15 @@ def render_interfaz_asistente_rebt():
         with st.chat_message("assistant", avatar="⚡"):
             with st.spinner("Analizando consulta según REBT, Solar, IRVE e ICT-2 con visión técnica e ingeniería..."):
                 respuesta = responder_consulta_rebt(prompt, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_enviar)
+                voz_mp3 = sintetizar_audio_voz(respuesta)
                 st.markdown(respuesta)
-                st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": respuesta})
-                render_reproductor_voz_tts(respuesta, len(st.session_state.mensajes_chat_rebt) - 1)
+                if voz_mp3:
+                    st.audio(voz_mp3, format="audio/mp3", autoplay=True)
+                st.session_state.mensajes_chat_rebt.append({
+                    "role": "assistant",
+                    "content": respuesta,
+                    "audio_respuesta": voz_mp3
+                })
 
     # Botones de control inferiores
     col_b1, col_b2 = st.columns([1, 4])
@@ -1330,6 +1396,6 @@ def render_interfaz_asistente_rebt():
                 }
             ]
             st.session_state["ia_chat_imagen_activa"] = None
-            st.session_state["ia_chat_texto_voz"] = None
-            st.session_state["ia_chat_last_trans_hash"] = None
+            st.session_state["ia_last_audio_hash"] = None
+            st.session_state["ia_voice_counter"] = st.session_state.get("ia_voice_counter", 0) + 1
             st.rerun()

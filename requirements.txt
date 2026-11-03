@@ -8,4 +8,5 @@ toml
 Pillow
 requests
 python-docx
+gTTS
 
