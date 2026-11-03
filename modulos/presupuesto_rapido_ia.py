@@ -355,7 +355,7 @@ def obtener_precio_por_tienda(nombre_mat: str, tienda: str, p_base: float, df_bd
 
 
 def comparar_precios_proveedores(nombre_mat: str, tienda_actual: str, precio_base: float, df_bd: pd.DataFrame = None) -> dict:
-    """Compara en tiempo real los precios entre tiendas para alertar al instalador si hay ahorro en otro proveedor."""
+    """Compara en tiempo real los precios entre tiendas para alertar al instalador si hay ahorro en CUALQUIER otro proveedor."""
     tiendas_evaluar = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico"]
     tienda_actual_norm = normalizar_texto(tienda_actual)
     precios = {}
@@ -368,24 +368,82 @@ def comparar_precios_proveedores(nombre_mat: str, tienda_actual: str, precio_bas
     if not p_actual or p_actual <= 0:
         p_actual = precio_base
 
-    # Identificar la tienda más barata
-    tienda_min = min(precios, key=precios.get)
-    p_min = precios[tienda_min]
+    # Identificar todas las tiendas que ofrecen un precio menor al seleccionado actualmente
+    mas_baratas = []
+    for t, p_t in precios.items():
+        if normalizar_texto(t) != tienda_actual_norm and p_t < (p_actual - 0.04):
+            dif = round(p_actual - p_t, 2)
+            pct = round((dif / p_actual) * 100, 1)
+            mas_baratas.append({
+                "tienda": t,
+                "precio": p_t,
+                "ahorro_ud": dif,
+                "ahorro_pct": pct
+            })
 
-    dif = round(p_actual - p_min, 2)
-    # Alerta activa si hay al menos 0.05 € de diferencia y la tienda más barata no es la actual
-    hay_ahorro = bool(dif >= 0.05 and normalizar_texto(tienda_min) != tienda_actual_norm)
+    mas_baratas.sort(key=lambda x: x["precio"])  # Las más baratas primero
+
+    tienda_min = mas_baratas[0]["tienda"] if mas_baratas else tienda_actual
+    p_min = mas_baratas[0]["precio"] if mas_baratas else p_actual
+    dif_min = mas_baratas[0]["ahorro_ud"] if mas_baratas else 0.0
+    pct_min = mas_baratas[0]["ahorro_pct"] if mas_baratas else 0.0
 
     return {
-        "hay_ahorro": hay_ahorro,
+        "hay_ahorro": bool(len(mas_baratas) > 0),
         "tienda_min": tienda_min,
         "precio_min": p_min,
         "precio_actual": p_actual,
-        "ahorro_ud": dif,
-        "ahorro_pct": round((dif / p_actual) * 100, 1) if p_actual > 0 else 0,
+        "ahorro_ud": dif_min,
+        "ahorro_pct": pct_min,
+        "todas_mas_baratas": mas_baratas,
         "precios_todos": precios
     }
-    return round(float(p_base) * factor, 2), f"Tarifa comparativa ({factor:.2f}x)"
+
+
+def buscar_marcas_alternativas(nombre_mat: str, df_bd: pd.DataFrame = None) -> list:
+    """Busca en la base de datos oficial alternativas de marcas reconocidas y gamas superiores (Schneider, Simon, Legrand, Niessen, Zemper, Hager, etc.)."""
+    if df_bd is None or df_bd.empty:
+        df_bd = cargar_df_bd_oficial()
+    if df_bd is None or df_bd.empty:
+        return []
+
+    mat_norm = normalizar_texto(nombre_mat)
+    tokens = [t for t in re.sub(r'[^a-z0-9]', ' ', mat_norm).split() if len(t) >= 3 and t not in ['para', 'con', 'del', 'las', 'los', 'una', 'uno', 'tipo', 'color', 'pack']]
+
+    matches = []
+    for idx, row in df_bd.iterrows():
+        desc = normalizar_texto(row.get('Descripción Exacta del Artículo', ''))
+        score = sum(1 for t in tokens if t in desc)
+        if score >= 2:
+            marca = str(row.get('Marca', '')).strip()
+            if marca and marca.lower() not in ['nan', 'general', 'varios', 'none']:
+                try:
+                    p = float(row.get('Precio S/IVA (€)', 0.0))
+                    gama = str(row.get('Nivel de Gama / Aplicación', 'Estándar'))
+                    prov = str(row.get('Proveedor / Tienda', 'Obramat'))
+                    art = str(row.get('Descripción Exacta del Artículo', ''))
+                    matches.append((score, marca, p, gama, prov, art))
+                except Exception:
+                    pass
+
+    # Agrupar por marca única conservando la opción más completa o de mayor calidad
+    by_marca = {}
+    for m in matches:
+        marca = m[1]
+        if marca not in by_marca or m[0] > by_marca[marca][0] or (m[0] == by_marca[marca][0] and m[2] > by_marca[marca][2]):
+            by_marca[marca] = m
+
+    res = []
+    for marca, m in by_marca.items():
+        res.append({
+            'marca': marca,
+            'precio': m[2],
+            'gama': m[3],
+            'tienda': m[4],
+            'art': m[5]
+        })
+    res.sort(key=lambda x: x['precio'])
+    return res
 
 
 def transcribir_audio_gemini(raw_bytes: bytes, mime_type: str = "audio/wav", api_key: str = "") -> dict:
@@ -1195,7 +1253,7 @@ def renderizar():
                             st.markdown(f"<div style='font-size:11px; color:#64748b; font-weight:600; margin-top:2px;'>Subtotal S/IVA:</div><div style='font-size:17px; font-weight:800; color:#0f172a; margin-top:4px;'>{sub_m:,.2f} €</div>", unsafe_allow_html=True)
                             total_mat_calc += sub_m
 
-                        # Fila 3: Ayuda emergente de ahorro comparativo (No se imprime en el PDF)
+                        # Fila 3: Ayuda emergente de ahorro comparativo para TODOS los proveedores más baratos
                         comp = comparar_precios_proveedores(n_mat, prov_sel, base_p, df_bd)
                         if comp["hay_ahorro"]:
                             ahorro_tot = round(comp["ahorro_ud"] * n_cnt, 2)
@@ -1206,34 +1264,74 @@ def renderizar():
                                         💡 ¡AVISO DE PRECIO MÁS BARATO DISPONIBLE!
                                     </div>
                                     <div style="font-size: 15px; color: #713f12; margin-top: 6px; line-height: 1.5;">
-                                        En <b>{prov_sel}</b> cuesta <b>{pu_actual:.2f} €/ud</b>, pero en <b>{comp['tienda_min']}</b> está disponible a <b>{comp['precio_min']:.2f} €/ud</b>.<br/>
-                                        👉 <b>Ahorras {comp['ahorro_ud']:.2f} € por unidad</b> (te ahorras <b>{ahorro_tot:,.2f} €</b> en total para las {n_cnt:.0f} unidades).
+                                        En <b>{prov_sel}</b> cuesta <b>{pu_actual:.2f} €/ud</b>, pero tienes distribuidores con precios más económicos:<br/>
+                                        👉 <b>La opción más barata es {comp['tienda_min']} a {comp['precio_min']:.2f} €/ud</b> (ahorras <b>{comp['ahorro_ud']:.2f} €/ud</b> · Total: <b>{ahorro_tot:,.2f} €</b>).
                                     </div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
                             )
-                            c_ah1, c_ah2 = st.columns([3.8, 2.2])
-                            with c_ah1:
-                                st.caption(f"¿Deseas comprar en {comp['tienda_min']} para optimizar el coste de este material?")
-                            with c_ah2:
-                                if st.button(
-                                    f"🛒 Sí, comprar en {comp['tienda_min']} ({comp['precio_min']:.2f} €)",
-                                    key=f"btn_switch_store_{idx_m}",
-                                    type="primary",
-                                    use_container_width=True,
-                                    help=f"Cambiar proveedor a {comp['tienda_min']} y actualizar precio a {comp['precio_min']:.2f} €"
-                                ):
-                                    st.session_state[key_prov] = comp['tienda_min']
-                                    st.session_state[key_p] = float(comp['precio_min'])
-                                    st.session_state[key_orig] = f"🏷️ Tarifa Optimizada ({comp['tienda_min']})"
-                                    st.rerun()
+                            st.caption("🛒 **Proveedores más baratos disponibles (pulsa para comprar de ahí):**")
+                            c_cheap_cols = st.columns(min(len(comp["todas_mas_baratas"]), 3) or 1)
+                            for i_tb, tb in enumerate(comp["todas_mas_baratas"]):
+                                tot_ah = round(tb["ahorro_ud"] * n_cnt, 2)
+                                with c_cheap_cols[i_tb % len(c_cheap_cols)]:
+                                    btn_type = "primary" if i_tb == 0 else "secondary"
+                                    if st.button(
+                                        f"🛒 Comprar en {tb['tienda']} ({tb['precio']:.2f} €)",
+                                        key=f"btn_apply_store_{idx_m}_{tb['tienda']}_{i_tb}",
+                                        use_container_width=True,
+                                        type=btn_type,
+                                        help=f"Cambiar a {tb['tienda']} a {tb['precio']:.2f} €/ud. Ahorras {tot_ah:,.2f} € para {n_cnt:.0f} uds."
+                                    ):
+                                        st.session_state[key_prov] = tb['tienda']
+                                        st.session_state[key_p] = float(tb['precio'])
+                                        st.session_state[key_orig] = f"🏷️ Tarifa Optimizada ({tb['tienda']})"
+                                        st.rerun()
                         else:
                             st.markdown(
                                 f"<div style='font-size:13px; color:#15803d; font-weight:700; margin-top:6px;'>"
                                 f"✅ <b>{prov_sel}</b> es el proveedor con el mejor precio disponible para esta partida ({pu_actual:.2f} €/ud).</div>",
                                 unsafe_allow_html=True
                             )
+
+                        # Fila 4: Opción para clientes que quieren más calidad o cambiar de marca
+                        with st.expander(f"⭐ ¿El cliente quiere más calidad o cambiar a primeras marcas? (Schneider, Simon, Legrand, Niessen, Zemper...)"):
+                            st.caption("Si el cliente pide mayor categoría estética, primeras marcas o gama premium, selecciona una opción oficial del catálogo:")
+                            alts_marcas = buscar_marcas_alternativas(n_mat, df_bd)
+                            if alts_marcas:
+                                st.markdown("**Marcas de calidad catalogadas para este material:**")
+                                cols_marcas = st.columns(min(len(alts_marcas), 3) or 1)
+                                for i_m, m_alt in enumerate(alts_marcas):
+                                    dif_m = round(m_alt['precio'] - pu_actual, 2)
+                                    signo_m = f"+{dif_m:.2f} €" if dif_m >= 0 else f"{dif_m:.2f} €"
+                                    with cols_marcas[i_m % len(cols_marcas)]:
+                                        st.markdown(f"**🏷️ {m_alt['marca']}** (`{m_alt['precio']:.2f} €`)")
+                                        st.caption(f"Gama: {m_alt['gama']} · {m_alt['tienda']}\n\n*{m_alt['art'][:36]}*")
+                                        if st.button(f"Elegir {m_alt['marca']} ({signo_m})", key=f"btn_alt_m_{idx_m}_{m_alt['marca']}_{i_m}", use_container_width=True):
+                                            st.session_state[key_n] = m_alt['art']
+                                            st.session_state[key_p] = float(m_alt['precio'])
+                                            st.session_state[key_prov] = m_alt['tienda']
+                                            st.session_state[key_orig] = f"🏷️ {m_alt['marca']} ({m_alt['gama']})"
+                                            st.rerun()
+
+                            st.markdown("---")
+                            st.markdown("**Opciones rápidas de salto de gama:**")
+                            col_g1, col_g2 = st.columns(2)
+                            with col_g1:
+                                p_media = round(pu_actual * 1.35, 2)
+                                if st.button(f"🔵 Calidad Profesional (+35%): ~{p_media:.2f} €/ud", key=f"btn_gama_media_{idx_m}", help="Marcas profesionales: Simon 27, Schneider Ovalis, Legrand Niloé"):
+                                    st.session_state[key_n] = f"{n_mat} (Gama Calidad Profesional - Schneider / Simon / Legrand)"
+                                    st.session_state[key_p] = float(p_media)
+                                    st.session_state[key_orig] = "🏷️ Calidad Profesional (+35%)"
+                                    st.rerun()
+                            with col_g2:
+                                p_alta = round(pu_actual * 1.75, 2)
+                                if st.button(f"⭐ Calidad Premium (+75%): ~{p_alta:.2f} €/ud", key=f"btn_gama_alta_{idx_m}", help="Marcas premium: Niessen Zenit, Simon 82, Schneider Acti9, Zemper"):
+                                    st.session_state[key_n] = f"{n_mat} (Gama Alta Premium - Niessen Zenit / Simon 82 / Schneider Acti9)"
+                                    st.session_state[key_p] = float(p_alta)
+                                    st.session_state[key_orig] = "⭐ Calidad Alta Premium (+75%)"
+                                    st.rerun()
 
                     # Sincronización continua con la lista maestra
                     m_item["mat"] = n_mat
