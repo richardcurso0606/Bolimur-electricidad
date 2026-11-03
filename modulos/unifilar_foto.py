@@ -49,6 +49,15 @@ try:
 except Exception:
     auditor_ia_rebt = None
 
+# Generador de planos AutoCAD (DXF) y estética técnica CAD
+try:
+    from modulos import generador_cad
+except ImportError:
+    try:
+        import generador_cad
+    except ImportError:
+        generador_cad = None
+
 # =========================================================================
 # CONFIGURACIÓN Y CONSTANTES REBT (ITC-BT-25 / ITC-BT-28)
 # =========================================================================
@@ -995,14 +1004,14 @@ def render_modulo_unifilar_foto():
             st.info("Renderizando vista previa estándar.")
 
         # Botones de exportación y descarga
-        col_desc1, col_desc2, col_desc3 = st.columns([1.5, 1.5, 1])
+        col_desc1, col_desc2, col_desc3, col_desc4 = st.columns([1.3, 1.3, 1.2, 0.9])
 
         # 1. Descarga PDF oficial apaisado A4
         with col_desc1:
             try:
                 pdf_bytes = generar_pdf_unifilar(datos, png_unifilar, dwg_unifilar)
                 st.download_button(
-                    label="📄 Descargar Plano Unifilar en PDF (A4 Oficial)",
+                    label="📄 Descargar PDF (A4 Oficial)",
                     data=pdf_bytes,
                     file_name=f"Esquema_Unifilar_Oficial_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                     mime="application/pdf",
@@ -1012,23 +1021,47 @@ def render_modulo_unifilar_foto():
             except Exception as e:
                 st.error(f"Error generando PDF: {str(e)}")
 
-        # 2. Descarga Imagen PNG (200 DPI)
+        # 2. Descarga Formato AutoCAD (.DXF)
         with col_desc2:
+            if generador_cad:
+                try:
+                    dxf_bytes = generador_cad.generar_dxf_unifilar_bytes(datos)
+                    st.download_button(
+                        label="📐 Descargar AutoCAD (.DXF)",
+                        data=dxf_bytes,
+                        file_name=f"Esquema_Unifilar_AutoCAD_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.dxf",
+                        mime="application/dxf",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.warning(f"Aviso DXF: {e}")
+
+        # 3. Descarga Imagen PNG (200 DPI)
+        with col_desc3:
             if png_unifilar:
                 st.download_button(
-                    label="🖼️ Descargar Imagen Vectorial Alta Calidad (PNG)",
+                    label="🖼️ Descargar PNG",
                     data=png_unifilar,
                     file_name=f"Esquema_Unifilar_Oficial_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.png",
                     mime="image/png",
                     use_container_width=True
                 )
 
-        # 3. Reiniciar / Nueva foto
-        with col_desc3:
+        # 4. Reiniciar / Nueva foto
+        with col_desc4:
             if st.button("🔄 Nuevo Cuadro", use_container_width=True):
                 st.session_state["unifilar_datos_cuadro"] = None
                 st.session_state["unifilar_imagen_bytes"] = None
                 st.rerun()
+
+        # Vista previa en Modo Espacio Modelo AutoCAD
+        if generador_cad:
+            with st.expander("📐 Ver Vista Previa Espacio Modelo AutoCAD (Dark Mode / Capas ACI)", expanded=False):
+                try:
+                    img_cad = generador_cad.generar_autocad_preview_image(datos)
+                    st.image(img_cad, caption="Visualización nativa AutoCAD (Model Space Dark Mode - Capas ACI UNE-EN 60617)", use_container_width=True)
+                except Exception as e:
+                    st.info("Vista previa CAD disponible descargando el archivo .DXF.")
 
 
 # =========================================================================

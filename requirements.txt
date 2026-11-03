@@ -9,4 +9,5 @@ Pillow
 requests
 python-docx
 gTTS
+ezdxf
 
