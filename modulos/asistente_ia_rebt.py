@@ -12,54 +12,79 @@ import requests
 from modulos import auditor_ia_rebt
 
 SYSTEM_PROMPT_INGENIERO_INSTALADOR = """
-Eres el Consultor Senior de Ingeniería (Eléctrica y Telecomunicaciones) y Maestro Instalador Habilitado de Bolimur.
-Combinas con máxima excelencia los siguientes perfiles:
+Eres el Consultor Senior de Ingeniería (Eléctrica, Fotovoltaica y Telecomunicaciones) y Maestro Instalador Habilitado de Bolimur.
+Combinas con máxima excelencia los siguientes perfiles de ingeniería y campo:
 
-1. Vista de Ingeniero Eléctrico e Ingeniero de Telecomunicación (Colegiado COIT / COITT):
+1. Vista de Ingeniero Colegiado (Eléctrico, Energías Renovables y Telecomunicaciones COIT/COITT):
    - Riguroso en el Reglamento Electrotécnico para Baja Tensión (REBT 2002 - RD 842/2002) y sus 52 ITCs (ITC-BT-01 a ITC-BT-52).
-   - Experto en Infraestructuras Comunes de Telecomunicaciones (ICT-2 - Real Decreto 346/2011 y Orden ITC/1644/2011).
-   - Normativa de Generación y Autoconsumo (ITC-BT-40, Real Decreto 244/2019, UNE-EN 62548, UNE-EN 50549-1).
-   - Normas europeas de cableado estructurado y compatibilidad electromagnética (UNE-EN 50173, UNE-EN 50174-2 sobre separación mínima de 20 cm entre cables de energía y datos, IEC 60794 para fibra monomodo G.657A2, y DVB-T2 / DVB-S2 para RTV).
-   - Criterios de tramitación técnica y administrativa ante la Dirección General de Energía y Actividad Industrial y Minera (DGEAIM Murcia) y ante la Secretaría de Estado de Telecomunicaciones e Infraestructuras Digitales (SETSI).
+   - Especialista en Infraestructura para la Recarga de Vehículos Eléctricos (ITC-BT-52), norma internacional IEC 61851-1 (Modos de carga 1 a 4) e IEC 62955 (detección de corriente continua de defecto 6 mA DC en diferenciales).
+   - Experto en Generación y Autoconsumo Fotovoltaico (ITC-BT-40, Real Decreto 244/2019, Real Decreto 1699/2011, Real Decreto 413/2014, Código Técnico de la Edificación CTE DB-HE 5 y CTE DB-SE-AE sobre cargas de viento y nieve en estructuras, UNE-EN 62446-1, UNE-EN 62446-3, UNE-EN 62548, UNE-EN 50549-1 y UNE 217240 para inyección cero).
+   - Experto en Infraestructuras Comunes de Telecomunicaciones (ICT-2 - Real Decreto 346/2011 y Orden ITC/1644/2011, UNE-EN 50173, UNE-EN 50174-2 sobre separación mínima de 20 cm entre cables de energía y datos, IEC 60794 para fibra monomodo G.657A2, y DVB-T2 / DVB-S2 para RTV).
+   - Criterios de tramitación técnica y administrativa ante la Dirección General de Energía y Actividad Industrial y Minera (DGEAIM Murcia - plataforma RADIX), distribuidoras eléctricas (i-DE de Iberdrola), Registro Administrativo de Autoconsumo (MITECO) y Secretaría de Estado de Telecomunicaciones e Infraestructuras Digitales (SETSI).
 
-2. Maestro Instalador y Especialista de Telecomunicaciones a Pie de Obra (25 años en calle):
-   A) TELECOMUNICACIONES EN VIVIENDAS, LOCALES Y COMUNIDADES (ICT-2):
-      - RTV (TDT y Satélite FI): Captación en mástil con antenas UHF preparadas para el 2º Dividendo Digital con filtro de corte LTE 700 MHz (canales 21 al 48, corte a 694 MHz para evitar saturación 5G). Parábolas offset orientadas a Astra 19.2ºE o Hispasat 30ºW con LNB universal (conmutación 13/18V y tono 22 kHz). Centrales amplificadoras programables digitales (Televes Avant X, Ikusi ONE) con CAG. Niveles reglamentarios obligatorios en toma de usuario:
-        * TDT (DVB-T / DVB-T2 COFDM): 45 dBµV a 70 dBµV (MER >= 21 dB, BER < 1e-4).
-        * Satélite FI (DVB-S / DVB-S2): 47 dBµV a 77 dBµV (C/N > 11 dB).
-        * Radio FM: 40 a 70 dBµV. Radio DAB: 35 a 70 dBµV.
-        * Distribución con cable coaxial clase A+ (Televes T-100plus), atenuación <= 18 dB/100m en UHF y <= 30 dB/100m en FI.
-      - Fibra Óptica FTTH: Fibra monomodo ITU-T G.657.A2 (baja sensibilidad a curvatura, R_min = 7.5 mm), conectores SC/APC verde (pérdidas de retorno > 60 dB). Fusionadora de fibra óptica por arco voltaico (<0.05 dB por empalme). PAU óptico en RTR de vivienda con 2 fibras monomodo. Atenuación máxima permitida de la red interior de usuario: <= 2.0 dB a 1310, 1490 y 1550 nm (medida con emisor láser y medidor de potencia óptica o reflectómetro OTDR).
-      - Redes de Datos y Cableado Estructurado (Cat6, Cat6A, Cat7):
-        * Viviendas: Mínimo Cat6 UTP (250 MHz, 1 Gbps hasta 100m).
-        * Locales y Oficinas: Cat6A F/UTP o U/FTP (500 MHz, 10 Gbps a 100m, blindaje contra diafonía exógena).
-        * Conectorización en rosetas RJ45 y patch panels bajo el estándar uniforme TIA/EIA-568-B.
-        * Alimentación PoE (802.3af 15.4W, 802.3at 30W PoE+, 802.3bt 60W/90W PoE++) para puntos de acceso Wi-Fi 6/7, cámaras IP y pantallas.
-        * Racks de 19 pulgadas murales (6U-12U) o de suelo (24U-42U), organizadores de cables, latiguillos y puesta a tierra obligatoria del chasis con cable verde/amarillo de 16 mm² Cu conectado a la borna principal de tierra del edificio.
-        * Separación crítica con cables de 230V/400V: Según norma UNE-EN 50174-2, mantener al menos 20 cm de distancia entre cables de fuerza y datos sin apantallar, o 5 cm si hay tabique metálico continuo conectado a tierra. ¡JAMÁS compartir tubo o corrugado entre cables eléctricos de 230V y cables de telecomunicación UTP/coaxial (prohibición terminante REBT e ICT-2)!
-      - Registros y Recintos ICT:
-        * En edificio: RITS (superior en cubierta), RITI (inferior), RITU (único para <= 10 PAUs o 3 plantas).
-        * En vivienda / local: Registro de Terminación de Red (RTR) en la entrada, dimensiones mínimas 500x600x80 mm (o 2 de 500x300x80 contiguos), equipado obligatoriamente con 2 tomas schuko 16A/230V con tierra para alimentar router/ONT y borna de equipotencialidad (Cu >= 6 mm²). Dotación mínima por estancias: salón (2 tomas dobles RJ45 + 2 RTV + FO), dormitorio ppal (1 doble RJ45 + 1 RTV), otros dormitorios y cocina (1 RJ45 + 1 RTV).
-      - Videoporteros y Control de Acceso:
-        * Sistemas digitales 2 hilos no polarizados (Fermax DUOX PLUS, Tegui 2 Hilos): Ideales para renovaciones y reformas sin cambiar canalizaciones preexistentes, transmisión digital de audio/vídeo hasta 300 metros.
-        * Sistemas IP / SIP (Fermax MEET, Dahua, Hikvision): Cableado Cat6 PoE con conexión a red local y desvío de llamada a móviles vía app.
-        * Abrepuertas: 12V AC o DC con protección varistor o diodo para amortiguar picos inductivos que averíen la placa electrónica.
-      - Tramitación Legal SETSI vs Proyecto ICT:
-        * Edificios comunitarios (> 1 vivienda o locales): Exigen Proyecto de Telecomunicaciones visado por Ingeniero de Telecomunicación + Dirección de Obra + Certificado Fin de Obra + Protocolo de Pruebas visado.
-        * Viviendas unifamiliares / locales independientes sin comunidad: Se tramitan con Boletín de Telecomunicaciones emitido por Instalador Autorizado registrado en la SETSI (Tipos A, C o F).
+2. Maestro Instalador y Experto de Mantenimiento de Campo (25 años de experiencia a pie de obra):
+   A) INSTALACIÓN Y MANTENIMIENTO DE PLACAS SOLARES FOTOVOLTAICAS (CONECTADAS A RED Y AISLADAS):
+      - Modalidades de Autoconsumo (RD 244/2019): Sin excedentes (sistema antivertido inyección cero UNE 217240 en <2 s), con excedentes acogida a compensación simplificada (potencia instalada <= 100 kW, precio pool horario vs precio acordado), con excedentes no acogida a compensación (venta a mercado), y autoconsumo colectivo en comunidades de vecinos (coeficientes horarios de reparto beta fijos o dinámicos).
+      - Estructuras y Anclajes según CTE DB-SE-AE: Cargas de viento en fachada y cubierta, coeficiente de presión eólica. Anclajes químicos con varilla M10/M12 A2/A4 en forjados de hormigón y correas metálicas. En cubiertas planas sin perforación: lastres autoportantes de hormigón con base de caucho EPDM y deflectores aerodinámicos de viento traseros (cálculo de 40 a 70 kg/panel según altura del edificio y zona eólica de Murcia). Inclinación óptima: 30º-35º para máximo anual o 45º para optimizar meses de invierno; orientación Sur óptima (azimut 0º) o configuraciones Este-Oeste para curva plana de autoconsumo.
+      - Protecciones DC según UNE-EN 62548 e ITC-BT-40:
+        * Fusibles gPV: Obligatorios en polos positivo (+) y negativo (-) si hay 3 o más strings en paralelo. Calibre: In = 1.5 x Isc del módulo.
+        * Seccionador DC omnipolar de corte en carga bajo categoría de empleo DC-PV2 o DC-21B (capaz de extinguir el arco en continua hasta 1.000V DC).
+        * Descargador de sobretensiones transitorias DC (DPS Tipo 1+2 o Tipo 2 a 1.000V DC) derivado a tierra con longitud de cable < 50 cm.
+        * Puesta a tierra de marcos y estructuras: Cable de cobre desnudo de 35 mm² o aislado verde/amarillo >= 6-16 mm², garantizando continuidad equipotencial de perfiles de aluminio con arandelas dentadas inoxidables o clips de puesta a tierra.
+      - Ensayos de Puesta en Servicio según UNE-EN 62446-1:
+        * Ensayo de polaridad y tensión de circuito abierto (Voc) en cada string comparada con la teórica STC según irradiancia y temperatura.
+        * Ensayo de corriente de cortocircuito (Isc) o corriente de operación con pinza amperimétrica DC.
+        * Ensayo de resistencia de aislamiento en continua con megóhmetro a 1.000V DC entre polos activos cortocircuitados y tierra (resistencia mínima obligatoria >= 1,0 Megaohmio).
+        * Ensayo de continuidad de conductores de protección y puesta a tierra (Rt <= 15 Ohm).
+      - Mantenimiento Preventivo y Termografía (UNE-EN 62446-3):
+        * Inspección termográfica periódica con cámara IR (irradiancia > 600 W/m²): Detección de puntos calientes (hotspots), células fisuradas, suciedad focalizada o diodos bypass en cortocircuito (calentamiento de la subcadena completa o caja de conexiones del módulo con Delta T > 10ºC-20ºC).
+        * Diodos bypass: Comprobación con multímetro en prueba de diodos (caída típica 0.3V-0.5V en directa, circuito abierto en inversa).
+        * Limpieza y 'soiling': Lavado exclusivo con agua desmineralizada/ósmosis y pértiga telescópica con cepillo de cerdas suaves. ¡JAMÁS lavar en horas centrales de sol para evitar fractura del vidrio templado por choque térmico! Frecuencia recomendada en Murcia (zona de polvo y calima): 2 a 4 limpiezas anuales.
+      - Resolución de Averías en Campo:
+        * 'Isolation Fault' (Fallo de Aislamiento DC): Localización rápida mediante polímetro en DC midiendo V(+)-PE y V(-)-PE con seccionador abierto. La posición del panel derivado se calcula con precisión milimétrica mediante la fórmula: Panel defectuoso = V(+)-PE / Voc_módulo.
+        * 'Grid Overvoltage' (Tensión AC > 253V - UNE-EN 50549): El inversor eleva tensión para evacuar. Solución: línea de evacuación AC dimensionada con caída de tensión <= 1,0% (máx 2,3V), reapriete dinamométrico de bornes, y en su caso solicitar ajuste de tomas del transformador a la distribuidora i-DE.
+        * Degradación PID (Potential Induced Degradation): Detección por pérdida de potencia en strings largos y solución mediante dispositivos anti-PID nocturnos.
+      - Instalaciones Aisladas (Off-Grid) con Baterías:
+        * Cálculo por mes más desfavorable (Diciembre en Murcia HSP = 2,8 h/día).
+        * Banco de acumulación: Baterías LiFePO4 (litio fosfato de hierro con DOD 85-90% y >4.000 ciclos) vs Plomo-Ácido/Gel (DOD 50% y menor ciclabilidad).
+        * Regulador MPPT: Cálculo de Voc máxima en frío con coeficiente beta de temperatura. Inversor-cargador senoidal puro con pico de sobrecarga del 200-300% para arranque de bombas y grupos electrógenos ATS automáticos.
 
-   B) BAJA TENSIÓN, SOLAR FOTOVOLTAICA E IRVE (REBT):
-      - Criterios de caída de tensión (1.5% DI, 3% alumbrado, 5% fuerza).
-      - Límite de 5 circuitos por diferencial de 30 mA (ITC-BT-25).
-      - Sobretensiones permanentes y transitorias obligatorias en Murcia (ITC-BT-23).
-      - Autoconsumo solar conectado a red (RD 244/2019) y aisladas off-grid con baterías (LiFePO4 DOD 90% vs Gel 50%, HSP Diciembre Murcia 2.8 h/día).
-      - Resolución de averías: 'Isolation Fault' (localización por tensión DC a tierra) y 'Grid Overvoltage' (evitar caídas > 1% en AC).
-      - Recarga de Vehículo Eléctrico IRVE (ITC-BT-52, Esquema 2, cables AS Cca, diferencial Clase A con 6mA DC según IEC 62955).
-      - Locales de Pública Concurrencia (ITC-BT-28: cables libres de halógenos, doble línea de luz, emergencias, OCA obligatoria).
+   B) INFRAESTRUCTURA DE RECARGA DE VEHÍCULOS ELÉCTRICOS (IRVE - ITC-BT-52):
+      - Esquemas de Conexión Oficiales (ITC-BT-52):
+        * Esquema 2 (Garaje comunitario): Contador individual principal para el punto de recarga en la centralización común de contadores del edificio, con derivación individual exclusiva hasta la plaza de garaje.
+        * Esquema 4 (Vivienda unifamiliar / Garaje propio): Circuito dedicado desde el cuadro general (CGMP) de la vivienda (circuito C13).
+        * Esquema 1 (Contador colectivo para varios puntos) y Esquema 3 (Contador secundario con facturación interna).
+      - Modos de Carga (UNE-EN 61851-1):
+        * Modo 1: Enchufe doméstico Schuko sin comunicación (máx 10A / 2,3 kW). Prohibido en garajes comunitarios y vía pública.
+        * Modo 2: Cable ocasional con caja de control integrada ICCB (hasta 16A monofásica o 32A trifásica).
+        * Modo 3: Punto de recarga fijo en pared (Wallbox) con comunicación piloto por modulación de ancho de pulso (PWM) entre cargador y vehículo mediante bornes Control Pilot (CP) y Proximity Pilot (PP). ESTÁNDAR OBLIGATORIO para instalaciones fijas (3,7 kW, 7,4 kW, 11 kW o 22 kW).
+        * Modo 4: Carga rápida en corriente continua (DC) desde 50 kW hasta 350 kW con conectores CCS Combo 2 o CHAdeMO.
+      - Protecciones Reglamentarias Innegociables:
+        * Interruptor Magnetotérmico: Curva C, calibre acorde al cargador (ej. 32A para 7,4 kW con línea de 6-10 mm² Cu).
+        * Interruptor Diferencial (IEC 62955): Clase A de 30 mA equipado con dispositivo de desconexión por defecto en corriente continua (RDC-DD) de 6 mA DC, o en su defecto un Interruptor Diferencial Clase B. ¡Crucial!: Los inversores y rectificadores a bordo del vehículo pueden inyectar componente continua que satura y ciega un diferencial normal; la detección de 6 mA DC garantiza que no haya riesgo de electrocución.
+        * Protector contra sobretensiones permanentes (POP) con bobina de disparo asociada al IGA y transitorias (DPS Tipo 2).
+        * Dispositivo de rearme automático: Muy recomendado en garajes comunitarios para restablecer el servicio tras microcortes nocturnos.
+      - Modulación Dinámica de Carga (Sistema SPL):
+        * Sensor toroidal (pinza amperimétrica CT) o vatímetro Modbus RS-485 / Ethernet colocado en la acometida principal de la vivienda. El cargador ajusta dinámicamente la corriente de carga (de 6A a 32A) para aprovechar la potencia disponible sin superar la potencia contratada ni provocar disparos del ICP.
+      - Canalizaciones y Cables en Garajes Comunitarios:
+        * Cables de Alta Seguridad AS libres de halógenos obligatorios clase Cca-s1b,d1,a1 (tipo RZ1-K 0.6/1kV).
+        * Tubo protector con resistencia al impacto IK08 (mínimo M32).
+        * Caída de tensión máxima admisible en la línea IRVE: <= 5% desde el origen.
+      - Marco Legal y Propiedad Horizontal:
+        * Artículo 17.5 de la Ley de Propiedad Horizontal (LPH): NO requiere autorización ni votación en junta de propietarios. Solo exige remitir comunicación previa formal por escrito al presidente o administrador de la comunidad con copia del esquema unifilar y datos del instalador autorizado.
+        * Tramitación: Hasta 50 kW en interior y 10 kW en exterior se tramita mediante Memoria Técnica de Diseño (MTD) por el Instalador Autorizado. Si supera esos límites, exige Proyecto Técnico visado por Ingeniero y OCA previa.
+
+   C) TELECOMUNICACIONES (ICT-2 RD 346/2011) Y BAJA TENSIÓN CONVENCIONAL (REBT):
+      - RTV TDT (45-70 dBµV, MER >= 21 dB, filtro LTE 700 5G a 694 MHz) y Satélite FI (47-77 dBµV).
+      - FTTH fibra monomodo G.657A2, conectores SC/APC, fusionadora (<0.05 dB/fusión), atenuación interior <= 2.0 dB.
+      - Redes Cat6/Cat6A TIA-568-B, PoE/PoE+, racks 19" y separación obligatoria > 20 cm de líneas de 230V (UNE-EN 50174-2).
+      - RTR dimensiones mínimas 500x600x80 con 2 schukos y tierra equipotencial.
+      - Videoporteros 2 hilos no polarizados (Fermax DUOX / Tegui) e IP/SIP PoE.
+      - Criterios REBT: máximo 5 circuitos por diferencial de 30 mA, caída de tensión (1.5% DI, 3% alumbrado, 5% fuerza).
 
 3. Asesor Experto en Elección de Plantillas e Instalaciones en la Región de Murcia:
    Conoces a la perfección el catálogo oficial de plantillas técnicas de Bolimur y sabes orientar al instalador:
-   - Viviendas (ITC-BT-10/25): Básica 5.75 kW (sin clima central), Elevada Clima 9.2 kW (modelo oficial DGEAIM Murcia con IGA 40A y DI 16 mm² Cu), Elevada Aerotermia 11.5 kW (IGA 50A con diferencial dedicado superinmunizado), Máxima Monofásica 14.49 kW (límite 63A a 230V con DI 25 mm² Cu), Chalet Trifásico 17.32 kW (400V para parcelas con piscina y riego).
+   - Viviendas (ITC-BT-10/25): Básica 5.75 kW, Elevada Clima 9.2 kW (modelo oficial DGEAIM Murcia con IGA 40A y DI 16 mm² Cu), Elevada Aerotermia 11.5 kW (IGA 50A con diferencial dedicado superinmunizado), Máxima Monofásica 14.49 kW (límite 63A a 230V con DI 25 mm² Cu), Chalet Trifásico 17.32 kW (400V para parcelas con piscina y riego).
    - Vehículo Eléctrico IRVE (ITC-BT-52): Garaje comunitario Esquema 2 (7.36 kW, cables libres de halógenos AS, tubo IK08, diferencial clase A 6mA DC), IRVE Trifásico 22 kW, y Vivienda con IRVE integrado (circuito C13 con modulación dinámica de carga SPL).
    - Autoconsumo Fotovoltaico (ITC-BT-40 / RD 244/2019): Solar 5 kW e Híbrido Vivienda + Solar + IRVE.
    - Locales Comerciales Ordinarios: Monofásico 9.2 kW y Trifásico 17.32 kW (cálculo de 100 W/m² según ITC-BT-10.3.3 con mínimo de 3.450 W).
@@ -68,10 +93,11 @@ Combinas con máxima excelencia los siguientes perfiles:
    - Límites de tramitación: Hasta 100 kW se tramita por MTD del instalador; más de 100 kW exige Proyecto Técnico visado por Ingeniero.
 
 Tus principios de respuesta:
-- Cita siempre la norma técnica y legal exacta (ej. RD 346/2011 ICT-2, ITC-BT correspondiente, UNE-EN 50174-2, etc.).
-- Aporta tanto la fórmula y el artículo legal como el consejo práctico de taller o montaje para que el instalador resuelva la obra sin incidencias.
-- Sé claro, directo y estructurado (utiliza viñetas, tablas markdown y fórmulas KaTeX cuando haya cálculos técnicos o económicos).
-- Responde siempre en español profesional, técnico y motivador.
+- Cita siempre la norma técnica y legal exacta (RD 244/2019, ITC-BT-40, ITC-BT-52, UNE-EN 62446, IEC 62955, RD 346/2011, etc.).
+- Estructura las respuestas de forma pedagógica y práctica con viñetas, tablas comparativas y fórmulas KaTeX.
+- Da el valor numérico exacto (amperios, milímetros cuadrados, voltios, Ohmios, dBµV, dB).
+- Aporta siempre tanto el fundamento reglamentario formal como el consejo directo de taller y trucos de montaje de calle.
+- Responde siempre en español profesional, técnico, conciso y motivador.
 """
 
 BASE_CONOCIMIENTO_OFFLINE = [
@@ -599,6 +625,139 @@ La convivencia de cables de energía y cables de datos/coaxial está regulada es
 3. **Consejo Profesional para el Abrepuertas:**
    - La cerradura eléctrica de 12V genera **picos inductivos de alta tensión** al desenergizarse la bobina.
    - Para no bloquear la placa exterior, coloca siempre un **varistor o diodo volante (flyback)** en paralelo con los bornes del abrepuertas."""
+    },
+    {
+        "keywords": ["mantenimiento placas solares", "termografia solar", "hotspots", "limpieza paneles", "revision fotovoltaica", "ensayos une-en 62446", "diodos bypass", "mantenimiento fotovoltaica"],
+        "pregunta": "¿Cómo se realiza el mantenimiento preventivo y correctivo de placas solares según la norma UNE-EN 62446?",
+        "respuesta": """### ☀️ Mantenimiento Integral de Instalaciones Solares - Normas UNE-EN 62446-1 y UNE-EN 62446-3
+
+Un mantenimiento profesional asegura que la instalación no pierda rendimiento y previene riesgos de incendio por arco eléctrico:
+
+1. **Protocolo de Ensayos según UNE-EN 62446-1:**
+   - **Tensión de Circuito Abierto ($V_{oc}$):** Medir con multímetro calibrado cada string en la caja de continua y cotejar con el valor de catálogo STC corregido por temperatura. Desviaciones $>5\%$ indican módulo cortocircuitado o degradado.
+   - **Corriente de Cortocircuito ($I_{sc}$) u Operación ($I_{mp}$):** Medir con pinza amperimétrica DC string a string bajo irradiancia estable ($>600\\text{ W/m}^2$).
+   - **Resistencia de Aislamiento DC:** Con megóhmetro a $1.000\\text{ V DC}$ entre polos cortocircuitados (+ / -) y tierra (PE). **Límite mínimo obligatorio: $\\ge 1,0\\text{ M}\\Omega$**.
+   - **Continuidad de Puesta a Tierra:** Verificar que la resistencia entre el marco de cualquier módulo y la pica de tierra sea $\\le 1\\ \\Omega$.
+
+2. **Termografía Infrarroja (UNE-EN 62446-3):**
+   - Realizar con cámara térmica con irradiancia $\\ge 600\\text{ W/m}^2$:
+     * **Puntos calientes (Hotspots):** Sobrecalentamiento puntual en células provocado por microfisuras, sombras parciales o suciedad (guano de pájaro). Un $\\Delta T > 10^\\circ\\text{C}-20^\\circ\\text{C}$ degrada rápidamente la resina EVA y quema el 'backsheet'.
+     * **Fallo de Diodo Bypass:** Si un tercio del panel está visiblemente más caliente que el resto ($\Delta T \\approx 10-15^\\circ\\text{C}$), el diodo bypass ha entrado en conducción permanente o cortocircuito.
+
+3. **Limpieza Profesional y Soiling:**
+   - Lavar exclusivamente con **agua desmineralizada o de ósmosis** y pértiga con cepillo de cerdas de nailon suaves.
+   - **¡PROHIBICIÓN ESTRICTA!** Jamás limpiar a pleno sol o en las horas centrales del día: el choque térmico entre el agua fría y el vidrio a $65^\\circ\\text{C}$ fractura el vidrio templado de forma irreversible.
+   - Periodicidad recomendada en la Región de Murcia (calima y polvo agrícola): al menos 2 a 3 limpiezas anuales."""
+    },
+    {
+        "keywords": ["estructura placas", "anclajes fotovoltaica", "cte db-se-ae", "viento placas", "lastres hormigon", "inclinacion paneles", "teja coplanar", "anclaje quimico"],
+        "pregunta": "¿Qué requisitos estructurales y de anclaje exige el Código Técnico (CTE DB-SE-AE) para paneles solares?",
+        "respuesta": """### 🏗️ Estructuras, Anclajes y Resistencia al Viento en Cubiertas - CTE DB-SE-AE
+
+El cálculo mecánico de la estructura debe resistir la succión del viento y las sobrecargas según la zona eólica (Murcia: Zona C, velocidad básica $27\\text{ m/s} = 97,2\\text{ km/h}$):
+
+1. **Cubiertas Inclinadas de Teja (Montaje Coplanar):**
+   - Utilizar ganchos 'salvatejas' de acero inoxidable **AISI 304 / A2** regulables en altura.
+   - Anclaje estructural directo al forjado o vigueta mediante **taco químico con resina de viniléster** y varilla roscada M10/M12. Nunca anclar sobre la teja o el rastrel de madera suelto.
+   - Disponer juntas de estanqueidad de EPDM en las perforaciones para garantizar la impermeabilización.
+
+2. **Cubiertas Planas / Terrazas Transitables:**
+   - Para no perforar la lámina impermeabilizante (asfáltica o PVC/EPDM), se instalan **soportes de hormigón autoportantes / lastres**:
+     * Colocar siempre lámina de caucho EPDM o geotextil bajo el bloque de hormigón para proteger la tela asfáltica.
+     * Incorporar **deflector aerodinámico de viento** en la parte trasera del panel: reduce la fuerza de sustentación en más de un $60\\%$.
+     * Peso necesario: Entre **$45\\text{ kg}$ y $75\\text{ kg}$ por panel** según la altura del edificio y la exposición (centro de cubierta vs esquinas).
+
+3. **Inclinación y Orientación Óptima en Murcia:**
+   - **Autoconsumo Residencial Anual:** Inclinación entre **$30^\\circ$ y $35^\\circ$ con orientación Sur puro (Azimut $0^\\circ$)**.
+   - **Autoconsumo en Oficinas / Naves:** Configuración **Este-Oeste a $10^\\circ-15^\\circ$** para generar una curva de producción uniforme y aplanada durante toda la jornada laboral."""
+    },
+    {
+        "keywords": ["protecciones dc", "fusibles gpv", "seccionador dc", "descargador dc", "une-en 62548", "itc-bt-40", "caja string"],
+        "pregunta": "¿Qué protecciones de corriente continua (DC) son obligatorias en una instalación solar (UNE-EN 62548)?",
+        "respuesta": """### 🛡️ Protecciones de Continua (DC) en Generadores Solares - UNE-EN 62548 e ITC-BT-40
+
+La corriente continua (DC) es especialmente peligrosa porque al abrir un contacto no existe paso por cero natural de la onda sinusoidal, manteniendo un arco voltaico permanente si los elementos no están certificados:
+
+1. **Fusibles de Continua tipo gPV (1000V / 1500V DC):**
+   - **Regla estricta UNE-EN 62548:**
+     * Con **1 o 2 strings en paralelo por MPPT**: NO son obligatorios los fusibles (la corriente inversa de defecto nunca puede superar la corriente admisible inversa de los módulos $I_{mod\_max\_ocpr}$).
+     * Con **3 o más strings en paralelo**: Es **OBLIGATORIO instalar fusibles gPV en el polo positivo (+) y en el polo negativo (-)** de cada string.
+     * Calibre reglamentario: $1,4 \\cdot I_{sc} \\le I_n \\le 1,5 \\cdot I_{sc}$.
+
+2. **Interruptor Seccionador de Corte en Carga DC:**
+   - Debe ser omnipolar y certificado bajo categoría de empleo **DC-PV2 o DC-21B** para la tensión máxima del string a mínima temperatura ($V_{oc\_max} \\le 1.000\\text{ V DC}$).
+   - Queda totalmente prohibido usar magnetotérmicos convencionales de alterna en circuitos de continua.
+
+3. **Descargador de Sobretensiones Transitorias DC (DPS):**
+   - Tipo 2 (o Tipo 1+2 si el edificio dispone de pararrayos exterior).
+   - Tensión máxima de servicio continuo $U_{cpv} \\ge 1,2 \\cdot V_{oc\_string}$.
+   - Conexión a tierra mediante conductor de cobre de $\\ge 6\\text{ mm}^2$ con recorrido rectilíneo y longitud inferior a $50\\text{ cm}$."""
+    },
+    {
+        "keywords": ["modos de carga", "modo 3", "modo 2", "modo 4", "iec 61851", "cargador coche", "tipo 2 mennekes", "hilo piloto"],
+        "pregunta": "¿Cuáles son los 4 Modos de Carga de Vehículos Eléctricos y qué conector es el estándar según la ITC-BT-52?",
+        "respuesta": """### 🚗 Modos de Carga y Conectores de Vehículos Eléctricos - Norma UNE-EN 61851-1 e ITC-BT-52
+
+La normativa europea y el REBT clasifican la recarga de vehículos eléctricos en 4 modos tecnológicos:
+
+1. **Modo 1 (Carga Lenta en Enchufe Doméstico Schuko):**
+   - Toma Schuko convencional de $230\\text{ V}$, corriente máx $10\\text{ A}$ ($2,3\\text{ kW}$).
+   - **Sin comunicación** entre el enchufe y el vehículo.
+   - **Restricción legal:** Prohibido en garajes comunitarios y en la vía pública por riesgo de sobrecalentamiento continuo.
+
+2. **Modo 2 (Carga Ocasional con Caja de Control en el Cable - ICCB):**
+   - Cable portátil con caja electrónica intermedia que supervisa la tierra y la corriente ($10\\text{ A}$ a $16\\text{ A}$ monofásico).
+   - Adecuado únicamente como recarga de emergencia o viajes.
+
+3. **Modo 3 (Punto de Recarga Dedicado Fijo - Wallbox) - EL ESTÁNDAR OBLIGATORIO:**
+   - Estación de recarga mural fija conectada a circuito exclusivo de la vivienda o garaje comunitario.
+   - **Comunicación permanente por Hilo Piloto PWM (Control Pilot CP y Proximity Pilot PP):** El cargador y el coche negocian la corriente admisible, bloquean mecánicamente la manguera para evitar desenchufes bajo carga y solo liberan energía si el circuito de tierra está perfecto.
+   - Potencias habituales: **$3,7\\text{ kW}$ (16A), $7,4\\text{ kW}$ (32A monofásica), $11\\text{ kW}$ y $22\\text{ kW}$ (trifásica)**.
+
+4. **Modo 4 (Carga Rápida en Corriente Continua DC):**
+   - Estación exterior donde la conversión AC/DC se realiza en el poste (potencias de $50\\text{ kW}$ a $350\\text{ kW}$).
+   - Conector oficial europeo: **CCS Combo 2** (o CHAdeMO en marcas japonesas antiguas).
+
+5. **Conector Estándar en Europa para Modo 3:**
+   - **Tipo 2 (Mennekes - IEC 62196-2):** Dispone de 7 bornes (L1, L2, L3, N, PE, CP, PP)."""
+    },
+    {
+        "keywords": ["diferencial 6ma", "diferencial irve", "clase a 6ma", "iec 62955", "clase b", "rdc-dd", "proteccion coche electrico"],
+        "pregunta": "¿Por qué la ITC-BT-52 exige un Diferencial Clase A con detección de 6 mA DC (IEC 62955) o Clase B?",
+        "respuesta": """### 🛡️ Protección Diferencial Específica para Vehículo Eléctrico - ITC-BT-52 y Norma IEC 62955
+
+El punto de recarga de vehículos eléctricos exige una protección diferencial muy superior a la de una vivienda habitual por una razón física crítica:
+
+1. **El Fenómeno de Saturación / 'Cegado' del Diferencial:**
+   - Los coches eléctricos incorporan un rectificador a bordo (cargador embarcado AC/DC) que transforma los 230V/400V de alterna en continua para cargar la batería de tracción (400V u 800V DC).
+   - Si se produce un fallo de aislamiento en la parte de continua, **se inyecta una fuga en corriente continua hacia la red de tierra de alterna**.
+   - Si la fuga continua supera los **$6\\text{ mA DC}$**, satura magnéticamente el toroide de ferrita de un diferencial convencional (Clase AC o Clase A normal), **dejándolo completamente bloqueado y 'ciego'**. Si en ese momento una persona toca una lavadora o un cable pelado, ¡el diferencial no disparará ante la descarga!
+
+2. **La Solución Legal Obligatoria (ITC-BT-52):**
+   El instalador debe instalar obligatoriamente una de estas dos soluciones:
+   - **Opción 1 (La más habitual y económica):** Diferencial **Clase A de $30\\text{ mA}$** combinado con un dispositivo detector de fugas en continua de $6\\text{ mA}$ (**RDC-DD según norma IEC 62955**). Muchos cargadores Wallbox modernos (como Circutor eNext, Policharger, Wallbox Pulsar Plus, V2C Trydan) ya llevan el RDC-DD 6mA DC incorporado en su electrónica, lo que permite instalar aguas arriba un diferencial Clase A convencional.
+   - **Opción 2:** Instalar un **Interruptor Diferencial Clase B de $30\\text{ mA}$** en el cuadro de cabecera (inmune a corrientes continuas puras y frecuencias elevadas)."""
+    },
+    {
+        "keywords": ["modulacion potencia", "spl", "balanceo dinamico", "sensor carga coche", "pinza amperimetrica wallbox", "evitar que salte icp"],
+        "pregunta": "¿Cómo funciona la modulación dinámica de potencia (SPL) y cómo evita que salte el ICP?",
+        "respuesta": """### ⚡ Modulación Dinámica de Carga (Sistema SPL) - ITC-BT-52
+
+El Sistema de Protección de la Línea General (SPL) o control dinámico de potencia es el accesorio más rentable de una instalación de recarga:
+
+1. **Cómo se Conecta e Instala:**
+   - Se coloca una **pinza amperimétrica (transformador de corriente CT)** o un vatímetro digital con comunicación RS-485 Modbus / Wi-Fi en el origen de la instalación (inmediatamente después del IGA general de la vivienda).
+   - Esta pinza mide en tiempo real los amperios totales que está consumiendo la casa en cada instante.
+
+2. **Algoritmo de Regulación Automática:**
+   - Supongamos una vivienda con potencia contratada de **$5,75\\text{ kW}$ ($25\\text{ A}$)** y un cargador de $7,4\\text{ kW}$ ($32\\text{ A}$):
+     * **Situación 1 (Noche - Consumo bajo):** La casa solo consume el frigorífico ($2\\text{ A}$). El cargador entrega hasta $23\\text{ A}$ al coche aprovechando el $100\\%$ del término de potencia contratado.
+     * **Situación 2 (Tarde - Cocinando y climatización):** Se enciende el horno, la vitrocerámica y el aire acondicionado ($20\\text{ A}$). El sensor detecta que solo quedan $5\\text{ A}$ de margen e instruye al coche mediante el hilo piloto PWM a **reducir inmediatamente la carga a $5\\text{ A}$**.
+     * **Situación 3 (Pico extremo):** Si la vivienda consume $25\\text{ A}$, el cargador **pausa temporalmente la carga** y la reanuda automáticamente en cuanto se apaga el horno.
+
+3. **Ventajas:**
+   - El cliente **no necesita pagar un aumento de término de potencia contratada** a la compañía eléctrica (ahorro de cientos de euros al año en la factura fija).
+   - Garantiza que **jamás salte el contador digital (ICP)** por sobrepotencia durante la noche."""
     }
 ]
 
@@ -916,9 +1075,9 @@ def responder_consulta_rebt(consulta: str, historial: list = None, imagen_b64: s
     return responder_consulta_offline_con_imagen(consulta, imagen_b64)
 
 def render_interfaz_asistente_rebt():
-    """Renderiza la interfaz principal del Consultor IA REBT & Telecomunicaciones ICT-2."""
-    st.markdown('<div class="section-header-blue"><h3 style="margin:0; color:#0369a1;">🤖 Consultor IA: Experto REBT & Telecomunicaciones ICT-2 (Ingeniero & Instalador)</h3></div>', unsafe_allow_html=True)
-    st.caption("Asesor técnico integral 24/7 con doble titulación y visión práctica a pie de obra. Resuelve dudas reglamentarias de Electricidad (REBT 2002), Telecomunicaciones (ICT-2 RD 346/2011), Antenas RTV, Fibra Óptica FTTH, Cableado Estructurado Cat6/Cat6A, Racks, Videoporteros, Solar y tramitaciones en Murcia (DGEAIM) y SETSI.")
+    """Renderiza la interfaz principal del Consultor IA REBT, Solar Fotovoltaica, IRVE & Telecomunicaciones ICT-2."""
+    st.markdown('<div class="section-header-blue"><h3 style="margin:0; color:#0369a1;">🤖 Consultor IA: Experto REBT, Solar Fotovoltaica, Vehículo Eléctrico & Telecomunicaciones (Ingeniero & Instalador)</h3></div>', unsafe_allow_html=True)
+    st.caption("Asesor técnico integral 24/7 con doble titulación de Ingeniería y 25 años de experiencia de campo. Resuelve consultas normativas y prácticas de Electricidad (REBT 2002), Autoconsumo y Mantenimiento Solar (RD 244/2019, UNE-EN 62446), Recarga de Vehículo Eléctrico (ITC-BT-52, IEC 62955), Telecomunicaciones (ICT-2 RD 346/2011) y trámites ante Industria (DGEAIM Murcia) y SETSI.")
 
     # Barra superior de configuración rápida de IA
     api_key_actual = auditor_ia_rebt.obtener_gemini_api_key()
@@ -930,7 +1089,7 @@ def render_interfaz_asistente_rebt():
             if tiene_key:
                 st.success("🟢 **Modo Online Activo (Google Gemini 3.5 Flash / Transcribe)**: Máxima capacidad de comprensión por voz, análisis visual y cálculo normativo en tiempo real.")
             else:
-                st.info("ℹ️ **Modo Offline Activo (Base Experta REBT & ICT-2 Bolimur)**: Consultas automáticas guiadas por las 52 ITCs del REBT y RD 346/2011.")
+                st.info("ℹ️ **Modo Offline Activo (Base Experta Bolimur)**: Consultas automáticas guiadas por las 52 ITCs del REBT, normativas solares, IRVE e ICT-2.")
             key_in = st.text_input("Clave API de Gemini (Gratuita en Google AI Studio):", value=api_key_actual if tiene_key else "", type="password", key="txt_ia_chat_key")
         with col_st2:
             st.write("")
@@ -940,127 +1099,32 @@ def render_interfaz_asistente_rebt():
                 st.success("Clave guardada.")
                 st.rerun()
 
-    # Bloque de captura con Micrófono (Voz), Cámara o Subida de Archivos
-    if "ia_chat_imagen_activa" not in st.session_state:
-        st.session_state["ia_chat_imagen_activa"] = None
-
-    with st.expander("🎙️ Instrucciones por Voz, Cámara en Vivo y Documentos Técnicos", expanded=bool(st.session_state.get("ia_chat_imagen_activa"))):
-        tab_mic, tab_cam, tab_up = st.tabs(["🎙️ Hablar por Micrófono (Voz Directa)", "📸 Tomar Foto con la Cámara", "📁 Subir Archivo (JPG, PNG, PDF)"])
-
-        with tab_mic:
-            st.caption("Graba tu duda o instrucción técnica por el micrófono. La IA transcribirá tus palabras y las procesará al instante con criterio de Ingeniero e Instalador:")
-            audio_pic = st.audio_input("Hablar por micrófono al Consultor IA", key="voice_mic_ia_chat")
-            if audio_pic is not None:
-                st.audio(audio_pic)
-                raw_audio = audio_pic.getvalue()
-                audio_hash = hash(raw_audio)
-
-                # Si es un audio nuevo, transcribir automáticamente
-                if st.session_state.get("ia_chat_last_trans_hash") != audio_hash:
-                    if tiene_key:
-                        with st.spinner("🎙️ Escuchando y transcribiendo tu voz a texto con IA..."):
-                            res_tr = transcribir_audio_gemini(raw_audio, audio_pic.type or "audio/wav", api_key_actual)
-                            if res_tr.get("exito"):
-                                st.session_state["ia_chat_last_trans_hash"] = audio_hash
-                                st.session_state["ia_chat_texto_voz"] = res_tr.get("texto", "")
-                                st.toast("🗣️ Voz transcrita con éxito", icon="🎙️")
-                            else:
-                                st.error(f"Error al transcribir voz: {res_tr.get('error')}")
-                    else:
-                        st.info("ℹ️ Para transcripción por voz directa con IA, activa tu clave Gemini en el panel superior. También puedes dictar en Windows con la combinación `Tecla Windows + H`.")
-
-                texto_voz_actual = st.session_state.get("ia_chat_texto_voz", "")
-                if texto_voz_actual:
-                    st.success(f"🗣️ **Texto Transcrito Reconocido:**\n\n*«{texto_voz_actual}»*")
-                    col_va1, col_va2 = st.columns([1.8, 3])
-                    with col_va1:
-                        if st.button("🚀 Enviar esta Consulta a la IA", type="primary", key="btn_send_voice_direct", use_container_width=True):
-                            img_actual = st.session_state.get("ia_chat_imagen_activa")
-                            st.session_state["ia_chat_imagen_activa"] = None
-                            st.session_state["ia_chat_texto_voz"] = None
-
-                            st.session_state.mensajes_chat_rebt.append({
-                                "role": "user",
-                                "content": f"🎙️ **Consulta de Voz:** «{texto_voz_actual}»",
-                                "audio": raw_audio,
-                                "image": img_actual
-                            })
-                            with st.spinner("Consultando normativas REBT e ICT-2 con visión de Ingeniero e Instalador..."):
-                                resp = responder_consulta_rebt(
-                                    consulta=texto_voz_actual,
-                                    historial=st.session_state.mensajes_chat_rebt[:-1],
-                                    imagen_b64=img_actual
-                                )
-                                st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
-                            st.rerun()
-                    with col_va2:
-                        st.caption("💡 *Tip:* Puedes combinar una foto tomada con la cámara y tu nota de voz preguntando sobre ella.")
-
-        with tab_cam:
-            st.caption("Apunta con la cámara de tu móvil o portátil al cuadro eléctrico, pica de tierra, rotulación, antena o rack:")
-            cam_pic = st.camera_input("Capturar foto desde el dispositivo", key="cam_input_ia_chat")
-            if cam_pic is not None:
-                b64_cam = procesar_archivo_camara_o_adjunto(cam_pic)
-                if b64_cam:
-                    st.session_state["ia_chat_imagen_activa"] = b64_cam
-
-        with tab_up:
-            st.caption("Sube un esquema unifilar, plano ICT o fotografía desde tu galería o disco (PNG, JPG, PDF):")
-            up_file = st.file_uploader("Seleccionar archivo técnico:", type=["png", "jpg", "jpeg", "webp", "pdf"], key="file_up_ia_chat")
-            if up_file is not None:
-                b64_up = procesar_archivo_camara_o_adjunto(up_file)
-                if b64_up:
-                    st.session_state["ia_chat_imagen_activa"] = b64_up
-
-        if st.session_state.get("ia_chat_imagen_activa"):
-            col_prev1, col_prev2 = st.columns([1.2, 3])
-            with col_prev1:
-                st.image(st.session_state["ia_chat_imagen_activa"], caption="Evidencia lista para consultar", width=220)
-                if st.button("🗑️ Descartar Imagen", key="btn_del_chat_img"):
-                    st.session_state["ia_chat_imagen_activa"] = None
-                    st.rerun()
-            with col_prev2:
-                st.info("✅ **Imagen adjunta cargada**. Escribe tu consulta abajo, habla por el micrófono o pulsa el botón directo para una auditoría general:")
-                if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_analizar_img_directo"):
-                    img_actual = st.session_state["ia_chat_imagen_activa"]
-                    txt_q = "Analiza detalladamente esta imagen técnica según el REBT o ICT-2 y criterios de ingeniería. Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
-                    st.session_state.mensajes_chat_rebt.append({
-                        "role": "user",
-                        "content": txt_q,
-                        "image": img_actual
-                    })
-                    st.session_state["ia_chat_imagen_activa"] = None
-                    with st.spinner("Analizando imagen con visión técnica e ingeniería REBT / ICT-2..."):
-                        resp = responder_consulta_rebt(txt_q, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_actual)
-                        st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
-                    st.rerun()
-
-    # Preguntas Rápidas Frecuentes (REBT, Solar y Telecomunicaciones ICT-2)
-    st.markdown("##### ⚡ Consultas Rápidas de Taller, Obra, Telecomunicaciones e ICT-2:")
+    # Preguntas Rápidas Frecuentes (REBT, Solar Fotovoltaica, IRVE y Telecomunicaciones ICT-2)
+    st.markdown("##### ⚡ Consultas Rápidas de Taller, Obra, Solar, Vehículo Eléctrico e ICT-2:")
     pills = [
+        "☀️ ¿Cómo se realiza el mantenimiento preventivo y correctivo de placas solares según la norma UNE-EN 62446?",
+        "🛡️ ¿Qué protecciones de corriente continua (DC) son obligatorias en una instalación solar (UNE-EN 62548)?",
+        "🚗 ¿Por qué la ITC-BT-52 exige un Diferencial Clase A con detección de 6 mA DC (IEC 62955) o Clase B?",
+        "🔌 ¿Cuáles son los 4 Modos de Carga de Vehículos Eléctricos y qué conector es el estándar según la ITC-BT-52?",
+        "⚡ ¿Cómo funciona la modulación dinámica de potencia (SPL) y cómo evita que salte el ICP?",
         "📡 ¿Cuáles son los niveles de señal reglamentarios en toma para TDT y Satélite según la ICT-2?",
-        "⚖️ ¿Cuándo se necesita Proyecto de Ingeniero de Telecomunicación vs Boletín?",
-        "🌐 ¿Cómo instalar y certificar cableado estructurado Cat6 / Cat6A y racks?",
         "💡 ¿Qué exigencias técnicas tiene la instalación de fibra óptica FTTH (ICT-2)?",
-        "🏢 ¿Qué dimensiones y tomas debe tener el Registro de Terminación de Red (RTR)?",
         "🚪 ¿Cómo elegir e instalar un videoportero de 2 hilos frente a uno IP / SIP?",
-        "⚡ ¿Qué separación debe mantenerse entre conductores de electricidad de 230V y datos?",
-        "⚖️ ¿Cuándo se necesita Proyecto de Ingeniero en lugar de MTD (REBT)?",
-        "☀️ ¿Cuál es la diferencia entre una instalación solar conectada a red y una aislada?",
-        "🛡️ ¿Cuántos circuitos magnetotérmicos (PIAs) se pueden conectar por cada diferencial?"
+        "🔴 ¿Cómo resolver el error 'Isolation Fault' (Fallo de aislamiento DC) en un inversor solar?",
+        "⚖️ ¿Cómo se legaliza un punto de recarga IRVE en garaje comunitario de Murcia según ITC-BT-52?"
     ]
 
     pills_labels = [
-        "📡 Niveles RTV TDT/SAT",
-        "⚖️ Proyecto ICT vs Boletín",
-        "🌐 Cableado Cat6 / Cat6A",
+        "☀️ Mantenimiento Solar & Hotspots",
+        "🛡️ Protecciones DC & Fusibles gPV",
+        "🚗 Diferencial 6mA DC (IRVE)",
+        "🔌 Modos de Carga & Mennekes",
+        "⚡ Modulación SPL (Evitar ICP)",
+        "📡 Niveles RTV TDT/SAT ICT-2",
         "💡 Fibra Óptica FTTH < 2dB",
-        "🏢 Registro RTR Vivienda",
         "🚪 Videoportero 2 Hilos / IP",
-        "⚡ Separación 230V y Datos",
-        "⚖️ MTD vs Proyecto REBT",
-        "☀️ Solar Red vs Aislada",
-        "🛡️ 5 Circuitos por Diferencial"
+        "🔴 Error 'Isolation Fault' DC",
+        "⚖️ Garaje Comunitario & LPH 17.5"
     ]
 
     cols_p1 = st.columns(5)
@@ -1080,15 +1144,21 @@ def render_interfaz_asistente_rebt():
             {
                 "role": "assistant",
                 "content": (
-                    "¡Hola! Soy tu **Consultor Senior de Ingeniería y Maestro Instalador Habilitado** (REBT e ICT-2) de Bolimur.\n\n"
-                    "Estoy preparado para resolver cualquier duda sobre:\n"
-                    "- ⚡ **Baja Tensión y Fotovoltaica (REBT):** Cálculos de caídas de tensión, secciones, coordinación de protecciones, esquemas unifilares, tramitación de MTD ante Industria (DGEAIM Murcia) y límites de Proyecto.\n"
-                    "- 📡 **Telecomunicaciones (ICT-2 RD 346/2011):** Niveles de señal RTV (TDT LTE 700 / Satélite FI), cableado estructurado Cat6/Cat6A, armarios rack, redes FTTH de fibra óptica insensible a curvatura (G.657A2), registros RTR y videoporteros digitales de 2 hilos e IP.\n\n"
-                    "🎙️ **Novedad:** Ahora puedes **hablar directamente por micrófono** y la IA transcribirá tu voz al instante, además de contar con **reproducción de voz en audio (🔊)** de todas las respuestas técnicas.\n\n"
+                    "¡Hola! Soy tu **Consultor Senior de Ingeniería y Maestro Instalador Habilitado** de Bolimur.\n\n"
+                    "Estoy preparado para asesorarte con rigor de ingeniero y experiencia a pie de obra en:\n"
+                    "- ⚡ **Baja Tensión (REBT):** Caídas de tensión, secciones, coordinación de protecciones, esquemas unifilares y MTD ante DGEAIM Murcia.\n"
+                    "- ☀️ **Solar Fotovoltaica (RD 244/2019, UNE-EN 62446):** Instalación y mantenimiento de placas, inspección termográfica de puntos calientes, diodos bypass, fusibles gPV, inversores a red y aisladas con baterías LiFePO4.\n"
+                    "- 🚗 **Vehículo Eléctrico (ITC-BT-52):** Puntos de recarga Wallbox en garajes comunitarios (Esquema 2 y LPH 17.5), diferenciales Clase A con detección 6 mA DC (IEC 62955) y modulación de carga SPL.\n"
+                    "- 📡 **Telecomunicaciones (ICT-2 RD 346/2011):** Niveles RTV TDT/SAT, fibra óptica FTTH insensible a curvatura (<2 dB), cableado Cat6/Cat6A y videoporteros digitales de 2 hilos e IP.\n\n"
+                    "🎙️ **Novedad Directa:** El micrófono, cámara y adjuntos están **integrados directamente abajo en la conversación** para que hables o subas fotos sin moverte de aquí.\n\n"
                     "¿Qué instalación estás ejecutando o qué consulta técnica tienes hoy?"
                 )
             }
         ]
+
+    # Inicializar estado de imagen activa
+    if "ia_chat_imagen_activa" not in st.session_state:
+        st.session_state["ia_chat_imagen_activa"] = None
 
     # Procesar si se seleccionó una píldora rápida
     if pregunta_seleccionada:
@@ -1098,7 +1168,7 @@ def render_interfaz_asistente_rebt():
         if img_p:
             user_p["image"] = img_p
         st.session_state.mensajes_chat_rebt.append(user_p)
-        with st.spinner("Consultando normativa técnica REBT / ICT-2 y criterios de ingeniería..."):
+        with st.spinner("Consultando normativas técnicas y criterios de ingeniería..."):
             resp = responder_consulta_rebt(pregunta_seleccionada, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_p)
             st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
         st.rerun()
@@ -1121,8 +1191,113 @@ def render_interfaz_asistente_rebt():
                     # Reproductor de voz Web Speech API
                     render_reproductor_voz_tts(m["content"], idx)
 
-    # Entrada del usuario en la parte inferior
-    prompt = st.chat_input("Escribe o consulta sobre electricidad (REBT), telecomunicaciones (ICT-2) o la foto adjunta...")
+    # -------------------------------------------------------------
+    # ZONA DE ACCIÓN CONVERSACIONAL (Micrófono, Cámara, Adjuntos)
+    # Ubicada DIRECTAMENTE en la conversación, sin tener que ir a otro lado
+    # -------------------------------------------------------------
+    
+    # Si hay una imagen cargada, mostrar su tarjeta de previsualización aquí mismo
+    if st.session_state.get("ia_chat_imagen_activa"):
+        with st.container(border=True):
+            col_prev1, col_prev2 = st.columns([1.2, 4])
+            with col_prev1:
+                st.image(st.session_state["ia_chat_imagen_activa"], caption="Evidencia lista para consultar", width=180)
+            with col_prev2:
+                st.info("✅ **Imagen técnica cargada.** Puedes formular tu pregunta abajo por texto, hablar por el micrófono o auditar la imagen directamente:")
+                c_btn1, c_btn2 = st.columns([2, 1.5])
+                with c_btn1:
+                    if st.button("🔍 Auditar esta Imagen con IA", type="primary", key="btn_auditar_directo_bar", use_container_width=True):
+                        img_actual = st.session_state["ia_chat_imagen_activa"]
+                        txt_q = "Analiza detalladamente esta imagen técnica según el REBT, Solar Fotovoltaica, Vehículo Eléctrico (ITC-BT-52) o Telecomunicaciones (ICT-2). Identifica componentes, comprueba cumplimiento normativo y señala cualquier defecto o mejora."
+                        st.session_state.mensajes_chat_rebt.append({
+                            "role": "user",
+                            "content": txt_q,
+                            "image": img_actual
+                        })
+                        st.session_state["ia_chat_imagen_activa"] = None
+                        with st.spinner("Analizando evidencia con visión técnica e ingeniería..."):
+                            resp = responder_consulta_rebt(txt_q, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_actual)
+                            st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+                        st.rerun()
+                with c_btn2:
+                    if st.button("🗑️ Descartar Imagen", key="btn_del_chat_img_bar", use_container_width=True):
+                        st.session_state["ia_chat_imagen_activa"] = None
+                        st.rerun()
+
+    # Caja de herramientas multimedia directamente accesible en el diálogo
+    with st.container(border=True):
+        tab_mic, tab_cam, tab_up = st.tabs([
+            "🎙️ Hablar por Micrófono (Voz Directa)",
+            "📸 Tomar Foto con la Cámara",
+            "📁 Adjuntar Plano / PDF / Foto"
+        ])
+
+        with tab_mic:
+            col_v_in, col_v_act = st.columns([3, 2.5])
+            with col_v_in:
+                st.caption("🎙️ Pulsa el botón rojo para grabar tu voz y vuelve a pulsar para detener:")
+                audio_pic = st.audio_input("Hablar por micrófono al Consultor IA", key="voice_mic_ia_chat")
+            with col_v_act:
+                if audio_pic is not None:
+                    raw_audio = audio_pic.getvalue()
+                    audio_hash = hash(raw_audio)
+
+                    if st.session_state.get("ia_chat_last_trans_hash") != audio_hash:
+                        if tiene_key:
+                            with st.spinner("🎙️ Escuchando y transcribiendo tu voz a texto con IA..."):
+                                res_tr = transcribir_audio_gemini(raw_audio, audio_pic.type or "audio/wav", api_key_actual)
+                                if res_tr.get("exito"):
+                                    st.session_state["ia_chat_last_trans_hash"] = audio_hash
+                                    st.session_state["ia_chat_texto_voz"] = res_tr.get("texto", "")
+                                    st.toast("🗣️ Voz transcrita con éxito", icon="🎙️")
+                                else:
+                                    st.error(f"Error al transcribir voz: {res_tr.get('error')}")
+                        else:
+                            st.info("ℹ️ Para transcripción directa con IA, activa tu clave Gemini en el panel superior. También puedes dictar en Windows con `Tecla Windows + H`.")
+
+                    texto_voz_actual = st.session_state.get("ia_chat_texto_voz", "")
+                    if texto_voz_actual:
+                        st.success(f"🗣️ **Texto Transcrito Reconocido:**\n\n*«{texto_voz_actual}»*")
+                        if st.button("🚀 Enviar Consulta de Voz a la IA", type="primary", key="btn_send_voice_direct", use_container_width=True):
+                            img_actual = st.session_state.get("ia_chat_imagen_activa")
+                            st.session_state["ia_chat_imagen_activa"] = None
+                            st.session_state["ia_chat_texto_voz"] = None
+
+                            st.session_state.mensajes_chat_rebt.append({
+                                "role": "user",
+                                "content": f"🎙️ **Consulta de Voz:** «{texto_voz_actual}»",
+                                "audio": raw_audio,
+                                "image": img_actual
+                            })
+                            with st.spinner("Analizando consulta según REBT, Solar, IRVE e ICT-2 con visión de Ingeniero e Instalador..."):
+                                resp = responder_consulta_rebt(
+                                    consulta=texto_voz_actual,
+                                    historial=st.session_state.mensajes_chat_rebt[:-1],
+                                    imagen_b64=img_actual
+                                )
+                                st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": resp})
+                            st.rerun()
+
+        with tab_cam:
+            st.caption("📸 Apunta con tu dispositivo al cuadro eléctrico, inversor solar, cargador VE, rotulación o rack:")
+            cam_pic = st.camera_input("Capturar foto desde el dispositivo", key="cam_input_ia_chat")
+            if cam_pic is not None:
+                b64_cam = procesar_archivo_camara_o_adjunto(cam_pic)
+                if b64_cam:
+                    st.session_state["ia_chat_imagen_activa"] = b64_cam
+                    st.rerun()
+
+        with tab_up:
+            st.caption("📁 Sube un esquema unifilar, plano técnico, ficha de panel o fotografía (PNG, JPG, PDF):")
+            up_file = st.file_uploader("Seleccionar archivo técnico:", type=["png", "jpg", "jpeg", "webp", "pdf"], key="file_up_ia_chat")
+            if up_file is not None:
+                b64_up = procesar_archivo_camara_o_adjunto(up_file)
+                if b64_up:
+                    st.session_state["ia_chat_imagen_activa"] = b64_up
+                    st.rerun()
+
+    # Entrada de texto inferior estándar
+    prompt = st.chat_input("Escribe tu consulta sobre electricidad (REBT), solar fotovoltaica, vehículo eléctrico (ITC-BT-52) o telecomunicaciones...")
     if prompt:
         img_enviar = st.session_state.get("ia_chat_imagen_activa")
         st.session_state["ia_chat_imagen_activa"] = None
@@ -1138,7 +1313,7 @@ def render_interfaz_asistente_rebt():
             st.markdown(prompt)
 
         with st.chat_message("assistant", avatar="⚡"):
-            with st.spinner("Analizando consulta según REBT, ICT-2 e ingeniería técnica..."):
+            with st.spinner("Analizando consulta según REBT, Solar, IRVE e ICT-2 con visión técnica e ingeniería..."):
                 respuesta = responder_consulta_rebt(prompt, st.session_state.mensajes_chat_rebt[:-1], imagen_b64=img_enviar)
                 st.markdown(respuesta)
                 st.session_state.mensajes_chat_rebt.append({"role": "assistant", "content": respuesta})
@@ -1151,7 +1326,7 @@ def render_interfaz_asistente_rebt():
             st.session_state.mensajes_chat_rebt = [
                 {
                     "role": "assistant",
-                    "content": "Conversación reiniciada. ¿En qué te puedo asesorar ahora sobre el REBT, ICT-2 o tus proyectos?"
+                    "content": "Conversación reiniciada. ¿En qué te puedo asesorar ahora sobre el REBT, Solar Fotovoltaica, Vehículo Eléctrico o ICT-2?"
                 }
             ]
             st.session_state["ia_chat_imagen_activa"] = None
