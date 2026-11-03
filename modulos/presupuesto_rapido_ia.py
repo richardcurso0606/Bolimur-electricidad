@@ -937,6 +937,8 @@ def renderizar():
     # Inicializar variables en session_state de forma segura
     if "pr_texto_input" not in st.session_state:
         st.session_state["pr_texto_input"] = ""
+    if "pr_txt_key_counter" not in st.session_state:
+        st.session_state["pr_txt_key_counter"] = 0
     if "pr_last_audio_bytes" not in st.session_state:
         st.session_state["pr_last_audio_bytes"] = None
     if "pr_precio_hora" not in st.session_state:
@@ -1046,7 +1048,7 @@ def renderizar():
                                 texto_transcrito = res_trans.get("texto", "")
                                 st.session_state["pr_audio_transcrito_hash"] = audio_hash
                                 st.session_state["pr_texto_input"] = texto_transcrito
-                                st.session_state["pr_texto_area"] = texto_transcrito
+                                st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
                                 st.toast("✅ ¡Dictado transcrito con éxito!", icon="🎙️")
                                 st.rerun()
                             else:
@@ -1081,12 +1083,13 @@ def renderizar():
             )
 
     with col_input1:
+        txt_key = f"pr_texto_area_{st.session_state.get('pr_txt_key_counter', 0)}"
         txt_descripcion = st.text_area(
             "✍️ **2. Texto transcrito del trabajo (revísalo o modifícalo aquí):**",
             value=st.session_state.get("pr_texto_input", ""),
             placeholder="Aquí aparecerá lo que digas por el micrófono. También puedes escribirlo directamente:\nEj: Instalar línea para depuradora de piscina con reloj horario en cuadro estanco exterior y 15 metros de cable 3x2.5mm² con tubo corrugado M25.",
             height=135,
-            key="pr_texto_area"
+            key=txt_key
         )
         st.session_state["pr_texto_input"] = txt_descripcion
 
@@ -1094,9 +1097,9 @@ def renderizar():
         with col_txt_actions[0]:
             if st.button("🧹 Borrar texto para nuevo dictado", key="btn_limpiar_pr_texto", use_container_width=True):
                 st.session_state["pr_texto_input"] = ""
-                st.session_state["pr_texto_area"] = ""
                 st.session_state["pr_last_audio_bytes"] = None
                 st.session_state["pr_audio_transcrito_hash"] = None
+                st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
                 st.rerun()
 
     # Atajos de 1 Clic para avisos habituales
@@ -1105,32 +1108,32 @@ def renderizar():
     if col_at1.button("🏊 Piscina", key="btn_at_dep", use_container_width=True):
         txt = "Instalación de línea protegida para depuradora de piscina con reloj programador horario modular carril DIN y magnetotérmico de 16A."
         st.session_state["pr_texto_input"] = txt
-        st.session_state["pr_texto_area"] = txt
+        st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
         st.rerun()
     if col_at2.button("❄️ Clima", key="btn_at_clima", use_container_width=True):
         txt = "Línea independiente de climatización C9 de 16A bajo canaleta blanca con cable 3x2.5mm² y protección en cuadro con diferencial superinmunizado."
         st.session_state["pr_texto_input"] = txt
-        st.session_state["pr_texto_area"] = txt
+        st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
         st.rerun()
     if col_at3.button("🚗 Recarga VE", key="btn_at_irve", use_container_width=True):
         txt = "Línea dedicada IRVE para recarga de coche eléctrico con cable 3x6mm², tubo M32, diferencial clase A e IGA 32A."
         st.session_state["pr_texto_input"] = txt
-        st.session_state["pr_texto_area"] = txt
+        st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
         st.rerun()
     if col_at4.button("🔌 Derivación DI", key="btn_at_di", use_container_width=True):
         txt = "Derivación individual monofásica desde contadores hasta vivienda con cable libre de halógenos 2x10mm²+TT y tubo M40."
         st.session_state["pr_texto_input"] = txt
-        st.session_state["pr_texto_area"] = txt
+        st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
         st.rerun()
     if col_at5.button("🍳 Horno/Vitro", key="btn_at_vitro", use_container_width=True):
         txt = "Circuito independiente C3 de 25A para horno y vitrocerámica con cable de 6mm² y base de enchufe de fuerza de 25A."
         st.session_state["pr_texto_input"] = txt
-        st.session_state["pr_texto_area"] = txt
+        st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
         st.rerun()
     if col_at6.button("⚡ Cuadro CGMP", key="btn_at_cgmp", use_container_width=True):
         txt = "Sustitución de cuadro general de mando y protección con nuevo IGA 32A, protector de sobretensiones permanente y transitoria y 2 diferenciales de 40A."
         st.session_state["pr_texto_input"] = txt
-        st.session_state["pr_texto_area"] = txt
+        st.session_state["pr_txt_key_counter"] = st.session_state.get("pr_txt_key_counter", 0) + 1
         st.rerun()
 
     st.markdown("")
