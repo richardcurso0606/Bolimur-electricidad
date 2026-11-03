@@ -259,18 +259,14 @@ def normalizar_texto(s: str) -> str:
 
 
 def contrastar_con_bd_oficial(nombre_mat: str, df_bd: pd.DataFrame = None) -> dict:
-    """Contrasta un material con la base de datos oficial y determina proveedor y origen."""
+    """Contrasta un material con la base de datos oficial y determina el proveedor más económico y su origen."""
     if df_bd is None:
         df_bd = cargar_df_bd_oficial()
 
     mat_norm = normalizar_texto(nombre_mat)
     prov_defecto = "Obramat"
-    if any(k in mat_norm for k in ["mecanismo", "schuko", "canaleta", "marco", "enchufe", "embellecedor", "pulsador"]):
-        prov_defecto = "Leroy Merlin"
-    elif any(k in mat_norm for k in ["reloj", "contactor", "telegestion", "pop+dps", "sobretensiones", "horario"]):
+    if any(k in mat_norm for k in ["reloj", "contactor", "telegestion", "pop+dps", "sobretensiones", "horario"]):
         prov_defecto = "Sumidelec"
-    elif any(k in mat_norm for k in ["cable", "manguera", "rz1-k", "h07z1-k", "tubo", "magnetotermico", "diferencial", "iga", "peine", "pica", "caja", "cuadro"]):
-        prov_defecto = "Obramat"
 
     if df_bd is None or df_bd.empty:
         return {
@@ -297,7 +293,8 @@ def contrastar_con_bd_oficial(nombre_mat: str, df_bd: pd.DataFrame = None) -> di
                 pass
 
     if candidatos:
-        candidatos.sort(key=lambda x: -x[0])
+        # Priorizar mejor coincidencia de texto, y a igualdad de coincidencia, el PRECIO MÁS ECONÓMICO
+        candidatos.sort(key=lambda x: (-x[0], x[2]))
         best = candidatos[0]
         return {
             "en_bd": True,
@@ -340,7 +337,8 @@ def obtener_precio_por_tienda(nombre_mat: str, tienda: str, p_base: float, df_bd
                     except Exception:
                         pass
         if candidatos:
-            candidatos.sort(key=lambda x: -x[0])
+            # Mejor coincidencia y menor precio en esa tienda
+            candidatos.sort(key=lambda x: (-x[0], x[1]))
             return round(candidatos[0][1], 2), "Precio Oficial BD"
 
     # Factores reales de mercado comparativo entre cadenas de distribución
@@ -353,6 +351,40 @@ def obtener_precio_por_tienda(nombre_mat: str, tienda: str, p_base: float, df_bd
         "suministro especializado": 1.08
     }
     factor = factores.get(tienda_norm, 1.00)
+    return round(float(p_base) * factor, 2), f"Tarifa comparativa ({factor:.2f}x)"
+
+
+def comparar_precios_proveedores(nombre_mat: str, tienda_actual: str, precio_base: float, df_bd: pd.DataFrame = None) -> dict:
+    """Compara en tiempo real los precios entre tiendas para alertar al instalador si hay ahorro en otro proveedor."""
+    tiendas_evaluar = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico"]
+    tienda_actual_norm = normalizar_texto(tienda_actual)
+    precios = {}
+
+    for t in tiendas_evaluar:
+        p_t, _ = obtener_precio_por_tienda(nombre_mat, t, precio_base, df_bd)
+        precios[t] = p_t
+
+    p_actual = precios.get(tienda_actual, precio_base)
+    if not p_actual or p_actual <= 0:
+        p_actual = precio_base
+
+    # Identificar la tienda más barata
+    tienda_min = min(precios, key=precios.get)
+    p_min = precios[tienda_min]
+
+    dif = round(p_actual - p_min, 2)
+    # Alerta activa si hay al menos 0.05 € de diferencia y la tienda más barata no es la actual
+    hay_ahorro = bool(dif >= 0.05 and normalizar_texto(tienda_min) != tienda_actual_norm)
+
+    return {
+        "hay_ahorro": hay_ahorro,
+        "tienda_min": tienda_min,
+        "precio_min": p_min,
+        "precio_actual": p_actual,
+        "ahorro_ud": dif,
+        "ahorro_pct": round((dif / p_actual) * 100, 1) if p_actual > 0 else 0,
+        "precios_todos": precios
+    }
     return round(float(p_base) * factor, 2), f"Tarifa comparativa ({factor:.2f}x)"
 
 
@@ -1027,25 +1059,11 @@ def renderizar():
             col_esc1, col_esc2 = st.columns([3.3, 1.7])
 
             with col_esc1:
-                st.markdown("##### 📦 Materiales, Dónde Comprar y Origen de Tarifas:")
+                st.markdown("##### 📦 Materiales, Dónde Comprar y Comparativa de Precios:")
+                st.caption("Visualiza la descripción completa del material, dónde comprar más barato y edita precios en tiempo real:")
                 df_bd = cargar_df_bd_oficial()
                 mats = res.get("materiales", [])
                 total_mat_calc = 0.0
-
-                # Encabezados visuales
-                c_h1, c_h2, c_h3, c_h4, c_h5, c_h6 = st.columns([2.5, 1.7, 0.8, 1.0, 1.0, 0.4])
-                with c_h1:
-                    st.caption("Descripción Material y Origen")
-                with c_h2:
-                    st.caption("Dónde Comprar / Tienda")
-                with c_h3:
-                    st.caption("Cant.")
-                with c_h4:
-                    st.caption("P.U. (€)")
-                with c_h5:
-                    st.caption("Subtotal")
-                with c_h6:
-                    st.caption("Borrar")
 
                 filas_mats_edit = []
                 acopio_por_tienda = {}
@@ -1080,9 +1098,28 @@ def renderizar():
                     if key_orig not in st.session_state:
                         st.session_state[key_orig] = info_bd["origen"]
 
-                    c_m1, c_m2, c_m3, c_m4, c_m5, c_m6 = st.columns([2.5, 1.7, 0.8, 1.0, 1.0, 0.4])
-                    with c_m1:
-                        n_mat = st.text_input(f"Mat {idx_m}", key=key_n, label_visibility="collapsed")
+                    with st.container(border=True):
+                        # Fila 1: Descripción completa al 100% de ancho (para que se lea en PC y móvil) + Borrar
+                        c_desc, c_del = st.columns([9.2, 0.8])
+                        with c_desc:
+                            n_mat = st.text_input(
+                                f"Partida #{idx_m + 1} - Descripción Completa del Material:",
+                                value=st.session_state[key_n],
+                                key=key_n,
+                                help="Descripción completa del producto. Se muestra a todo el ancho sin recortar texto tanto en móvil como en PC."
+                            )
+                        with c_del:
+                            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+                            if st.button("🗑️", key=f"btn_del_mat_{idx_m}", help="Eliminar partida"):
+                                mats.pop(idx_m)
+                                for k in list(st.session_state.keys()):
+                                    if k.startswith("prm_"):
+                                        del st.session_state[k]
+                                res["materiales"] = mats
+                                st.session_state["pr_resultado_escandallo"] = res
+                                st.rerun()
+
+                        # Origen en base de datos y enlace directo de verificación web
                         prov_actual = st.session_state.get(key_prov, "Obramat")
                         origen_actual = st.session_state.get(key_orig, info_bd["origen"])
                         pu_actual = float(st.session_state.get(key_p, base_p))
@@ -1092,50 +1129,58 @@ def renderizar():
                         if "BD Oficial" in origen_actual or info_bd["en_bd"]:
                             art_tit = info_bd.get("art_bd", "")
                             st.markdown(
-                                f"<div style='margin-top:-6px; font-size:11px; color:#15803d; font-weight:700;' title='Artículo en BD: {art_tit}'>"
+                                f"<div style='margin-top:-8px; margin-bottom:8px; font-size:11px; color:#15803d; font-weight:700;' title='Artículo en BD: {art_tit}'>"
                                 f"🏷️ {origen_actual} ({prov_actual}) · {pu_actual:.2f} € · <a href='{url_search}' target='_blank' style='color:#15803d; text-decoration:underline;'>🔍 Comprobar en web</a></div>",
                                 unsafe_allow_html=True
                             )
                         else:
                             st.markdown(
-                                f"<div style='margin-top:-6px; font-size:11px; color:#0284c7; font-weight:600;'>"
+                                f"<div style='margin-top:-8px; margin-bottom:8px; font-size:11px; color:#0284c7; font-weight:600;'>"
                                 f"🤖 {origen_actual} ({prov_actual}) · {pu_actual:.2f} € · <a href='{url_search}' target='_blank' style='color:#0284c7; text-decoration:underline;'>🔍 Verificar en la red</a></div>",
                                 unsafe_allow_html=True
                             )
 
-                    with c_m2:
-                        opciones_tiendas = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico", "Suministro Especializado"]
-                        if st.session_state[key_prov] not in opciones_tiendas:
-                            st.session_state[key_prov] = "Obramat"
-                        prov_sel = st.selectbox(
-                            f"Prov {idx_m}",
-                            opciones_tiendas,
-                            key=key_prov,
-                            label_visibility="collapsed",
-                            on_change=cb_cambiar_tienda,
-                            args=(idx_m, base_p)
-                        )
+                        # Fila 2: Selector de Tienda, Cantidad, Precio Unitario y Subtotal
+                        c_m1, c_m2, c_m3, c_m4 = st.columns([2.5, 1.2, 1.3, 1.4])
+                        with c_m1:
+                            opciones_tiendas = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico", "Suministro Especializado"]
+                            if st.session_state[key_prov] not in opciones_tiendas:
+                                st.session_state[key_prov] = "Obramat"
+                            prov_sel = st.selectbox(
+                                "🏬 Dónde Comprar:",
+                                opciones_tiendas,
+                                key=key_prov,
+                                on_change=cb_cambiar_tienda,
+                                args=(idx_m, base_p)
+                            )
+                        with c_m2:
+                            unid_lbl = m_item.get("unid", "ud")
+                            n_cnt = st.number_input(f"Cantidad ({unid_lbl}):", min_value=0.1, step=1.0, key=key_c)
+                        with c_m3:
+                            n_pu = st.number_input("PVP Unit. (€):", min_value=0.01, step=0.5, format="%.2f", key=key_p)
+                        with c_m4:
+                            sub_m = round(n_cnt * n_pu, 2)
+                            st.markdown(f"<div style='font-size:11px; color:#64748b; font-weight:600; margin-top:2px;'>Subtotal S/IVA:</div><div style='font-size:17px; font-weight:800; color:#0f172a; margin-top:4px;'>{sub_m:,.2f} €</div>", unsafe_allow_html=True)
+                            total_mat_calc += sub_m
 
-                    with c_m3:
-                        n_cnt = st.number_input(f"Cant {idx_m}", min_value=0.1, step=1.0, key=key_c, label_visibility="collapsed")
-
-                    with c_m4:
-                        n_pu = st.number_input(f"P.U {idx_m}", min_value=0.01, step=0.5, format="%.2f", key=key_p, label_visibility="collapsed")
-
-                    with c_m5:
-                        sub_m = round(n_cnt * n_pu, 2)
-                        st.markdown(f"<div style='margin-top:6px; font-weight:bold;'>{sub_m:,.2f} €</div>", unsafe_allow_html=True)
-                        total_mat_calc += sub_m
-
-                    with c_m6:
-                        if st.button("🗑️", key=f"btn_del_mat_{idx_m}", help="Eliminar partida"):
-                            mats.pop(idx_m)
-                            for k in list(st.session_state.keys()):
-                                if k.startswith("prm_"):
-                                    del st.session_state[k]
-                            res["materiales"] = mats
-                            st.session_state["pr_resultado_escandallo"] = res
-                            st.rerun()
+                        # Fila 3: Ayuda emergente de ahorro comparativo (No se imprime en el PDF)
+                        comp = comparar_precios_proveedores(n_mat, prov_sel, base_p, df_bd)
+                        if comp["hay_ahorro"]:
+                            ahorro_tot = round(comp["ahorro_ud"] * n_cnt, 2)
+                            c_ah1, c_ah2 = st.columns([4.0, 1.8])
+                            with c_ah1:
+                                st.info(
+                                    f"💡 **Aviso de Ahorro:** Este material está más barato en **{comp['tienda_min']}** a **`{comp['precio_min']:.2f} €/ud`** "
+                                    f"(ahorras **`{comp['ahorro_ud']:.2f} €/ud`** vs {prov_sel} · Ahorro total: **`{ahorro_tot:,.2f} €`**).",
+                                    icon="💡"
+                                )
+                            with c_ah2:
+                                st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+                                if st.button(f"⚡ Cambiar a {comp['tienda_min']}", key=f"btn_switch_store_{idx_m}", help=f"Cambiar proveedor a {comp['tienda_min']} y actualizar a {comp['precio_min']:.2f} €"):
+                                    st.session_state[key_prov] = comp['tienda_min']
+                                    st.session_state[key_p] = float(comp['precio_min'])
+                                    st.session_state[key_orig] = f"🏷️ BD Oficial ({comp['tienda_min']})"
+                                    st.rerun()
 
                     # Sincronización continua con la lista maestra
                     m_item["mat"] = n_mat
