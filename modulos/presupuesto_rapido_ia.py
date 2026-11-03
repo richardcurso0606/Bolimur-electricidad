@@ -23,9 +23,42 @@ from modulos import auditor_ia_rebt
 from modulos import asistente_ia_rebt
 
 
+def normalizar_texto(s: str) -> str:
+    """Normaliza texto eliminando tildes y caracteres especiales para búsqueda tolerante."""
+    return "".join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower()
+
+
+def es_servicio_o_logistica(texto: str) -> bool:
+    """Detecta si una partida representa un servicio, tiempo invertido, transporte, desplazamiento o gestión,
+    para evitar tratarlo como un material físico de ferretería."""
+    if not texto:
+        return False
+    t = normalizar_texto(texto)
+    frases_clave = [
+        "tiempo invertido", "comprar material", "compra de material", "compra material",
+        "desplazamiento", "kilometraje", "portes", "tramitacion", "gestion de compra",
+        "gestion de acopio", "servicio tecnico", "mano de obra", "visita tecnica",
+        "boletin electrico", "certificado de instalacion", "hora extra", "ayudante",
+        "furgoneta", "dietas", "foco cambiado", "punto colocado", "tiempo y transporte",
+        "transporte y tiempo", "recogida de material", "viaje", "gasoil"
+    ]
+    if any(k in t for k in frases_clave):
+        return True
+    
+    palabras = set(re.findall(r'\b[a-z]+\b', t))
+    claves_aisladas = {"transporte", "porte", "portes", "desplazamiento", "kilometraje", "gestion", "acopio", "tiempo"}
+    if palabras.intersection(claves_aisladas):
+        no_es_material = not any(m in t for m in ["tubo", "cable", "manguera", "diferencial", "magnetotermico", "caja", "cuadro", "enchufe", "interruptor", "foco", "downlight", "led", "canal"])
+        if no_es_material:
+            return True
+    return False
+
+
 def generar_excel_orden_compra(filas_compra: list, nom_cliente: str, concepto_obra: str) -> bytes:
     """Genera un archivo Excel (.xlsx) estructurado con la Orden de Compra y Acopio agrupado por proveedor."""
     output = io.BytesIO()
+    solo_mats = [f for f in filas_compra if not (f.get("es_servicio") or es_servicio_o_logistica(f.get("mat", "")))]
+    datos = solo_mats if solo_mats else filas_compra
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_export = pd.DataFrame([
             {
@@ -35,10 +68,11 @@ def generar_excel_orden_compra(filas_compra: list, nom_cliente: str, concepto_ob
                 "Unidad": f.get("unid", "ud"),
                 "P. Unitario S/IVA (€)": round(float(f.get("p_u", 0.0)), 2),
                 "Subtotal S/IVA (€)": round(float(f.get("subtotal", 0.0)), 2),
+                "A Pagar Mostrador c/21% IVA (€)": round(float(f.get("subtotal", 0.0)) * 1.21, 2),
                 "Origen de Tarifa": f.get("origen", "Base de Datos"),
                 "Estado de Compra": "⏳ Pendiente"
             }
-            for f in filas_compra
+            for f in datos
         ])
         if not df_export.empty:
             df_export = df_export.sort_values(by=["Proveedor / Tienda", "Descripción del Material"])
@@ -54,19 +88,26 @@ def generar_texto_whatsapp_compra(filas_compra: list, nom_cliente: str, concepto
     texto += f"⚡ Trabajo: {concepto_obra}\n"
     texto += f"-----------------------------------------\n"
 
+    solo_mats = [f for f in filas_compra if not (f.get("es_servicio") or es_servicio_o_logistica(f.get("mat", "")))]
+    datos = solo_mats if solo_mats else filas_compra
+
     por_prov = {}
-    for f in filas_compra:
+    for f in datos:
         p = f.get("proveedor", "Obramat")
         por_prov.setdefault(p, []).append(f)
 
+    tot_compra_siva = 0.0
     for prov_name, items in por_prov.items():
         sub_p = sum(float(x.get("subtotal", 0.0)) for x in items)
-        texto += f"\n🏬 *{prov_name.upper()}* (Total: {sub_p:,.2f} €):\n"
+        sub_p_civa = round(sub_p * 1.21, 2)
+        tot_compra_siva += sub_p
+        texto += f"\n🏬 *{prov_name.upper()}* (Base: {sub_p:,.2f} € | 💳 Caja: {sub_p_civa:,.2f} € c/IVA):\n"
         for it in items:
-            texto += f"  • {float(it.get('cant', 1.0)):.1f} {it.get('unid', 'ud')} - {it.get('mat', '')} (~{float(it.get('subtotal', 0.0)):,.2f} €)\n"
+            s_it = float(it.get('subtotal', 0.0))
+            texto += f"  • {float(it.get('cant', 1.0)):.1f} {it.get('unid', 'ud')} - {it.get('mat', '')} (~{s_it:,.2f} € S/IVA · {s_it*1.21:,.2f} € c/IVA)\n"
 
     texto += f"\n-----------------------------------------\n"
-    texto += f"💰 *Total Coste Materiales:* {total_mat:,.2f} € (S/IVA) | {total_mat * 1.21:,.2f} € (C/IVA 21%)\n"
+    texto += f"💰 *Gasto Total en Mostrador:* {tot_compra_siva:,.2f} € (S/IVA) | *{tot_compra_siva * 1.21:,.2f} € (C/IVA 21% a pagar en caja)*\n"
     return texto
 
 
@@ -79,11 +120,22 @@ def generar_texto_whatsapp_presupuesto(nom_cliente: str, concepto_obra: str, sub
     if tipo_tarifa:
         texto += f"🏷️ Régimen / Tarifa: {tipo_tarifa}\n"
     texto += "-----------------------------------------\n"
-    texto += f"📦 *Materiales y Aparamenta:* {total_mat:,.2f} €\n"
-    for it in filas_mats[:6]:
+    
+    mats_solo = [it for it in filas_mats if not (it.get("es_servicio") or es_servicio_o_logistica(it.get("mat", "")))]
+    serv_solo = [it for it in filas_mats if (it.get("es_servicio") or es_servicio_o_logistica(it.get("mat", "")))]
+    
+    texto += f"📦 *Materiales y Aparamenta:* {total_mat:,.2f} € (S/IVA)\n"
+    for it in mats_solo[:5]:
         texto += f"  • {float(it.get('cant', 1.0)):.1f} {it.get('unid', 'ud')} {it.get('mat', '')[:30]} ({float(it.get('subtotal', 0.0)):,.2f} €)\n"
-    if len(filas_mats) > 6:
-        texto += f"  • ... y {len(filas_mats) - 6} partidas adicionales de instalación.\n"
+    if len(mats_solo) > 5:
+        texto += f"  • ... y {len(mats_solo) - 5} partidas adicionales de material.\n"
+    
+    if serv_solo:
+        tot_serv = sum(float(x.get("subtotal", 0.0)) for x in serv_solo)
+        texto += f"\n🚚 *Logística y Tiempo de Compras:* {tot_serv:,.2f} € (S/IVA)\n"
+        for it in serv_solo:
+            texto += f"  • {it.get('mat', '')[:35]} ({float(it.get('subtotal', 0.0)):,.2f} €)\n"
+
     texto += f"\n⏱️ *Mano de Obra Instalador REBT:* {horas_mo:.1f}h × {precio_mo:.2f} €/h = {coste_mo:,.2f} €\n"
     if desplazamiento > 0:
         texto += f"🚗 *Desplazamiento / Salida:* {desplazamiento:,.2f} €\n"
@@ -100,7 +152,7 @@ def generar_texto_whatsapp_presupuesto(nom_cliente: str, concepto_obra: str, sub
 
 
 def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concepto: str, total_mat: float, iva_pct: float, usuario: dict = None) -> bytes:
-    """Genera el PDF oficial de la Orden de Compra clasificado por proveedor."""
+    """Genera el PDF oficial de la Orden de Compra clasificado por proveedor excluyendo servicios internos."""
     from modulos import pdf_presupuesto
     usuario = usuario or {}
     proyecto_info = {
@@ -114,8 +166,11 @@ def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concep
         'expediente': f"{datetime.date.today().strftime('%Y%m%d')}-OC",
         'fecha': datetime.date.today().strftime('%d/%m/%Y')
     }
+    solo_mats = [f for f in filas_compra if not (f.get("es_servicio") or es_servicio_o_logistica(f.get("mat", "")))]
+    datos = solo_mats if solo_mats else filas_compra
     cats = {}
-    for f in filas_compra:
+    tot_compra_puro = sum(float(f.get('subtotal', 0.0)) for f in datos)
+    for f in datos:
         p_name = f.get('proveedor', 'Obramat')
         cat_key = f"PROVEEDOR / TIENDA: {p_name.upper()}"
         if cat_key not in cats:
@@ -134,12 +189,12 @@ def generar_pdf_orden_compra_rapida(filas_compra: list, nom_cliente: str, concep
             'p_unit': float(f.get('p_u', 0.0)),
             'subtotal': float(f.get('subtotal', 0.0))
         })
-    cuota = round(total_mat * (iva_pct / 100.0), 2)
+    cuota = round(tot_compra_puro * 0.21, 2)
     oc_data = {
-        'total_neto': total_mat,
-        'iva_pct': iva_pct,
+        'total_neto': tot_compra_puro,
+        'iva_pct': 21.0,
         'cuota_iva': cuota,
-        'total_con_iva': round(total_mat + cuota, 2),
+        'total_con_iva': round(tot_compra_puro + cuota, 2),
         'categorias': cats
     }
     return pdf_presupuesto.generar_pdf_orden_compra(proyecto_info, oc_data)
@@ -161,23 +216,36 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
         'fecha': datetime.date.today().strftime('%d/%m/%Y')
     }
     tarifa_limpia = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', str(tipo_tarifa)).strip()
+
+    cap_mats = [f for f in filas_compra if not (f.get("es_servicio") or es_servicio_o_logistica(f.get("mat", "")))]
+    cap_serv = [f for f in filas_compra if (f.get("es_servicio") or es_servicio_o_logistica(f.get("mat", "")))]
+    tot_mats_val = sum(float(x.get("subtotal", 0.0)) for x in cap_mats)
+    tot_serv_val = sum(float(x.get("subtotal", 0.0)) for x in cap_serv)
+
     capitulos = [
         {
             'cap': 'CAP-01',
             'titulo': 'Materiales y Suministro Eléctrico Certificado',
-            'desc': f"Suministro de {len(filas_compra)} partidas normalizadas de conductores, protecciones y canalizaciones.",
-            'importe': total_mat
-        },
-        {
-            'cap': 'CAP-02',
-            'titulo': f"Mano de Obra e Instalación Profesional ({tarifa_limpia})" if tarifa_limpia else "Mano de Obra e Instalación Profesional",
-            'desc': f"Montaje técnico ({horas_mo:.1f} h a {precio_mo:.2f} €/h), tendido, conexionado, timbrado y ensayos reglamentarios según {res.get('norma', 'REBT RD 842/2002')}.",
-            'importe': coste_mo
+            'desc': f"Suministro de {len(cap_mats)} partidas normalizadas de conductores, protecciones y canalizaciones.",
+            'importe': tot_mats_val
         }
     ]
+    if tot_serv_val > 0:
+        capitulos.append({
+            'cap': f"CAP-0{len(capitulos) + 1}",
+            'titulo': 'Logística, Gestión de Acopio y Servicios Técnicos',
+            'desc': f"Tiempo invertido en acopio y transporte de materiales, coordinación técnica y gestiones operativas.",
+            'importe': tot_serv_val
+        })
+    capitulos.append({
+        'cap': f"CAP-0{len(capitulos) + 1}",
+        'titulo': f"Mano de Obra e Instalación Profesional ({tarifa_limpia})" if tarifa_limpia else "Mano de Obra e Instalación Profesional",
+        'desc': f"Montaje técnico ({horas_mo:.1f} h a {precio_mo:.2f} €/h), tendido, conexionado, timbrado y ensayos reglamentarios según {res.get('norma', 'REBT RD 842/2002')}.",
+        'importe': coste_mo
+    })
     if desplazamiento > 0:
         capitulos.append({
-            'cap': 'CAP-03',
+            'cap': f"CAP-0{len(capitulos) + 1}",
             'titulo': 'Desplazamiento y Salida de Furgón Taller',
             'desc': f"Transporte técnico, kilometraje y puesta a disposición de furgón taller e instrumental reglamentario ({tarifa_limpia})." if tarifa_limpia else "Transporte técnico, kilometraje y puesta a disposición de furgón taller.",
             'importe': desplazamiento
@@ -186,11 +254,13 @@ def generar_pdf_presupuesto_rapido(res: dict, filas_compra: list, nom_cliente: s
     # Partidas desglosadas completas para que el cliente vea cada artículo en el PDF
     partidas_desglose = []
     for f in filas_compra:
+        es_s = f.get('es_servicio') or es_servicio_o_logistica(f.get('mat', ''))
         origen_limpio = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', str(f.get('origen', 'Tarifa Oficial'))).strip()
         mat_limpio = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\ufe00-\ufe0f]', '', str(f.get('mat', 'Material Eléctrico'))).strip()
+        desc_linea = f"Gestión logística y coordinación técnica ({f.get('proveedor', 'Servicio Propio')})" if es_s else f"Suministro oficial ({f.get('proveedor', 'Obramat')}) - {origen_limpio}"
         partidas_desglose.append({
             'concepto': mat_limpio,
-            'descripcion': f"Suministro oficial ({f.get('proveedor', 'Obramat')}) - {origen_limpio}",
+            'descripcion': desc_linea,
             'cantidad': float(f.get('cant', 1.0)),
             'unidad': f.get('unid', 'ud'),
             'precio_unitario': float(f.get('p_u', 0.0)),
@@ -260,6 +330,15 @@ def normalizar_texto(s: str) -> str:
 
 def contrastar_con_bd_oficial(nombre_mat: str, df_bd: pd.DataFrame = None) -> dict:
     """Contrasta un material con la base de datos oficial y determina el proveedor más económico y su origen."""
+    if es_servicio_o_logistica(nombre_mat):
+        return {
+            "en_bd": False,
+            "origen": "🚚 Logística / Gestión",
+            "proveedor": "Servicio Técnico Propio",
+            "art_bd": "",
+            "precio_bd": None
+        }
+
     if df_bd is None:
         df_bd = cargar_df_bd_oficial()
 
@@ -356,6 +435,18 @@ def obtener_precio_por_tienda(nombre_mat: str, tienda: str, p_base: float, df_bd
 
 def comparar_precios_proveedores(nombre_mat: str, tienda_actual: str, precio_base: float, df_bd: pd.DataFrame = None) -> dict:
     """Compara en tiempo real los precios entre tiendas para alertar al instalador si hay ahorro en CUALQUIER otro proveedor."""
+    if es_servicio_o_logistica(nombre_mat):
+        return {
+            "hay_ahorro": False,
+            "tienda_min": tienda_actual or "Servicio Técnico Propio",
+            "precio_min": precio_base,
+            "precio_actual": precio_base,
+            "ahorro_ud": 0.0,
+            "ahorro_pct": 0.0,
+            "todas_mas_baratas": [],
+            "precios_todos": {}
+        }
+
     tiendas_evaluar = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico"]
     tienda_actual_norm = normalizar_texto(tienda_actual)
     precios = {}
@@ -402,6 +493,8 @@ def comparar_precios_proveedores(nombre_mat: str, tienda_actual: str, precio_bas
 
 def buscar_marcas_alternativas(nombre_mat: str, df_bd: pd.DataFrame = None) -> list:
     """Busca en la base de datos oficial alternativas de marcas reconocidas y gamas superiores (Schneider, Simon, Legrand, Niessen, Zemper, Hager, etc.)."""
+    if es_servicio_o_logistica(nombre_mat):
+        return []
     if df_bd is None or df_bd.empty:
         df_bd = cargar_df_bd_oficial()
     if df_bd is None or df_bd.empty:
@@ -1157,6 +1250,7 @@ def renderizar():
 
                 filas_mats_edit = []
                 acopio_por_tienda = {}
+                servicios_internos = []
 
                 def cb_cambiar_tienda(idx: int, p_base_calculado: float):
                     t_sel = st.session_state.get(f"prm_prov_{idx}", "Obramat")
@@ -1167,36 +1261,41 @@ def renderizar():
                     st.session_state[f"prm_orig_{idx}"] = n_org
 
                 for idx_m, m_item in enumerate(mats):
-                    info_bd = contrastar_con_bd_oficial(m_item.get("mat", ""), df_bd)
-
+                    tipo_m = m_item.get("tipo", "")
+                    n_mat_inicial = m_item.get("mat", "")
                     key_n = f"prm_n_{idx_m}"
                     key_prov = f"prm_prov_{idx_m}"
                     key_c = f"prm_c_{idx_m}"
                     key_p = f"prm_p_{idx_m}"
                     key_orig = f"prm_orig_{idx_m}"
 
-                    base_p = float(info_bd["precio_bd"]) if (info_bd["en_bd"] and info_bd["precio_bd"]) else float(m_item.get("p_u", 10.0))
+                    texto_eval = st.session_state.get(key_n, n_mat_inicial)
+                    es_serv = (tipo_m == "servicio") or es_servicio_o_logistica(texto_eval)
+
+                    info_bd = contrastar_con_bd_oficial(texto_eval, df_bd)
+                    base_p = float(info_bd["precio_bd"]) if (info_bd["en_bd"] and info_bd["precio_bd"]) else float(m_item.get("p_u", 35.0 if es_serv else 10.0))
 
                     if key_n not in st.session_state:
                         st.session_state[key_n] = m_item.get("mat", "")
                     if key_c not in st.session_state:
                         st.session_state[key_c] = float(m_item.get("cant", 1.0))
                     if key_prov not in st.session_state:
-                        st.session_state[key_prov] = info_bd.get("proveedor", "Obramat")
+                        st.session_state[key_prov] = "Servicio Técnico Propio" if es_serv else info_bd.get("proveedor", "Obramat")
                     if key_p not in st.session_state:
                         st.session_state[key_p] = float(base_p)
                     if key_orig not in st.session_state:
-                        st.session_state[key_orig] = info_bd["origen"]
+                        st.session_state[key_orig] = "🚚 Logística / Gestión Interna" if es_serv else info_bd["origen"]
 
                     with st.container(border=True):
-                        # Fila 1: Descripción completa al 100% de ancho (para que se lea en PC y móvil) + Borrar
+                        # Fila 1: Descripción completa al 100% de ancho + Borrar
                         c_desc, c_del = st.columns([9.2, 0.8])
                         with c_desc:
+                            lbl_partida = f"Partida #{idx_m + 1} - 🚚 Gestión / Servicio Técnico / Desplazamiento:" if es_serv else f"Partida #{idx_m + 1} - 📦 Descripción Completa del Material:"
                             n_mat = st.text_input(
-                                f"Partida #{idx_m + 1} - Descripción Completa del Material:",
+                                lbl_partida,
                                 value=st.session_state[key_n],
                                 key=key_n,
-                                help="Descripción completa del producto. Se muestra a todo el ancho sin recortar texto tanto en móvil como en PC."
+                                help="Descripción completa. Se muestra a todo el ancho sin recortar texto tanto en móvil como en PC."
                             )
                         with c_del:
                             st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
@@ -1209,129 +1308,153 @@ def renderizar():
                                 st.session_state["pr_resultado_escandallo"] = res
                                 st.rerun()
 
-                        # Origen en base de datos y enlace directo de verificación web
-                        prov_actual = st.session_state.get(key_prov, "Obramat")
-                        origen_actual = st.session_state.get(key_orig, info_bd["origen"])
+                        # Origen en base de datos y enlaces
+                        prov_actual = st.session_state.get(key_prov, "Servicio Técnico Propio" if es_serv else "Obramat")
+                        origen_actual = st.session_state.get(key_orig, "🚚 Gestión Interna" if es_serv else info_bd["origen"])
                         pu_actual = float(st.session_state.get(key_p, base_p))
-                        query_q = urllib.parse.quote(f"precio {n_mat} {prov_actual}")
-                        url_search = f"https://www.google.com/search?q={query_q}"
 
-                        if "BD Oficial" in origen_actual or info_bd["en_bd"]:
+                        if es_serv:
+                            st.markdown(
+                                f"<div style='margin-top:-8px; margin-bottom:8px; font-size:11px; color:#4f46e5; font-weight:700;'>"
+                                f"🚚 SERVICIO / GESTIÓN INTERNA · Sin compra en almacén de ferretería · {pu_actual:.2f} €/ud</div>",
+                                unsafe_allow_html=True
+                            )
+                        elif "BD Oficial" in origen_actual or info_bd["en_bd"]:
                             art_tit = info_bd.get("art_bd", "")
+                            query_q = urllib.parse.quote(f"precio {n_mat} {prov_actual}")
+                            url_search = f"https://www.google.com/search?q={query_q}"
                             st.markdown(
                                 f"<div style='margin-top:-8px; margin-bottom:8px; font-size:11px; color:#15803d; font-weight:700;' title='Artículo en BD: {art_tit}'>"
                                 f"🏷️ {origen_actual} ({prov_actual}) · {pu_actual:.2f} € · <a href='{url_search}' target='_blank' style='color:#15803d; text-decoration:underline;'>🔍 Comprobar en web</a></div>",
                                 unsafe_allow_html=True
                             )
                         else:
+                            query_q = urllib.parse.quote(f"precio {n_mat} {prov_actual}")
+                            url_search = f"https://www.google.com/search?q={query_q}"
                             st.markdown(
                                 f"<div style='margin-top:-8px; margin-bottom:8px; font-size:11px; color:#0284c7; font-weight:600;'>"
                                 f"🤖 {origen_actual} ({prov_actual}) · {pu_actual:.2f} € · <a href='{url_search}' target='_blank' style='color:#0284c7; text-decoration:underline;'>🔍 Verificar en la red</a></div>",
                                 unsafe_allow_html=True
                             )
 
-                        # Fila 2: Selector de Tienda, Cantidad, Precio Unitario y Subtotal
+                        # Fila 2: Selector de Tienda / Canal, Cantidad, Precio Unitario y Subtotal
                         c_m1, c_m2, c_m3, c_m4 = st.columns([2.5, 1.2, 1.3, 1.4])
                         with c_m1:
-                            opciones_tiendas = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico", "Suministro Especializado"]
+                            if es_serv:
+                                opciones_tiendas = ["Servicio Técnico Propio", "Logística y Transporte", "Gestión Externa / Subcontrata"]
+                            else:
+                                opciones_tiendas = ["Obramat", "Leroy Merlin", "Sumidelec", "Sonepar / Rexel", "Mayorista Eléctrico", "Suministro Especializado"]
+
                             if st.session_state[key_prov] not in opciones_tiendas:
-                                st.session_state[key_prov] = "Obramat"
+                                st.session_state[key_prov] = opciones_tiendas[0]
+
                             prov_sel = st.selectbox(
-                                "🏬 Dónde Comprar:",
+                                "🏬 Canal / Proveedor:" if es_serv else "🏬 Dónde Comprar:",
                                 opciones_tiendas,
                                 key=key_prov,
-                                on_change=cb_cambiar_tienda,
-                                args=(idx_m, base_p)
+                                on_change=cb_cambiar_tienda if not es_serv else None,
+                                args=(idx_m, base_p) if not es_serv else None
                             )
                         with c_m2:
-                            unid_lbl = m_item.get("unid", "ud")
+                            unid_lbl = m_item.get("unid", "servicio" if es_serv else "ud")
                             n_cnt = st.number_input(f"Cantidad ({unid_lbl}):", min_value=0.1, step=1.0, key=key_c)
                         with c_m3:
                             n_pu = st.number_input("PVP Unit. (€):", min_value=0.01, step=0.5, format="%.2f", key=key_p)
                         with c_m4:
                             sub_m = round(n_cnt * n_pu, 2)
-                            st.markdown(f"<div style='font-size:11px; color:#64748b; font-weight:600; margin-top:2px;'>Subtotal S/IVA:</div><div style='font-size:17px; font-weight:800; color:#0f172a; margin-top:4px;'>{sub_m:,.2f} €</div>", unsafe_allow_html=True)
+                            sub_m_civa = round(sub_m * 1.21, 2)
+                            if es_serv:
+                                st.markdown(f"<div style='font-size:11px; color:#64748b; font-weight:600; margin-top:2px;'>Subtotal S/IVA:</div><div style='font-size:17px; font-weight:800; color:#0f172a; margin-top:4px;'>{sub_m:,.2f} €</div><div style='font-size:11px; color:#4f46e5; font-weight:600;'>c/21% IVA: {sub_m_civa:,.2f} €</div>", unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"<div style='font-size:11px; color:#64748b; font-weight:600; margin-top:2px;'>Subtotal S/IVA:</div><div style='font-size:17px; font-weight:800; color:#0f172a; margin-top:4px;'>{sub_m:,.2f} €</div><div style='font-size:11px; color:#0284c7; font-weight:600;'>💳 En caja: {sub_m_civa:,.2f} €</div>", unsafe_allow_html=True)
                             total_mat_calc += sub_m
 
-                        # Fila 3: Ayuda emergente de ahorro comparativo para TODOS los proveedores más baratos
-                        comp = comparar_precios_proveedores(n_mat, prov_sel, base_p, df_bd)
-                        if comp["hay_ahorro"]:
-                            ahorro_tot = round(comp["ahorro_ud"] * n_cnt, 2)
-                            st.markdown(
-                                f"""
-                                <div style="background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); border: 2px solid #eab308; border-radius: 10px; padding: 14px 18px; margin: 10px 0;">
-                                    <div style="font-size: 16px; font-weight: 800; color: #854d0e;">
-                                        💡 ¡AVISO DE PRECIO MÁS BARATO DISPONIBLE!
+                        # Fila 3 y 4: Comparativa de Ahorro y Marcas SOLO para materiales físicos
+                        if not es_serv:
+                            comp = comparar_precios_proveedores(n_mat, prov_sel, base_p, df_bd)
+                            if comp["hay_ahorro"]:
+                                ahorro_tot = round(comp["ahorro_ud"] * n_cnt, 2)
+                                st.markdown(
+                                    f"""
+                                    <div style="background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); border: 2px solid #eab308; border-radius: 10px; padding: 14px 18px; margin: 10px 0;">
+                                        <div style="font-size: 16px; font-weight: 800; color: #854d0e;">
+                                            💡 ¡AVISO DE PRECIO MÁS BARATO DISPONIBLE!
+                                        </div>
+                                        <div style="font-size: 15px; color: #713f12; margin-top: 6px; line-height: 1.5;">
+                                            En <b>{prov_sel}</b> cuesta <b>{pu_actual:.2f} €/ud</b>, pero tienes distribuidores con precios más económicos:<br/>
+                                            👉 <b>La opción más barata es {comp['tienda_min']} a {comp['precio_min']:.2f} €/ud</b> (ahorras <b>{comp['ahorro_ud']:.2f} €/ud</b> · Total: <b>{ahorro_tot:,.2f} €</b>).
+                                        </div>
                                     </div>
-                                    <div style="font-size: 15px; color: #713f12; margin-top: 6px; line-height: 1.5;">
-                                        En <b>{prov_sel}</b> cuesta <b>{pu_actual:.2f} €/ud</b>, pero tienes distribuidores con precios más económicos:<br/>
-                                        👉 <b>La opción más barata es {comp['tienda_min']} a {comp['precio_min']:.2f} €/ud</b> (ahorras <b>{comp['ahorro_ud']:.2f} €/ud</b> · Total: <b>{ahorro_tot:,.2f} €</b>).
-                                    </div>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-                            st.caption("🛒 **Proveedores más baratos disponibles (pulsa para comprar de ahí):**")
-                            c_cheap_cols = st.columns(min(len(comp["todas_mas_baratas"]), 3) or 1)
-                            for i_tb, tb in enumerate(comp["todas_mas_baratas"]):
-                                tot_ah = round(tb["ahorro_ud"] * n_cnt, 2)
-                                with c_cheap_cols[i_tb % len(c_cheap_cols)]:
-                                    btn_type = "primary" if i_tb == 0 else "secondary"
-                                    if st.button(
-                                        f"🛒 Comprar en {tb['tienda']} ({tb['precio']:.2f} €)",
-                                        key=f"btn_apply_store_{idx_m}_{tb['tienda']}_{i_tb}",
-                                        use_container_width=True,
-                                        type=btn_type,
-                                        help=f"Cambiar a {tb['tienda']} a {tb['precio']:.2f} €/ud. Ahorras {tot_ah:,.2f} € para {n_cnt:.0f} uds."
-                                    ):
-                                        st.session_state[key_prov] = tb['tienda']
-                                        st.session_state[key_p] = float(tb['precio'])
-                                        st.session_state[key_orig] = f"🏷️ Tarifa Optimizada ({tb['tienda']})"
+                                    """,
+                                    unsafe_allow_html=True
+                                )
+                                st.caption("🛒 **Proveedores más baratos disponibles (pulsa para comprar de ahí):**")
+                                c_cheap_cols = st.columns(min(len(comp["todas_mas_baratas"]), 3) or 1)
+                                for i_tb, tb in enumerate(comp["todas_mas_baratas"]):
+                                    tot_ah = round(tb["ahorro_ud"] * n_cnt, 2)
+                                    with c_cheap_cols[i_tb % len(c_cheap_cols)]:
+                                        btn_type = "primary" if i_tb == 0 else "secondary"
+                                        if st.button(
+                                            f"🛒 Comprar en {tb['tienda']} ({tb['precio']:.2f} €)",
+                                            key=f"btn_apply_store_{idx_m}_{tb['tienda']}_{i_tb}",
+                                            use_container_width=True,
+                                            type=btn_type,
+                                            help=f"Cambiar a {tb['tienda']} a {tb['precio']:.2f} €/ud. Ahorras {tot_ah:,.2f} € para {n_cnt:.0f} uds."
+                                        ):
+                                            st.session_state[key_prov] = tb['tienda']
+                                            st.session_state[key_p] = float(tb['precio'])
+                                            st.session_state[key_orig] = f"🏷️ Tarifa Optimizada ({tb['tienda']})"
+                                            st.rerun()
+                            else:
+                                st.markdown(
+                                    f"<div style='font-size:13px; color:#15803d; font-weight:700; margin-top:6px;'>"
+                                    f"✅ <b>{prov_sel}</b> es el proveedor con el mejor precio disponible para esta partida ({pu_actual:.2f} €/ud).</div>",
+                                    unsafe_allow_html=True
+                                )
+
+                            # Fila 4: Opción para clientes que quieren más calidad o cambiar de marca
+                            with st.expander(f"⭐ ¿El cliente quiere más calidad o cambiar a primeras marcas? (Schneider, Simon, Legrand, Niessen, Zemper...)"):
+                                st.caption("Si el cliente pide mayor categoría estética, primeras marcas o gama premium, selecciona una opción oficial del catálogo:")
+                                alts_marcas = buscar_marcas_alternativas(n_mat, df_bd)
+                                if alts_marcas:
+                                    st.markdown("**Marcas de calidad catalogadas para este material:**")
+                                    cols_marcas = st.columns(min(len(alts_marcas), 3) or 1)
+                                    for i_m, m_alt in enumerate(alts_marcas):
+                                        dif_m = round(m_alt['precio'] - pu_actual, 2)
+                                        signo_m = f"+{dif_m:.2f} €" if dif_m >= 0 else f"{dif_m:.2f} €"
+                                        with cols_marcas[i_m % len(cols_marcas)]:
+                                            st.markdown(f"**🏷️ {m_alt['marca']}** (`{m_alt['precio']:.2f} €`)")
+                                            st.caption(f"Gama: {m_alt['gama']} · {m_alt['tienda']}\n\n*{m_alt['art'][:36]}*")
+                                            if st.button(f"Elegir {m_alt['marca']} ({signo_m})", key=f"btn_alt_m_{idx_m}_{m_alt['marca']}_{i_m}", use_container_width=True):
+                                                st.session_state[key_n] = m_alt['art']
+                                                st.session_state[key_p] = float(m_alt['precio'])
+                                                st.session_state[key_prov] = m_alt['tienda']
+                                                st.session_state[key_orig] = f"🏷️ {m_alt['marca']} ({m_alt['gama']})"
+                                                st.rerun()
+
+                                st.markdown("---")
+                                st.markdown("**Opciones rápidas de salto de gama:**")
+                                col_g1, col_g2 = st.columns(2)
+                                with col_g1:
+                                    p_media = round(pu_actual * 1.35, 2)
+                                    if st.button(f"🔵 Calidad Profesional (+35%): ~{p_media:.2f} €/ud", key=f"btn_gama_media_{idx_m}", help="Marcas profesionales: Simon 27, Schneider Ovalis, Legrand Niloé"):
+                                        st.session_state[key_n] = f"{n_mat} (Gama Calidad Profesional - Schneider / Simon / Legrand)"
+                                        st.session_state[key_p] = float(p_media)
+                                        st.session_state[key_orig] = "🏷️ Calidad Profesional (+35%)"
+                                        st.rerun()
+                                with col_g2:
+                                    p_alta = round(pu_actual * 1.75, 2)
+                                    if st.button(f"⭐ Calidad Premium (+75%): ~{p_alta:.2f} €/ud", key=f"btn_gama_alta_{idx_m}", help="Marcas premium: Niessen Zenit, Simon 82, Schneider Acti9, Zemper"):
+                                        st.session_state[key_n] = f"{n_mat} (Gama Alta Premium - Niessen Zenit / Simon 82 / Schneider Acti9)"
+                                        st.session_state[key_p] = float(p_alta)
+                                        st.session_state[key_orig] = "⭐ Calidad Alta Premium (+75%)"
                                         st.rerun()
                         else:
                             st.markdown(
-                                f"<div style='font-size:13px; color:#15803d; font-weight:700; margin-top:6px;'>"
-                                f"✅ <b>{prov_sel}</b> es el proveedor con el mejor precio disponible para esta partida ({pu_actual:.2f} €/ud).</div>",
+                                "<div style='font-size:12px; color:#475569; font-style:italic; margin-top:4px;'>"
+                                "🚚 Concepto de logística, compras o desplazamiento técnico (no requiere compra de material físico en almacén).</div>",
                                 unsafe_allow_html=True
                             )
-
-                        # Fila 4: Opción para clientes que quieren más calidad o cambiar de marca
-                        with st.expander(f"⭐ ¿El cliente quiere más calidad o cambiar a primeras marcas? (Schneider, Simon, Legrand, Niessen, Zemper...)"):
-                            st.caption("Si el cliente pide mayor categoría estética, primeras marcas o gama premium, selecciona una opción oficial del catálogo:")
-                            alts_marcas = buscar_marcas_alternativas(n_mat, df_bd)
-                            if alts_marcas:
-                                st.markdown("**Marcas de calidad catalogadas para este material:**")
-                                cols_marcas = st.columns(min(len(alts_marcas), 3) or 1)
-                                for i_m, m_alt in enumerate(alts_marcas):
-                                    dif_m = round(m_alt['precio'] - pu_actual, 2)
-                                    signo_m = f"+{dif_m:.2f} €" if dif_m >= 0 else f"{dif_m:.2f} €"
-                                    with cols_marcas[i_m % len(cols_marcas)]:
-                                        st.markdown(f"**🏷️ {m_alt['marca']}** (`{m_alt['precio']:.2f} €`)")
-                                        st.caption(f"Gama: {m_alt['gama']} · {m_alt['tienda']}\n\n*{m_alt['art'][:36]}*")
-                                        if st.button(f"Elegir {m_alt['marca']} ({signo_m})", key=f"btn_alt_m_{idx_m}_{m_alt['marca']}_{i_m}", use_container_width=True):
-                                            st.session_state[key_n] = m_alt['art']
-                                            st.session_state[key_p] = float(m_alt['precio'])
-                                            st.session_state[key_prov] = m_alt['tienda']
-                                            st.session_state[key_orig] = f"🏷️ {m_alt['marca']} ({m_alt['gama']})"
-                                            st.rerun()
-
-                            st.markdown("---")
-                            st.markdown("**Opciones rápidas de salto de gama:**")
-                            col_g1, col_g2 = st.columns(2)
-                            with col_g1:
-                                p_media = round(pu_actual * 1.35, 2)
-                                if st.button(f"🔵 Calidad Profesional (+35%): ~{p_media:.2f} €/ud", key=f"btn_gama_media_{idx_m}", help="Marcas profesionales: Simon 27, Schneider Ovalis, Legrand Niloé"):
-                                    st.session_state[key_n] = f"{n_mat} (Gama Calidad Profesional - Schneider / Simon / Legrand)"
-                                    st.session_state[key_p] = float(p_media)
-                                    st.session_state[key_orig] = "🏷️ Calidad Profesional (+35%)"
-                                    st.rerun()
-                            with col_g2:
-                                p_alta = round(pu_actual * 1.75, 2)
-                                if st.button(f"⭐ Calidad Premium (+75%): ~{p_alta:.2f} €/ud", key=f"btn_gama_alta_{idx_m}", help="Marcas premium: Niessen Zenit, Simon 82, Schneider Acti9, Zemper"):
-                                    st.session_state[key_n] = f"{n_mat} (Gama Alta Premium - Niessen Zenit / Simon 82 / Schneider Acti9)"
-                                    st.session_state[key_p] = float(p_alta)
-                                    st.session_state[key_orig] = "⭐ Calidad Alta Premium (+75%)"
-                                    st.rerun()
 
                     # Sincronización continua con la lista maestra
                     m_item["mat"] = n_mat
@@ -1340,32 +1463,52 @@ def renderizar():
                     m_item["subtotal"] = sub_m
                     m_item["proveedor"] = prov_sel
                     m_item["origen"] = origen_actual
+                    m_item["tipo"] = "servicio" if es_serv else "material"
 
                     filas_mats_edit.append({
                         "mat": n_mat,
                         "cant": n_cnt,
-                        "unid": m_item.get("unid", "ud"),
+                        "unid": unid_lbl,
                         "p_u": n_pu,
                         "subtotal": sub_m,
                         "proveedor": prov_sel,
                         "en_bd": ("BD Oficial" in origen_actual),
-                        "origen": origen_actual
+                        "origen": origen_actual,
+                        "es_servicio": es_serv,
+                        "tipo": "servicio" if es_serv else "material"
                     })
 
-                    if prov_sel not in acopio_por_tienda:
-                        acopio_por_tienda[prov_sel] = []
-                    acopio_por_tienda[prov_sel].append({"mat": n_mat, "cant": n_cnt, "unid": m_item.get("unid", "ud"), "p_u": n_pu, "subtotal": sub_m})
+                    if not es_serv:
+                        if prov_sel not in acopio_por_tienda:
+                            acopio_por_tienda[prov_sel] = []
+                        acopio_por_tienda[prov_sel].append({"mat": n_mat, "cant": n_cnt, "unid": unid_lbl, "p_u": n_pu, "subtotal": sub_m})
+                    else:
+                        servicios_internos.append({"mat": n_mat, "cant": n_cnt, "unid": unid_lbl, "p_u": n_pu, "subtotal": sub_m, "prov": prov_sel})
 
-                # Botón interactivo para añadir nuevas líneas al escandallo
+                # Botones interactivos para añadir nuevas líneas al escandallo
                 st.markdown("")
-                c_ins1, _ = st.columns([2.5, 4.5])
+                c_ins1, c_ins2, _ = st.columns([2.5, 2.8, 2.7])
                 with c_ins1:
-                    if st.button("➕ Insertar Nueva Partida de Material", key="btn_add_mat_row", use_container_width=True):
+                    if st.button("➕ 📦 Insertar Material Físico", key="btn_add_mat_row", use_container_width=True):
                         mats.append({
                             "mat": "Nueva Partida de Material Eléctrico",
                             "cant": 1.0,
                             "unid": "ud",
-                            "p_u": 10.00
+                            "p_u": 10.00,
+                            "tipo": "material"
+                        })
+                        res["materiales"] = mats
+                        st.session_state["pr_resultado_escandallo"] = res
+                        st.rerun()
+                with c_ins2:
+                    if st.button("➕ 🚚 Insertar Gestión / Tiempo / Portes", key="btn_add_serv_row", use_container_width=True):
+                        mats.append({
+                            "mat": "Tiempo invertido en acopio y compra de materiales + transporte",
+                            "cant": 1.0,
+                            "unid": "servicio",
+                            "p_u": 35.00,
+                            "proveedor": "Servicio Técnico Propio",
+                            "tipo": "servicio"
                         })
                         res["materiales"] = mats
                         st.session_state["pr_resultado_escandallo"] = res
@@ -1375,14 +1518,26 @@ def renderizar():
                 st.markdown("")
                 with st.container(border=True):
                     st.markdown("##### 🛒 Lista de la Compra y Acopio por Proveedor:")
-                    st.caption("Materiales organizados por tienda recomendada para facilitar la compra:")
-                    cols_tiendas = st.columns(min(len(acopio_por_tienda), 3) or 1)
-                    for idx_t, (tienda_k, items_t) in enumerate(acopio_por_tienda.items()):
-                        subt_tienda = sum(x["subtotal"] for x in items_t)
-                        with cols_tiendas[idx_t % len(cols_tiendas)]:
-                            st.markdown(f"**🏬 {tienda_k}** (`{subt_tienda:,.2f} €`)")
-                            for it_c in items_t:
-                                st.markdown(f"• `{it_c['cant']:.0f} {it_c['unid']}` {it_c['mat'][:32]}")
+                    st.caption("Materiales físicos organizados por tienda con precio base S/IVA y total real en mostrador (c/21% IVA):")
+                    if acopio_por_tienda:
+                        cols_tiendas = st.columns(min(len(acopio_por_tienda), 3) or 1)
+                        for idx_t, (tienda_k, items_t) in enumerate(acopio_por_tienda.items()):
+                            subt_tienda = sum(x["subtotal"] for x in items_t)
+                            subt_tienda_civa = round(subt_tienda * 1.21, 2)
+                            with cols_tiendas[idx_t % len(cols_tiendas)]:
+                                st.markdown(f"**🏬 {tienda_k}**")
+                                st.markdown(f"- Base: `{subt_tienda:,.2f} €` S/IVA\n- 💳 **A pagar en caja:** `{subt_tienda_civa:,.2f} €` (c/21% IVA)")
+                                for it_c in items_t:
+                                    s_it = it_c['subtotal']
+                                    st.markdown(f"• `{it_c['cant']:.0f} {it_c['unid']}` {it_c['mat'][:28]} (`{s_it:,.2f} €` · c/IVA: `{s_it*1.21:,.2f} €`)")
+                    else:
+                        st.info("No hay materiales físicos pendientes de compra en ferretería.")
+
+                    if servicios_internos:
+                        st.markdown("---")
+                        st.markdown("**🚚 Gestión, Logística y Desplazamiento Interno (Sin compra en ferretería):**")
+                        for si in servicios_internos:
+                            st.markdown(f"• **{si['mat']}**: `{si['cant']:.1f} {si['unid']}` × `{si['p_u']:.2f} €` = **`{si['subtotal']:,.2f} €`** S/IVA (`{si['subtotal']*1.21:,.2f} €` c/IVA)")
 
             with col_esc2:
                 with st.container(border=True):
@@ -1392,12 +1547,40 @@ def renderizar():
                     coste_mo_calc = round(horas_mo_val * precio_hora_mo, 2)
                     desp_calc = float(desplazamiento_val)
 
+                    # Margen Comercial sobre materiales
+                    margen_mat_pct = st.slider(
+                        "📈 Margen Comercial sobre Materiales (%):",
+                        min_value=0, max_value=100,
+                        value=int(st.session_state.get("pr_margen_mat_pct", 0)),
+                        step=5,
+                        key="pr_margen_mat_pct",
+                        help="Margen de beneficio comercial aplicado sobre el coste de compra de los materiales para el cliente."
+                    )
+
+                    # Desglose claro de costes: Materiales Físicos vs Servicios Logísticos
+                    coste_mat_siva = sum(float(x.get("subtotal", 0.0)) for x in filas_mats_edit if not x.get("es_servicio"))
+                    coste_mat_civa = round(coste_mat_siva * 1.21, 2)
+                    coste_serv_siva = sum(float(x.get("subtotal", 0.0)) for x in filas_mats_edit if x.get("es_servicio"))
+
+                    beneficio_mat = round(coste_mat_siva * (margen_mat_pct / 100.0), 2)
+                    pvp_mat_siva = round(coste_mat_siva + beneficio_mat, 2)
+                    pvp_mat_civa = round(pvp_mat_siva * 1.21, 2)
+
                     st.markdown(f"- **Mano de Obra ({tipo_tarifa.split('(')[0].strip()}):** `{horas_mo_val:.1f} h` × `{precio_hora_mo:.2f} €/h` = **`{coste_mo_calc:,.2f} €`**")
-                    st.markdown(f"- **Total Materiales:** **`{total_mat_calc:,.2f} €`**")
+                    if margen_mat_pct > 0:
+                        st.markdown(f"- **Coste Compra Materiales:** `{coste_mat_siva:,.2f} €` S/IVA (💳 `{coste_mat_civa:,.2f} €` en caja mostrador)")
+                        st.markdown(f"- **Margen Comercial (+{margen_mat_pct}%):** `+{beneficio_mat:,.2f} €`")
+                        st.markdown(f"- **Materiales Facturados (Cliente):** **`{pvp_mat_siva:,.2f} €`** S/IVA (`{pvp_mat_civa:,.2f} €` c/IVA)")
+                    else:
+                        st.markdown(f"- **Total Materiales:** **`{coste_mat_siva:,.2f} €`** S/IVA (💳 `{coste_mat_civa:,.2f} €` en mostrador caja)")
+
+                    if coste_serv_siva > 0:
+                        st.markdown(f"- **🚚 Gestión / Tiempo de Compras:** **`{coste_serv_siva:,.2f} €`** S/IVA")
+
                     if desp_calc > 0:
                         st.markdown(f"- **🚗 Salida / Desplazamiento:** **`{desp_calc:,.2f} €`**")
 
-                    subtotal_siva = round(total_mat_calc + coste_mo_calc + desp_calc, 2)
+                    subtotal_siva = round(pvp_mat_siva + coste_serv_siva + coste_mo_calc + desp_calc, 2)
                     cuota_iva = round(subtotal_siva * (iva_pct / 100.0), 2)
                     total_civa = round(subtotal_siva + cuota_iva, 2)
 
@@ -1408,6 +1591,45 @@ def renderizar():
                         st.caption("ℹ️ Inversión de Sujeto Pasivo (Art. 84.Uno.2º.f LIVA) o Subcontrata.")
                     else:
                         st.markdown(f"#### **Total Cliente (C/IVA {iva_pct:.0f}%):** <span style='color:#0284c7; font-size:24px; font-weight:bold;'>{total_civa:,.2f} €</span>", unsafe_allow_html=True)
+
+                # Calculadora de Cobro por Foco Cambiado / Punto de Luz Colocado
+                with st.container(border=True):
+                    st.markdown("##### 💡 Cobro por Foco Cambiado / Punto de Luz:")
+                    st.caption("Cálculo instantáneo del coste unitario y precio de venta por foco instalado:")
+                    focos_detectados = 0.0
+                    for m_it in mats:
+                        n_lower = normalizar_texto(m_it.get("mat", ""))
+                        if any(w in n_lower for w in ["foco", "downlight", "lampara", "bombilla", "panel led", "pantalla", "ojo de buey", "aplique", "proyector", "punto"]):
+                            focos_detectados += float(m_it.get("cant", 1.0))
+                    val_init_focos = max(1.0, focos_detectados if focos_detectados > 0 else 1.0)
+                    num_focos = st.number_input("Nº de Focos / Puntos de Luz:", min_value=1.0, value=val_init_focos, step=1.0, key="pr_num_focos_in")
+
+                    coste_mat_ud = round(coste_mat_siva / num_focos, 2)
+                    pvp_foco_siva = round(subtotal_siva / num_focos, 2)
+                    pvp_foco_civa = round(total_civa / num_focos, 2)
+
+                    st.markdown(f"""
+                    <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;">
+                        <div style="font-weight: 700; color: #166534; font-size: 14px;">📊 Desglose por Foco / Punto ({num_focos:.0f} uds):</div>
+                        <div style="font-size: 13px; color: #14532d; margin-top: 4px;">
+                            • <b>Coste compra material por foco:</b> <code>{coste_mat_ud:,.2f} €</code> S/IVA (<code>{coste_mat_ud * 1.21:,.2f} €</code> en mostrador caja)<br/>
+                            • <b>PVP recomendado por foco colocado:</b> <b style="color: #15803d; font-size: 15px;">{pvp_foco_siva:,.2f} € S/IVA</b> ({pvp_foco_civa:,.2f} € C/IVA)
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    c_f1, c_f2 = st.columns([1.5, 1.5])
+                    with c_f1:
+                        tar_foco = st.number_input("🎯 Fijar Precio por Foco (€ S/IVA):", min_value=1.0, value=float(round(pvp_foco_siva, 0)), step=5.0, key="pr_tar_foco_input")
+                    with c_f2:
+                        tot_f_siva = round(tar_foco * num_focos, 2)
+                        tot_f_civa = round(tot_f_siva * (1 + (iva_pct / 100.0)), 2)
+                        st.markdown(f"<div style='font-size:11px; color:#64748b; margin-top:4px;'>Total Resultante ({num_focos:.0f} focos):</div><div style='font-size:15px; font-weight:700; color:#0f172a;'>{tot_f_siva:,.2f} € S/IVA ({tot_f_civa:,.2f} € C/IVA)</div>", unsafe_allow_html=True)
+
+                    if st.button(f"🎯 Aplicar {tar_foco:.2f} €/foco al Presupuesto", key="btn_apply_foco_pvp", use_container_width=True):
+                        base_aplicar = tot_f_civa if iva_pct > 0 else tot_f_siva
+                        st.session_state["pr_target_round"] = float(base_aplicar)
+                        st.rerun()
 
             # 5. Opciones de Negociación y Ajuste a Precio Cerrado
             st.markdown("---")
@@ -1452,7 +1674,7 @@ def renderizar():
             with c_pdf1:
                 pdf_pres_bytes = generar_pdf_presupuesto_rapido(
                     res, filas_mats_edit, nom_cliente, horas_mo_val, precio_hora_mo,
-                    coste_mo_calc, total_mat_calc, subtotal_siva, total_civa, iva_pct, usuario_actual,
+                    coste_mo_calc, pvp_mat_siva, subtotal_siva, total_civa, iva_pct, usuario_actual,
                     desplazamiento=desp_calc, tipo_tarifa=tipo_tarifa
                 )
                 st.download_button(
@@ -1467,7 +1689,7 @@ def renderizar():
             with c_pdf2:
                 pdf_oc_bytes = generar_pdf_orden_compra_rapida(
                     filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"),
-                    total_mat_calc, iva_pct, usuario_actual
+                    coste_mat_siva, iva_pct, usuario_actual
                 )
                 st.download_button(
                     label="📦 Descargar Orden Compra (PDF)",
@@ -1494,10 +1716,10 @@ def renderizar():
                 st.markdown("##### 📲 Enviar por WhatsApp con 1 Clic:")
                 st.caption("Introduce el número de teléfono móvil al que deseas enviar la orden de compra o el presupuesto (puedes poner los 9 dígitos o incluir prefijo internacional):")
                 
-                txt_wsp_compra = generar_texto_whatsapp_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"), total_mat_calc)
+                txt_wsp_compra = generar_texto_whatsapp_compra(filas_mats_edit, nom_cliente, res.get("concepto", "Aviso"), coste_mat_siva)
                 txt_wsp_presup = generar_texto_whatsapp_presupuesto(
                     nom_cliente, res.get("concepto", "Aviso"), subtotal_siva, total_civa, iva_pct,
-                    horas_mo_val, precio_hora_mo, coste_mo_calc, total_mat_calc, filas_mats_edit,
+                    horas_mo_val, precio_hora_mo, coste_mo_calc, pvp_mat_siva, filas_mats_edit,
                     desplazamiento=desp_calc, tipo_tarifa=tipo_tarifa
                 )
                 
@@ -1536,14 +1758,18 @@ def renderizar():
 
             # Tabla formal consolidada de la orden de compra ordenada por proveedor
             st.markdown("")
+            st.markdown("### 🛒 Orden Consolidada de Materiales y Acopio en Tiendas")
+            st.caption(f"Coste Total Materiales Físicos en Mostrador: **{coste_mat_siva:,.2f} € S/IVA** · 💳 **{coste_mat_civa:,.2f} € (c/21% IVA en caja)**")
             filas_orden_ordenadas = sorted(filas_mats_edit, key=lambda x: (x.get("proveedor", ""), x.get("mat", "")))
             df_orden_view = pd.DataFrame([
                 {
                     "🏬 Tienda / Proveedor": f["proveedor"],
-                    "📦 Material / Elemento": f["mat"],
+                    "📦 Material / Partida": f["mat"],
                     "Cant.": f"{f['cant']:.1f} {f['unid']}",
-                    "P. Unit (€)": f"{f['p_u']:.2f} €",
-                    "Subtotal (€)": f"{f['subtotal']:.2f} €",
+                    "P. Unit S/IVA (€)": f"{f['p_u']:.2f} €",
+                    "Subtotal S/IVA (€)": f"{f['subtotal']:.2f} €",
+                    "💳 Mostrador c/21% IVA (€)": f"{f['subtotal'] * 1.21:.2f} €" if not f.get("es_servicio") else "— (Servicio Propio)",
+                    "Naturaleza": "🚚 Servicio / Logística" if f.get("es_servicio") else "📦 Material Físico",
                     "Origen Tarifa": f["origen"],
                     "Estado Acopio": "⏳ Pendiente"
                 }
