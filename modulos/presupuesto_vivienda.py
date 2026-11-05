@@ -1747,14 +1747,15 @@ def app():
     # SECCIÓN 5: TELECOMUNICACIONES (ICT-2 RD 346/2011 & CUADRO RTR)
     # ==========================================
     with tab_sec_teleco:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📡 SECCIÓN 5: Infraestructura de Telecomunicaciones (ICT-2 RD 346/2011)</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">📡 SECCIÓN 5: Infraestructura de Telecomunicaciones al Detalle (ICT-2 RD 346/2011)</h4></div>', unsafe_allow_html=True)
         st.info("""
-        📘 **Marco Normativo Oficial de Telecomunicaciones en Edificación:**  
-        Conforme al **Real Decreto 346/2011 (Reglamento de ICT-2)** y la **Orden Ministerial ITC/1644/2011**, toda vivienda debe disponer de un **Registro de Terminación de Red (RTR)** situado junto a la entrada o CGMP para albergar los puntos de acceso al usuario (PAU) de Fibra Óptica (FTTH), Coaxial de TV (RTV) y Red de Par Trenzado (UTP Cat.6).
+        📘 **Marco Normativo ICT-2 (Real Decreto 346/2011 & Orden ITC/1644/2011):**  
+        Toda vivienda debe disponer de un **Registro de Terminación de Red (RTR)** para centralizar las 3 redes reglamentarias: **Fibra Óptica (FTTH)**, **Coaxial de Televisión (RTV)** y **Red de Datos en Par Trenzado (UTP Cat.6)** distribuidas en estrella hacia cada estancia.
         """)
 
         with st.container(border=True):
-            st.markdown("#### 🗄️ Configuración del Armario/Envolvente RTR (Registro de Terminación de Red)")
+            # 1. ENVOLVENTE Y EQUIPAMIENTO EN EL CUADRO RTR
+            st.markdown("#### 🗄️ 1. Equipamiento de Cabecera en el Cuadro RTR (Registro de Terminación de Red)")
             col_rtr1, col_rtr2 = st.columns([2, 2])
             with col_rtr1:
                 tipo_rtr_sel = st.selectbox(
@@ -1779,32 +1780,144 @@ def app():
                     key="rad_schuko_rtr",
                     help="El reglamento exige un mínimo de 2 tomas de corriente alimentadas del circuito C2. Como buena práctica profesional, se instalan 3 bases para conectar el router del operador, la roseta/ONT de fibra y un switch o centralita domótica sin regletas externas."
                 )
-            
             n_schuko_rtr = 3 if "3 Bases" in schuko_rtr_opcion else 2
 
-            st.markdown("#### 🔌 Dotación de Elementos y PAU en el interior del RTR:")
+            st.markdown("##### 🔌 Elementos de Entrada y Distribución dentro del Cuadro RTR:")
             col_pau1, col_pau2, col_pau3 = st.columns(3)
             with col_pau1:
-                incluir_pau_fibra = st.checkbox("PAU Fibra Óptica (FTTH) 2x SC/APC", value=True, key="chk_pau_fibra", help="Roseta óptica con adaptadores SC/APC según norma ICT-2.")
+                st.markdown("**🌐 Red de Fibra Óptica (FTTH):**")
+                incluir_pau_fibra = st.checkbox("PAU Fibra Óptica 2x SC/APC con Roseta", value=True, key="chk_pau_fibra", help="Roseta óptica con adaptadores SC/APC según norma ICT-2.")
+                metros_acometida_fibra = st.number_input("Metros acometida fibra (RITI a RTR):", min_value=5.0, max_value=80.0, value=float(st.session_state.get("in_m_fibra_acometida", 25.0)), step=5.0, key="in_m_fibra_acometida")
+                incluir_latiguillo_fibra = st.checkbox("Latiguillo Fibra SC/APC-SC/APC 2m (Router/ONT)", value=True, key="chk_lat_fibra")
             with col_pau2:
-                incluir_pau_coaxial = st.checkbox("PAU Coaxial RTV (Repartidor F Televes)", value=True, key="chk_pau_coax", help="Distribuidor TV terrestre y satélite con conectores F EasyF.")
+                st.markdown("**📺 Red de Televisión (RTV Coaxial):**")
+                incluir_pau_coaxial = st.checkbox("PAU Coaxial Televes Repartidor F EasyF", value=True, key="chk_pau_coax", help="Distribuidor TV terrestre y satélite con conectores F EasyF.")
+                incluir_cargas_f = st.checkbox("Cargas 75Ω con Bloqueo DC + Conectores F", value=True, key="chk_cargas_f")
             with col_pau3:
-                incluir_panel_rj45 = st.checkbox("Multiplexor Pasivo Datos UTP Cat.6", value=True, key="chk_pau_utp", help="Panel de parcheo o regleta para distribución en estrella de red Ethernet.")
+                st.markdown("**💻 Red Local de Datos (Ethernet UTP):**")
+                incluir_panel_rj45 = st.checkbox("Multiplexor Pasivo 8x RJ45 Cat.6 UTP", value=True, key="chk_pau_utp", help="Panel de parcheo o regleta para distribución en estrella de red Ethernet.")
+                incluir_latiguillos_rj = st.checkbox("Latiguillos Patch Cords RJ45 Cat.6 (Switch)", value=True, key="chk_lat_rj45")
 
-            st.markdown("#### 📊 Resumen Técnico de la Red de Telecomunicaciones de la Vivienda:")
-            tot_tomas_rj_est = sum(e.get("cant_rj", 2 if ("salón" in e["nombre"].lower() or "dormitorio" in e["nombre"].lower()) else 1) for e in estancias_activas)
-            m_coaxial_est = len(estancias_activas) * 15.0
-            m_utp_est = len(estancias_activas) * 18.0
+            # 2. CÁLCULO DETALLADO DE CABLES
+            st.markdown("---")
+            st.markdown("#### 🧵 2. Detalle de Cables de Telecomunicaciones (ICT-2)")
+            st.caption("Especificaciones técnicas de los 3 tipos de cables reglamentarios con sus normativas de fabricación:")
 
-            c_met1, c_met2, c_met3, c_met4 = st.columns(4)
-            with c_met1:
-                st.metric("Enchufes Schuko en RTR", f"{n_schuko_rtr} ud (C2)")
-            with c_met2:
-                st.metric("Tomas de Datos/TV Finales", f"{tot_tomas_rj_est} tomas")
-            with c_met3:
-                st.metric("Cable Coaxial RG6 Cu/Cu", f"{m_coaxial_est:.0f} m")
-            with c_met4:
-                st.metric("Cable UTP Cat.6 LSZH", f"{m_utp_est:.0f} m")
+            col_cb1, col_cb2, col_cb3 = st.columns(3)
+            with col_cb1:
+                st.markdown("""
+                <div style="background-color:#f0fdf4; border:1.5px solid #16a34a; border-radius:8px; padding:12px;">
+                    <b style="color:#16a34a; font-size:14px;">🌐 Cable de Fibra Óptica Monomodo</b><br/>
+                    <span style="font-size:12.5px; color:#334155;">
+                    • <b>Tipo:</b> Bifibra (2 fibras) ITU-T G.657A2<br/>
+                    • <b>Cubierta:</b> LSZH Blanca Cca-s1a,d1,a1<br/>
+                    • <b>Radio curvatura:</b> 7.5 mm (Anti-pliegues)<br/>
+                    • <b>Destino:</b> Entrada RITI/Acometida → PAU RTR
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_cb2:
+                st.markdown("""
+                <div style="background-color:#eff6ff; border:1.5px solid #0284c7; border-radius:8px; padding:12px;">
+                    <b style="color:#0284c7; font-size:14px;">📺 Cable Coaxial RTV (RG-6 Cu/Cu)</b><br/>
+                    <span style="font-size:12.5px; color:#334155;">
+                    • <b>Vivo / Malla:</b> 100% Cobre Puro (Cu/Cu)<br/>
+                    • <b>Apantallamiento:</b> Trishield Clase A (>85 dB)<br/>
+                    • <b>Frecuencia:</b> 5 - 2400 MHz (TDT + SAT)<br/>
+                    • <b>Destino:</b> Repartidor RTR → Tomas de cada estancia
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_cb3:
+                st.markdown("""
+                <div style="background-color:#f8fafc; border:1.5px solid #64748b; border-radius:8px; padding:12px;">
+                    <b style="color:#334155; font-size:14px;">💻 Cable de Red UTP Cat.6 (Datos)</b><br/>
+                    <span style="font-size:12.5px; color:#334155;">
+                    • <b>Estructura:</b> 4 Pares Trenzados 23 AWG 100% Cobre<br/>
+                    • <b>Ancho de Banda:</b> 250 MHz (Gigabit 1 Gbps)<br/>
+                    • <b>Cubierta:</b> LSZH Libre de Halógenos Cca<br/>
+                    • <b>Destino:</b> Panel RTR → Tomas RJ45 de cada estancia
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # 3. DETALLE ESTANCIA POR ESTANCIA
+            st.markdown("---")
+            st.markdown("#### 🏠 3. Desglose Estancia por Estancia: Mecanismos y Metros de Cable")
+            st.caption("Cómputo exacto de tomas de TV, tomas de red RJ45 y metros lineales de cable desde el RTR:")
+
+            tabla_teleco_filas = []
+            m_coax_total_prev = 0.0
+            m_utp_total_prev = 0.0
+            tot_tv_prev = 0
+            tot_rj_prev = 0
+
+            for e in estancias_activas:
+                n_e = e["nombre"]
+                n_e_low = n_e.lower()
+                d_c = float(e.get("distancia_cuadro", 10.0))
+
+                if "salón" in n_e_low or "comedor" in n_e_low:
+                    t_tv_e = 2 if e.get("m2", 10.0) >= 15.0 else 1
+                    t_rj_e = 2
+                elif "dormitorio" in n_e_low or "habitación" in n_e_low:
+                    t_tv_e = 1
+                    t_rj_e = 1
+                elif "cocina" in n_e_low:
+                    t_tv_e = 1
+                    t_rj_e = 0
+                elif "despacho" in n_e_low or "estudio" in n_e_low:
+                    t_tv_e = 1
+                    t_rj_e = 2
+                elif "hall" in n_e_low or "recibidor" in n_e_low:
+                    t_tv_e = 0
+                    t_rj_e = 1
+                else:
+                    t_tv_e = 0
+                    t_rj_e = 0
+
+                t_tv_final = max(0, t_tv_e + e.get("extra_tv", 0))
+                t_rj_final = max(0, t_rj_e + e.get("extra_rj45", 0))
+
+                m_coax_calc = round(t_tv_final * (d_c * 1.35 + 2.5), 1)
+                m_utp_calc = round(t_rj_final * (d_c * 1.35 + 2.5), 1)
+
+                m_coax_total_prev += m_coax_calc
+                m_utp_total_prev += m_utp_calc
+                tot_tv_prev += t_tv_final
+                tot_rj_prev += t_rj_final
+
+                # Descripción de mecanismos en esta estancia
+                mecs_teleco_txt = []
+                if t_tv_final > 0:
+                    mecs_teleco_txt.append(f"{t_tv_final}x Toma RTV Coaxial")
+                if t_rj_final > 0:
+                    mecs_teleco_txt.append(f"{t_rj_final}x Toma Red RJ45 Cat.6{' (Doble)' if t_rj_final >= 2 else ''}")
+                if not mecs_teleco_txt:
+                    mecs_teleco_txt.append("Sin tomas de telecomunicaciones")
+
+                tabla_teleco_filas.append({
+                    "Estancia": n_e,
+                    "Distancia RTR": f"{d_c:.1f} m",
+                    "Tomas TV": f"{t_tv_final} ud",
+                    "Tomas RJ45": f"{t_rj_final} ud",
+                    "Cable Coaxial": f"{m_coax_calc:.1f} m",
+                    "Cable Red UTP": f"{m_utp_calc:.1f} m",
+                    "Mecanismos Finales en Pared": ", ".join(mecs_teleco_txt)
+                })
+
+            st.dataframe(pd.DataFrame(tabla_teleco_filas), use_container_width=True, hide_index=True)
+
+            # Métricas globales de telecomunicaciones
+            col_tg1, col_tg2, col_tg3, col_tg4 = st.columns(4)
+            with col_tg1:
+                st.metric("🌐 Acometida Fibra Óptica", f"{metros_acometida_fibra:.0f} m", help="Desde RITI hasta el PAU de fibra en el RTR.")
+            with col_tg2:
+                st.metric("📺 Cable Coaxial RG6", f"{m_coax_total_prev:.0f} m", help="Metros totales de coaxial Cu/Cu tendidos a las estancias.")
+            with col_tg3:
+                st.metric("💻 Cable Red UTP Cat.6", f"{m_utp_total_prev:.0f} m", help="Metros totales de cable de red 100% Cobre LSZH tendidos.")
+            with col_tg4:
+                st.metric("🔌 Mecanismos Teleco", f"{tot_tv_prev + tot_rj_prev} uds", help=f"{tot_tv_prev} tomas TV + {tot_rj_prev} tomas RJ45 a juego con la serie.")
 
             st.caption("✅ Cumplimiento pleno de la Instrucción Técnica ICT-2 RD 346/2011 Anexos I, II y III (Servicios de RTV, Banda Ancha y Telefonía).")
 
@@ -2570,12 +2683,50 @@ def app():
                     "marca_bd": "Wago" if "Wago" in str(nom_cj) else "General"
                 })
 
-        # 4. Telecomunicaciones e ICT-2 (RTR, PAUs y Cableados)
+        # 4. Telecomunicaciones e ICT-2 (RTR, PAUs, Cableados y Mecanismos por Estancia)
         n_schuko_teleco = 3 if "3 Bases" in st.session_state.get("rad_schuko_rtr", "3 Bases") else 2
         p_rtr_box = 57.02 if "Rack" in st.session_state.get("sel_tipo_rtr", "") else 32.50
-        desc_rtr_box = "Armario Rack Mural 10 Pulgadas 6U ICT" if "Rack" in st.session_state.get("sel_tipo_rtr", "") else "Caja Registro Terminación Red RTR Empotrada ICT-2 Normalizada"
-        m_coaxial_tot = len(estancias_activas) * 15.0
+        desc_rtr_box = "Armario Rack Mural 10 Pulgadas 6U ICT" if "Rack" in st.session_state.get("sel_tipo_rtr", "") else "Caja Registro Terminación Red RTR Empotrada ICT-2 Normalizada (500x600x80 mm)"
+        m_fibra_acom = float(st.session_state.get("in_m_fibra_acometida", 25.0))
 
+        # Cómputo exacto estancia por estancia
+        m_coaxial_tot = 0.0
+        m_utp_tot = 0.0
+        tot_tomas_tv_tot = 0
+        tot_tomas_rj_tot = 0
+
+        for e_act in estancias_activas:
+            nom_e = e_act["nombre"].lower()
+            d_cuadro = float(e_act.get("distancia_cuadro", 10.0))
+
+            if "salón" in nom_e or "comedor" in nom_e:
+                t_tv_base = 2 if e_act.get("m2", 10.0) >= 15.0 else 1
+                t_rj_base = 2
+            elif "dormitorio" in nom_e or "habitación" in nom_e:
+                t_tv_base = 1
+                t_rj_base = 1
+            elif "cocina" in nom_e:
+                t_tv_base = 1
+                t_rj_base = 0
+            elif "despacho" in nom_e or "estudio" in nom_e:
+                t_tv_base = 1
+                t_rj_base = 2
+            elif "hall" in nom_e or "recibidor" in nom_e:
+                t_tv_base = 0
+                t_rj_base = 1
+            else:
+                t_tv_base = 0
+                t_rj_base = 0
+
+            t_tv_act = max(0, t_tv_base + e_act.get("extra_tv", 0))
+            t_rj_act = max(0, t_rj_base + e_act.get("extra_rj45", 0))
+
+            m_coaxial_tot += round(t_tv_act * (d_cuadro * 1.35 + 2.5), 1)
+            m_utp_tot += round(t_rj_act * (d_cuadro * 1.35 + 2.5), 1)
+            tot_tomas_tv_tot += t_tv_act
+            tot_tomas_rj_tot += t_rj_act
+
+        # 4.1 Envolvente y Bases Schuko
         categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
             "articulo": "Cuadro / Armario RTR Telecomunicaciones ICT-2",
             "desc_exacta": desc_rtr_box,
@@ -2600,6 +2751,8 @@ def app():
             "categoria_bd": "Mecanismos",
             "marca_bd": serie_mecanismos
         })
+
+        # 4.2 Fibra Óptica (FTTH)
         categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
             "articulo": "PAU Fibra Óptica FTTH 2x SC/APC con Roseta",
             "desc_exacta": "PAU Fibra Óptica 2 Tomas SC/APC con Roseta Interior ICT-2",
@@ -2613,20 +2766,72 @@ def app():
             "marca_bd": "Televes"
         })
         categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
-            "articulo": "PAU Repartidor Televisión Coaxial RTV Televes F",
-            "desc_exacta": "PAU Distribuidor Televisión EasyF Televes",
+            "articulo": "Cable Acometida Fibra Óptica Monomodo 2 Fibras G.657A2 Cca",
+            "desc_exacta": "Cable Bifibra Óptica Monomodo G.657A2 LSZH Blanco Cca (RITI a RTR)",
+            "proveedor": "Televes / Prysmian",
+            "cantidad": int(round(m_fibra_acom)),
+            "unidad": "m",
+            "precio_unitario": 0.68,
+            "subtotal": round(m_fibra_acom * 0.68, 2),
+            "en_bd": True,
+            "categoria_bd": "Conductores",
+            "marca_bd": "Televes"
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "Latiguillo de Fibra Óptica Monomodo SC/APC - SC/APC 2m",
+            "desc_exacta": "Patch Cord Monomodo Simplex SC/APC 2 Metros para Router/ONT",
             "proveedor": "Televes / Obramat",
             "cantidad": 1,
             "unidad": "ud",
-            "precio_unitario": 8.68,
-            "subtotal": 8.68,
+            "precio_unitario": 5.40,
+            "subtotal": 5.40,
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+
+        # 4.3 Coaxial de Televisión (RTV)
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": f"PAU Repartidor Televisión Coaxial RTV Televes EasyF ({max(2, tot_tomas_tv_tot)}D)",
+            "desc_exacta": f"Distribuidor Televisión Terrestre y Satélite Televes EasyF {max(2, tot_tomas_tv_tot)} Salidas",
+            "proveedor": "Televes / Obramat",
+            "cantidad": 1,
+            "unidad": "ud",
+            "precio_unitario": 9.80,
+            "subtotal": 9.80,
             "en_bd": True,
             "categoria_bd": "Telecomunicaciones",
             "marca_bd": "Televes"
         })
         categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
-            "articulo": "Multiplexor Pasivo Red Datos RJ45 Cat.6 UTP",
-            "desc_exacta": "Panel de Parcheo / Multiplexor Pasivo 8x RJ45 Cat.6 para RTR",
+            "articulo": "Cargas Terminales 75Ω con Bloqueo DC + Conectores F Blindados",
+            "desc_exacta": "Cargas 75 Ohmios con Aislamiento DC y Conectores F Compresión/Rosca",
+            "proveedor": "Televes / Obramat",
+            "cantidad": 1,
+            "unidad": "lote",
+            "precio_unitario": 5.50,
+            "subtotal": 5.50,
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "Cable Coaxial TV RG6 Cobre Cu/Cu Cca Alta Cobertura Trishield",
+            "desc_exacta": "Cable Coaxial RG-6 Cu/Cu Cca Alta Cobertura Clase A (>85 dB)",
+            "proveedor": "Televes / Prysmian",
+            "cantidad": int(round(m_coaxial_tot)),
+            "unidad": "m",
+            "precio_unitario": 0.58,
+            "subtotal": round(m_coaxial_tot * 0.58, 2),
+            "en_bd": True,
+            "categoria_bd": "Conductores",
+            "marca_bd": "Televes"
+        })
+
+        # 4.4 Red Local de Datos Ethernet (UTP Cat.6)
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": "Multiplexor Pasivo Red Datos RJ45 Cat.6 UTP (8 Puertos)",
+            "desc_exacta": "Panel de Parcheo / Multiplexor Pasivo 8x RJ45 Cat.6 UTP para RTR",
             "proveedor": "Televes / Obramat",
             "cantidad": 1,
             "unidad": "ud",
@@ -2637,17 +2842,58 @@ def app():
             "marca_bd": "Televes"
         })
         categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
-            "articulo": "Cable Coaxial TV RG6 Cobre Cu/Cu Cca (Tendido Interior)",
-            "desc_exacta": "Cable Coaxial RG6 Cobre / Cobre Cu/Cu Cca Alta Cobertura (Rollo)",
+            "articulo": "Cable Red Datos UTP Cat.6 100% Cobre LSZH Cca Libre de Halógenos",
+            "desc_exacta": "Cable 4 Pares Trenzados UTP Cat.6 23 AWG Cobre Puro LSZH Cca (Rollo)",
             "proveedor": "Televes / Prysmian",
-            "cantidad": int(round(m_coaxial_tot)),
+            "cantidad": int(round(m_utp_tot)),
             "unidad": "m",
-            "precio_unitario": 0.52,
-            "subtotal": round(m_coaxial_tot * 0.52, 2),
+            "precio_unitario": 0.64,
+            "subtotal": round(m_utp_tot * 0.64, 2),
             "en_bd": True,
             "categoria_bd": "Conductores",
             "marca_bd": "Televes"
         })
+        n_latiguillos = max(2, tot_tomas_rj_tot)
+        categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+            "articulo": f"Latiguillos de Red RJ45 Cat.6 UTP Patch Cords ({n_latiguillos} uds)",
+            "desc_exacta": f"Latiguillos RJ45 Cat.6 UTP Flexibles 0.5m / 1m para Enlace Switch/Router (x{n_latiguillos})",
+            "proveedor": "Televes / Obramat",
+            "cantidad": n_latiguillos,
+            "unidad": "ud",
+            "precio_unitario": 2.20,
+            "subtotal": round(n_latiguillos * 2.20, 2),
+            "en_bd": True,
+            "categoria_bd": "Telecomunicaciones",
+            "marca_bd": "Televes"
+        })
+
+        # 4.5 Mecanismos en Estancias (TV y RJ45 de Serie)
+        if tot_tomas_tv_tot > 0:
+            categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+                "articulo": f"Mecanismos Toma R-TV / SAT Final Separadora ({serie_mecanismos})",
+                "desc_exacta": f"Toma Final RTV-SAT Blindada Conector CEI 9.5 mm Serie {serie_mecanismos}",
+                "proveedor": prov_mecanismo,
+                "cantidad": tot_tomas_tv_tot,
+                "unidad": "ud",
+                "precio_unitario": 8.90,
+                "subtotal": round(tot_tomas_tv_tot * 8.90, 2),
+                "en_bd": True,
+                "categoria_bd": "Mecanismos",
+                "marca_bd": serie_mecanismos
+            })
+        if tot_tomas_rj_tot > 0:
+            categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
+                "articulo": f"Mecanismos Toma Red RJ45 Hembra Cat.6 Keystone con Tapa ({serie_mecanismos})",
+                "desc_exacta": f"Conector RJ45 Hembra Cat.6 UTP + Frontal/Tapa Serie {serie_mecanismos}",
+                "proveedor": prov_mecanismo,
+                "cantidad": tot_tomas_rj_tot,
+                "unidad": "ud",
+                "precio_unitario": 9.50,
+                "subtotal": round(tot_tomas_rj_tot * 9.50, 2),
+                "en_bd": True,
+                "categoria_bd": "Mecanismos",
+                "marca_bd": serie_mecanismos
+            })
 
         # Listado de no catalogados para el actualizador interactivo
         items_no_catalogados = []
@@ -2746,7 +2992,7 @@ def app():
             {
                 "cap": "CAP. 02",
                 "titulo": "Infraestructura de Telecomunicaciones y Cuadro RTR (ICT-2 RD 346/2011)",
-                "desc": f"Suministro, montaje y conectorización de Registro de Terminación de Red (RTR), dotado de {n_schuko_teleco} bases Schuko 16A (C2), PAU de Fibra Óptica (FTTH) 2x SC/APC, PAU de RTV Coaxial Televes con repartidor F EasyF, multiplexor pasivo de datos RJ45 Cat.6 UTP y tendido de cable coaxial RG6 Cu/Cu ({len(estancias_activas)*15:.0f} m) y UTP Cat.6 LSZH ({len(estancias_activas)*18:.0f} m) conforme al RD 346/2011.",
+                "desc": f"Suministro, montaje y conectorización de Registro de Terminación de Red (RTR), dotado de {n_schuko_teleco} bases Schuko 16A (C2), PAU de Fibra Óptica 2x SC/APC con acometida monomodo G.657A2 ({m_fibra_acom:.0f} m) y patch cord 2m, PAU de RTV Coaxial Televes con repartidor F EasyF y cargas 75Ω, multiplexor pasivo RJ45 Cat.6 UTP con latiguillos flexibles, tendido en estrella de cable coaxial RG6 Cu/Cu Trishield ({m_coaxial_tot:.0f} m), cable red UTP Cat.6 LSZH ({m_utp_tot:.0f} m) y mecanismos finales ({tot_tomas_tv_tot}x TV + {tot_tomas_rj_tot}x RJ45) en cada estancia conforme al RD 346/2011.",
                 "importe": round(venta_cap_teleco, 2)
             },
             {
