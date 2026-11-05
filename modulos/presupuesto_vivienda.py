@@ -1227,39 +1227,163 @@ def app():
     # SECCIÓN 3: MANO DE OBRA, TECHOS Y CONDICIONES ECONÓMICAS
     # ==========================================
     with tab_sec3:
-        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⏱️ SECCIÓN 3: Mano de Obra, Rozas, Techos, Boletín CIE y Márgenes</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⏱️ SECCIÓN 3: Mano de Obra, Planificación de Cuadrilla y Comparativa Empresa vs Autónomo</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
-            col_prof1, col_prof2 = st.columns([2, 1])
-            with col_prof1:
-                idx_prof = 1 if st.session_state.get('perfil_tarifa_autonomo') else 0
-                sel_perfil = st.radio(
-                    "💼 Modalidad de Facturación de Mano de Obra:",
-                    ["🏢 Modelo Empresa (Margen Comercial Completo +50%)", "🧑‍🔧 Modelo Autónomo / Tutor (Sin Margen en Mano de Obra)"],
-                    index=idx_prof,
+
+            # ---------------------------------------------------------
+            # 1. CONFIGURACIÓN DE CUADRILLA Y TRABAJADORES (OFICIAL + COMPAÑERO)
+            # ---------------------------------------------------------
+            st.markdown("##### 👥 1. Configuración de la Cuadrilla de Instalación")
+            st.caption("Define el equipo de trabajo en obra: si vas solo o con tu compañero/peón para calcular plazos y jornales exactos.")
+
+            col_cuad1, col_cuad2 = st.columns([1.8, 1.2])
+            with col_cuad1:
+                tipo_cuadrilla_sel = st.radio(
+                    "Equipo de Trabajo en Obra:",
+                    [
+                        "👤 Voy Solo (1 Oficial Electricista)",
+                        "👥 Voy con mi Compañero (2 Trabajadores: Oficial + Compañero)",
+                        "🛠️ Cuadrilla Personalizada (3 o más trabajadores)"
+                    ],
+                    index=1,
                     horizontal=True,
-                    key="radio_perfil_tarifa_sec3"
+                    key="radio_tipo_cuadrilla"
                 )
-                es_modo_autonomo_sec3 = "Autónomo" in sel_perfil
-                st.session_state['perfil_tarifa_autonomo'] = es_modo_autonomo_sec3
-            with col_prof2:
-                if es_modo_autonomo_sec3:
-                    st.success("🧑‍🔧 **Modo Tutor:** Cobras el 100% de tus horas trabajadas directas sin sobrecoste de margen comercial MO.")
+            with col_cuad2:
+                if "Compañero" in tipo_cuadrilla_sel:
+                    st.success("👥 **Equipo de 2:** La obra se ejecuta en la mitad de días. Se controlan los dos sueldos en paralelo.")
+                elif "Solo" in tipo_cuadrilla_sel:
+                    st.info("👤 **Instalador individual:** Trabajas tú solo al 100% cobrando íntegramente tu tarifa horaria.")
                 else:
-                    st.info("🏢 **Modo Empresa:** Aplica margen comercial industrial tanto a materiales como a mano de obra.")
+                    st.info("🛠️ **Cuadrilla grande:** Distribución de horas entre múltiples oficiales y peones.")
+
+            col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+            if "Compañero" in tipo_cuadrilla_sel:
+                num_operarios = 2
+                with col_c1:
+                    precio_hora_oficial = st.number_input("🔨 Tu Sueldo / Hora (€/h Oficial)", min_value=15.0, max_value=80.0, value=28.0, step=1.0, key="num_p_hora_oficial")
+                with col_c2:
+                    precio_hora_comp = st.number_input("🤝 Sueldo / Hora (€/h Compañero)", min_value=12.0, max_value=80.0, value=22.0, step=1.0, key="num_p_hora_comp")
+                with col_c3:
+                    horas_jornada = st.number_input("⏱️ Horas por Jornada (h/día)", min_value=4.0, max_value=12.0, value=8.0, step=0.5, key="num_h_jornada")
+                with col_c4:
+                    precio_boletin_cie = st.number_input("📋 Tarifa Boletín CIE + Ensayos (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, key="num_p_boletin")
+                precio_hora = round((precio_hora_oficial + precio_hora_comp) / 2.0, 2)
+            elif "Solo" in tipo_cuadrilla_sel:
+                num_operarios = 1
+                with col_c1:
+                    precio_hora_oficial = st.number_input("🔨 Tu Sueldo / Hora (€/h)", min_value=15.0, max_value=80.0, value=28.0, step=1.0, key="num_p_hora_oficial")
+                with col_c2:
+                    precio_hora_comp = 0.0
+                    st.text_input("Compañero", value="Sin compañero (Solo)", disabled=True, key="txt_sin_comp")
+                with col_c3:
+                    horas_jornada = st.number_input("⏱️ Horas por Jornada (h/día)", min_value=4.0, max_value=12.0, value=8.0, step=0.5, key="num_h_jornada")
+                with col_c4:
+                    precio_boletin_cie = st.number_input("📋 Tarifa Boletín CIE + Ensayos (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, key="num_p_boletin")
+                precio_hora = precio_hora_oficial
+            else:
+                with col_c1:
+                    num_operarios = st.number_input("👷 Nº Operarios Cuadrilla", min_value=3, max_value=8, value=3, step=1, key="num_operarios_cuad")
+                with col_c2:
+                    precio_hora = st.number_input("🔨 Precio Medio Cuadrilla (€/h)", min_value=15.0, max_value=80.0, value=25.0, step=1.0, key="num_p_hora_medio")
+                    precio_hora_oficial = precio_hora
+                    precio_hora_comp = precio_hora
+                with col_c3:
+                    horas_jornada = st.number_input("⏱️ Horas por Jornada (h/día)", min_value=4.0, max_value=12.0, value=8.0, step=0.5, key="num_h_jornada")
+                with col_c4:
+                    precio_boletin_cie = st.number_input("📋 Tarifa Boletín CIE + Ensayos (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, key="num_p_boletin")
+
+            # ---------------------------------------------------------
+            # 2. PLANIFICACIÓN DE FASES Y DÍAS DE OBRA (LO QUE DICE EL COMPAÑERO)
+            # ---------------------------------------------------------
+            st.markdown("---")
+            st.markdown("##### 📅 2. Planificador de Fases de Obra y Control de Tiempos (Días de Calle)")
+            st.caption("Organiza los días reales de trabajo: *«un día para abrir rozas, otro para tubos, otro para cablear, otro para armar y cuadro»*.")
+
+            plan_fases_manual = st.checkbox(
+                "🔧 Ajustar los días de cada fase de obra manualmente con mi compañero",
+                value=True,
+                key="chk_plan_fases_manual_vivienda"
+            )
+
+            col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
+            with col_f1:
+                dias_fase_abrir = st.number_input(
+                    "1️⃣ Abrir / Rozas (Días):",
+                    min_value=0.2, max_value=15.0, value=1.0, step=0.5,
+                    key="dias_fase_abrir_in",
+                    help="Replanteo, picado de rozas, cajas de mecanismos y regatas."
+                )
+            with col_f2:
+                dias_fase_tubos = st.number_input(
+                    "2️⃣ Colocar Tubos (Días):",
+                    min_value=0.2, max_value=15.0, value=1.0, step=0.5,
+                    key="dias_fase_tubos_in",
+                    help="Entubar tubo corrugado M20/M25 y recibir cajas con yeso/cemento."
+                )
+            with col_f3:
+                dias_fase_cable = st.number_input(
+                    "3️⃣ Cablear e Hilado (Días):",
+                    min_value=0.2, max_value=15.0, value=1.0, step=0.5,
+                    key="dias_fase_cable_in",
+                    help="Pasar conductores (1.5, 2.5, 6 mm²) con guía y conexionado de cajas."
+                )
+            with col_f4:
+                dias_fase_armar = st.number_input(
+                    "4️⃣ Mecanismos & Cuadro (Días):",
+                    min_value=0.2, max_value=15.0, value=1.0, step=0.5,
+                    key="dias_fase_armar_in",
+                    help="Montar mecanismos, aparamenta DIN, peinar y rotular cuadro general CGMP."
+                )
+            with col_f5:
+                dias_fase_cie = st.number_input(
+                    "5️⃣ Pruebas & CIE (Días):",
+                    min_value=0.2, max_value=5.0, value=0.5, step=0.5,
+                    key="dias_fase_cie_in",
+                    help="Medidas REBT (aislamiento megóhmetro, disparo diferencial, tierra) y certificado CIE."
+                )
+
+            dias_totales_plan = round(dias_fase_abrir + dias_fase_tubos + dias_fase_cable + dias_fase_armar + dias_fase_cie, 1)
+            horas_totales_cuadrilla = round(dias_totales_plan * horas_jornada * num_operarios, 1)
+            horas_por_operario = round(dias_totales_plan * horas_jornada, 1)
+            coste_mo_cuadrilla = round(horas_por_operario * precio_hora_oficial + (horas_por_operario * precio_hora_comp if num_operarios > 1 else 0.0), 2)
+
+            # Tarjeta resumen de la cuadrilla
+            col_kpi_pl1, col_kpi_pl2, col_kpi_pl3, col_kpi_pl4 = st.columns(4)
+            with col_kpi_pl1:
+                st.metric("📅 Plazo Real de Obra", f"{dias_totales_plan:.1f} días", help="Días laborables en la vivienda con el equipo trabajando.")
+            with col_kpi_pl2:
+                st.metric("⏱️ Horas Cuadrilla", f"{horas_totales_cuadrilla:.0f} h", help=f"{horas_por_operario:.0f} horas cada trabajador.")
+            with col_kpi_pl3:
+                st.metric("💶 Total Mano de Obra", f"{coste_mo_cuadrilla:,.2f} €", help="Coste íntegro de mano de obra de la cuadrilla.")
+            with col_kpi_pl4:
+                if num_operarios == 2:
+                    p_of_tot = horas_por_operario * precio_hora_oficial
+                    p_cp_tot = horas_por_operario * precio_hora_comp
+                    st.metric("💵 Reparto de Jornales", f"{p_of_tot:,.0f} € / {p_cp_tot:,.0f} €", help=f"Oficial: {p_of_tot:,.2f} € | Compañero: {p_cp_tot:,.2f} €")
+                else:
+                    st.metric("💵 Tu Jornal Limpio", f"{coste_mo_cuadrilla:,.2f} €", help="Cobrado íntegro por ti.")
+
+            # ---------------------------------------------------------
+            # 3. COMPARATIVA EN VIVO: MODO EMPRESA VS MODO AUTÓNOMO
+            # ---------------------------------------------------------
+            st.markdown("---")
+            st.markdown("##### ⚖️ 3. Comparativa en Directo: Modo Empresa vs. Modo Autónomo (Tutor)")
+            st.caption("Visualiza las diferencias económicas y el ahorro que puedes ofrecer al cliente frente a una constructora:")
 
             col_m1, col_m2, col_m3 = st.columns([1, 1, 1.8])
             with col_m1:
-                val_margen_def = 0 if es_modo_autonomo_sec3 else 50
                 margen_comercial = st.number_input(
-                    "Margen Comercial General (%)", 
-                    min_value=0, max_value=200, value=val_margen_def, step=5,
-                    key=f"margen_comercial_input_{'auto' if es_modo_autonomo_sec3 else 'emp'}",
-                    help="Margen comercial sobre costes de materiales y mano de obra."
+                    "Margen Empresa General (%)", 
+                    min_value=0, max_value=200, value=50, step=5,
+                    key="margen_comercial_input_empresa",
+                    help="Margen comercial sobre materiales y mano de obra para Modelo Empresa (G_mo)."
                 )
             with col_m2:
                 porc_garantia = st.number_input(
-                    "Colchón de Garantía en Materiales (%)", 
+                    "Colchón Garantía Materiales (%)", 
                     min_value=0, max_value=100, value=10, step=1,
+                    key="porc_garantia_mat_input",
                     help="Colchón adicional para imprevistos y reposición de materiales."
                 )
             with col_m3:
@@ -1274,24 +1398,82 @@ def app():
                     index=0,
                     key="sel_iva_cliente_hacienda"
                 )
-                if "10%" in iva_label_sel:
-                    iva_sel = 10
-                elif "21%" in iva_label_sel:
-                    iva_sel = 21
-                else:
-                    iva_sel = 0
+                iva_sel = 10 if "10%" in iva_label_sel else (21 if "21%" in iva_label_sel else 0)
 
-            # Explicación de requisitos legales de Hacienda
-            if iva_sel == 10:
-                st.caption("⚖️ **Requisitos Hacienda (Art. 91.Uno.2.10º Ley IVA):** 1) Vivienda particular terminada hace más de 2 años. 2) Destinatario persona física o comunidad. 3) Los materiales aportados por el electricista NO deben superar el 40% del total de la obra.")
-            elif iva_sel == 21:
-                st.caption("⚖️ **Régimen General AEAT:** Aplicable a locales comerciales, despachos, naves o reformas donde el material aportado supera el 40% del presupuesto.")
-            else:
-                st.caption("⚖️ **Inversión de Sujeto Pasivo (Art. 84.Uno.2º.f Ley IVA):** Facturación directa entre empresas / autónomos subcontratistas en ejecución de obra sin repercusión de IVA.")
+            # Estimación preliminar para la comparativa rápida en Sección 3
+            est_temp_m2 = sum([e.get("m2", 10.0) for e in st.session_state.get('estancias_pro', [])])
+            c_mat_aprox = round(max(600.0, est_temp_m2 * 18.0 + 350.0), 2)
+            c_mo_aprox = coste_mo_cuadrilla
+
+            # Modelo Empresa
+            g_mo_emp_aprox = round(c_mo_aprox * (margen_comercial / 100.0), 2)
+            u_mat_emp_aprox = round(c_mat_aprox * 0.50, 2)
+            base_emp_aprox = round(c_mat_aprox + u_mat_emp_aprox + c_mo_aprox + g_mo_emp_aprox + precio_boletin_cie, 2)
+            tot_emp_aprox = round(base_emp_aprox * (1.0 + iva_sel / 100.0), 2)
+
+            # Modelo Autónomo (G_mo = 0, margen material moderado 25%)
+            u_mat_auto_aprox = round(c_mat_aprox * 0.25, 2)
+            base_auto_aprox = round(c_mat_aprox + u_mat_auto_aprox + c_mo_aprox + precio_boletin_cie, 2)
+            tot_auto_aprox = round(base_auto_aprox * (1.0 + iva_sel / 100.0), 2)
+
+            dif_ahorro_aprox = round(tot_emp_aprox - tot_auto_aprox, 2)
+            sueldo_limpio_cuadrilla = round(c_mo_aprox + u_mat_auto_aprox + precio_boletin_cie, 2)
+
+            col_comp_emp, col_comp_auto = st.columns(2)
+            with col_comp_emp:
+                st.markdown(f"""
+                <div style="background-color:#f8fafc; border:2px solid #cbd5e1; border-radius:10px; padding:16px;">
+                    <div style="color:#475569; font-weight:bold; font-size:15px;">🏢 MODELO EMPRESA (Constructora/Pyme)</div>
+                    <div style="font-size:24px; font-weight:800; color:#0f172a; margin:6px 0;">{tot_emp_aprox:,.2f} € <span style="font-size:13px; font-weight:normal; color:#64748b;">(C/IVA)</span></div>
+                    <div style="font-size:13px; color:#475569; line-height:1.6;">
+                        • Base Imponible: <b>{base_emp_aprox:,.2f} €</b><br>
+                        • Recargo Oficina MO ({margen_comercial}%): <b style="color:#dc2626;">+{g_mo_emp_aprox:,.2f} €</b><br>
+                        • Margen Materiales (+50%): <b>+{u_mat_emp_aprox:,.2f} €</b>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col_comp_auto:
+                st.markdown(f"""
+                <div style="background-color:#eff6ff; border:2px solid #0284c7; border-radius:10px; padding:16px;">
+                    <div style="color:#0284c7; font-weight:bold; font-size:15px;">🧑‍🔧 MODELO AUTÓNOMO / TUTOR (De Calle)</div>
+                    <div style="font-size:24px; font-weight:800; color:#0369a1; margin:6px 0;">{tot_auto_aprox:,.2f} € <span style="font-size:13px; font-weight:normal; color:#64748b;">(C/IVA)</span></div>
+                    <div style="font-size:13px; color:#334155; line-height:1.6;">
+                        • Base Imponible: <b>{base_auto_aprox:,.2f} €</b><br>
+                        • Recargo Oficina MO: <b style="color:#16a34a;">0,00 € (¡Sin sobrecoste!)</b><br>
+                        • Ahorro para el cliente: <b style="color:#16a34a;">-{dif_ahorro_aprox:,.2f} € más barato</b>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div style="background-color:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 14px; margin-top:12px; font-size:13.5px; color:#14532d;">
+                💰 <b>Beneficio Limpio Total para la Cuadrilla en Modo Autónomo: {sueldo_limpio_cuadrilla:,.2f} €</b>  
+                (Cobráis el 100% de vuestros jornales: <b>{c_mo_aprox:,.2f} €</b> + ganancia limpia materiales: <b>{u_mat_auto_aprox:,.2f} €</b> + honorarios CIE: <b>{precio_boletin_cie:,.2f} €</b>).
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Selector del modo activo
+            st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+            sel_perfil = st.radio(
+                "💼 ¿Qué tarifa deseas emitir en el Presupuesto Oficial para el Cliente?",
+                ["🧑‍🔧 Modelo Autónomo / Tutor (Tarifa Competitiva de Calle)", "🏢 Modelo Empresa (Margen Comercial Completo +50%)"],
+                index=0 if st.session_state.get('perfil_tarifa_autonomo', True) else 1,
+                horizontal=True,
+                key="radio_perfil_tarifa_sec3"
+            )
+            es_modo_autonomo_sec3 = "Autónomo" in sel_perfil
+            st.session_state['perfil_tarifa_autonomo'] = es_modo_autonomo_sec3
+
+            # ---------------------------------------------------------
+            # 4. CONDICIONES DE MONTAJE FÍSICO (ROZAS Y TECHOS)
+            # ---------------------------------------------------------
+            st.markdown("---")
+            st.markdown("##### 🏗️ 4. Condiciones Físicas de la Obra (Rozas y Techos)")
 
             col_roz1, col_roz2 = st.columns(2)
             with col_roz1:
-                hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True)
+                hace_rozas_electricista = st.checkbox("¿Asumes tú (electricista) el picado de rozas y tapado con yeso?", value=True, key="chk_hace_rozas")
             with col_roz2:
                 tipo_pared = st.selectbox(
                     "Tipo de Pared / Soporte",
@@ -1301,7 +1483,8 @@ def app():
                         "Ladrillo Perforado / Termoarcilla (Dureza media)", 
                         "Hormigón / Estructura (Requiere rozadora y martillo pesado)"
                     ],
-                    index=0
+                    index=0,
+                    key="sel_tipo_pared"
                 )
 
             tipo_techo = st.selectbox(
@@ -1309,21 +1492,15 @@ def app():
                 [
                     "Falso Techo de Pladur / Escayola (Cableado superior ágil - Menor rozado vertical de luz)",
                     "Techo Macizo / Hormigón o Viguetas (Exige rozado completo en paredes y techos para alumbrado)"
-                ]
+                ],
+                key="sel_tipo_techo"
             )
 
-            col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-            with col_c1:
-                precio_hora = st.number_input("Precio Mano de Obra (€/h neto)", min_value=10.0, max_value=60.0, value=25.0, step=1.0)
-            with col_c2:
-                num_operarios = st.number_input("Nº Operarios", min_value=1, max_value=5, value=1, step=1)
-            with col_c3:
-                horas_jornada = st.number_input("Horas por Jornada / Día", min_value=4.0, max_value=12.0, value=8.0, step=0.5)
-            with col_c4:
-                precio_boletin_cie = st.number_input("Tarifa Ensayos + MTD + Boletín CIE (€)", min_value=0.0, max_value=800.0, value=150.0, step=10.0, help="Tarifa profesional por verificaciones previas ITC-BT-05 (aislamiento con megóhmetro, disparo diferencial, continuidad y bucle de tierra), elaboración de Memoria Técnica de Diseño (MTD) y tramitación del Certificado CIE ante la DGEAIM Murcia.")
-
+            # ---------------------------------------------------------
+            # 5. MODALIDAD DE PRESUPUESTO (ESCANDALLO VS TARIFA POR PUNTO)
+            # ---------------------------------------------------------
             st.markdown("---")
-            st.markdown("##### 🔌 Modalidad de Presupuesto: Escandallo Analítico vs Tarifa de Calle por Punto (25 - 30 €/pto)")
+            st.markdown("##### 🔌 5. Modalidad de Presupuesto: Escandallo Analítico vs Tarifa de Calle por Punto (25 - 30 €/pto)")
             col_mod_tar1, col_mod_tar2 = st.columns([1.6, 1.2])
             with col_mod_tar1:
                 modo_tarifa_sel = st.radio(
@@ -1345,6 +1522,7 @@ def app():
                     value=28.0,
                     step=1.0,
                     disabled=not es_modo_tarifa_puntos,
+                    key="num_tarifa_punto_calle",
                     help="Precio de referencia por punto instalado (tubo, cable, caja y mecanismo). En la calle se suele cobrar de 25 € a 30 €."
                 )
                 if es_modo_tarifa_puntos:
@@ -2075,9 +2253,16 @@ def app():
             horas_cuadro += 1.5
         coste_mo_cuadro = horas_cuadro * precio_hora
         horas_totales_obra += horas_cuadro
-        coste_mano_obra_bruto = horas_totales_obra * precio_hora
-        horas_totales_equipo = horas_totales_obra / num_operarios
-        dias_estimados = horas_totales_equipo / horas_jornada
+
+        if plan_fases_manual:
+            dias_estimados = dias_totales_plan
+            horas_totales_equipo = dias_totales_plan * horas_jornada
+            horas_totales_obra = horas_totales_equipo * num_operarios
+            coste_mano_obra_bruto = coste_mo_cuadrilla
+        else:
+            coste_mano_obra_bruto = horas_totales_obra * precio_hora
+            horas_totales_equipo = horas_totales_obra / num_operarios
+            dias_estimados = horas_totales_equipo / horas_jornada
 
         # Surcharges técnicos certificados
         sobrecoste_dif_si = 45.0 if instalar_c9 else 0.0
@@ -4747,7 +4932,13 @@ def app():
                     st.write(f"- ⚡ **Fase de Cableado:** `{sum_h_cable:.2f} h`")
                     st.write(f"- 🔲 **Fase de Mecanizado:** `{sum_h_mec:.2f} h`")
                     st.info(f"⏱️ **Total Horas de Trabajo:** `{horas_totales_obra:.2f} h` netas (`{coste_mano_obra_bruto:.2f} €` coste MO)")
-                    st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
+                    if plan_fases_manual:
+                        st.success(
+                            f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra con `{num_operarios} operario(s)` a `{horas_jornada} h/día`.\n\n"
+                            f"**Planificación por Fases acordada:** 1️⃣ Abrir rozas: `{dias_fase_abrir:.1f} d` | 2️⃣ Colocar tubos: `{dias_fase_tubos:.1f} d` | 3️⃣ Cablear e hilado: `{dias_fase_cable:.1f} d` | 4️⃣ Mecanismos y Cuadro: `{dias_fase_armar:.1f} d` | 5️⃣ Pruebas & CIE: `{dias_fase_cie:.1f} d`."
+                        )
+                    else:
+                        st.success(f"📅 **Plazo Estimado de Ejecución:** `{dias_estimados:.1f} días` de obra (con `{num_operarios} operario(s)` a jornadas de `{horas_jornada} h/día`).")
 
                 st.markdown("---")
 
