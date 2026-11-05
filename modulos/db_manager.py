@@ -147,6 +147,44 @@ def inicializar_bd():
     )
     """)
 
+    # Tabla de Materiales Personalizados y Guardados por el Instalador
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS materiales_personalizados (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT UNIQUE NOT NULL,
+        precio_coste REAL NOT NULL,
+        unidad TEXT DEFAULT 'ud',
+        proveedor TEXT DEFAULT 'Obramat',
+        categoria TEXT DEFAULT 'General',
+        fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Tabla de Presupuestos Completos Guardados para Edición, Recuperación y Duplicación
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS presupuestos_guardados (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        usuario_email TEXT,
+        cliente_id INTEGER,
+        nombre_cliente TEXT,
+        nombre_presupuesto TEXT NOT NULL,
+        modulo_origen TEXT NOT NULL,
+        estado TEXT DEFAULT 'Pendiente',
+        total_sin_iva REAL DEFAULT 0.0,
+        total_con_iva REAL DEFAULT 0.0,
+        iva_pct REAL DEFAULT 21.0,
+        modo_tarifa TEXT DEFAULT 'Autónomo',
+        datos_json TEXT NOT NULL,
+        validez_dias INTEGER DEFAULT 30,
+        fecha_presupuesto TEXT,
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
+        FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE SET NULL
+    )
+    """)
+
     # Migración y aseguramiento de usuario oficial richardcurso0606@gmail.com
     try:
         cursor.execute("""

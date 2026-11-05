@@ -298,6 +298,30 @@ def renderizar():
                     st.session_state.presupuesto_calculado = True
                     st.success(f"✅ Derivación Individual añadida a las partidas del presupuesto (+{p_di:.2f} €).")
 
+                # Panel Comercial Integral y Auditor para Derivación Individual
+                try:
+                    from modulos import herramientas_presupuesto
+                    datos_obra_di = {
+                        "coste_materiales": c_di['coste_materiales'],
+                        "margen_materiales_pct": 25.0,
+                        "horas_mano_obra": tarifa_calle_di_res.get('horas_estimadas', 6.0),
+                        "precio_hora_coste": 28.0,
+                        "recargo_empresa_mo_pct": 35.0,
+                        "coste_tramitacion": 90.0,
+                        "desplazamiento": 25.0,
+                        "iva_pct": 21.0,
+                        "cliente": "Cliente Derivación Individual",
+                        "concepto": f"Sustitución e Instalación de Derivación Individual DI (ITC-BT-15)",
+                        "filas_materiales": [
+                            {"mat": f"Cable unipolar Cu libre de halógenos H07Z1-K (Fases+N+PE)", "cant": float(longitud), "unid": "m", "p_u": round(c_di['coste_materiales']*0.6/max(longitud,1), 2)},
+                            {"mat": "Tubo protector libre de halógenos M32/M40 IK08", "cant": float(longitud), "unid": "m", "p_u": 2.10},
+                            {"mat": "Hilo de mando rojo 1.5 mm² para telegestión de contador", "cant": float(longitud), "unid": "m", "p_u": 0.28}
+                        ]
+                    }
+                    herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_di, modulo_nombre="Derivación Individual (DI)", key_prefix="di_hp")
+                except Exception as e:
+                    st.info(f"Herramientas comerciales DI disponibles: {e}")
+
     with tab_di3:
         st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):

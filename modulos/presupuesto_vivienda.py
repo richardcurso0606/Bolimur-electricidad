@@ -962,6 +962,34 @@ def app():
     with tab_sec1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Potencia, Escalones IGA y Configuración de Circuitos</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
+            # Selector Desplegable de Tipo de Trabajo / Plantillas Oficiales REBT (Sincronizado con MTD)
+            col_t_inst1, col_t_inst2 = st.columns([2.5, 1.5])
+            with col_t_inst1:
+                tipo_trabajo_sel = st.selectbox(
+                    "📋 Tipo de Instalación / Trabajo a Presupuestar (Plantillas Oficiales REBT):",
+                    [
+                        "🏡 Vivienda Básica (5.750 W - 230V Monofásica - IGA 25A)",
+                        "🏡 Vivienda Elevada - Climatización / Aire Acondicionado (9.200 W - 230V - IGA 40A)",
+                        "🏡 Vivienda Elevada - Aerotermia + Climatización (11.500 W - 230V - IGA 50A)",
+                        "🏡 Vivienda Elevada - Máxima Monofásica (14.490 W - 230V - IGA 63A)",
+                        "🏡 Vivienda Unifamiliar / Chalet Trifásica (17.320 W - 400V - IGA 25A Tri)",
+                        "🚗 IRVE - Garaje Comunitario (Esquema 2 - 7.360 W - 230V - IGA 32A/40A)",
+                        "🚗 IRVE - Trifásico Comercial / Rápido (22.000 W - 400V - IGA 32A Tri)",
+                        "🚗 Vivienda con Recarga VE Integrada (11.500 W - 230V - IGA 50A con SPL)",
+                        "☀️ Autoconsumo Solar Fotovoltaico (5.000 W Inversor - 230V - IGA 25A)",
+                        "☀️ Combo: Vivienda + Solar Fotovoltaica (5 kW) + IRVE (7.36 kW)",
+                        "🏢 Local Comercial Ordinario Monofásico (Oficina/Tienda - 9.200 W - 230V - IGA 40A)",
+                        "🏢 Local Comercial Trifásico (Comercio/Clima Tri - 17.320 W - 400V - IGA 25A Tri)",
+                        "🍽️ LPC: Bar / Restaurante / Cafetería (27.710 W - 400V - IGA 40A Tri - OCA)",
+                        "🎓 LPC: Academia / Clínica / Centro de Enseñanza (>50 pers. - 17.320 W - 400V - OCA)",
+                        "🏗️ Instalación Provisional de Obra (ITC-BT-33 - 15.000 W - 400V)"
+                    ],
+                    key="sel_tipo_trabajo_presupuesto",
+                    help="Carga automáticamente la potencia adecuada, el IGA y preconfigura los circuitos específicos del trabajo."
+                )
+            with col_t_inst2:
+                st.caption(f"🔧 Preconfiguración activa: **{tipo_trabajo_sel.split('(')[0].strip()}**")
+
             col_pot1, col_pot2, col_pot3 = st.columns(3)
             with col_pot1:
                 potencia_prevista_kw = st.selectbox(
@@ -4585,6 +4613,26 @@ def app():
                 # SUB-PESTAÑA 3: COMPARATIVA DIRECTA CARA A CARA (EMPRESA VS AUTÓNOMO)
                 # =====================================================================
                 with tab_mod_comparativa:
+                    # Panel Comercial Integral: Semáforo, Auditor de Ofertas («¿Pierdes Dinero?») y Guardado/Recuperación
+                    try:
+                        from modulos import herramientas_presupuesto
+                        datos_obra_pv = {
+                            "coste_materiales": c_mat,
+                            "margen_materiales_pct": round(((u_mat + m_seg) / c_mat * 100), 1) if c_mat > 0 else 25.0,
+                            "horas_mano_obra": horas_totales_obra,
+                            "precio_hora_coste": coste_mano_obra_hora,
+                            "recargo_empresa_mo_pct": float(margen_comercial),
+                            "coste_tramitacion": v_bol,
+                            "desplazamiento": v_part,
+                            "iva_pct": float(iva_sel),
+                            "cliente": "Cliente Vivienda / Reforma",
+                            "concepto": f"Reforma Eléctrica Integral ({grado_electr} {potencia_prevista_kw})",
+                            "filas_materiales": materiales_pvp
+                        }
+                        herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_pv, modulo_nombre="Presupuesto Vivienda / Autónomo", key_prefix="pv_autonomo_hp")
+                    except Exception as e:
+                        st.info(f"Panel comercial disponible: {e}")
+
                     st.markdown("##### ⚖️ Comparativa Directa Cara a Cara: Empresa vs Instalador Autónomo:")
                     st.caption("Visualiza el impacto exacto en el bolsillo del cliente y en tu rentabilidad como profesional:")
 

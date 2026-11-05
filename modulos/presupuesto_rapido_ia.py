@@ -1727,6 +1727,26 @@ def renderizar():
                 except Exception:
                     pass
 
+
+            # Panel Comercial Integral: Balance Empresa vs Autónomo, Semáforo y Auditor de Contraofertas
+            try:
+                from modulos import herramientas_presupuesto
+                datos_pr_hp = {
+                    "coste_materiales": coste_mat_siva,
+                    "margen_materiales_pct": 25.0,
+                    "horas_mano_obra": horas_mo_val,
+                    "precio_hora_coste": precio_hora_mo,
+                    "recargo_empresa_mo_pct": 40.0,
+                    "coste_tramitacion": 0.0,
+                    "desplazamiento": desp_calc,
+                    "iva_pct": iva_pct,
+                    "cliente": nom_cliente,
+                    "concepto": res.get("concepto", "Aviso Urgente"),
+                    "filas_materiales": filas_mats_edit
+                }
+                herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_pr_hp, modulo_nombre="Presupuesto Rápido IA", key_prefix="pr_hp")
+            except Exception as e:
+                st.info(f"Herramientas de presupuesto disponibles: {e}")
             # Envío Directo por WhatsApp solicitando teléfono
             st.markdown("")
             with st.container(border=True):

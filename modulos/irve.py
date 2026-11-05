@@ -829,6 +829,26 @@ def renderizar():
             with col_t_irve2:
                 st.caption("Inserta este circuito IRVE como circuito C13 en la Memoria Técnica General.")
 
+            # Panel Comercial Integral: Balance Empresa vs Autónomo, Semáforo, Auditor de Ofertas y Guardado
+            try:
+                from modulos import herramientas_presupuesto
+                datos_obra_irve = {
+                    "coste_materiales": tot_equipos,
+                    "margen_materiales_pct": 25.0,
+                    "horas_mano_obra": horas_mo,
+                    "precio_hora_coste": precio_h,
+                    "recargo_empresa_mo_pct": 40.0,
+                    "coste_tramitacion": c_cie,
+                    "desplazamiento": 35.0,
+                    "iva_pct": 21.0 if "21" in str(tipo_iva_sel) else 10.0,
+                    "cliente": "Cliente Recarga VE",
+                    "concepto": f"Instalación Punto de Recarga VE {p_cargador_val/1000:.1f} kW (ITC-BT-52)",
+                    "filas_materiales": lista_materiales_pdf
+                }
+                herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_irve, modulo_nombre="Línea Recarga (IRVE)", key_prefix="irve_hp")
+            except Exception as e:
+                st.info(f"Herramientas de presupuesto disponibles: {e}")
+
     with tab_irve5:
         # SECCIÓN 5: ASISTENTE IA EXPERTO EN IRVE Y REBT (VOZ Y TEXTO)
         # =========================================================================
