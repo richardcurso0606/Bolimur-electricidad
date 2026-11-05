@@ -1974,20 +1974,23 @@ with st.sidebar:
         except Exception:
             pass
 
-        with st.expander("🤖 Clave IA (Google Gemini)", expanded=(not bool(clave_gemini_act))):
-            if clave_gemini_act and len(clave_gemini_act) > 8:
-                enmascarada = f"{clave_gemini_act[:4]}...{clave_gemini_act[-4:]}"
-                st.markdown(
-                    f"<div style='font-size:11px; color:#15803d; font-weight:700; margin-bottom:4px;'>"
-                    f"🟢 Conectada: <code>{enmascarada}</code></div>",
-                    unsafe_allow_html=True
-                )
-            else:
-                st.markdown(
-                    "<div style='font-size:11px; color:#b45309; font-weight:600; margin-bottom:4px;'>"
-                    "⚠️ Sin clave configurada</div>",
-                    unsafe_allow_html=True
-                )
+        # Indicador permanente y visible del estado de la Clave IA en la barra lateral
+        if clave_gemini_act and len(clave_gemini_act) > 8:
+            enmascarada = f"{clave_gemini_act[:4]}...{clave_gemini_act[-4:]}"
+            st.markdown(
+                f"<div style='background-color:#f0fdf4; border:1.5px solid #22c55e; border-radius:8px; padding:6px 10px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;'>"
+                f"<span style='font-size:12px; font-weight:700; color:#15803d;'>🟢 Clave IA Conectada</span>"
+                f"<code style='font-size:11px; color:#166534;'>{enmascarada}</code></div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                "<div style='background-color:#fef2f2; border:1.5px solid #ef4444; border-radius:8px; padding:6px 10px; margin-bottom:8px;'>"
+                "<span style='font-size:12px; font-weight:700; color:#b91c1c;'>⚠️ Clave IA No Configurada</span></div>",
+                unsafe_allow_html=True
+            )
+
+        with st.expander("🤖 Ver / Modificar Clave IA (Google Gemini)", expanded=(not bool(clave_gemini_act))):
             in_key_side = st.text_input(
                 "API Key Gemini:",
                 value=clave_gemini_act,

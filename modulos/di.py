@@ -68,15 +68,17 @@ def renderizar():
         )
 
     if modo_vista_di.startswith("📑"):
-        tab_di1, tab_di2, tab_di3 = st.tabs([
+        tab_di1, tab_di2, tab_di3, tab_di4 = st.tabs([
             "🔌 1. Parámetros DI",
             "📋 2. Memoria & Sección Óptima",
-            "🖨️ 3. Reporte PDF Oficial"
+            "💰 3. Presupuesto & Negociación",
+            "🖨️ 4. Reporte PDF Oficial"
         ])
     else:
         tab_di1 = _NullContext()
         tab_di2 = _NullContext()
         tab_di3 = _NullContext()
+        tab_di4 = _NullContext()
 
     with tab_di1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Diseño de la Derivación Individual (ITC-BT-15)</h4></div>', unsafe_allow_html=True)
@@ -238,7 +240,9 @@ def renderizar():
                 st.session_state.menu_activo = "🏛️ Memoria Técnica (MTD 30)"
                 st.rerun()
 
-            with st.expander("💼 Tarifa de Calle y Análisis de Rentabilidad del Instalador", expanded=False):
+    with tab_di3:
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">💰 SECCIÓN 3: Presupuesto y Auditor Comercial de la Derivación Individual</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
                 st.markdown("""
                 **Valoración económica conforme a precios reales de mercado y tutor de prácticas:**  
                 Calcula el precio de venta sugerido (200 - 250 € base hasta 20 m sin rozas, suplemento si exige 16 mm², metros extra y obra) y audita tus costes y beneficio neto.
@@ -322,8 +326,8 @@ def renderizar():
                 except Exception as e:
                     st.info(f"Herramientas comerciales DI disponibles: {e}")
 
-    with tab_di3:
-        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
+    with tab_di4:
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 4: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
             with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
                 col_m1, col_m2 = st.columns(2)
