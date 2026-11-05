@@ -958,13 +958,13 @@ def renderizar():
                     "desplazamiento": 45.0,
                     "iva_pct": 21.0,
                     "cliente": "Cliente Autoconsumo Solar",
-                    "concepto": f"Instalación Solar Fotovoltaica Autoconsumo {pot_pico_total_kw:.2f} kWp ({num_modulos} Paneles)",
+                    "concepto": f"Instalación Solar Fotovoltaica Autoconsumo {pot_pico_total_kw:.2f} kWp",
                     "filas_materiales": [
-                        {"mat": f"Módulos Solares {mod_seleccionado['potencia_w']}W (x{num_modulos})", "cant": num_modulos, "unid": "ud", "p_u": round(mod_seleccionado['potencia_w'] * 0.18, 2)},
-                        {"mat": f"Inversor Solar On-Grid {pot_inversor_nominal_kw} kW", "cant": 1, "unid": "ud", "p_u": round(pot_inversor_nominal_kw * 180.0, 2)},
-                        {"mat": f"Estructura soporte coplanar/inclinada para {num_modulos} módulos", "cant": num_modulos, "unid": "ud", "p_u": 28.50},
-                        {"mat": "Cable Solar H1Z2Z2-K 1x6 mm² Rojo y Negro (Rollos)", "cant": 50, "unid": "m", "p_u": 1.45},
-                        {"mat": "Cuadro Protecciones AC/DC (DPS Tipo II + IGA + Dif 30mA Clase A)", "cant": 1, "unid": "ud", "p_u": 185.0}
+                        {"mat": "Módulos Solares Monocristalinos Tier-1 500W", "cant": float(max(int(round(pot_pico_total_kw * 1000 / 500)), 1)), "unid": "ud", "p_u": 95.0},
+                        {"mat": f"Inversor Solar On-Grid {max(round(pot_pico_total_kw * 0.9, 1), 1.5)} kW", "cant": 1.0, "unid": "ud", "p_u": round(max(round(pot_pico_total_kw * 0.9, 1), 1.5) * 190.0, 2)},
+                        {"mat": "Estructura soporte coplanar/inclinada de aluminio", "cant": float(max(int(round(pot_pico_total_kw * 1000 / 500)), 1)), "unid": "ud", "p_u": 28.50},
+                        {"mat": "Cable Solar H1Z2Z2-K 1x6 mm² Rojo y Negro (Rollos)", "cant": 50.0, "unid": "m", "p_u": 1.45},
+                        {"mat": "Cuadro Protecciones AC/DC (DPS Tipo II + IGA + Dif 30mA Clase A)", "cant": 1.0, "unid": "ud", "p_u": 185.0}
                     ]
                 }
                 herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_pv, modulo_nombre="Solar Fotovoltaica", key_prefix="pv_hp")

@@ -317,9 +317,9 @@ def renderizar():
                         "cliente": "Cliente Derivación Individual",
                         "concepto": f"Sustitución e Instalación de Derivación Individual DI (ITC-BT-15)",
                         "filas_materiales": [
-                            {"mat": f"Cable unipolar Cu libre de halógenos H07Z1-K (Fases+N+PE)", "cant": float(longitud), "unid": "m", "p_u": round(c_di['coste_materiales']*0.6/max(longitud,1), 2)},
-                            {"mat": "Tubo protector libre de halógenos M32/M40 IK08", "cant": float(longitud), "unid": "m", "p_u": 2.10},
-                            {"mat": "Hilo de mando rojo 1.5 mm² para telegestión de contador", "cant": float(longitud), "unid": "m", "p_u": 0.28}
+                            {"mat": f"Cable unipolar Cu libre de halógenos H07Z1-K (Fases+N+PE)", "cant": float(di_long), "unid": "m", "p_u": round(c_di['coste_materiales']*0.6/max(float(di_long),1.0), 2)},
+                            {"mat": "Tubo protector libre de halógenos M32/M40 IK08", "cant": float(di_long), "unid": "m", "p_u": 2.10},
+                            {"mat": "Hilo de mando rojo 1.5 mm² para telegestión de contador", "cant": float(di_long), "unid": "m", "p_u": 0.28}
                         ]
                     }
                     herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_di, modulo_nombre="Derivación Individual (DI)", key_prefix="di_hp")
