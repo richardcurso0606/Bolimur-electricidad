@@ -201,11 +201,18 @@ def renderizar():
                 elif in_iga_auto > cond_s_di:
                     est = f"❌ Falla ($I_n$ {in_iga_auto}A > {cond_s_di:.1f}A)"
                     est_clean = f"Falla (In {in_iga_auto}A > {cond_s_di:.1f}A)"
+                elif s_com < s_final_di:
+                    if s_final_di == 16 and s_com < 16:
+                        est = "⚠️ No cumple mín. reglamentario (16 mm² - ITC-BT-15)"
+                        est_clean = "No cumple mín. 16 mm² (ITC-BT-15)"
+                    else:
+                        est = f"⚠️ Sección inferior a la óptima ({s_final_di} mm²)"
+                        est_clean = f"Inferior a sección óptima ({s_final_di} mm²)"
                 elif s_com == s_final_di:
                     est = f"✅ **CUMPLE IDEAL** ($I_n$ {in_iga_auto}A $\\le$ {cond_s_di:.1f}A)"
                     est_clean = f"CUMPLE IDEAL (In {in_iga_auto}A ≤ {cond_s_di:.1f}A)"
                 else:
-                    est = "Válido pero sobredimensionado"
+                    est = "ℹ️ Válido pero sobredimensionado (Mayor coste innecesario)"
                     est_clean = "Válido sobredimensionado"
             
                 tabla_di_md += f"| **{s_com} mm²** | {iz_val_di} A | {dv_c_di_pct:.3f}% | {est} |\n"
@@ -277,21 +284,6 @@ def renderizar():
 
                 c_di = tarifa_calle_di_res["coste"]
                 p_di = tarifa_calle_di_res["pvp_venta_neto"]
-                b_di = tarifa_calle_di_res["beneficio_neto"]
-                m_di = tarifa_calle_di_res["margen_sobre_venta_pct"]
-
-                col_mdi1, col_mdi2, col_mdi3 = st.columns(3)
-                with col_mdi1:
-                    st.metric("PVP Venta Cliente (S/IVA)", f"{p_di:,.2f} €")
-                    st.caption("Tarifa de mercado sugerida")
-                with col_mdi2:
-                    st.metric("Coste Real Directo", f"{c_di['coste_directo_total']:,.2f} €")
-                    st.caption(f"Materiales: {c_di['coste_materiales']:.2f} € | MO: {c_di['coste_mo']:.2f} €")
-                with col_mdi3:
-                    st.metric("Beneficio Neto", f"+{b_di:,.2f} €")
-                    st.caption(f"Margen s/venta: {m_di:.1f}%")
-
-                st.markdown(f"<div style='font-weight:bold; color:{tarifa_calle_di_res['color_hex']}; font-size:15px; margin-bottom:10px;'>{tarifa_calle_di_res['semaforo']} — {tarifa_calle_di_res['diagnostico']}</div>", unsafe_allow_html=True)
 
                 if st.button("➕ Incorporar esta DI al Presupuesto de Vivienda como Partida", key="btn_add_di_desde_modulo"):
                     if "partidas_manuales" not in st.session_state:

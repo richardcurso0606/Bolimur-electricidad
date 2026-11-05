@@ -133,15 +133,17 @@ def renderizar():
         )
 
     if modo_vista_lga.startswith("📑"):
-        tab_lga1, tab_lga2, tab_lga3 = st.tabs([
+        tab_lga1, tab_lga2, tab_lga3, tab_lga4 = st.tabs([
             "⚡ 1. Parámetros & Potencia",
             "📋 2. Memoria & Sección Óptima",
-            "🖨️ 3. Reporte PDF Oficial"
+            "💰 3. Presupuesto & Auditor Comercial",
+            "🖨️ 4. Reporte PDF Oficial"
         ])
     else:
         tab_lga1 = _NullContext()
         tab_lga2 = _NullContext()
         tab_lga3 = _NullContext()
+        tab_lga4 = _NullContext()
 
     with tab_lga1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Diseño y Potencia Prevista (Pt - ITC-BT-14)</h4></div>', unsafe_allow_html=True)
@@ -301,11 +303,18 @@ def renderizar():
                 elif in_lga_auto > cond_s_lga:
                     est = f"❌ Falla (I<sub>n</sub> {in_lga_auto}A > {cond_s_lga:.1f}A)"
                     est_clean = f"Falla (In {in_lga_auto}A > {cond_s_lga:.1f}A)"
+                elif s_com < s_final_lga:
+                    if s_final_lga == 10 and s_com < 10:
+                        est = "⚠️ No cumple mín. reglamentario (10 mm² - ITC-BT-14)"
+                        est_clean = "No cumple mín. 10 mm² (ITC-BT-14)"
+                    else:
+                        est = f"⚠️ Sección inferior a la óptima ({s_final_lga} mm²)"
+                        est_clean = f"Inferior a sección óptima ({s_final_lga} mm²)"
                 elif s_com == s_final_lga:
                     est = f"✅ <b>CUMPLE IDEAL</b> (I<sub>n</sub> {in_lga_auto}A ≤ {cond_s_lga:.1f}A)"
                     est_clean = f"CUMPLE IDEAL (In {in_lga_auto}A ≤ {cond_s_lga:.1f}A)"
                 else:
-                    est = "Válido pero sobredimensionado"
+                    est = "ℹ️ Válido pero sobredimensionado (Mayor coste innecesario)"
                     est_clean = "Válido sobredimensionado"
                 
                 fila_str = f'<tr style="border-bottom: 1px solid {border_row}; {bg_row}"><td style="padding: 12px 16px; font-weight: bold; color: {text_row};">{s_com} mm²</td><td style="padding: 12px 16px; color: {text_row};">{iz_val_t} A</td><td style="padding: 12px 16px; color: {text_row};">{dv_c_pct:.3f}%</td><td style="padding: 12px 16px; color: {text_row};">{est}</td></tr>'
@@ -359,7 +368,51 @@ def renderizar():
                 st.caption("Carga los parámetros de la LGA como alimentación principal de la Memoria Técnica.")
 
     with tab_lga3:
-        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 3: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">💰 SECCIÓN 3: Presupuesto y Auditor Comercial de la Línea General de Alimentación</h4></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            try:
+                from modulos import herramientas_presupuesto
+                
+                # Estimación de costes de materiales de LGA
+                if lga_mat == "cobre":
+                    p_m_cond = max(2.80, round(float(s_final_lga) * 0.18, 2))
+                else:
+                    p_m_cond = max(1.60, round(float(s_final_lga) * 0.08, 2))
+
+                coste_cables = round(4.0 * p_m_cond * float(lga_long), 2)
+                coste_tubo_m = 3.80 if int(str(tubo_diam).replace("Ø", "").replace("mm", "").strip() or 63) <= 90 else 5.90
+                coste_tubo = round(coste_tubo_m * float(lga_long), 2)
+                coste_fusibles = 48.0 # 3 fusibles gG
+                coste_terminales = 24.0 # 4 terminales bimetálicos / punteras
+                c_mat_lga = round(coste_cables + coste_tubo + coste_fusibles + coste_terminales, 2)
+
+                # Horas estimadas: 6 horas base + 0.2 horas por metro
+                horas_lga_est = round(6.0 + (float(lga_long) * 0.20), 1)
+
+                datos_obra_lga = {
+                    "coste_materiales": c_mat_lga,
+                    "margen_materiales_pct": 25.0,
+                    "horas_mano_obra": horas_lga_est,
+                    "precio_hora_coste": 32.0,
+                    "recargo_empresa_mo_pct": 35.0,
+                    "coste_tramitacion": 120.0,
+                    "desplazamiento": 30.0,
+                    "iva_pct": 21.0,
+                    "cliente": "Comunidad de Propietarios / Promotor",
+                    "concepto": f"Instalación de LGA {4}x{s_final_lga} mm² {lga_mat.upper()} ({lga_long} m) - ITC-BT-14",
+                    "filas_materiales": [
+                        {"mat": f"Conductor unipolar 0.6/1kV {lga_mat.upper()} {s_final_lga} mm² (3 Fases + 1 Neutro)", "cant": round(float(lga_long) * 4.0, 1), "unid": "m", "p_u": p_m_cond},
+                        {"mat": f"Tubo protector {tubo_diam} libre de halógenos enterrado/superficie", "cant": float(lga_long), "unid": "m", "p_u": coste_tubo_m},
+                        {"mat": f"Fusibles de cuchilla tipo gG de {in_lga_auto} A para CGP", "cant": 3.0, "unid": "ud", "p_u": 16.0},
+                        {"mat": "Terminales de compresión / bimetálicos y accesorios de fijación", "cant": 4.0, "unid": "ud", "p_u": 6.0}
+                    ]
+                }
+                herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_lga, modulo_nombre="Línea General Alimentación (LGA)", key_prefix="lga_hp")
+            except Exception as e:
+                st.info(f"Herramientas comerciales LGA disponibles: {e}")
+
+    with tab_lga4:
+        st.markdown('<div class="section-header-slate"><h4 style="margin:0; color:#334155;">🖨️ SECCIÓN 4: Generación de Reporte Técnico Oficial en PDF</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
             with st.expander("📄 Configurar Datos del Proyecto y Exportar PDF Profesional (ReportLab / Impresión)", expanded=True):
                 col_m1, col_m2 = st.columns(2)

@@ -423,6 +423,7 @@ def render_panel_herramientas_presupuesto(
 ):
     """
     Renderiza el panel comercial integral:
+    - Ajustes en tiempo real de márgenes (%) y precio/hora (€/h)
     - Balance Económico (Modo Empresa vs Modo Autónomo)
     - Semáforo de Negociación y Calculadora de Anticipo
     - Auditor de Contraofertas ("¿Pierdo dinero?")
@@ -430,18 +431,11 @@ def render_panel_herramientas_presupuesto(
     - Guardar, Recuperar, Editar y Duplicar Presupuesto
     """
     # Extracción de parámetros con valores por defecto seguros
-    coste_mat = float(datos_presupuesto.get("coste_materiales", 0.0))
-    margen_mat_pct = float(datos_presupuesto.get("margen_materiales_pct", 25.0))
-    benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
-    pvp_mat = round(coste_mat + benef_mat, 2)
-
-    horas_mo = float(datos_presupuesto.get("horas_mano_obra", 8.0))
-    precio_h_coste = float(datos_presupuesto.get("precio_hora_coste", 35.0))
-    coste_mo_directo = round(horas_mo * precio_h_coste, 2)
-
-    recargo_empresa_pct = float(datos_presupuesto.get("recargo_empresa_mo_pct", 40.0))
-    g_mo_empresa = round(coste_mo_directo * (recargo_empresa_pct / 100.0), 2)
-
+    coste_mat_orig = float(datos_presupuesto.get("coste_materiales", 0.0))
+    margen_mat_def = float(datos_presupuesto.get("margen_materiales_pct", 25.0))
+    horas_mo_def = float(datos_presupuesto.get("horas_mano_obra", 8.0))
+    precio_h_coste_def = float(datos_presupuesto.get("precio_hora_coste", 35.0))
+    recargo_emp_def = float(datos_presupuesto.get("recargo_empresa_mo_pct", 40.0))
     coste_tramitacion = float(datos_presupuesto.get("coste_tramitacion", 120.0))
     desplazamiento = float(datos_presupuesto.get("desplazamiento", 0.0))
     iva_pct = float(datos_presupuesto.get("iva_pct", 21.0))
@@ -449,23 +443,97 @@ def render_panel_herramientas_presupuesto(
     nom_cliente_def = datos_presupuesto.get("cliente", "Cliente Particular")
     nom_obra_def = datos_presupuesto.get("concepto", f"Presupuesto de {modulo_nombre}")
 
+    # Contenedor visual del panel comercial
+    st.markdown("---")
+    st.markdown(f"### 💼 Gestión Comercial, Balance y Auditor Financiero ({modulo_nombre})")
+    st.caption("Herramienta de control financiero para el instalador de calle: ajusta tus márgenes, compara tarifas Empresa vs. Autónomo y audita ofertas del cliente.")
+
+    # ---------------------------------------------------------------------
+    # AJUSTES INTERACTIVOS DE MÁRGENES Y MANO DE OBRA (ESTILO VIVIENDA)
+    # ---------------------------------------------------------------------
+    with st.expander("⚙️ Ajustar Márgenes Comerciales y Mano de Obra en Tiempo Real", expanded=True):
+        st.markdown("<div style='font-size:13.5px; color:#475569; margin-bottom:10px;'>Ajusta libremente tus márgenes y tu tarifa horaria para ver el impacto inmediato en el presupuesto, tus beneficios limpios y el semáforo comercial:</div>", unsafe_allow_html=True)
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        with col_m1:
+            margen_mat_pct = st.slider(
+                "📈 Margen s/ Materiales (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(margen_mat_def),
+                step=5.0,
+                key=f"{key_prefix}_slider_margen_mat",
+                help="Beneficio comercial que aplicas sobre el precio de compra en almacén (Obramat/distribuidor)."
+            )
+        with col_m2:
+            precio_h_coste = st.number_input(
+                "🔨 Tu Sueldo / Hora (€/h)",
+                min_value=15.0,
+                max_value=120.0,
+                value=float(precio_h_coste_def),
+                step=2.5,
+                key=f"{key_prefix}_num_precio_hora",
+                help="Tu retribución profesional limpia por hora trabajada en obra."
+            )
+        with col_m3:
+            horas_mo = st.number_input(
+                "⏱️ Horas de Trabajo (h)",
+                min_value=0.5,
+                max_value=300.0,
+                value=float(horas_mo_def),
+                step=0.5,
+                key=f"{key_prefix}_num_horas_mo",
+                help="Horas estimadas totales dedicadas al montaje e instalación física."
+            )
+        with col_m4:
+            recargo_empresa_pct = st.slider(
+                "🏢 Recargo Empresa MO (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(recargo_emp_def),
+                step=5.0,
+                key=f"{key_prefix}_slider_recargo_emp",
+                help="Sobrecoste de estructura, oficina y gestión para el Modo Empresa (G_mo)."
+            )
+
+        col_sub1, col_sub2 = st.columns([1.5, 2.5])
+        with col_sub1:
+            margen_mo_auto_pct = st.slider(
+                "👤 Margen Extra MO Autónomo (%)",
+                min_value=0.0,
+                max_value=float(max(recargo_empresa_pct, 50.0)),
+                value=0.0,
+                step=5.0,
+                key=f"{key_prefix}_slider_margen_auto",
+                help="Recargo extra sobre tu mano de obra para autónomo. En 0% (Modo Tutor puro) eres ultra competitivo cobrando tu jornal íntegro."
+            )
+        with col_sub2:
+            st.markdown(f"""
+            <div style="background-color:#f8fafc; border-left:3px solid #0284c7; padding:8px 12px; border-radius:4px; font-size:12.5px; color:#334155; margin-top:14px;">
+                <b>💡 Estrategia Tutor / Autónomo:</b> Al mantener el recargo MO en <b>{margen_mo_auto_pct:.0f}%</b>, garantizas cobrar el 100% de tus horas (<b>{horas_mo * precio_h_coste:,.2f} €</b>) y tu ganancia de materiales (<b>{coste_mat_orig * (margen_mat_pct / 100.0):,.2f} €</b>), ofreciendo un precio de calle que las constructoras no pueden igualar.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Recálculo dinámico con los parámetros interactivos
+    coste_mat = coste_mat_orig
+    benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
+    pvp_mat = round(coste_mat + benef_mat, 2)
+
+    coste_mo_directo = round(horas_mo * precio_h_coste, 2)
+    g_mo_empresa = round(coste_mo_directo * (recargo_empresa_pct / 100.0), 2)
+    g_mo_autonomo = round(coste_mo_directo * (margen_mo_auto_pct / 100.0), 2)
+
     # Totales Modo Empresa
     base_empresa = round(pvp_mat + coste_mo_directo + g_mo_empresa + coste_tramitacion + desplazamiento, 2)
     iva_empresa = round(base_empresa * (iva_pct / 100.0), 2)
     total_empresa = round(base_empresa + iva_empresa, 2)
 
-    # Totales Modo Autónomo (g_mo = 0)
-    base_autonomo = round(pvp_mat + coste_mo_directo + coste_tramitacion + desplazamiento, 2)
+    # Totales Modo Autónomo (g_mo ajustable)
+    base_autonomo = round(pvp_mat + coste_mo_directo + g_mo_autonomo + coste_tramitacion + desplazamiento, 2)
     iva_autonomo = round(base_autonomo * (iva_pct / 100.0), 2)
     total_autonomo = round(base_autonomo + iva_autonomo, 2)
 
     diferencia_ahorro = round(total_empresa - total_autonomo, 2)
-    sueldo_limpio_autonomo = round(coste_mo_directo + benef_mat + coste_tramitacion, 2)
-
-    # Contenedor visual del panel comercial
-    st.markdown("---")
-    st.markdown(f"### 💼 Gestión Comercial, Balance y Auditor Financiero ({modulo_nombre})")
-    st.caption("Herramienta de control financiero para el instalador de calle: compara tarifas, audita ofertas del cliente y genera listas de compra.")
+    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion, 2)
 
     tab_bal, tab_audit, tab_acopio, tab_guardar = st.tabs([
         "⚖️ Balance Económico (Empresa vs Autónomo)",
@@ -509,7 +577,7 @@ def render_panel_herramientas_presupuesto(
             {"Concepto Económico": "📦 1. Compra Materiales (Almacén)", "🏢 Empresa": f"{coste_mat:,.2f} €", "👤 Autónomo": f"{coste_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Salida de caja a Obramat/Leroy"},
             {"Concepto Económico": f"📈 2. Beneficio s/ Materiales ({margen_mat_pct:.0f}%)", "🏢 Empresa": f"{benef_mat:,.2f} €", "👤 Autónomo": f"{benef_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Ganancia limpia por suministrar material"},
             {"Concepto Económico": f"🔨 3. Tu Jornal Directo ({horas_mo:.1f}h x {precio_h_coste:.0f}€)", "🏢 Empresa": f"{coste_mo_directo:,.2f} €", "👤 Autónomo": f"{coste_mo_directo:,.2f} €", "Diferencia": "0,00 €", "Destino": "Tu sueldo profesional por trabajar"},
-            {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "👤 Autónomo": "0,00 €", "Diferencia": f"-{g_mo_empresa:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
+            {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}% vs {margen_mo_auto_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "👤 Autónomo": f"{g_mo_autonomo:,.2f} €", "Diferencia": f"-{g_mo_empresa - g_mo_autonomo:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
             {"Concepto Económico": "📋 5. Tramitación CIE / Boletín", "🏢 Empresa": f"{coste_tramitacion:,.2f} €", "👤 Autónomo": f"{coste_tramitacion:,.2f} €", "Diferencia": "0,00 €", "Destino": "Honorarios técnicos de legalización"},
         ]
         if desplazamiento > 0:
@@ -679,13 +747,26 @@ def render_panel_herramientas_presupuesto(
             tot_civa_g = total_autonomo if sel_modo_guardar == "Autónomo" else total_empresa
 
             if st.button("💾 Guardar en Base de Datos de Bolimur", type="primary", use_container_width=True, key=f"{key_prefix}_btn_guardar_bd"):
+                datos_guardar = dict(datos_presupuesto)
+                datos_guardar.update({
+                    "margen_materiales_pct": margen_mat_pct,
+                    "precio_hora_coste": precio_h_coste,
+                    "horas_mano_obra": horas_mo,
+                    "recargo_empresa_mo_pct": recargo_empresa_pct,
+                    "margen_mo_auto_pct": margen_mo_auto_pct,
+                    "base_empresa": base_empresa,
+                    "total_empresa": total_empresa,
+                    "base_autonomo": base_autonomo,
+                    "total_autonomo": total_autonomo,
+                    "sueldo_limpio_autonomo": sueldo_limpio_autonomo
+                })
                 ok, pid = guardar_presupuesto(
                     usuario_id=1,
                     cliente_id=None,
                     nombre_cliente=in_cli_pres,
                     nombre_presupuesto=in_nom_pres,
                     modulo_origen=modulo_nombre,
-                    datos_presupuesto=datos_presupuesto,
+                    datos_presupuesto=datos_guardar,
                     estado="Pendiente",
                     total_sin_iva=tot_siva_g,
                     total_con_iva=tot_civa_g,
