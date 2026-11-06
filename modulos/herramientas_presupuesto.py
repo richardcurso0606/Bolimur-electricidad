@@ -1065,20 +1065,22 @@ def render_panel_herramientas_presupuesto(
         for idx_po, part in enumerate(partidas_activas_ordenadas, start=1):
             col_po1, col_po2, col_po3, col_po4 = st.columns([2.8, 3.4, 1.6, 1.2])
             with col_po1:
-                st.markdown(f"**PART. {idx_po:02d}: {part.get('icono', '📌')} {part.get('concepto', 'Partida')}**")
+                st.markdown(f'<div translate="no" class="notranslate" style="font-weight:700; font-size:14px;">PART. {idx_po:02d}: {part.get("icono", "📌")} {part.get("concepto", "Partida")}</div>', unsafe_allow_html=True)
             with col_po2:
                 desc_p = str(part.get('desc', ''))
-                st.caption(desc_p[:65] + ("..." if len(desc_p) > 65 else ""))
+                txt_corta = desc_p[:65] + ("..." if len(desc_p) > 65 else "")
+                st.markdown(f'<div translate="no" class="notranslate" style="font-size:12.5px; color:#64748b; line-height:1.3;">{txt_corta}</div>', unsafe_allow_html=True)
             with col_po3:
                 try:
                     imp_a = float(part.get('importe_auto', 0.0) or 0.0)
                     imp_e = float(part.get('importe_emp', 0.0) or 0.0)
                     if round(imp_a, 2) == round(imp_e, 2):
-                        st.markdown(f"**{imp_a:,.2f} €**")
+                        txt_p_fmt = f"{imp_a:,.2f} €"
                     else:
-                        st.markdown(f"Aut: **{imp_a:,.2f} €** | Emp: **{imp_e:,.2f} €**")
+                        txt_p_fmt = f"Aut: {imp_a:,.2f} € | Emp: {imp_e:,.2f} €"
+                    st.markdown(f'<div translate="no" class="notranslate" style="font-weight:700; color:#0f172a; font-size:13.5px;">{txt_p_fmt}</div>', unsafe_allow_html=True)
                 except Exception:
-                    st.markdown("**0,00 €**")
+                    st.markdown('<div translate="no" class="notranslate" style="font-weight:700; color:#0f172a; font-size:13.5px;">0,00 €</div>', unsafe_allow_html=True)
             with col_po4:
                 col_sub_u, col_sub_d, col_sub_del = st.columns(3)
                 with col_sub_u:

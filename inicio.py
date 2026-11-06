@@ -7,6 +7,24 @@ import os
 
 st.set_page_config(page_title="Bolimur - Cálculos Eléctricos REBT", page_icon="⚡", layout="wide")
 
+# Prevenir que el traductor automático del navegador corrompa el DOM de React (NotFoundError: removeChild)
+st.markdown("""
+<script>
+    try {
+        document.documentElement.lang = "es";
+        document.documentElement.classList.add("notranslate");
+        document.documentElement.setAttribute("translate", "no");
+        if (!document.querySelector('meta[name="google"][content="notranslate"]')) {
+            var m = document.createElement('meta');
+            m.name = "google";
+            m.content = "notranslate";
+            document.head.appendChild(m);
+        }
+    } catch(e) {}
+</script>
+<meta name="google" content="notranslate" />
+""", unsafe_allow_html=True)
+
 # =========================================================================
 # IMPORTACIÓN SEGURA DE MÓDULOS
 # =========================================================================
