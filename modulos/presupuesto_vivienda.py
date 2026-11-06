@@ -2270,6 +2270,7 @@ def app():
 
         p_int, prov_int, desc_int, ok_int, fila_int = buscar_mecanismo_por_filtro(df_precios, 'interruptor', modo_seleccion, serie_mecanismos)
         p_schuko, prov_schuko, desc_schuko, ok_schuko, fila_schuko = buscar_mecanismo_por_filtro(df_precios, 'schuko', modo_seleccion, serie_mecanismos)
+        prov_mecanismo = prov_schuko
         p_rj45, prov_rj45, desc_rj45, ok_rj45, fila_rj45 = buscar_mecanismo_por_filtro(df_precios, 'rj45', modo_seleccion, serie_mecanismos)
         p_tv, prov_tv, desc_tv, ok_tv, fila_tv = buscar_mecanismo_por_filtro(df_precios, 'tv', modo_seleccion, serie_mecanismos)
         p_marco, prov_marco, desc_marco, ok_marco, fila_marco = buscar_mecanismo_por_filtro(df_precios, 'marco', modo_seleccion, serie_mecanismos)
@@ -2559,6 +2560,9 @@ def app():
                 "cable_25_tt": est_25_tt,
                 "cable_utp": est_utp
             })
+
+        df_comercial = pd.DataFrame(comercial_estancias)
+        coste_mano_obra_hora = precio_hora
 
         # Cómputo de tubos y cables adicionales para Climatización C9
         m_cable_60_c9 = 0.0
@@ -3108,7 +3112,7 @@ def app():
             categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
                 "articulo": f"Mecanismos Toma R-TV / SAT Final Separadora ({serie_mecanismos})",
                 "desc_exacta": f"Toma Final RTV-SAT Blindada Conector CEI 9.5 mm Serie {serie_mecanismos}",
-                "proveedor": prov_mecanismo,
+                "proveedor": prov_tv,
                 "cantidad": tot_tomas_tv_tot,
                 "unidad": "ud",
                 "precio_unitario": 8.90,
@@ -3121,7 +3125,7 @@ def app():
             categorias_orden_compra["📡 4. Telecomunicaciones (ICT-2 RD 346/2011 & RTR)"].append({
                 "articulo": f"Mecanismos Toma Red RJ45 Hembra Cat.6 Keystone con Tapa ({serie_mecanismos})",
                 "desc_exacta": f"Conector RJ45 Hembra Cat.6 UTP + Frontal/Tapa Serie {serie_mecanismos}",
-                "proveedor": prov_mecanismo,
+                "proveedor": prov_rj45,
                 "cantidad": tot_tomas_rj_tot,
                 "unidad": "ud",
                 "precio_unitario": 9.50,
@@ -4673,35 +4677,7 @@ def app():
                     with col_jauto3:
                         st.success(f"💶 **Total Mano de Obra Cuadrilla:**  \n**{coste_mano_obra_bruto:,.2f} €** ({dias_estimados:.1f} días | {horas_totales_obra:.0f} h totales)")
 
-                # =========================================================================
-                # DESGLOSE DE PUNTOS POR ESTANCIAS Y ORIGEN DE CIFRAS (MODO AUTÓNOMO)
-                # =========================================================================
-                st.markdown("---")
-                render_resumen_estancias_glance(
-                    df_comercial_auto if 'df_comercial_auto' in locals() and df_comercial_auto else comercial_estancias,
-                    titulo_modo="Modo Autónomo (Sin Recargo MO)",
-                    precio_pto_pared_ref=precio_pto_pared_siva_auto,
-                    es_autonomo=True
-                )
-
-                render_explicacion_origen_cifras_puntos(
-                    total_puntos=total_puntos_mecanismos,
-                    p_pared_emp=precio_pto_pared_siva,
-                    p_pared_auto=precio_pto_pared_siva_auto,
-                    p_global_emp=precio_medio_por_punto,
-                    p_global_auto=precio_pto_total_auto,
-                    cgmp_total=venta_cap1_cgmp,
-                    teleco_total=venta_cap_teleco,
-                    cie_total=venta_cap5_boletin,
-                    total_obra_emp=total_calc,
-                    total_obra_auto=total_calc_auto,
-                    iva_sel=iva_sel
-                )
-
-                # Generación del Presupuesto Oficial Modo Autónomo
-                st.markdown("---")
-                st.markdown("#### 📄 Documentos Oficiales Modo Autónomo para el Cliente:")
-
+                # Cálculo previo de capítulos y estancias ajustadas para Modo Autónomo
                 capitulos_auto = []
                 caps_obra = [c for c in capitulos_presupuesto if c.get("cap") in ["CAP. 01", "CAP. 02", "CAP. 03", "CAP. 04", "CAP. 05"]]
                 suma_caps_obra = sum(c.get("importe", 0.0) for c in caps_obra)
@@ -4739,6 +4715,35 @@ def app():
                         df_comercial_auto.append(r_dict)
                 else:
                     df_comercial_auto = comercial_estancias
+
+                # =========================================================================
+                # DESGLOSE DE PUNTOS POR ESTANCIAS Y ORIGEN DE CIFRAS (MODO AUTÓNOMO)
+                # =========================================================================
+                st.markdown("---")
+                render_resumen_estancias_glance(
+                    df_comercial_auto,
+                    titulo_modo="Modo Autónomo (Sin Recargo MO)",
+                    precio_pto_pared_ref=precio_pto_pared_siva_auto,
+                    es_autonomo=True
+                )
+
+                render_explicacion_origen_cifras_puntos(
+                    total_puntos=total_puntos_mecanismos,
+                    p_pared_emp=precio_pto_pared_siva,
+                    p_pared_auto=precio_pto_pared_siva_auto,
+                    p_global_emp=precio_medio_por_punto,
+                    p_global_auto=precio_pto_total_auto,
+                    cgmp_total=venta_cap1_cgmp,
+                    teleco_total=venta_cap_teleco,
+                    cie_total=venta_cap5_boletin,
+                    total_obra_emp=total_calc,
+                    total_obra_auto=total_calc_auto,
+                    iva_sel=iva_sel
+                )
+
+                # Generación del Presupuesto Oficial Modo Autónomo
+                st.markdown("---")
+                st.markdown("#### 📄 Documentos Oficiales Modo Autónomo para el Cliente:")
 
                 pdf_bytes_auto = pdf_presupuesto.generar_pdf_presupuesto(
                     proyecto_info={
