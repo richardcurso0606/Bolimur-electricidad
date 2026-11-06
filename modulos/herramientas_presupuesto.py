@@ -840,7 +840,7 @@ def render_panel_herramientas_presupuesto(
                 help="Desmarca esta casilla con la X para que no figure desplazamiento ni se cobre al cliente."
             )
             if inc_desp:
-                val_desp_base = st.number_input(
+                val_desp_input = st.number_input(
                     "🚗 Importe Desplazamiento (€) [Aumenta en ambos: Empresa y Autónomo]:",
                     min_value=0.0,
                     max_value=3000.0,
@@ -849,16 +849,19 @@ def render_panel_herramientas_presupuesto(
                     key=f"{key_prefix}_num_desp_base",
                     help="Al modificar este importe se incrementa directamente en la columna de Empresa y en la de Autónomo."
                 )
+                val_desp_base = float(val_desp_input) if val_desp_input is not None else 0.0
                 dif_desp = st.checkbox("Diferenciar tarifa de desplazamiento para Empresa", value=False, key=f"{key_prefix}_chk_dif_desp")
                 if dif_desp:
                     col_dd1, col_dd2 = st.columns(2)
                     with col_dd1:
-                        desplazamiento_emp = st.number_input("🏢 Desplazamiento Empresa (€):", min_value=0.0, value=float(val_desp_base * 1.3), step=5.0, key=f"{key_prefix}_num_desp_emp")
+                        desp_emp_in = st.number_input("🏢 Desplazamiento Empresa (€):", min_value=0.0, value=float(val_desp_base * 1.3), step=5.0, key=f"{key_prefix}_num_desp_emp")
+                        desplazamiento_emp = float(desp_emp_in) if desp_emp_in is not None else val_desp_base
                     with col_dd2:
-                        desplazamiento_auto = st.number_input("🧑‍🔧 Desplazamiento Autónomo (€):", min_value=0.0, value=float(val_desp_base), step=5.0, key=f"{key_prefix}_num_desp_auto")
+                        desp_auto_in = st.number_input("🧑‍🔧 Desplazamiento Autónomo (€):", min_value=0.0, value=float(val_desp_base), step=5.0, key=f"{key_prefix}_num_desp_auto")
+                        desplazamiento_auto = float(desp_auto_in) if desp_auto_in is not None else val_desp_base
                 else:
-                    desplazamiento_emp = val_desp_base
-                    desplazamiento_auto = val_desp_base
+                    desplazamiento_emp = float(val_desp_base)
+                    desplazamiento_auto = float(val_desp_base)
             else:
                 desplazamiento_emp = 0.0
                 desplazamiento_auto = 0.0
@@ -872,7 +875,7 @@ def render_panel_herramientas_presupuesto(
                 help="Desmarca esta casilla con la X si el cliente ya dispone de boletín o si no te vas a encargar de tramitarlo ante Industria / SIEM."
             )
             if inc_cie:
-                val_cie_base = st.number_input(
+                val_cie_input = st.number_input(
                     "📋 Importe Tramitación SIEM / CIE (€) [Aplica en ambos: Empresa y Autónomo]:",
                     min_value=0.0,
                     max_value=3000.0,
@@ -881,16 +884,19 @@ def render_panel_herramientas_presupuesto(
                     key=f"{key_prefix}_num_cie_base",
                     help="Honorarios de visado y presentación oficial ante Industria / SIEM."
                 )
+                val_cie_base = float(val_cie_input) if val_cie_input is not None else 0.0
                 dif_cie = st.checkbox("Diferenciar tarifa de tramitación para Empresa", value=False, key=f"{key_prefix}_chk_dif_cie")
                 if dif_cie:
                     col_cc1, col_cc2 = st.columns(2)
                     with col_cc1:
-                        coste_tramitacion_emp = st.number_input("🏢 SIEM Empresa (€):", min_value=0.0, value=float(val_cie_base * 1.25), step=10.0, key=f"{key_prefix}_num_cie_emp")
+                        cie_emp_in = st.number_input("🏢 SIEM Empresa (€):", min_value=0.0, value=float(val_cie_base * 1.25), step=10.0, key=f"{key_prefix}_num_cie_emp")
+                        coste_tramitacion_emp = float(cie_emp_in) if cie_emp_in is not None else val_cie_base
                     with col_cc2:
-                        coste_tramitacion_auto = st.number_input("🧑‍🔧 SIEM Autónomo (€):", min_value=0.0, value=float(val_cie_base), step=10.0, key=f"{key_prefix}_num_cie_auto")
+                        cie_auto_in = st.number_input("🧑‍🔧 SIEM Autónomo (€):", min_value=0.0, value=float(val_cie_base), step=10.0, key=f"{key_prefix}_num_cie_auto")
+                        coste_tramitacion_auto = float(cie_auto_in) if cie_auto_in is not None else val_cie_base
                 else:
-                    coste_tramitacion_emp = val_cie_base
-                    coste_tramitacion_auto = val_cie_base
+                    coste_tramitacion_emp = float(val_cie_base)
+                    coste_tramitacion_auto = float(val_cie_base)
             else:
                 coste_tramitacion_emp = 0.0
                 coste_tramitacion_auto = 0.0
@@ -1059,39 +1065,48 @@ def render_panel_herramientas_presupuesto(
         for idx_po, part in enumerate(partidas_activas_ordenadas, start=1):
             col_po1, col_po2, col_po3, col_po4 = st.columns([2.8, 3.4, 1.6, 1.2])
             with col_po1:
-                st.markdown(f"**PART. {idx_po:02d}: {part['icono']} {part['concepto']}**")
+                st.markdown(f"**PART. {idx_po:02d}: {part.get('icono', '📌')} {part.get('concepto', 'Partida')}**")
             with col_po2:
-                st.caption(part['desc'][:65] + ("..." if len(part['desc']) > 65 else ""))
+                desc_p = str(part.get('desc', ''))
+                st.caption(desc_p[:65] + ("..." if len(desc_p) > 65 else ""))
             with col_po3:
-                imp_a = part['importe_auto']
-                imp_e = part['importe_emp']
-                if imp_a == imp_e:
-                    st.markdown(f"**{imp_a:,.2f} €**")
-                else:
-                    st.markdown(f"Aut: **{imp_a:,.2f} €** | Emp: **{imp_e:,.2f} €**")
+                try:
+                    imp_a = float(part.get('importe_auto', 0.0) or 0.0)
+                    imp_e = float(part.get('importe_emp', 0.0) or 0.0)
+                    if round(imp_a, 2) == round(imp_e, 2):
+                        st.markdown(f"**{imp_a:,.2f} €**")
+                    else:
+                        st.markdown(f"Aut: **{imp_a:,.2f} €** | Emp: **{imp_e:,.2f} €**")
+                except Exception:
+                    st.markdown("**0,00 €**")
             with col_po4:
                 col_sub_u, col_sub_d, col_sub_del = st.columns(3)
                 with col_sub_u:
-                    if st.button("⬆️", key=f"{key_prefix}_btn_up_part_{part['id']}", disabled=(idx_po == 1), help="Subir una posición hacia adelante"):
-                        curr_sec = st.session_state[key_sec_part]
-                        idx_in_sec = curr_sec.index(part['id'])
-                        prev_pid = partidas_activas_ordenadas[idx_po - 2]['id']
-                        prev_in_sec = curr_sec.index(prev_pid)
-                        curr_sec[idx_in_sec], curr_sec[prev_in_sec] = curr_sec[prev_in_sec], curr_sec[idx_in_sec]
-                        st.rerun()
+                    if st.button("⬆️", key=f"{key_prefix}_btn_up_part_{part.get('id', idx_po)}", disabled=(idx_po == 1), help="Subir una posición hacia adelante"):
+                        curr_sec = st.session_state.get(key_sec_part, [])
+                        if part.get('id') in curr_sec and (idx_po - 2) >= 0:
+                            prev_pid = partidas_activas_ordenadas[idx_po - 2].get('id')
+                            if prev_pid in curr_sec:
+                                idx_in_sec = curr_sec.index(part['id'])
+                                prev_in_sec = curr_sec.index(prev_pid)
+                                curr_sec[idx_in_sec], curr_sec[prev_in_sec] = curr_sec[prev_in_sec], curr_sec[idx_in_sec]
+                                st.rerun()
                 with col_sub_d:
-                    if st.button("⬇️", key=f"{key_prefix}_btn_dn_part_{part['id']}", disabled=(idx_po == len(partidas_activas_ordenadas)), help="Bajar una posición hacia atrás"):
-                        curr_sec = st.session_state[key_sec_part]
-                        idx_in_sec = curr_sec.index(part['id'])
-                        next_pid = partidas_activas_ordenadas[idx_po]['id']
-                        next_in_sec = curr_sec.index(next_pid)
-                        curr_sec[idx_in_sec], curr_sec[next_in_sec] = curr_sec[next_in_sec], curr_sec[idx_in_sec]
-                        st.rerun()
+                    if st.button("⬇️", key=f"{key_prefix}_btn_dn_part_{part.get('id', idx_po)}", disabled=(idx_po == len(partidas_activas_ordenadas)), help="Bajar una posición hacia atrás"):
+                        curr_sec = st.session_state.get(key_sec_part, [])
+                        if part.get('id') in curr_sec and idx_po < len(partidas_activas_ordenadas):
+                            next_pid = partidas_activas_ordenadas[idx_po].get('id')
+                            if next_pid in curr_sec:
+                                idx_in_sec = curr_sec.index(part['id'])
+                                next_in_sec = curr_sec.index(next_pid)
+                                curr_sec[idx_in_sec], curr_sec[next_in_sec] = curr_sec[next_in_sec], curr_sec[idx_in_sec]
+                                st.rerun()
                 with col_sub_del:
-                    if part['tipo'] == "personalizada":
-                        if st.button("🗑️", key=f"{key_prefix}_btn_del_part_{part['id']}", help="Eliminar esta partida"):
-                            st.session_state[key_sec_part].remove(part['id'])
-                            if part['id'] in st.session_state[key_dict_extra]:
+                    if part.get('tipo') == "personalizada":
+                        if st.button("🗑️", key=f"{key_prefix}_btn_del_part_{part.get('id', idx_po)}", help="Eliminar esta partida"):
+                            if part.get('id') in st.session_state.get(key_sec_part, []):
+                                st.session_state[key_sec_part].remove(part['id'])
+                            if part.get('id') in st.session_state.get(key_dict_extra, {}):
                                 del st.session_state[key_dict_extra][part['id']]
                             st.rerun()
 
