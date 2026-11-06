@@ -1736,7 +1736,7 @@ def renderizar():
                     "margen_materiales_pct": 25.0,
                     "horas_mano_obra": horas_mo_val,
                     "precio_hora_coste": precio_hora_mo,
-                    "recargo_empresa_mo_pct": 40.0,
+                    "recargo_empresa_mo_pct": 35.0,
                     "coste_tramitacion": 0.0,
                     "desplazamiento": desp_calc,
                     "iva_pct": iva_pct,
