@@ -18,19 +18,21 @@ from reportlab.pdfgen import canvas
 def _limpiar_texto(txt):
     if not txt:
         return ""
-    # Reemplazar emojis o caracteres no compatibles con fuentes estándar
+    # Reemplazar emojis o caracteres no compatibles con fuentes estándar Helvetica
     s = str(txt)
     reemplazos = {
         "🏢": "", "🧑‍🔧": "", "👤": "", "🔨": "", "📦": "", "📈": "", "📋": "", "🚗": "",
         "🚦": "", "🟢": "", "🔵": "", "🔴": "", "💰": "", "💶": "", "💵": "", "⚡": "",
         "🔌": "", "🏠": "", "📐": "", "🛋️": "", "🍳": "", "🛏️": "", "🚿": "", "🚪": "",
-        "🌅": "", "🧺": "", "🔑": "", "📦": "", "🛡️": "", "📡": "", "🏆": "", "🏁": "",
+        "🌅": "", "🧺": "", "🔑": "", "🛡️": "", "📡": "", "🏆": "", "🏁": "", "🌐": "", "🏪": "",
         "🏛️": "", "🏷️": "", "🔍": "", "👁️": "", "✅": "", "⚠️": "", "❌": "", "🎯": "",
         "🛒": "", "📂": "", "📲": "", "💳": "", "✨": "", "•": "-"
     }
     for k, v in reemplazos.items():
         s = s.replace(k, v)
-    return s.strip()
+    # Filtrar caracteres fuera de latin-1 para compatibilidad garantizada con ReportLab
+    s_clean = "".join(c for c in s if ord(c) < 256)
+    return s_clean.strip()
 
 class NumberedCanvasComercial(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -201,33 +203,47 @@ def generar_pdf_oferta_comercial(proyecto_info: dict, presupuesto_data: dict, mo
     items_presupuesto = presupuesto_data.get("partidas", [])
     if not items_presupuesto:
         # Partidas estándar automáticas del balance
-        items_presupuesto = [
-            {
-                "num": "PART. 01",
+        items_presupuesto = []
+        part_idx = 1
+        coste_mat_val = float(presupuesto_data.get("coste_materiales_venta", presupuesto_data.get("coste_materiales", 0.0)))
+        if coste_mat_val > 0:
+            items_presupuesto.append({
+                "num": f"PART. {part_idx:02d}",
                 "titulo": "Materiales Normalizados y Canalización",
                 "desc": f"Suministro de materiales homologados conforme a REBT ({_limpiar_texto(presupuesto_data.get('detalle_materiales', 'Cables libres de halogenos, tubo corrugado M25/M32 e hilo telegestion'))}).",
-                "importe": float(presupuesto_data.get("coste_materiales_venta", presupuesto_data.get("coste_materiales", 0.0)))
-            },
-            {
-                "num": "PART. 02",
+                "importe": coste_mat_val
+            })
+            part_idx += 1
+
+        coste_mo_val = float(presupuesto_data.get("coste_mo_venta", 0.0))
+        if coste_mo_val > 0:
+            items_presupuesto.append({
+                "num": f"PART. {part_idx:02d}",
                 "titulo": "Mano de Obra Especializada y Montaje",
                 "desc": f"Tendido, fijacion y conexionado profesional ({presupuesto_data.get('horas_mo', 6.0):.1f} horas estimadas de instalador cualificado).",
-                "importe": float(presupuesto_data.get("coste_mo_venta", 0.0))
-            },
-            {
-                "num": "PART. 03",
-                "titulo": "Ensayos ITC-BT-05 y Certificado CIE",
-                "desc": "Medidas de aislamiento con megohmetro, continuidad, disparo diferencial y tramitacion oficial de boletin electrico ante Industria.",
-                "importe": float(presupuesto_data.get("coste_tramitacion", 150.0))
-            }
-        ]
-        if float(presupuesto_data.get("desplazamiento", 0.0)) > 0:
+                "importe": coste_mo_val
+            })
+            part_idx += 1
+
+        coste_tram_val = float(presupuesto_data.get("coste_tramitacion", 0.0))
+        if coste_tram_val > 0:
             items_presupuesto.append({
-                "num": "PART. 04",
+                "num": f"PART. {part_idx:02d}",
+                "titulo": "Ensayos ITC-BT-05 y Certificado CIE / SIEM",
+                "desc": "Medidas de aislamiento con megohmetro, continuidad, disparo diferencial y tramitacion oficial de boletin electrico ante Industria / SIEM.",
+                "importe": coste_tram_val
+            })
+            part_idx += 1
+
+        desp_val = float(presupuesto_data.get("desplazamiento", 0.0))
+        if desp_val > 0:
+            items_presupuesto.append({
+                "num": f"PART. {part_idx:02d}",
                 "titulo": "Desplazamiento y Medios Auxiliares",
                 "desc": "Vehiculo de taller, acopio y portes al centro de trabajo.",
-                "importe": float(presupuesto_data.get("desplazamiento", 0.0))
+                "importe": desp_val
             })
+            part_idx += 1
 
     for p in items_presupuesto:
         num_str = p.get("num") or p.get("cap") or "PART."
@@ -381,7 +397,8 @@ def generar_pdf_lista_materiales_almacen(proyecto_info: dict, filas_materiales: 
         Paragraph("<b>Cant.</b>", bold_style),
         Paragraph("<b>Unid.</b>", bold_style),
         Paragraph("<b>Denominacion del Material / Articulo</b>", bold_style),
-        Paragraph("<b>P. Unit Aprox</b>", ParagraphStyle('R_pu', parent=bold_style, alignment=2)),
+        Paragraph("<b>Donde Comprar (Proveedor)</b>", bold_style),
+        Paragraph("<b>P. Unit</b>", ParagraphStyle('R_pu', parent=bold_style, alignment=2)),
         Paragraph("<b>Subtotal Est.</b>", ParagraphStyle('R_sub', parent=bold_style, alignment=2))
     ]
     filas_tabla = [cabecera]
@@ -392,17 +409,25 @@ def generar_pdf_lista_materiales_almacen(proyecto_info: dict, filas_materiales: 
         c_unid = _limpiar_texto(m.get("unid") or m.get("unidad") or "ud")
         c_pu = float(m.get("p_u") or m.get("precio_ud") or m.get("precio") or 0.0)
         c_sub = float(c_cant) * c_pu
+        
+        c_prov = _limpiar_texto(m.get("proveedor") or m.get("tienda") or m.get("donde_comprar") or "Obramat / Almacen")
+        c_sku = _limpiar_texto(m.get("sku") or m.get("ref") or "")
+        if c_sku and c_sku != "S/Ref":
+            txt_prov = f"<b>{c_prov}</b><br/><font size=7 color='#64748b'>Ref: {c_sku}</font>"
+        else:
+            txt_prov = f"<b>{c_prov}</b>"
 
         filas_tabla.append([
             Paragraph("[  ]", ParagraphStyle('Chk_b', parent=bold_style, alignment=1, fontSize=11)),
             Paragraph(f"{c_cant}", norm_style),
             Paragraph(c_unid, norm_style),
             Paragraph(c_nom, norm_style),
+            Paragraph(txt_prov, desc_style),
             Paragraph(f"{c_pu:,.2f} €", ParagraphStyle('R_val_pu', parent=norm_style, alignment=2)),
             Paragraph(f"{c_sub:,.2f} €", ParagraphStyle('R_val_sb', parent=norm_style, alignment=2))
         ])
 
-    t_items = Table(filas_tabla, colWidths=[1.4*cm, 1.4*cm, 1.4*cm, 9.4*cm, 2.2*cm, 2.2*cm])
+    t_items = Table(filas_tabla, colWidths=[1.2*cm, 1.2*cm, 1.2*cm, 7.2*cm, 3.6*cm, 1.8*cm, 1.8*cm])
     t_items.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#0284c7")),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),

@@ -10,6 +10,8 @@ Proporciona:
 7. Aviso de Material Faltante con guardado automático en Base de Datos.
 """
 
+import os
+import re
 import json
 import datetime
 import urllib.parse
@@ -37,6 +39,17 @@ def guardar_material_personalizado(nombre: str, precio_coste: float, unidad: str
         conn = db_manager.obtener_conexion()
         cursor = conn.cursor()
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS materiales_personalizados (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT UNIQUE NOT NULL,
+                precio_coste REAL NOT NULL,
+                unidad TEXT DEFAULT 'ud',
+                proveedor TEXT DEFAULT 'Obramat',
+                categoria TEXT DEFAULT 'General',
+                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
             INSERT INTO materiales_personalizados (nombre, precio_coste, unidad, proveedor, categoria, fecha_actualizacion)
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(nombre) DO UPDATE SET 
@@ -59,6 +72,17 @@ def buscar_material_personalizado(nombre: str) -> Optional[Dict[str, Any]]:
     try:
         conn = db_manager.obtener_conexion()
         cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS materiales_personalizados (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT UNIQUE NOT NULL,
+                precio_coste REAL NOT NULL,
+                unidad TEXT DEFAULT 'ud',
+                proveedor TEXT DEFAULT 'Obramat',
+                categoria TEXT DEFAULT 'General',
+                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         nom_clean = nombre.strip().lower()
         cursor.execute("SELECT id, nombre, precio_coste, unidad, proveedor, categoria FROM materiales_personalizados")
         filas = cursor.fetchall()
@@ -77,6 +101,97 @@ def buscar_material_personalizado(nombre: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         print(f"Error al buscar material personalizado: {e}")
         return None
+
+
+@st.cache_data(show_spinner=False)
+def cargar_base_datos_oficial_excel():
+    """Carga y cachea en memoria la base de datos oficial de materiales de almacén (base_datos_precio_oficial.xlsx)."""
+    rutas = [
+        "base_datos_precio_oficial.xlsx",
+        os.path.join(os.path.dirname(__file__), "..", "base_datos_precio_oficial.xlsx"),
+        os.path.join(os.getcwd(), "base_datos_precio_oficial.xlsx")
+    ]
+    for r in rutas:
+        if os.path.exists(r):
+            try:
+                import pandas as pd
+                df = pd.read_excel(r)
+                return df
+            except Exception as e:
+                print(f"Error cargando base_datos_precio_oficial.xlsx: {e}")
+    return None
+
+
+def vincular_materiales_con_bd(filas_materiales: list) -> list:
+    """
+    Cruza cada partida técnica con la base de datos oficial de almacén (base_datos_precio_oficial.xlsx)
+    y los materiales personalizados de SQLite. Determina proveedor (Obramat, Leroy Merlin, etc.),
+    código SKU, estado de registro y genera enlaces de búsqueda para partidas con tarifa web.
+    """
+    df_oficial = cargar_base_datos_oficial_excel()
+    lista_vinculada = []
+
+    for idx, m in enumerate(filas_materiales):
+        item = dict(m)
+        c_nom = item.get("mat") or item.get("concepto") or item.get("nombre") or f"Partida {idx+1}"
+        c_cant = float(item.get("cant") or item.get("cantidad") or 1.0)
+        c_unid = item.get("unid") or item.get("unidad") or "ud"
+        c_pu_orig = float(item.get("p_u") or item.get("precio_ud") or item.get("precio") or 0.0)
+
+        # 1. Comprobar en SQLite de materiales personalizados del instalador
+        mat_sql = buscar_material_personalizado(c_nom)
+        if mat_sql:
+            item["en_bd"] = True
+            item["proveedor"] = mat_sql.get("proveedor", "Obramat")
+            item["sku"] = f"BD-SQL#{mat_sql['id']}"
+            item["estado_bd"] = f"✅ Registrado en tu BD ({item['proveedor']})"
+            item["p_u"] = mat_sql.get("precio_coste", c_pu_orig)
+            item["subtotal"] = round(c_cant * float(item["p_u"]), 2)
+            lista_vinculada.append(item)
+            continue
+
+        # 2. Comprobar en base de datos oficial Excel
+        encontrado_excel = False
+        if df_oficial is not None and not df_oficial.empty:
+            nom_clean = c_nom.lower()
+            palabras = [w for w in re.split(r'[\s,/\-\+]+', nom_clean) if len(w) > 2 and w not in ['para', 'con', 'del', 'los', 'las', 'por', 'libre', 'mm2', 'mm²']]
+
+            mejor_fila = None
+            max_score = 0
+            for _, row in df_oficial.iterrows():
+                desc = str(row.get('Descripción Exacta del Artículo', '')).lower() + ' ' + str(row.get('Observaciones / Aplicación Técnica', '')).lower()
+                sc = sum(1 for p in palabras if p in desc)
+                if sc > max_score and sc >= min(2, len(palabras)):
+                    max_score = sc
+                    mejor_fila = row
+
+            if mejor_fila is not None:
+                tienda = str(mejor_fila.get('Proveedor / Tienda', 'Obramat'))
+                item["en_bd"] = True
+                item["proveedor"] = tienda
+                item["sku"] = str(mejor_fila.get('Código SKU / Ref', 'S/Ref'))
+                item["estado_bd"] = f"✅ En BD Oficial ({tienda})"
+                if c_pu_orig <= 0:
+                    item["p_u"] = float(mejor_fila.get('Precio S/IVA (€)', 0.0))
+                else:
+                    item["p_u"] = c_pu_orig
+                item["subtotal"] = round(c_cant * float(item["p_u"]), 2)
+                item["articulo_oficial"] = str(mejor_fila.get('Descripción Exacta del Artículo', ''))
+                encontrado_excel = True
+
+        if not encontrado_excel:
+            item["en_bd"] = False
+            item["proveedor"] = "🌐 Tarifa Web / Almacén"
+            item["sku"] = "S/Ref"
+            item["estado_bd"] = "⚠️ No en BD (Tarifa Web Estimada)"
+            item["p_u"] = c_pu_orig
+            item["subtotal"] = round(c_cant * c_pu_orig, 2)
+            item["url_google"] = f"https://www.google.com/search?q=comprar+material+electrico+{urllib.parse.quote_plus(c_nom)}"
+            item["url_obramat"] = f"https://www.obramat.es/catalogsearch/result/?q={urllib.parse.quote_plus(c_nom)}"
+
+        lista_vinculada.append(item)
+
+    return lista_vinculada
 
 
 # =========================================================================
@@ -518,6 +633,54 @@ def render_panel_herramientas_presupuesto(
             </div>
             """, unsafe_allow_html=True)
 
+        st.markdown("---")
+        st.markdown("##### ✏️ Personalizar y Modificar Partidas de Obra (Boletín CIE / SIEM y Desplazamiento)")
+        col_part1, col_part2 = st.columns(2)
+        with col_part1:
+            inc_tramitacion = st.checkbox(
+                "📋 Incluir Tramitación CIE / Boletín / SIEM",
+                value=(coste_tramitacion > 0),
+                key=f"{key_prefix}_chk_inc_cie",
+                help="Desmarca si el cliente ya dispone de boletín o si no te vas a encargar de tramitarlo ante Industria / SIEM."
+            )
+            if inc_tramitacion:
+                coste_tramitacion_real = st.number_input(
+                    "Importe Tramitación / SIEM (€):",
+                    min_value=0.0,
+                    max_value=3000.0,
+                    value=float(coste_tramitacion) if coste_tramitacion > 0 else 120.0,
+                    step=10.0,
+                    key=f"{key_prefix}_num_cie_val",
+                    help="Honorarios profesionales y tasas de visado / Industria por expedir el CIE."
+                )
+            else:
+                coste_tramitacion_real = 0.0
+                st.caption("ℹ️ *Partida de Boletín/SIEM desactivada (0,00 €). No se facturará al cliente.*")
+
+        with col_part2:
+            inc_desplazamiento = st.checkbox(
+                "🚗 Incluir Desplazamiento y Dietas de Obra",
+                value=(desplazamiento > 0),
+                key=f"{key_prefix}_chk_inc_desp",
+                help="Marca para repercutir kilometraje, furgoneta o dietas de desplazamiento."
+            )
+            if inc_desplazamiento:
+                desplazamiento_real = st.number_input(
+                    "Importe Desplazamiento / Portes (€):",
+                    min_value=0.0,
+                    max_value=2000.0,
+                    value=float(desplazamiento) if desplazamiento > 0 else 30.0,
+                    step=5.0,
+                    key=f"{key_prefix}_num_desp_val",
+                    help="Coste de combustible, furgoneta de taller y dietas."
+                )
+            else:
+                desplazamiento_real = 0.0
+                st.caption("ℹ️ *Partida de desplazamiento desactivada (0,00 €).*")
+
+        coste_tramitacion = coste_tramitacion_real
+        desplazamiento = desplazamiento_real
+
     # Recálculo dinámico con los parámetros interactivos
     coste_mat = coste_mat_orig
     benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
@@ -588,10 +751,16 @@ def render_panel_herramientas_presupuesto(
             {"Concepto Económico": f"📈 2. Beneficio s/ Materiales ({margen_mat_pct:.0f}%)", "🏢 Empresa": f"{benef_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{benef_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Ganancia limpia por suministrar material"},
             {"Concepto Económico": f"🔨 3. Tu Jornal Directo ({horas_mo:.1f}h x {precio_h_coste:.0f}€)", "🏢 Empresa": f"{coste_mo_directo:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mo_directo:,.2f} €", "Diferencia": "0,00 €", "Destino": "Tu sueldo profesional por trabajar"},
             {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}% vs {margen_mo_auto_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "🧑‍🔧 Autónomo": f"{g_mo_autonomo:,.2f} €", "Diferencia": f"-{g_mo_empresa - g_mo_autonomo:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
-            {"Concepto Económico": "📋 5. Tramitación CIE / Boletín", "🏢 Empresa": f"{coste_tramitacion:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_tramitacion:,.2f} €", "Diferencia": "0,00 €", "Destino": "Honorarios técnicos de legalización"},
         ]
+        if coste_tramitacion > 0:
+            filas_balance.append({"Concepto Económico": "📋 5. Tramitación CIE / Boletín / SIEM", "🏢 Empresa": f"{coste_tramitacion:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_tramitacion:,.2f} €", "Diferencia": "0,00 €", "Destino": "Honorarios técnicos de legalización"})
+        else:
+            filas_balance.append({"Concepto Económico": "📋 5. Tramitación CIE / SIEM", "🏢 Empresa": "0,00 € (Omitida)", "🧑‍🔧 Autónomo": "0,00 € (Omitida)", "Diferencia": "0,00 €", "Destino": "No requerida / Omitida"})
+
         if desplazamiento > 0:
             filas_balance.append({"Concepto Económico": "🚗 6. Desplazamiento y Dietas", "🏢 Empresa": f"{desplazamiento:,.2f} €", "🧑‍🔧 Autónomo": f"{desplazamiento:,.2f} €", "Diferencia": "0,00 €", "Destino": "Combustible y vehículo"})
+        else:
+            filas_balance.append({"Concepto Económico": "🚗 6. Desplazamiento y Dietas", "🏢 Empresa": "0,00 € (Omitido)", "🧑‍🔧 Autónomo": "0,00 € (Omitido)", "Diferencia": "0,00 €", "Destino": "No repercutido al cliente"})
 
         # FILAS DE TOTALES CLAVE AL FINAL DE LA TABLA (PARA VER CON TOTAL CLARIDAD EL TOTAL DE CADA COLUMNA):
         diferencia_base = round(base_empresa - base_autonomo, 2)
@@ -644,35 +813,15 @@ def render_panel_herramientas_presupuesto(
         # -------------------------------------------------------------
         st.markdown("---")
         st.markdown("##### 📄 Presupuesto Oficial para Enviar al Cliente (PDF Imprimible)")
-        st.caption("Genera y descarga un presupuesto comercial formal listo para imprimir o enviar por WhatsApp al cliente:")
+        st.caption("Emite y descarga la oferta formal para entregar al cliente o mandar por WhatsApp, disponible en Modo Autónomo o Modo Empresa:")
 
-        col_pdf_mod1, col_pdf_mod2 = st.columns([1.6, 2.4])
-        with col_pdf_mod1:
-            modo_emision_sel = st.radio(
-                "¿En qué modalidad deseas emitir la oferta al cliente?",
-                [
-                    f"🧑‍🔧 Modo Autónomo ({total_autonomo:,.2f} € C/IVA)",
-                    f"🏢 Modo Empresa ({total_empresa:,.2f} € C/IVA)"
-                ],
-                index=0,
-                key=f"{key_prefix}_rad_modo_pdf_cliente"
-            )
-            es_modo_empresa_emision = "Empresa" in modo_emision_sel
-            modo_clave_pdf = "empresa" if es_modo_empresa_emision else "autonomo"
-
-        with col_pdf_mod2:
-            with st.popover("⚙️ Configurar Datos del Cliente y Condiciones para el PDF"):
-                cli_nombre_pdf = st.text_input("Nombre del Cliente / Destinatario:", value=nom_cliente_def, key=f"{key_prefix}_in_clipdf_nom")
-                cli_dir_pdf = st.text_input("Dirección de la Obra:", value="Calle Mayor nº 45", key=f"{key_prefix}_in_clipdf_dir")
-                cli_tel_pdf = st.text_input("Teléfono del Cliente:", value="+34 600 000 000", key=f"{key_prefix}_in_clipdf_tel")
-                cli_validez_pdf = st.text_input("Validez del Presupuesto:", value="30 días naturales", key=f"{key_prefix}_in_clipdf_val")
-                cli_plazo_pdf = st.text_input("Plazo Estimado de Ejecución:", value="1-2 días laborables", key=f"{key_prefix}_in_clipdf_plz")
-                cli_forma_pago = st.text_input("Condiciones de Pago:", value=f"Anticipo materiales ({pct_anticipo_rec:.0f}% = {anticipo_recomendado:,.2f} €) y resto al finalizar", key=f"{key_prefix}_in_clipdf_fpago")
-
-        base_sel_pdf = base_empresa if es_modo_empresa_emision else base_autonomo
-        iva_sel_pdf = iva_empresa if es_modo_empresa_emision else iva_autonomo
-        total_sel_pdf = total_empresa if es_modo_empresa_emision else total_autonomo
-        g_mo_sel_pdf = g_mo_empresa if es_modo_empresa_emision else g_mo_autonomo
+        with st.popover("⚙️ Configurar Datos del Cliente y Condiciones para el Presupuesto (PDF)"):
+            cli_nombre_pdf = st.text_input("Nombre del Cliente / Destinatario:", value=nom_cliente_def, key=f"{key_prefix}_in_clipdf_nom")
+            cli_dir_pdf = st.text_input("Dirección de la Obra:", value="Calle Mayor nº 45", key=f"{key_prefix}_in_clipdf_dir")
+            cli_tel_pdf = st.text_input("Teléfono del Cliente:", value="+34 600 000 000", key=f"{key_prefix}_in_clipdf_tel")
+            cli_validez_pdf = st.text_input("Validez del Presupuesto:", value="30 días naturales", key=f"{key_prefix}_in_clipdf_val")
+            cli_plazo_pdf = st.text_input("Plazo Estimado de Ejecución:", value="1-2 días laborables", key=f"{key_prefix}_in_clipdf_plz")
+            cli_forma_pago = st.text_input("Condiciones de Pago:", value=f"Anticipo materiales ({pct_anticipo_rec:.0f}% = {anticipo_recomendado:,.2f} €) y resto al finalizar", key=f"{key_prefix}_in_clipdf_fpago")
 
         proyecto_info_pdf = {
             "cliente": cli_nombre_pdf if 'cli_nombre_pdf' in locals() else nom_cliente_def,
@@ -686,47 +835,83 @@ def render_panel_herramientas_presupuesto(
             "licencia": "Instalador Autorizado REBT (DGEAIM Murcia)",
             "fecha": datetime.date.today().strftime("%d/%m/%Y")
         }
-        presupuesto_data_pdf = {
-            "base_imponible": base_sel_pdf,
+
+        # Preparar datos específicos para Modo Autónomo
+        presupuesto_data_auto = {
+            "base_imponible": base_autonomo,
             "iva_pct": iva_pct,
-            "cuota_iva": iva_sel_pdf,
-            "total_cliente": total_sel_pdf,
+            "cuota_iva": iva_autonomo,
+            "total_cliente": total_autonomo,
             "coste_materiales": coste_mat,
             "coste_materiales_venta": round(coste_mat + benef_mat, 2),
             "horas_mo": horas_mo,
-            "coste_mo_venta": round(coste_mo_directo + g_mo_sel_pdf, 2),
+            "coste_mo_venta": round(coste_mo_directo + g_mo_autonomo, 2),
+            "coste_tramitacion": coste_tramitacion,
+            "desplazamiento": desplazamiento,
+            "detalle_materiales": "Materiales homologados REBT según especificación técnica"
+        }
+
+        # Preparar datos específicos para Modo Empresa
+        presupuesto_data_emp = {
+            "base_imponible": base_empresa,
+            "iva_pct": iva_pct,
+            "cuota_iva": iva_empresa,
+            "total_cliente": total_empresa,
+            "coste_materiales": coste_mat,
+            "coste_materiales_venta": round(coste_mat + benef_mat, 2),
+            "horas_mo": horas_mo,
+            "coste_mo_venta": round(coste_mo_directo + g_mo_empresa, 2),
             "coste_tramitacion": coste_tramitacion,
             "desplazamiento": desplazamiento,
             "detalle_materiales": "Materiales homologados REBT según especificación técnica"
         }
 
         try:
-            pdf_bytes_cliente = pdf_comercial_cliente.generar_pdf_oferta_comercial(
-                proyecto_info_pdf, presupuesto_data_pdf, modo=modo_clave_pdf
+            pdf_bytes_auto = pdf_comercial_cliente.generar_pdf_oferta_comercial(
+                proyecto_info_pdf, presupuesto_data_auto, modo="autonomo"
             )
-            col_bpdf1, col_bpdf2 = st.columns([2, 1])
-            with col_bpdf1:
+            pdf_bytes_emp = pdf_comercial_cliente.generar_pdf_oferta_comercial(
+                proyecto_info_pdf, presupuesto_data_emp, modo="empresa"
+            )
+
+            col_btn_auto, col_btn_emp = st.columns(2)
+            with col_btn_auto:
                 st.download_button(
-                    label=f"📄 🖨️ Descargar Presupuesto PDF para el Cliente ({'Modo Empresa' if es_modo_empresa_emision else 'Modo Autónomo'})",
-                    data=pdf_bytes_cliente,
-                    file_name=f"Presupuesto_{nom_obra_def.replace(' ', '_')}_{modo_clave_pdf.capitalize()}.pdf",
+                    label=f"🧑‍🔧 🖨️ Descargar Presupuesto MODO AUTÓNOMO ({total_autonomo:,.2f} €)",
+                    data=pdf_bytes_auto,
+                    file_name=f"Presupuesto_{nom_obra_def.replace(' ', '_')}_Autonomo.pdf",
                     mime="application/pdf",
                     type="primary",
-                    key=f"{key_prefix}_btn_descarga_pdf_cli",
+                    key=f"{key_prefix}_btn_descarga_pdf_auto",
                     use_container_width=True
                 )
-            with col_bpdf2:
-                with st.popover("👁️ Vista Previa PDF"):
-                    try:
-                        import pymupdf
-                        doc_prev = pymupdf.open(stream=pdf_bytes_cliente, filetype="pdf")
-                        for pag_num, pag in enumerate(doc_prev, start=1):
-                            pix = pag.get_pixmap(dpi=130)
-                            st.image(pix.tobytes("png"), caption=f"Página {pag_num}", use_container_width=True)
-                    except Exception:
-                        import base64
-                        b64 = base64.b64encode(pdf_bytes_cliente).decode('utf-8')
-                        st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="500"></iframe>', unsafe_allow_html=True)
+                st.caption(f"Tarifa competitiva de calle (Base: {base_autonomo:,.2f} € + IVA: {iva_autonomo:,.2f} €)")
+
+            with col_btn_emp:
+                st.download_button(
+                    label=f"🏢 🖨️ Descargar Presupuesto MODO EMPRESA ({total_empresa:,.2f} €)",
+                    data=pdf_bytes_emp,
+                    file_name=f"Presupuesto_{nom_obra_def.replace(' ', '_')}_Empresa.pdf",
+                    mime="application/pdf",
+                    type="secondary",
+                    key=f"{key_prefix}_btn_descarga_pdf_emp",
+                    use_container_width=True
+                )
+                st.caption(f"Tarifa formal con estructura de empresa (Base: {base_empresa:,.2f} € + IVA: {iva_empresa:,.2f} €)")
+
+            with st.popover("👁️ Vista Previa en Pantalla del Presupuesto (PDF)"):
+                sel_prev_modo = st.radio("¿Qué modelo deseas visualizar?", ["🧑‍🔧 Modo Autónomo", "🏢 Modo Empresa"], horizontal=True, key=f"{key_prefix}_rad_prev_modo")
+                pdf_mostrar = pdf_bytes_auto if "Autónomo" in sel_prev_modo else pdf_bytes_emp
+                try:
+                    import pymupdf
+                    doc_prev = pymupdf.open(stream=pdf_mostrar, filetype="pdf")
+                    for pag_num, pag in enumerate(doc_prev, start=1):
+                        pix = pag.get_pixmap(dpi=130)
+                        st.image(pix.tobytes("png"), caption=f"Página {pag_num} ({sel_prev_modo})", use_container_width=True)
+                except Exception:
+                    import base64
+                    b64 = base64.b64encode(pdf_mostrar).decode('utf-8')
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="500"></iframe>', unsafe_allow_html=True)
         except Exception as e_pdf_cli:
             st.warning(f"Generador PDF disponible: {e_pdf_cli}")
 
@@ -825,32 +1010,104 @@ def render_panel_herramientas_presupuesto(
     # TAB 3: LISTA DE COMPRA PARA ALMACÉN Y CALCULADORA DE ANTICIPO
     # ---------------------------------------------------------------------
     with tab_acopio:
-        col_ac1, col_ac2 = st.columns([1.8, 1.2])
-        with col_ac1:
-            st.markdown("##### 🛒 Lista de Compra de Materiales para el Mostrador")
-            st.caption("Lista ordenada para enseñar en Obramat / Leroy Merlin o enviar por WhatsApp al almacén:")
+        filas_mat_vinculadas = vincular_materiales_con_bd(filas_materiales) if filas_materiales else []
+        items_en_bd = [m for m in filas_mat_vinculadas if m.get("en_bd")]
+        items_web = [m for m in filas_mat_vinculadas if not m.get("en_bd")]
 
-            lineas_texto_compra = []
-            if filas_materiales:
-                for idx, m in enumerate(filas_materiales):
-                    c_nom = m.get("mat") or m.get("concepto") or m.get("nombre") or f"Partida {idx+1}"
-                    c_cant = m.get("cant") or m.get("cantidad") or 1.0
-                    c_unid = m.get("unid") or m.get("unidad") or "ud"
-                    c_pu = m.get("p_u") or m.get("precio_ud") or m.get("precio") or 0.0
-                    c_sub = float(c_cant) * float(c_pu)
-                    lineas_texto_compra.append(f"• {c_cant} {c_unid} - {c_nom} (Coste aprox: {c_sub:,.2f} €)")
+        col_ac1, col_ac2 = st.columns([1.9, 1.1])
+        with col_ac1:
+            st.markdown("##### 🛒 Lista de Compra de Materiales para el Mostrador y Almacén")
+            st.caption("Partidas cruzadas automáticamente con la base de datos oficial (Obramat / Leroy Merlin / Sumidelec) y tarifas web:")
+
+            # Banners informativos de procedencia
+            col_sbd1, col_sbd2 = st.columns(2)
+            with col_sbd1:
+                st.success(f"✅ **{len(items_en_bd)} de {len(filas_mat_vinculadas)} artículos en BD Oficial** (Obramat / Leroy)")
+            with col_sbd2:
+                if items_web:
+                    st.warning(f"🌐 **{len(items_web)} artículos con Tarifa Web** (Enlaces directos abajo)")
+                else:
+                    st.info("🎯 **100% de materiales catalogados en almacén oficial**")
+
+            # Tabla interactiva con Dónde Comprar, Ref SKU y Estado
+            if filas_mat_vinculadas:
+                filas_display = []
+                for m in filas_mat_vinculadas:
+                    c_nom = m.get("mat") or m.get("concepto") or m.get("nombre") or ""
+                    c_cant = m.get("cant") or 1.0
+                    c_unid = m.get("unid") or "ud"
+                    c_pu = float(m.get("p_u") or 0.0)
+                    c_sub = float(m.get("subtotal") or (float(c_cant) * c_pu))
+                    prov = m.get("proveedor", "Obramat")
+                    sku = m.get("sku", "S/Ref")
+                    est = "✅ En BD" if m.get("en_bd") else "🌐 Tarifa Web"
+
+                    filas_display.append({
+                        "Estado": est,
+                        "Cant.": c_cant,
+                        "Unid.": c_unid,
+                        "Denominación del Material": c_nom,
+                        "Dónde Comprar (Proveedor)": prov,
+                        "Ref. SKU": sku,
+                        "P. Unit (€)": f"{c_pu:,.2f} €",
+                        "Subtotal (€)": f"{c_sub:,.2f} €"
+                    })
+                st.dataframe(filas_display, use_container_width=True, hide_index=True)
             else:
-                lineas_texto_compra.append(f"• Materiales generales normalizados de {modulo_nombre}: {coste_mat:,.2f} €")
+                st.info(f"Materiales normalizados generales de {modulo_nombre}: {coste_mat:,.2f} €")
+
+            # Investigar en la Web y Guardar en BD para los artículos no registrados
+            if items_web:
+                with st.expander(f"🔍 Investigar Artículos con Tarifa Web ({len(items_web)}) y Guardar en tu Base de Datos", expanded=False):
+                    st.markdown("<div style='font-size:12.5px; color:#475569;'>Haz clic en las tiendas para comprobar el precio real online y regístralo con 1 clic para que ya quede guardado en tu base de datos:</div>", unsafe_allow_html=True)
+                    for idx_w, iw in enumerate(items_web):
+                        col_iw1, col_iw2, col_iw3 = st.columns([2.5, 1.2, 1.3])
+                        w_nom = iw.get("mat") or iw.get("concepto") or iw.get("nombre") or ""
+                        with col_iw1:
+                            st.markdown(f"**{w_nom}**")
+                        with col_iw2:
+                            st.markdown(f"[🏪 Buscar en Obramat]({iw['url_obramat']})")
+                        with col_iw3:
+                            st.markdown(f"[🔍 Buscar en Google]({iw['url_google']})")
+
+                    st.markdown("---")
+                    st.markdown("###### ➕ Registrar Precio Real en tu Base de Datos Local:")
+                    col_reg1, col_reg2, col_reg3, col_reg4 = st.columns([2.2, 1.0, 1.4, 0.9])
+                    with col_reg1:
+                        reg_nom = st.text_input("Artículo:", value=items_web[0].get("mat", ""), key=f"{key_prefix}_in_reg_mat_nom")
+                    with col_reg2:
+                        reg_pu = st.number_input("Precio (€):", min_value=0.01, value=float(items_web[0].get("p_u", 10.0)), step=0.5, key=f"{key_prefix}_in_reg_mat_pu")
+                    with col_reg3:
+                        reg_prov = st.selectbox("Tienda / Almacén:", ["Obramat", "Leroy Merlin", "Sumidelec", "Saltoki", "Electro Stocks", "Otro Almacén"], key=f"{key_prefix}_sel_reg_mat_prov")
+                    with col_reg4:
+                        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+                        if st.button("💾 Guardar", key=f"{key_prefix}_btn_save_mat_bd"):
+                            ok_g = guardar_material_personalizado(reg_nom, reg_pu, unidad=items_web[0].get("unid", "ud"), proveedor=reg_prov)
+                            if ok_g:
+                                st.success(f"¡'{reg_nom}' guardado en tu base de datos!")
+                                st.rerun()
+
+            # Resumen de texto para WhatsApp
+            lineas_texto_compra = []
+            lista_para_pdf = filas_mat_vinculadas if filas_mat_vinculadas else (filas_materiales if filas_materiales else [{"mat": f"Materiales normalizados de {modulo_nombre}", "cant": 1, "unid": "partida", "p_u": coste_mat, "proveedor": "Obramat"}])
+            for idx, m in enumerate(lista_para_pdf):
+                c_nom = m.get("mat") or m.get("concepto") or m.get("nombre") or f"Partida {idx+1}"
+                c_cant = m.get("cant") or m.get("cantidad") or 1.0
+                c_unid = m.get("unid") or m.get("unidad") or "ud"
+                c_pu = m.get("p_u") or m.get("precio_ud") or m.get("precio") or 0.0
+                c_sub = float(c_cant) * float(c_pu)
+                c_prv = m.get("proveedor", "Almacén")
+                lineas_texto_compra.append(f"• {c_cant} {c_unid} - {c_nom} [{c_prv}] (Aprox: {c_sub:,.2f} €)")
 
             txt_lista_mostrador = "📦 *LISTA DE ACOPIO DE MATERIALES - BOLIMUR*\n" + f"Trabajo: {nom_obra_def}\n" + "---------------------------------------\n" + "\n".join(lineas_texto_compra) + f"\n---------------------------------------\nCoste Total Materiales Estimado: {coste_mat:,.2f} € (S/IVA)"
-            st.text_area("Lista de Materiales:", value=txt_lista_mostrador, height=220, key=f"{key_prefix}_txt_lista_compra")
+            with st.expander("📲 Ver Lista en Formato Texto para WhatsApp / Mostrador", expanded=False):
+                st.text_area("Lista para enviar:", value=txt_lista_mostrador, height=180, key=f"{key_prefix}_txt_lista_compra")
 
-            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
             try:
-                filas_mat_acopio = filas_materiales if filas_materiales else [{"mat": f"Materiales normalizados de {modulo_nombre}", "cant": 1, "unid": "partida", "p_u": coste_mat}]
                 pdf_bytes_acopio = pdf_comercial_cliente.generar_pdf_lista_materiales_almacen(
                     proyecto_info={"concepto": nom_obra_def, "instalador": "Instalador Autorizado REBT", "fecha": datetime.date.today().strftime("%d/%m/%Y")},
-                    filas_materiales=filas_mat_acopio,
+                    filas_materiales=lista_para_pdf,
                     coste_total_neto=coste_mat,
                     iva_pct=iva_pct
                 )

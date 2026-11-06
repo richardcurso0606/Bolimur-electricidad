@@ -1427,3 +1427,75 @@ def importar_copia_seguridad_nube(usuario_id: int, json_str: str) -> tuple[bool,
         return True, f"Se han importado {len(clientes_in)} clientes y {len(proyectos_in)} proyectos en tu cuenta privada."
     except Exception as ex:
         return False, f"Error al importar archivo de respaldo: {ex}"
+
+
+# =========================================================================
+# GESTIÓN DE MATERIALES PERSONALIZADOS / BASE DE DATOS LOCAL
+# =========================================================================
+
+def guardar_material_personalizado(
+    nombre: str,
+    precio_coste: float,
+    unidad: str = "ud",
+    proveedor: str = "Obramat",
+    categoria: str = "General"
+) -> tuple[bool, str]:
+    """Inserta o actualiza un material en la tabla materiales_personalizados."""
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO materiales_personalizados (nombre, precio_coste, unidad, proveedor, categoria, fecha_actualizacion)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(nombre) DO UPDATE SET
+                precio_coste = excluded.precio_coste,
+                unidad = excluded.unidad,
+                proveedor = excluded.proveedor,
+                categoria = excluded.categoria,
+                fecha_actualizacion = CURRENT_TIMESTAMP
+        """, (nombre.strip(), float(precio_coste), unidad.strip(), proveedor.strip(), categoria.strip()))
+        conn.commit()
+        conn.close()
+        return True, f"Material '{nombre}' guardado en la base de datos."
+    except Exception as e:
+        return False, f"Error al guardar material: {e}"
+
+
+def listar_materiales_personalizados() -> List[Dict[str, Any]]:
+    """Devuelve la lista de materiales personalizados registrados por el usuario."""
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nombre, precio_coste, unidad, proveedor, categoria, fecha_actualizacion FROM materiales_personalizados ORDER BY nombre ASC")
+        rows = cursor.fetchall()
+        conn.close()
+        return [
+            {
+                "id": r[0],
+                "nombre": r[1],
+                "precio_coste": float(r[2]),
+                "unidad": r[3] or "ud",
+                "proveedor": r[4] or "Obramat",
+                "categoria": r[5] or "General",
+                "fecha_actualizacion": str(r[6])
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"Error al listar materiales personalizados: {e}")
+        return []
+
+
+def eliminar_material_personalizado(material_id: int) -> bool:
+    """Elimina un material personalizado de SQLite."""
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM materiales_personalizados WHERE id = ?", (material_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error al eliminar material personalizado: {e}")
+        return False
+
