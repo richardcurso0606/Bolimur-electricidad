@@ -534,6 +534,79 @@ def eliminar_presupuesto(presupuesto_id: int) -> bool:
         return False
 
 
+def interpretar_gasto_voz(texto: str) -> dict:
+    """Extrae automáticamente concepto, comercio, importe y pagador de una frase hablada o escrita."""
+    import re
+    t = (texto or "").lower().strip()
+    if not t:
+        return {}
+
+    # 1. Extraer importe
+    m_imp = re.search(r'(\d+[\.,]?\d*)\s*(?:€|euros?|pavos?)', t)
+    if not m_imp:
+        m_imp = re.search(r'(?:por|de|importe|gastado|cuenta)\s*(\d+[\.,]?\d*)', t)
+    if not m_imp:
+        m_imp = re.search(r'\b(\d+[\.,]?\d*)\b', t)
+
+    try:
+        importe = float(m_imp.group(1).replace(',', '.')) if m_imp else 25.0
+    except Exception:
+        importe = 25.0
+
+    # 2. Pagador
+    if any(k in t for k in ['compañero', 'socio', 'lo pagó él', 'él', 'companero']):
+        pagador = '👥 Mi Compañero'
+    elif any(k in t for k in ['bote', 'caja', 'de la obra', 'común', 'comun']):
+        pagador = '💳 Bote Común de la Obra'
+    else:
+        pagador = '🧑‍🔧 Yo (Titular)'
+
+    # 3. Establecimiento / Centro comercial
+    comercios_conocidos = [
+        'repsol', 'cepsa', 'bp', 'galp', 'shell', 'plenoil', 'ballenoil',
+        'obramat', 'bricomart', 'leroy merlin', 'leroy', 'brico depot', 'bricodepot', 'bauhaus', 
+        'saltoki', 'peisa', 'sonepar', 'electro stocks', 'salvador escoda',
+        'mercadona', 'carrefour', 'dia', 'lidl', 'mcdonalds', 'burger king'
+    ]
+    comercio = ''
+    for c in comercios_conocidos:
+        if c in t:
+            comercio = c.title()
+            break
+
+    if not comercio:
+        m_com = re.search(r'en\s+(?:el\s+|la\s+)?([a-záéíóúñ0-9\s]+?)(?:\s+y\s+|\s+por\s+|\s+de\s+|\s+lo\s+|$)', t)
+        if m_com:
+            comercio = m_com.group(1).strip().title()[:30]
+
+    # 4. Tipo y Concepto
+    if any(k in t for k in ['gasoil', 'gasolina', 'combustible', 'diesel', 'diésel', 'repostar', 'llenar']):
+        icono = '⛽'
+        concepto = 'Gasoil / Combustible'
+    elif any(k in t for k in ['comida', 'comer', 'menu', 'menú', 'almuerzo', 'desayuno', 'cena', 'bocadillo', 'restaurante', 'bar']):
+        icono = '🍽️'
+        concepto = 'Comida / Menú de obra'
+    elif any(k in t for k in ['parking', 'aparcamiento', 'ora', 'peaje', 'autopista', 'zona azul']):
+        icono = '🅿️'
+        concepto = 'Parking / Peaje'
+    elif any(k in t for k in ['broca', 'espuma', 'disco', 'tornillo', 'taco', 'cinta', 'silicona', 'ferreteria', 'ferretería']):
+        icono = '🔨'
+        concepto = 'Consumibles / Ferretería'
+    else:
+        icono = '🧾'
+        concepto = texto.strip().capitalize()[:40]
+
+    return {
+        'concepto': concepto,
+        'comercio': comercio or 'Comercio local',
+        'importe': importe,
+        'pagador': pagador,
+        'icono': icono,
+        'fecha': datetime.date.today(),
+        'notas': f'Dictado por voz: "{texto.strip()}"'
+    }
+
+
 # =========================================================================
 # 4. COMPONENTE VISUAL REUTILIZABLE PARA TODOS LOS MÓDULOS DE BOLIMUR
 # =========================================================================
@@ -1050,77 +1123,186 @@ def render_panel_herramientas_presupuesto(
         if key_tickets_obra not in st.session_state:
             st.session_state[key_tickets_obra] = []
 
-        with st.expander("🧾 Tickets y Gastos Operativos de Obra (Gasoil, Dietas, Comidas, Parking, etc.)", expanded=bool(st.session_state[key_tickets_obra])):
+        with st.expander("🧾 Tickets y Gastos Operativos de Obra (Gasoil, Dietas, Comidas, Parking, etc.)", expanded=True):
             st.caption("Apunta los gastos reales de la jornada (gasoil, menús, parking, consumibles de ferretería...). Se deducirán del dinero cobrado antes del reparto entre vosotros:")
 
             # Lista de tickets registrados
             if st.session_state[key_tickets_obra]:
+                st.markdown("###### 📋 Gastos Registrados en esta Obra:")
                 for idx_tk, tk in enumerate(st.session_state[key_tickets_obra]):
-                    col_tk1, col_tk2, col_tk3, col_tk4, col_tk5 = st.columns([2.5, 1.2, 1.5, 1.2, 0.6])
-                    with col_tk1:
-                        st.markdown(f"**{tk.get('icono', '🧾')} {tk.get('concepto', 'Gasto')}**")
-                        if tk.get('fecha'):
-                            st.caption(f"Fecha: {tk['fecha']}")
-                    with col_tk2:
-                        st.markdown(f"**{float(tk.get('importe', 0.0)):,.2f} €**")
-                    with col_tk3:
-                        pagador_str = tk.get('pagador', 'Bote Común')
-                        st.caption(f"Pagó: **{pagador_str}**")
-                    with col_tk4:
-                        if tk.get('foto_b64'):
-                            with st.popover("📷 Ver Ticket"):
-                                st.image(f"data:image/jpeg;base64,{tk['foto_b64']}", caption=tk.get('concepto', 'Ticket'))
-                        else:
-                            st.caption("Sin foto")
-                    with col_tk5:
-                        if st.button("🗑️", key=f"{key_prefix}_btn_del_tk_{idx_tk}", help="Eliminar este ticket"):
-                            st.session_state[key_tickets_obra].pop(idx_tk)
-                            st.rerun()
+                    with st.container(border=True):
+                        col_tk1, col_tk2, col_tk3, col_tk4, col_tk5 = st.columns([2.5, 1.2, 1.5, 1.2, 0.6])
+                        with col_tk1:
+                            st.markdown(f"**{tk.get('icono', '🧾')} {tk.get('concepto', 'Gasto')}**")
+                            comercio_txt = tk.get('comercio', '')
+                            fecha_txt = tk.get('fecha', '')
+                            notas_txt = tk.get('notas', '')
+                            sub_info = []
+                            if comercio_txt:
+                                sub_info.append(f"🏢 {comercio_txt}")
+                            if fecha_txt:
+                                sub_info.append(f"📅 {fecha_txt}")
+                            if sub_info:
+                                st.caption(" | ".join(sub_info))
+                            if notas_txt:
+                                st.caption(f"📝 *{notas_txt}*")
+                        with col_tk2:
+                            st.markdown(f"**{float(tk.get('importe', 0.0)):,.2f} €**")
+                        with col_tk3:
+                            pagador_str = tk.get('pagador', 'Bote Común')
+                            st.markdown(f"Pagó: **{pagador_str}**")
+                        with col_tk4:
+                            if tk.get('foto_b64'):
+                                with st.popover("📷 Ver Foto Ticket"):
+                                    st.image(f"data:image/jpeg;base64,{tk['foto_b64']}", caption=f"{tk.get('concepto')} - {tk.get('comercio', '')}")
+                            else:
+                                st.caption("Sin foto")
+                        with col_tk5:
+                            if st.button("🗑️", key=f"{key_prefix}_btn_del_tk_{idx_tk}", help="Eliminar este gasto"):
+                                st.session_state[key_tickets_obra].pop(idx_tk)
+                                st.rerun()
 
-            # Formulario para añadir nuevo ticket
-            with st.form(f"{key_prefix}_form_nuevo_ticket", clear_on_submit=True):
-                st.markdown("###### ➕ Registrar Ticket o Gasto Incurrido")
-                col_ntk1, col_ntk2 = st.columns([2.2, 1.0])
-                with col_ntk1:
-                    tk_concepto = st.text_input("Concepto / Motivo del gasto:", placeholder="Ej: Gasoil furgoneta Repsol / Menús 2 personas / Parking ORA / Broca SDS hormigón")
-                with col_ntk2:
-                    tk_importe = st.number_input("Importe (€):", min_value=0.0, value=25.0, step=5.0)
+            st.markdown("---")
+            st.markdown("###### ➕ Registrar Nuevo Ticket o Gasto:")
 
-                col_ntk3, col_ntk4 = st.columns(2)
-                with col_ntk3:
-                    tk_pagador = st.selectbox(
-                        "¿Quién adelantó el dinero?",
-                        ["💳 Bote Común de la Obra", "🧑‍🔧 Yo (Titular)", "👥 Mi Compañero"],
-                        help="Si lo adelantó uno de los dos de su bolsillo, el balance le devolverá ese importe exacto antes de repartir el beneficio."
-                    )
-                with col_ntk4:
-                    tk_foto = st.file_uploader("Foto del Ticket / Factura (opcional):", type=["jpg", "jpeg", "png"], key=f"{key_prefix}_upload_ticket")
+            # 🎙️ Dictado por voz / Asistente IA
+            col_v_txt, col_v_btn = st.columns([3.2, 1.2])
+            with col_v_txt:
+                frase_dictado = st.text_input(
+                    "🎙️ Dicta o escribe tu gasto con tus propias palabras:",
+                    placeholder="Ej: He gastado 35 euros de gasoil en Repsol y lo pagué yo",
+                    key=f"{key_prefix}_input_dictado_gasto"
+                )
+            with col_v_btn:
+                btn_interpretar = st.button("🤖 Rellenar con IA", key=f"{key_prefix}_btn_interpretar_gasto", help="Analiza la frase y rellena el importe, comercio, categoría y quién pagó", use_container_width=True)
 
-                btn_add_tk = st.form_submit_button("➕ Añadir Gasto a la Obra", type="primary", use_container_width=True)
-                if btn_add_tk:
-                    if tk_concepto.strip() and tk_importe > 0:
-                        foto_b64 = None
-                        if tk_foto is not None:
-                            try:
-                                foto_b64 = base64.b64encode(tk_foto.read()).decode("utf-8")
-                            except Exception:
-                                pass
+            if btn_interpretar and frase_dictado.strip():
+                gasto_ia = interpretar_gasto_voz(frase_dictado)
+                if gasto_ia:
+                    st.session_state[f"{key_prefix}_tk_in_concepto"] = gasto_ia.get("concepto", "Gasto de Obra")
+                    st.session_state[f"{key_prefix}_tk_in_comercio"] = gasto_ia.get("comercio", "")
+                    st.session_state[f"{key_prefix}_tk_in_importe"] = float(gasto_ia.get("importe", 25.0))
+                    st.session_state[f"{key_prefix}_tk_in_pagador"] = gasto_ia.get("pagador", "🧑‍🔧 Yo (Titular)")
+                    st.session_state[f"{key_prefix}_tk_in_notas"] = gasto_ia.get("notas", "")
+                    st.success(f"✅ Gasto interpretado: {gasto_ia.get('concepto')} ({gasto_ia.get('importe'):,.2f} € en {gasto_ia.get('comercio')})")
+                    st.rerun()
 
-                        icono_g = "⛽" if any(k in tk_concepto.lower() for k in ["gasoil", "gasolina", "combustible"]) else (
-                            "🍽️" if any(k in tk_concepto.lower() for k in ["comida", "menu", "almuerzo", "cena", "bocadillo"]) else (
-                                "🅿️" if any(k in tk_concepto.lower() for k in ["parking", "aparcamiento", "ora", "peaje"]) else "🧾"
+            # Botones de categorías rápidas para facilitar la introducción en furgoneta
+            col_cat1, col_cat2, col_cat3, col_cat4 = st.columns(4)
+            with col_cat1:
+                if st.button("⛽ Gasoil Furgoneta", key=f"{key_prefix}_cat_gasoil", use_container_width=True):
+                    st.session_state[f"{key_prefix}_tk_in_concepto"] = "Gasoil / Combustible furgoneta"
+                    st.session_state[f"{key_prefix}_tk_in_comercio"] = "Repsol / Gasolinera"
+                    st.session_state[f"{key_prefix}_tk_in_importe"] = 35.0
+                    st.rerun()
+            with col_cat2:
+                if st.button("🍽️ Menús Comida", key=f"{key_prefix}_cat_comida", use_container_width=True):
+                    st.session_state[f"{key_prefix}_tk_in_concepto"] = "Comida / Menú del día en obra"
+                    st.session_state[f"{key_prefix}_tk_in_comercio"] = "Bar / Restaurante"
+                    st.session_state[f"{key_prefix}_tk_in_importe"] = 24.0
+                    st.rerun()
+            with col_cat3:
+                if st.button("🅿️ Parking / Peaje", key=f"{key_prefix}_cat_parking", use_container_width=True):
+                    st.session_state[f"{key_prefix}_tk_in_concepto"] = "Ticket Parking / Peaje ORA"
+                    st.session_state[f"{key_prefix}_tk_in_comercio"] = "Parking Centro"
+                    st.session_state[f"{key_prefix}_tk_in_importe"] = 8.50
+                    st.rerun()
+            with col_cat4:
+                if st.button("🔨 Ferretería / Brocas", key=f"{key_prefix}_cat_ferreteria", use_container_width=True):
+                    st.session_state[f"{key_prefix}_tk_in_concepto"] = "Consumibles / Broca / Espuma"
+                    st.session_state[f"{key_prefix}_tk_in_comercio"] = "Obramat / Bricomart"
+                    st.session_state[f"{key_prefix}_tk_in_importe"] = 15.0
+                    st.rerun()
+
+            # Campos detallados del gasto
+            col_f1, col_f2, col_f3 = st.columns([1.5, 2.0, 1.5])
+            with col_f1:
+                tk_fecha = st.date_input("📅 Fecha del Gasto:", value=datetime.date.today(), key=f"{key_prefix}_tk_in_fecha")
+            with col_f2:
+                tk_comercio = st.text_input(
+                    "🏢 Centro Comercial / Comercio / Bar:",
+                    value=st.session_state.get(f"{key_prefix}_tk_in_comercio", ""),
+                    placeholder="Ej: Obramat, Repsol, Bar El Cruce, Leroy Merlin...",
+                    key=f"{key_prefix}_tk_in_comercio"
+                )
+            with col_f3:
+                tk_importe = st.number_input(
+                    "💶 Importe (€):",
+                    min_value=0.0,
+                    value=float(st.session_state.get(f"{key_prefix}_tk_in_importe", 25.0)),
+                    step=5.0,
+                    key=f"{key_prefix}_tk_in_importe"
+                )
+
+            col_c1, col_c2 = st.columns([2.5, 2.0])
+            with col_c1:
+                tk_concepto = st.text_input(
+                    "📝 Concepto / Motivo del gasto:",
+                    value=st.session_state.get(f"{key_prefix}_tk_in_concepto", "Gasoil furgoneta"),
+                    placeholder="Ej: Gasoil furgoneta, Menú del día 2 personas, Broca SDS...",
+                    key=f"{key_prefix}_tk_in_concepto"
+                )
+            with col_c2:
+                pagador_default = st.session_state.get(f"{key_prefix}_tk_in_pagador", "💳 Bote Común de la Obra")
+                pagador_opts = ["💳 Bote Común de la Obra", "🧑‍🔧 Yo (Titular)", "👥 Mi Compañero"]
+                idx_pag_def = pagador_opts.index(pagador_default) if pagador_default in pagador_opts else 0
+                tk_pagador = st.selectbox(
+                    "👤 ¿Quién adelantó el dinero?",
+                    pagador_opts,
+                    index=idx_pag_def,
+                    key=f"{key_prefix}_tk_in_pagador",
+                    help="Si lo pagó uno de los dos de su bolsillo, el sistema le devolverá este dinero antes de repartir los beneficios."
+                )
+
+            col_sub_not, col_sub_fot = st.columns([2.5, 2.0])
+            with col_sub_not:
+                tk_notas = st.text_area(
+                    "📋 Notas / Observaciones (opcional):",
+                    value=st.session_state.get(f"{key_prefix}_tk_in_notas", ""),
+                    placeholder="Ej: Ticket guardado para desgravar IVA / Factura pendiente con CIF de empresa...",
+                    height=70,
+                    key=f"{key_prefix}_tk_in_notas"
+                )
+            with col_sub_fot:
+                tk_foto = st.file_uploader(
+                    "📷 Subir Foto del Ticket o Factura (opcional):",
+                    type=["jpg", "jpeg", "png"],
+                    key=f"{key_prefix}_upload_ticket"
+                )
+
+            btn_add_tk = st.button("➕ Añadir Gasto a la Obra", type="primary", use_container_width=True, key=f"{key_prefix}_btn_guardar_gasto")
+            if btn_add_tk:
+                final_concepto = tk_concepto.strip() if tk_concepto.strip() else (f"Gasto en {tk_comercio.strip()}" if tk_comercio.strip() else "Gasto Operativo de Obra")
+                if tk_importe > 0:
+                    foto_b64 = None
+                    if tk_foto is not None:
+                        try:
+                            foto_b64 = base64.b64encode(tk_foto.read()).decode("utf-8")
+                        except Exception:
+                            pass
+
+                    icono_g = "⛽" if any(k in final_concepto.lower() for k in ["gasoil", "gasolina", "combustible"]) else (
+                        "🍽️" if any(k in final_concepto.lower() for k in ["comida", "menu", "almuerzo", "cena", "bocadillo"]) else (
+                            "🅿️" if any(k in final_concepto.lower() for k in ["parking", "aparcamiento", "ora", "peaje"]) else (
+                                "🔨" if any(k in final_concepto.lower() for k in ["broca", "espuma", "disco", "herramienta"]) else "🧾"
                             )
                         )
-                        st.session_state[key_tickets_obra].append({
-                            "concepto": tk_concepto.strip(),
-                            "importe": float(tk_importe),
-                            "pagador": tk_pagador,
-                            "icono": icono_g,
-                            "foto_b64": foto_b64,
-                            "fecha": datetime.date.today().strftime("%d/%m/%Y")
-                        })
-                        st.success(f"Ticket '{tk_concepto}' añadido correctamente.")
-                        st.rerun()
+                    )
+                    fecha_str = tk_fecha.strftime("%d/%m/%Y") if hasattr(tk_fecha, "strftime") else str(tk_fecha)
+                    st.session_state[key_tickets_obra].append({
+                        "concepto": final_concepto,
+                        "comercio": tk_comercio.strip() if tk_comercio.strip() else "Comercio local",
+                        "importe": float(tk_importe),
+                        "pagador": tk_pagador,
+                        "fecha": fecha_str,
+                        "notas": tk_notas.strip(),
+                        "icono": icono_g,
+                        "foto_b64": foto_b64
+                    })
+                    st.success(f"✅ Gasto '{final_concepto}' de {tk_importe:,.2f} € guardado correctamente.")
+                    st.rerun()
+                else:
+                    st.warning("⚠️ El importe del gasto debe ser mayor a 0,00 €.")
 
         total_tickets_obra = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []))
         total_adelantado_yo = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []) if "Yo" in tk.get("pagador", ""))
