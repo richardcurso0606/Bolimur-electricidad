@@ -504,12 +504,12 @@ def render_panel_herramientas_presupuesto(
                 value=0.0,
                 step=5.0,
                 key=f"{key_prefix}_slider_margen_auto",
-                help="Recargo extra sobre tu mano de obra para autónomo. En 0% (Modo Tutor puro) eres ultra competitivo cobrando tu jornal íntegro."
+                help="Recargo extra sobre tu mano de obra para autónomo. En 0% (Modo Autónomo puro) eres ultra competitivo cobrando tu jornal íntegro."
             )
         with col_sub2:
             st.markdown(f"""
             <div style="background-color:#f8fafc; border-left:3px solid #0284c7; padding:8px 12px; border-radius:4px; font-size:12.5px; color:#334155; margin-top:14px;">
-                <b>💡 Estrategia Tutor / Autónomo:</b> Al mantener el recargo MO en <b>{margen_mo_auto_pct:.0f}%</b>, garantizas cobrar el 100% de tus horas (<b>{horas_mo * precio_h_coste:,.2f} €</b>) y tu ganancia de materiales (<b>{coste_mat_orig * (margen_mat_pct / 100.0):,.2f} €</b>), ofreciendo un precio de calle que las constructoras no pueden igualar.
+                <b>💡 Estrategia Modo Autónomo:</b> Al mantener el recargo MO en <b>{margen_mo_auto_pct:.0f}%</b>, garantizas cobrar el 100% de tus horas (<b>{horas_mo * precio_h_coste:,.2f} €</b>) y tu ganancia de materiales (<b>{coste_mat_orig * (margen_mat_pct / 100.0):,.2f} €</b>), ofreciendo un precio de calle que las constructoras no pueden igualar.
             </div>
             """, unsafe_allow_html=True)
 
@@ -556,7 +556,7 @@ def render_panel_herramientas_presupuesto(
             st.caption(f"Base: {base_empresa:,.2f} € | IVA ({iva_pct:.0f}%): {iva_empresa:,.2f} €")
         with col_t2:
             st.metric(
-                "👤 Modo Autónomo (Tutor)",
+                "🧑‍🔧 Modo Autónomo",
                 f"{total_autonomo:,.2f} €",
                 delta=f"-{diferencia_ahorro:,.2f} € Ahorro",
                 delta_color="inverse",

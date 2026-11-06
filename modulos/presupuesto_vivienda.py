@@ -237,6 +237,236 @@ def exportar_excel_orden_compra(df_orden_compra, total_neto, cuota_iva, total_co
     return output.getvalue()
 
 
+
+def render_resumen_estancias_glance(lista_estancias, titulo_modo="Modelo Empresa (PVP)", precio_pto_pared_ref=28.0, es_autonomo=False):
+    """
+    Renderiza un resumen ejecutivo de puntos por estancias:
+    - KPIs globales (Total puntos, estancias, promedio pto)
+    - Tarjetas visuales interactivas ('De un vistazo')
+    - Tabla estructurada con desglose, % de obra y precio medio por punto
+    """
+    if not lista_estancias:
+        st.info("No hay estancias registradas.")
+        return
+
+    total_pts_calc = sum(int(r.get("puntos_num", r.get("puntos", 0))) for r in lista_estancias)
+    total_imp_calc = sum(float(r.get("Importe Venta (€)", 0.0)) for r in lista_estancias)
+    total_m2_calc = sum(float(r.get("m2_num", 0.0)) for r in lista_estancias)
+    p_medio_global_est = (total_imp_calc / total_pts_calc) if total_pts_calc > 0 else precio_pto_pared_ref
+
+    # Encontrar la estancia con más puntos
+    est_max = max(lista_estancias, key=lambda x: int(x.get("puntos_num", x.get("puntos", 0))))
+    max_pts = int(est_max.get("puntos_num", est_max.get("puntos", 0)))
+    pct_max = (max_pts / total_pts_calc * 100) if total_pts_calc > 0 else 0
+
+    st.markdown(f"#### 🚪 Resumen Ejecutivo de Puntos y Precios por Estancias ({titulo_modo})")
+    st.caption("Visualiza de un vistazo la distribución de mecanismos, densidad por m² y coste medio unitario por estancia:")
+
+    # 1. Fila de KPIs rápidos
+    col_k1, col_k2, col_k3, col_k4, col_k5 = st.columns(5)
+    with col_k1:
+        st.metric("🔌 Total Puntos Obra", f"{total_pts_calc} pts")
+        st.caption("Mecanismos de pared")
+    with col_k2:
+        st.metric("🏠 Nº Estancias", f"{len(lista_estancias)} estancias")
+        st.caption(f"{total_m2_calc:.1f} m² útiles")
+    with col_k3:
+        st.metric("💶 Total Partida Pared", f"{total_imp_calc:,.2f} €")
+        st.caption("Subtotal mecanismos S/IVA")
+    with col_k4:
+        st.metric("🏷️ Precio Medio / Punto", f"{p_medio_global_est:.2f} €/pto", help="Precio medio real por punto instalado en tabique (material + mano de obra)")
+        st.caption(f"{'Tarifa directa sin recargo' if es_autonomo else 'PVP con margen empresa'}")
+    with col_k5:
+        st.metric("🏆 Estancia Principal", f"{est_max.get('Estancia', 'Salón')[:15]}", help=f"Estancia con mayor dotación: {max_pts} pts")
+        st.caption(f"**{max_pts} pts** ({pct_max:.0f}% del total)")
+
+    # 2. Tarjetas 'De un vistazo' (Grid visual con hasta 6-8 estancias)
+    st.markdown("##### 👁️ Vista Rápida por Estancias (Tarjetas Resumen de un vistazo):")
+    cols_grid = st.columns(min(len(lista_estancias), 4))
+    iconos_est = {
+        "salón": "🛋️", "comedor": "🛋️", "cocina": "🍳", "dormitorio": "🛏️",
+        "habitación": "🛏️", "baño": "🚿", "aseo": "🚿", "pasillo": "🚪",
+        "distribuidor": "🚪", "terraza": "🌅", "balcón": "🌅", "lavadero": "🧺",
+        "recibidor": "🔑", "entrada": "🔑", "garaje": "🚗", "trastero": "📦"
+    }
+
+    for idx, r in enumerate(lista_estancias):
+        col_dest = cols_grid[idx % len(cols_grid)]
+        nom_low = r.get("Estancia", "").lower()
+        icono = "🏠"
+        for k_ic, v_ic in iconos_est.items():
+            if k_ic in nom_low:
+                icono = v_ic
+                break
+        
+        pts_item = int(r.get("puntos_num", r.get("puntos", 0)))
+        imp_item = float(r.get("Importe Venta (€)", 0.0))
+        pmed_item = float(r.get("precio_medio_pto_num", (imp_item / pts_item if pts_item > 0 else 0.0)))
+        pct_item = (pts_item / total_pts_calc * 100) if total_pts_calc > 0 else 0
+        sup_str = r.get("Superficie", "")
+
+        with col_dest:
+            with st.container(border=True):
+                st.markdown(f"**{icono} {r.get('Estancia', '')}**")
+                st.markdown(f"<h3 style='margin:0; color:#0284c7;'>{pts_item} <span style='font-size:14px; color:#64748b;'>pts ({pct_item:.0f}%)</span></h3>", unsafe_allow_html=True)
+                st.markdown(f"💶 **{imp_item:,.2f} €** · `{pmed_item:.2f} €/pto`")
+                st.caption(f"📐 {sup_str}")
+
+    # 3. Tabla Completa y Detallada de Estancias
+    st.markdown("##### 📋 Tabla Detallada de Puntos, Equipamiento y Precios por Estancia:")
+    filas_tabla_est = []
+    for r in lista_estancias:
+        pts_item = int(r.get("puntos_num", r.get("puntos", 0)))
+        imp_item = float(r.get("Importe Venta (€)", 0.0))
+        pmed_item = float(r.get("precio_medio_pto_num", (imp_item / pts_item if pts_item > 0 else 0.0)))
+        pct_imp = (imp_item / total_imp_calc * 100) if total_imp_calc > 0 else 0
+        filas_tabla_est.append({
+            "🏠 Estancia": r.get("Estancia", ""),
+            "📐 Superficie": r.get("Superficie", ""),
+            "🔌 Puntos": f"{pts_item} pts",
+            "📋 Mecanismos y Equipamiento": r.get("Detalle Comercial", ""),
+            "💶 Importe S/IVA (€)": f"{imp_item:,.2f} €",
+            "🏷️ Precio Medio / Punto": f"{pmed_item:.2f} €/pto",
+            "📊 % de Partida": f"{pct_imp:.1f}%"
+        })
+    
+    # Fila de totales
+    filas_tabla_est.append({
+        "🏠 Estancia": "🏁 TOTALES VIVIENDA",
+        "📐 Superficie": f"{total_m2_calc:.1f} m²",
+        "🔌 Puntos": f"{total_pts_calc} pts",
+        "📋 Mecanismos y Equipamiento": f"{total_pts_calc} mecanismos de distribución interior instalados en pared",
+        "💶 Importe S/IVA (€)": f"{total_imp_calc:,.2f} €",
+        "🏷️ Precio Medio / Punto": f"{p_medio_global_est:.2f} €/pto",
+        "📊 % de Partida": "100.0%"
+    })
+
+    st.dataframe(pd.DataFrame(filas_tabla_est), use_container_width=True, hide_index=True)
+
+
+def render_explicacion_origen_cifras_puntos(total_puntos, p_pared_emp, p_pared_auto, p_global_emp, p_global_auto, cgmp_total, teleco_total, cie_total, total_obra_emp, total_obra_auto, iva_sel):
+    """
+    Explica al céntimo y con transparencia de instalador de calle:
+    1. Escandallo técnico unitario de 1 punto en pared (Materiales + Mano de Obra)
+    2. La escalera de costes de cómo se pasa de 28 € a 72 €/pto de ratio global
+    3. Balance comparativo desglosado por punto
+    """
+    with st.expander("🔍 ¿De dónde salen las cifras de los puntos? (Escandallo Técnico y Balance al Céntimo)", expanded=True):
+        st.markdown("""
+        ### 🧐 La Verdad del Instalador de Calle: ¿De Dónde Salen los Precios?
+        Para que no haya ninguna duda ante un cliente ni ante un compañero, aquí tienes el **escandallo físico y económico al céntimo** de cómo se calcula cada cifra en la aplicación.
+        """)
+
+        col_esc1, col_esc2 = st.columns(2)
+        with col_esc1:
+            st.markdown("#### 1️⃣ Escandallo Técnico de 1 Punto Instalado en Pared")
+            st.caption("Desglose unitario para 1 base Schuko 16A o Interruptor en tabique de ladrillo:")
+            
+            filas_esc_pto = [
+                {"Componente": "1x Caja universal enlazable empotrada", "Detalle Físico": "Caja 68 mm de mecanismos", "Coste Neto": "0,32 €"},
+                {"Componente": "3,5 m Tubo corrugado M20/M25 libre de halógenos", "Detalle Físico": "Tubo ICTA 750N a 0,35 €/m", "Coste Neto": "1,23 €"},
+                {"Componente": "10,5 m Conductores de cobre Cu H07Z1-K 2,5 mm²", "Detalle Físico": "3,5m Fase + 3,5m Neutro + 3,5m Tierra a 0,30 €/m", "Coste Neto": "3,15 €"},
+                {"Componente": "1x Mecanismo Base Schuko 16A o Conmutador", "Detalle Físico": "Mecanismo gama seleccionada", "Coste Neto": "4,85 €"},
+                {"Componente": "1x Marco embellecedor prorrateado", "Detalle Físico": "Marco 1 elemento / ventana", "Coste Neto": "1,10 €"},
+                {"Componente": "Yeso rápido, grapas y fijaciones", "Detalle Físico": "Material de albañilería y agarre", "Coste Neto": "0,35 €"},
+                {"Componente": "📦 TOTAL MATERIALES POR PUNTO", "Detalle Físico": "Suma de componentes en almacén", "Coste Neto": "11,00 €"},
+                {"Componente": "⏱️ MANO DE OBRA (0,45 h = 27 min / punto)", "Detalle Físico": "Roza (9m) + Tubo (6m) + Hilado (6m) + Embornar (6m)", "Coste Neto": "12,60 € (a 28 €/h)"},
+                {"Componente": "🛠️ COSTE DIRECTO ESTRICTO (Mat + MO)", "Detalle Físico": "Coste real sin sobrecostes", "Coste Neto": "23,60 € / punto"},
+                {"Componente": "🧑‍🔧 PRECIO VENTA MODO AUTÓNOMO (S/IVA)", "Detalle Físico": "Coste directo + margen acopio (~0,90 €)", "Coste Neto": f"{p_pared_auto:.2f} € / punto"},
+                {"Componente": "🏢 PRECIO VENTA MODELO EMPRESA (S/IVA)", "Detalle Físico": "Coste directo + 50% margen MO empresa", "Coste Neto": f"{p_pared_emp:.2f} € / punto"}
+            ]
+            st.dataframe(pd.DataFrame(filas_esc_pto), use_container_width=True, hide_index=True)
+
+        with col_esc2:
+            st.markdown("#### 2️⃣ La Escalera del Ratio Global: ¿Por qué da ~72 €/pto C/IVA?")
+            st.caption("Descomposición de cómo el Cuadro General, Telecomunicaciones y Boletín se reparten entre los puntos:")
+
+            p_cgmp_pto = (cgmp_total / total_puntos) if total_puntos > 0 else 0.0
+            p_tel_pto = (teleco_total / total_puntos) if total_puntos > 0 else 0.0
+            p_cie_pto = (cie_total / total_puntos) if total_puntos > 0 else 0.0
+            sub_base_pto = p_pared_emp + p_cgmp_pto + p_tel_pto + p_cie_pto
+            iva_pto_emp = p_global_emp - (total_obra_emp / (1 + iva_sel / 100.0) / total_puntos if total_puntos > 0 else 0.0)
+
+            filas_escalera = [
+                {"Escalón de Coste": "1. 🔌 Punto Instalado en Pared (Base)", "Importe Repartido": f"{p_pared_emp:.2f} €/pto", "¿Qué representa?": "Tubo + Caja + Cables 2.5mm² + Mecanismo"},
+                {"Escalón de Coste": f"2. ⚡ Prorrateo Cuadro CGMP 11.5 kW ({cgmp_total:,.0f} € ÷ {total_puntos} pts)", "Importe Repartido": f"+{p_cgmp_pto:.2f} €/pto", "¿Qué representa?": "IGA 50A, POP+DPS sobretensiones, 5 difs, 12 PIAs"},
+                {"Escalón de Coste": f"3. 📡 Prorrateo Telecomunicaciones RTR ({teleco_total:,.0f} € ÷ {total_puntos} pts)", "Importe Repartido": f"+{p_tel_pto:.2f} €/pto", "¿Qué representa?": "Caja RTR, Fibra FTTH, RTV Coaxial y multiplexor RJ45"},
+                {"Escalón de Coste": f"4. 📋 Prorrateo Boletín Oficial CIE ({cie_total:,.0f} € ÷ {total_puntos} pts)", "Importe Repartido": f"+{p_cie_pto:.2f} €/pto", "¿Qué representa?": "Medidas megóhmetro, diferenciales y registro DGEAIM"},
+                {"Escalón de Coste": "🏁 SUB-TOTAL BASE IMPONIBLE POR PUNTO", "Importe Repartido": f"{p_global_emp / (1 + iva_sel / 100.0):.2f} €/pto", "¿Qué representa?": "Presupuesto total neto ÷ total puntos de la vivienda"},
+                {"Escalón de Coste": f"🏛️ Cuota Oficial IVA ({iva_sel}%)", "Importe Repartido": f"+{p_global_emp - (p_global_emp / (1 + iva_sel / 100.0)):.2f} €/pto", "¿Qué representa?": "Impuesto sobre el Valor Añadido para Hacienda"},
+                {"Escalón de Coste": "🏆 RATIO MEDIO GLOBAL VIVIENDA (C/IVA)", "Importe Repartido": f"mathbf{{{p_global_emp:.2f} €/pto}}", "¿Qué representa?": f"Total factura cliente ({total_obra_emp:,.2f} €) ÷ {total_puntos} puntos"}
+            ]
+            st.dataframe(pd.DataFrame(filas_escalera), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("#### ⚖️ Cuadro de Balance Económico y Desglose por Punto (Empresa vs. Modo Autónomo)")
+        st.caption("Comparativa directa donde se aprecia la diferencia total y el impacto unitario por cada mecanismo instalado:")
+
+        p_dif_pared = p_pared_emp - p_pared_auto
+        p_dif_global = p_global_emp - p_global_auto
+        tot_dif_obra = total_obra_emp - total_obra_auto
+
+        filas_balance_final = [
+            {
+                "Concepto Económico": "🔌 Punto Instalado en Pared (S/IVA)",
+                "🏢 Modelo Empresa (SL)": f"{p_pared_emp:.2f} €/pto",
+                "🧑‍🔧 Modo Autónomo": f"{p_pared_auto:.2f} €/pto",
+                "Diferencia / Ahorro": f"-{p_dif_pared:.2f} €/pto",
+                "Impacto por Punto (57 pts)": f"El autónomo rebaja {p_dif_pared:.2f} €/pto",
+                "¿De dónde sale la cifra?": "Tarifa real de tabique (tubo+cable+mecanismo)"
+            },
+            {
+                "Concepto Económico": "⚡ Cuadro General CGMP 11.5 kW",
+                "🏢 Modelo Empresa (SL)": f"{cgmp_total:,.2f} €",
+                "🧑‍🔧 Modo Autónomo": f"{cgmp_total * (total_obra_auto / total_obra_emp if total_obra_emp > 0 else 1.0):,.2f} €",
+                "Diferencia / Ahorro": f"-{cgmp_total * (1 - (total_obra_auto / total_obra_emp if total_obra_emp > 0 else 1.0)):,.2f} €",
+                "Impacto por Punto (57 pts)": f"+{p_cgmp_pto:.2f} €/pto prorrateado",
+                "¿De dónde sale la cifra?": "IGA 50A, sobretensiones POP+DPS, 5 difs, 12 PIAs"
+            },
+            {
+                "Concepto Económico": "📡 Red Telecomunicaciones RTR (ICT-2)",
+                "🏢 Modelo Empresa (SL)": f"{teleco_total:,.2f} €",
+                "🧑‍🔧 Modo Autónomo": f"{teleco_total * (total_obra_auto / total_obra_emp if total_obra_emp > 0 else 1.0):,.2f} €",
+                "Diferencia / Ahorro": f"-{teleco_total * (1 - (total_obra_auto / total_obra_emp if total_obra_emp > 0 else 1.0)):,.2f} €",
+                "Impacto por Punto (57 pts)": f"+{p_tel_pto:.2f} €/pto prorrateado",
+                "¿De dónde sale la cifra?": "RTR, Fibra FTTH, Coaxial RG6, tomas TV y RJ45"
+            },
+            {
+                "Concepto Económico": "📋 Ensayos y Tramitación Boletín CIE",
+                "🏢 Modelo Empresa (SL)": f"{cie_total:,.2f} €",
+                "🧑‍🔧 Modo Autónomo": f"{cie_total:,.2f} €",
+                "Diferencia / Ahorro": "0,00 €",
+                "Impacto por Punto (57 pts)": f"+{p_cie_pto:.2f} €/pto prorrateado",
+                "¿De dónde sale la cifra?": "Verificaciones reglamentarias y registro DGEAIM"
+            },
+            {
+                "Concepto Económico": "🏁 BASE IMPONIBLE TOTAL (S/IVA)",
+                "🏢 Modelo Empresa (SL)": f"{total_obra_emp / (1 + iva_sel / 100.0):,.2f} €",
+                "🧑‍🔧 Modo Autónomo": f"{total_obra_auto / (1 + iva_sel / 100.0):,.2f} €",
+                "Diferencia / Ahorro": f"-{tot_dif_obra / (1 + iva_sel / 100.0):,.2f} €",
+                "Impacto por Punto (57 pts)": f"-{tot_dif_obra / (1 + iva_sel / 100.0) / total_puntos:.2f} €/pto",
+                "¿De dónde sale la cifra?": "Base imponible oficial antes de impuestos"
+            },
+            {
+                "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (C/IVA)",
+                "🏢 Modelo Empresa (SL)": f"{total_obra_emp:,.2f} €",
+                "🧑‍🔧 Modo Autónomo": f"{total_obra_auto:,.2f} €",
+                "Diferencia / Ahorro": f"-{tot_dif_obra:,.2f} €",
+                "Impacto por Punto (57 pts)": f"-{p_dif_global:.2f} €/pto",
+                "¿De dónde sale la cifra?": f"Total factura oficial para el cliente (con {iva_sel}% IVA)"
+            },
+            {
+                "Concepto Económico": "📊 Ratio Medio Global Vivienda (C/IVA)",
+                "🏢 Modelo Empresa (SL)": f"{p_global_emp:.2f} €/pto",
+                "🧑‍🔧 Modo Autónomo": f"{p_global_auto:.2f} €/pto",
+                "Diferencia / Ahorro": f"-{p_dif_global:.2f} €/pto",
+                "Impacto por Punto (57 pts)": f"Ahorro de {p_dif_global:.2f} € en el ratio global",
+                "¿De dónde sale la cifra?": "Total obra completa llave en mano ÷ 57 puntos"
+            }
+        ]
+        st.dataframe(pd.DataFrame(filas_balance_final), use_container_width=True, hide_index=True)
+
+
 def app():
     if "partidas_manuales" not in st.session_state:
         st.session_state["partidas_manuales"] = []
@@ -1368,7 +1598,7 @@ def app():
             # 3. COMPARATIVA EN VIVO: MODO EMPRESA VS MODO AUTÓNOMO
             # ---------------------------------------------------------
             st.markdown("---")
-            st.markdown("##### ⚖️ 3. Comparativa en Directo: Modo Empresa vs. Modo Autónomo (Tutor)")
+            st.markdown("##### ⚖️ 3. Comparativa en Directo: Modo Empresa vs. Modo Autónomo")
             st.caption("Visualiza las diferencias económicas y el ahorro que puedes ofrecer al cliente frente a una constructora:")
 
             col_m1, col_m2, col_m3 = st.columns([1, 1, 1.8])
@@ -1436,7 +1666,7 @@ def app():
             with col_comp_auto:
                 st.markdown(f"""
                 <div style="background-color:#eff6ff; border:2px solid #0284c7; border-radius:10px; padding:16px;">
-                    <div style="color:#0284c7; font-weight:bold; font-size:15px;">🧑‍🔧 MODELO AUTÓNOMO / TUTOR (De Calle)</div>
+                    <div style="color:#0284c7; font-weight:bold; font-size:15px;">🧑‍🔧 MODELO AUTÓNOMO (De Calle)</div>
                     <div style="font-size:24px; font-weight:800; color:#0369a1; margin:6px 0;">{tot_auto_aprox:,.2f} € <span style="font-size:13px; font-weight:normal; color:#64748b;">(C/IVA)</span></div>
                     <div style="font-size:13px; color:#334155; line-height:1.6;">
                         • Base Imponible: <b>{base_auto_aprox:,.2f} €</b><br>
@@ -1457,7 +1687,7 @@ def app():
             st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
             sel_perfil = st.radio(
                 "💼 ¿Qué tarifa deseas emitir en el Presupuesto Oficial para el Cliente?",
-                ["🧑‍🔧 Modelo Autónomo / Tutor (Tarifa Competitiva de Calle)", "🏢 Modelo Empresa (Margen Comercial Completo +50%)"],
+                ["🧑‍🔧 Modelo Autónomo (Tarifa Competitiva de Calle)", "🏢 Modelo Empresa (Margen Comercial Completo +50%)"],
                 index=0 if st.session_state.get('perfil_tarifa_autonomo', True) else 1,
                 horizontal=True,
                 key="radio_perfil_tarifa_sec3"
@@ -1507,11 +1737,11 @@ def app():
                     "Modelo de valoración económica para distribución interior:",
                     [
                         "📊 Escandallo Analítico (Coste Materiales + Horas MO + Margen %)",
-                        "🔌 Tarifa de Calle por Punto (25 - 30 €/pto según mercado/tutor)"
+                        "🔌 Tarifa de Calle por Punto (25 - 30 €/pto según mercado/autónomo)"
                     ],
                     index=0,
                     key="modo_tarifa_calle_vivienda",
-                    help="Permite elegir si los capítulos de distribución interior y mecanismos se valoran por escandallo detallado o por la tarifa de mercado habitual por punto (25 - 30 €/pto) que aplican instaladores y tutores en calle."
+                    help="Permite elegir si los capítulos de distribución interior y mecanismos se valoran por escandallo detallado o por la tarifa de mercado habitual por punto (25 - 30 €/pto) que aplican instaladores autónomos en calle."
                 )
             with col_mod_tar2:
                 es_modo_tarifa_puntos = "Tarifa de Calle por Punto" in modo_tarifa_sel
@@ -2290,11 +2520,17 @@ def app():
             if not detalle_mec_estancia:
                 detalle_mec_estancia = f"Instalación interior ({total_mecanismos} puntos)"
 
+            precio_medio_pto_est = (precio_venta_estancia / puntos_est_sel) if puntos_est_sel > 0 else 0.0
             comercial_estancias.append({
                 "Estancia": est["nombre"],
-                "Superficie": f"{m2} m²",
+                "Superficie": f"{m2:.1f} m²",
+                "m2_num": m2,
+                "Puntos": f"{puntos_est_sel} pts",
+                "puntos_num": puntos_est_sel,
                 "Detalle Comercial": detalle_mec_estancia,
-                "Importe Venta (€)": round(precio_venta_estancia, 2)
+                "Importe Venta (€)": round(precio_venta_estancia, 2),
+                "Precio Medio / Punto": f"{precio_medio_pto_est:.2f} €/pto",
+                "precio_medio_pto_num": round(precio_medio_pto_est, 2)
             })
 
             desgloses_internos_estancias.append({
@@ -3331,7 +3567,7 @@ def app():
 
             tab_doc_com, tab_doc_auto, tab_doc_comp, tab_doc_int, tab_doc_oc, tab_doc_uni = st.tabs([
                 "🏢 1. Presupuesto Empresa (PVP)",
-                "🧑‍🔧 2. Presupuesto Autónomo / Tutor (Sin Margen MO)",
+                "🧑‍🔧 2. Presupuesto Autónomo (Sin Margen MO)",
                 "⚖️ 3. Comparativa Empresa vs Autónomo",
                 "🛠️ 4. Panel Interno de Rendimiento",
                 "🛒 5. Orden de Compra y Acopio",
@@ -3420,7 +3656,7 @@ def app():
                 with st.expander("⚡ Kit Inteligente: Derivación Individual DI (ITC-BT-15) — Tarifa de Calle y Motor REBT", expanded=False):
                     st.markdown("""
                     **Calcula y cotiza la Derivación Individual con rigor de ingeniería y la realidad del instalador de calle:**  
-                    Dimensiona automáticamente la sección de cobre (10 o 16 mm²), tubo reglamentario y caída de tensión según ITC-BT-15, aplicando la tarifa de mercado (tutor de prácticas: 200 - 250 € base sin rozas, suplementos por metros, sección y obra) con semáforo de rentabilidad en directo.
+                    Dimensiona automáticamente la sección de cobre (10 o 16 mm²), tubo reglamentario y caída de tensión según ITC-BT-15, aplicando la tarifa de mercado (instalador de calle: 200 - 250 € base sin rozas, suplementos por metros, sección y obra) con semáforo de rentabilidad en directo.
                     """)
                     
                     col_di_k1, col_di_k2, col_di_k3 = st.columns(3)
@@ -3954,11 +4190,29 @@ def app():
                 st.markdown("---")
 
                 # =========================================================================
-                # SECCIÓN 2: DESGLOSE POR ESTANCIAS
+                # SECCIÓN 2: DESGLOSE POR ESTANCIAS (DE UN VISTAZO)
                 # =========================================================================
-                st.subheader("2. 🚪 Desglose de Instalación por Estancias de la Vivienda")
-                df_comercial = pd.DataFrame(comercial_estancias)
-                st.dataframe(df_comercial, use_container_width=True, hide_index=True)
+                render_resumen_estancias_glance(
+                    comercial_estancias,
+                    titulo_modo="Modelo Empresa (PVP)",
+                    precio_pto_pared_ref=precio_pto_pared_siva,
+                    es_autonomo=False
+                )
+
+                # Desglose al céntimo de dónde salen las cifras de los puntos
+                render_explicacion_origen_cifras_puntos(
+                    total_puntos=total_puntos_mecanismos,
+                    p_pared_emp=precio_pto_pared_siva,
+                    p_pared_auto=precio_pto_pared_siva_auto if 'precio_pto_pared_siva_auto' in locals() else round(precio_pto_pared_siva * 0.88, 2),
+                    p_global_emp=precio_medio_por_punto,
+                    p_global_auto=precio_pto_total_auto if 'precio_pto_total_auto' in locals() else round(precio_medio_por_punto * 0.90, 2),
+                    cgmp_total=venta_cap1_cgmp,
+                    teleco_total=venta_cap_teleco,
+                    cie_total=venta_cap5_boletin,
+                    total_obra_emp=total_cliente,
+                    total_obra_auto=total_calc_auto if 'total_calc_auto' in locals() else total_cliente,
+                    iva_sel=iva_sel
+                )
 
                 st.markdown("---")
 
@@ -4138,13 +4392,13 @@ def app():
 
 
             # =========================================================================
-            # PESTAÑA 2: PRESUPUESTO OFICIAL MODO AUTÓNOMO (TUTOR - SIN MARGEN MO)
+            # PESTAÑA 2: PRESUPUESTO OFICIAL MODO AUTÓNOMO (SIN MARGEN MO)
             # =========================================================================
             with tab_doc_auto:
-                st.header("🧑‍🔧 Vista Comercial: Presupuesto Oficial Modo Autónomo / Tutor")
+                st.header("🧑‍🔧 Vista Comercial: Presupuesto Oficial Modo Autónomo")
                 st.info("""
                 💡 **Oferta Comercial Sin Sobrecoste de Mano de Obra:**  
-                A diferencia de una empresa con cuadrillas contratadas, el **instalador electricista autónomo (como tu tutor de prácticas)** realiza el trabajo personalmente. Su jornal íntegro queda completamente garantizado con el coste directo por hora ($C_{mo}$).  
+                A diferencia de una empresa con cuadrillas contratadas, el **instalador electricista autónomo (instalador profesional directo)** realiza el trabajo personalmente. Su jornal íntegro queda completamente garantizado con el coste directo por hora ($C_{mo}$).  
                 Al suprimir o graduar el margen empresarial de mano de obra ($G_{mo}$), puedes presentar al cliente un presupuesto mucho más competitivo y económico manteniendo íntegros tu jornal y los beneficios de los materiales.
                 """)
 
@@ -4172,7 +4426,7 @@ def app():
                         step=5.0,
                         format="%.0f%%",
                         key="slider_margen_mo_auto_pestaña",
-                        help="0% = Modo Tutor Autónomo Puro (Solo cobra sus horas directas sin recargo adicional)."
+                        help="0% = Modo Autónomo Puro (Solo cobra sus horas directas sin recargo adicional)."
                     )
                 with col_cauto2:
                     st.markdown(f"""
@@ -4212,7 +4466,7 @@ def app():
                             <p style="margin: 3px 0; color: {card_text_color};"><b>Instalador Autorizado REBT ({n_licencia})</b> | {localidad} | Tel: {telefono}</p>
                         </div>
                         <div style="text-align: right;">
-                            <span style="background-color: #16a34a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 13px;">OFERTA AUTÓNOMO (MODO TUTOR)</span>
+                            <span style="background-color: #16a34a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 13px;">OFERTA AUTÓNOMO (PRESUPUESTO DIRECTO)</span>
                             <p style="margin: 4px 0 0 0; font-size: 13px; color: {card_text_color};"><b>Fecha:</b> {datetime.date.today().strftime("%d/%m/%Y")}</p>
                         </div>
                     </div>
@@ -4272,7 +4526,7 @@ def app():
                         $$\\underbrace{{{c_mat:,.2f}\text{{ €}}}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}\text{{ €}}}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}\text{{ €}}}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}\text{{ €}}}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}\text{{ €}}}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}\text{{ €}}}}$$
                         """)
                         if pct_margen_mo_auto == 0:
-                            st.caption("✅ **Modo Tutor Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
+                            st.caption("✅ **Modo Autónomo Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
                         else:
                             st.caption(f"✅ **Margen MO Personalizado ({pct_margen_mo_auto:.0f}%):** Ajuste comercial flexible.")
 
@@ -4295,49 +4549,49 @@ def app():
                     """)
 
                 # Cuadro de Balance Económico Comparativo (Empresa vs Autónomo)
-                st.markdown("#### ⚖️ Cuadro de Balance Económico Comparativo: Modelo Empresa vs. Modo Autónomo (Tutor)")
+                st.markdown("#### ⚖️ Cuadro de Balance Económico Comparativo: Modelo Empresa vs. Modo Autónomo")
                 st.caption("Visualiza con total transparencia dónde se genera el ahorro y cuánto dinero limpio ingresas:")
 
                 filas_balance_auto = [
                     {
                         "Concepto Económico": "📦 Coste Materiales de Compra (Almacén)",
                         "🏢 Modelo Empresa (SL)": f"{c_mat:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{c_mat:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{c_mat:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Explicación / Análisis de Calle": "Coste neto idéntico de almacén distribuidor"
                     },
                     {
                         "Concepto Económico": f"🛡️ Colchón Imprevistos Materiales ({porc_garantia}%)",
                         "🏢 Modelo Empresa (SL)": f"{m_seg:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{m_seg:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{m_seg:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Explicación / Análisis de Calle": "Fondo de seguridad por roturas o reposición"
                     },
                     {
                         "Concepto Económico": "📈 Ganancia en Materiales (U_mat)",
                         "🏢 Modelo Empresa (SL)": f"{u_mat:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{u_mat:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{u_mat:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Explicación / Análisis de Calle": "Beneficio comercial íntegro en tu bolsillo"
                     },
                     {
                         "Concepto Económico": f"⏱️ Mano de Obra Directa Cuadrilla ({horas_totales_obra:.0f} h)",
                         "🏢 Modelo Empresa (SL)": f"{c_mo:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{c_mo:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{c_mo:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Explicación / Análisis de Calle": f"Oficial: {p_of_tot:,.2f} € | Compañero: {p_cp_tot:,.2f} €" if num_operarios > 1 else f"Jornal íntegro del instalador ({p_of_tot:,.2f} €)"
                     },
                     {
                         "Concepto Económico": "💼 Margen Comercial Mano de Obra (G_mo)",
                         "🏢 Modelo Empresa (SL)": f"{g_mo:,.2f} € ({margen_comercial:.0f}%)",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
+                        "🧑‍🔧 Modo Autónomo": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
                         "Diferencia (€)": f"-{g_mo - g_mo_auto:,.2f} €",
                         "Explicación / Análisis de Calle": "🎯 AQUÍ ESTÁ EL AHORRO: El autónomo no cobra sobrecoste"
                     },
                     {
                         "Concepto Económico": "📋 Ensayos ITC-BT-05 y Boletín CIE DGEAIM",
                         "🏢 Modelo Empresa (SL)": f"{v_bol:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{v_bol:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{v_bol:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Explicación / Análisis de Calle": "Honorarios técnicos de legalización y tasas"
                     }
@@ -4346,7 +4600,7 @@ def app():
                     filas_balance_auto.append({
                         "Concepto Económico": "➕ Partidas Adicionales a Medida",
                         "🏢 Modelo Empresa (SL)": f"{v_part:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{v_part:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{v_part:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Explicación / Análisis de Calle": "Trabajos adicionales valorados"
                     })
@@ -4354,42 +4608,42 @@ def app():
                     {
                         "Concepto Económico": "🏁 BASE IMPONIBLE TOTAL (S/IVA)",
                         "🏢 Modelo Empresa (SL)": f"{base_calc:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{base_calc_auto:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{base_calc_auto:,.2f} €",
                         "Diferencia (€)": f"-{dif_base:,.2f} €",
                         "Explicación / Análisis de Calle": f"Rebaja neta de -{(dif_base / base_calc * 100) if base_calc > 0 else 0:.1f}% para el cliente"
                     },
                     {
                         "Concepto Económico": f"🏛️ Cuota IVA Oficial ({iva_sel}%)",
                         "🏢 Modelo Empresa (SL)": f"{cuota_iva_calc:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{cuota_iva_auto:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{cuota_iva_auto:,.2f} €",
                         "Diferencia (€)": f"-{cuota_iva_calc - cuota_iva_auto:,.2f} €",
                         "Explicación / Análisis de Calle": "Menos impuestos a ingresar en Hacienda"
                     },
                     {
                         "Concepto Económico": "🏆 TOTAL FACTURA CLIENTE (C/IVA)",
                         "🏢 Modelo Empresa (SL)": f"{total_calc:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{total_calc_auto:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{total_calc_auto:,.2f} €",
                         "Diferencia (€)": f"-{dif_total:,.2f} €",
                         "Explicación / Análisis de Calle": f"El cliente se ahorra {dif_total:,.2f} € (-{(dif_total / total_calc * 100) if total_calc > 0 else 0:.1f}%)"
                     },
                     {
                         "Concepto Económico": "🔌 Punto Instalado en Pared (S/IVA)",
                         "🏢 Modelo Empresa (SL)": f"{precio_pto_pared_siva:,.2f} €/pto",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{precio_pto_pared_siva_auto:,.2f} €/pto",
+                        "🧑‍🔧 Modo Autónomo": f"{precio_pto_pared_siva_auto:,.2f} €/pto",
                         "Diferencia (€)": f"-{delta_pto_pared:,.2f} €/pto",
                         "Explicación / Análisis de Calle": "Tarifa real por mecanismo en tabique"
                     },
                     {
                         "Concepto Económico": "📊 Ratio Global Vivienda (C/IVA)",
                         "🏢 Modelo Empresa (SL)": f"{precio_medio_por_punto:,.2f} €/pto",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{precio_pto_total_auto:,.2f} €/pto",
+                        "🧑‍🔧 Modo Autónomo": f"{precio_pto_total_auto:,.2f} €/pto",
                         "Diferencia (€)": f"-{delta_pto:,.2f} €/pto",
                         "Explicación / Análisis de Calle": "Ratio con CGMP 11.5kW y CIE repartidos"
                     },
                     {
                         "Concepto Económico": "💰 Dinero Limpio para Ti y tu Compañero",
                         "🏢 Modelo Empresa (SL)": f"{benef_total_empresa:,.2f} € (Solo benef. SL)",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{ingreso_real_autonomo:,.2f} € (Jornal + Beneficios)",
+                        "🧑‍🔧 Modo Autónomo": f"{ingreso_real_autonomo:,.2f} € (Jornal + Beneficios)",
                         "Diferencia (€)": f"+{ingreso_real_autonomo - benef_total_empresa:,.2f} €",
                         "Explicación / Análisis de Calle": "El autónomo cobra su sueldo íntegro en mano"
                     }
@@ -4418,6 +4672,31 @@ def app():
                             st.info("👤 **Trabajo Individual:**  \nObra realizada íntegramente por un único instalador.")
                     with col_jauto3:
                         st.success(f"💶 **Total Mano de Obra Cuadrilla:**  \n**{coste_mano_obra_bruto:,.2f} €** ({dias_estimados:.1f} días | {horas_totales_obra:.0f} h totales)")
+
+                # =========================================================================
+                # DESGLOSE DE PUNTOS POR ESTANCIAS Y ORIGEN DE CIFRAS (MODO AUTÓNOMO)
+                # =========================================================================
+                st.markdown("---")
+                render_resumen_estancias_glance(
+                    df_comercial_auto if 'df_comercial_auto' in locals() and df_comercial_auto else comercial_estancias,
+                    titulo_modo="Modo Autónomo (Sin Recargo MO)",
+                    precio_pto_pared_ref=precio_pto_pared_siva_auto,
+                    es_autonomo=True
+                )
+
+                render_explicacion_origen_cifras_puntos(
+                    total_puntos=total_puntos_mecanismos,
+                    p_pared_emp=precio_pto_pared_siva,
+                    p_pared_auto=precio_pto_pared_siva_auto,
+                    p_global_emp=precio_medio_por_punto,
+                    p_global_auto=precio_pto_total_auto,
+                    cgmp_total=venta_cap1_cgmp,
+                    teleco_total=venta_cap_teleco,
+                    cie_total=venta_cap5_boletin,
+                    total_obra_emp=total_calc,
+                    total_obra_auto=total_calc_auto,
+                    iva_sel=iva_sel
+                )
 
                 # Generación del Presupuesto Oficial Modo Autónomo
                 st.markdown("---")
@@ -4451,7 +4730,12 @@ def app():
                     factor_est = suma_est_nueva / total_est_orig
                     for r_orig in comercial_estancias:
                         r_dict = dict(r_orig)
-                        r_dict["Importe Venta (€)"] = round(float(r_orig.get("Importe Venta (€)", 0.0)) * factor_est, 2)
+                        imp_auto = round(float(r_orig.get("Importe Venta (€)", 0.0)) * factor_est, 2)
+                        r_dict["Importe Venta (€)"] = imp_auto
+                        pts_r = r_orig.get("puntos_num", 1)
+                        p_med_auto = (imp_auto / pts_r) if pts_r > 0 else 0.0
+                        r_dict["Precio Medio / Punto"] = f"{p_med_auto:.2f} €/pto"
+                        r_dict["precio_medio_pto_num"] = round(p_med_auto, 2)
                         df_comercial_auto.append(r_dict)
                 else:
                     df_comercial_auto = comercial_estancias
@@ -4551,42 +4835,42 @@ def app():
                     {
                         "Concepto Económico": "📦 Coste Materiales de Compra (C_mat)",
                         "🏢 Modelo Empresa": f"{c_mat:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{c_mat:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{c_mat:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Impacto / Análisis": "Coste idéntico en almacén"
                     },
                     {
                         "Concepto Económico": "🛡️ Margen Seguridad Materiales (M_seg)",
                         "🏢 Modelo Empresa": f"{m_seg:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{m_seg:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{m_seg:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Impacto / Análisis": f"Colchón {porc_garantia}% conservado"
                     },
                     {
                         "Concepto Económico": "📈 Beneficio en Materiales (U_mat)",
                         "🏢 Modelo Empresa": f"{u_mat:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{u_mat:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{u_mat:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Impacto / Análisis": "Ganancia íntegra conservada"
                     },
                     {
                         "Concepto Económico": "⏱️ Jornal / Mano de Obra Directa (C_mo)",
                         "🏢 Modelo Empresa": f"{c_mo:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{c_mo:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{c_mo:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Impacto / Análisis": f"Sueldo garantizado ({horas_totales_obra:.1f} h)"
                     },
                     {
                         "Concepto Económico": "💼 Ganancia Comercial Mano de Obra (G_mo)",
                         "🏢 Modelo Empresa": f"{g_mo:,.2f} € ({margen_comercial:.0f}%)",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
+                        "🧑‍🔧 Modo Autónomo": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
                         "Diferencia (€)": f"-{g_mo - g_mo_auto:,.2f} €",
                         "Impacto / Análisis": "Sobrecoste retirado por el autónomo"
                     },
                     {
                         "Concepto Económico": "📋 Ensayos ITC-BT-05 y CIE DGEAIM",
                         "🏢 Modelo Empresa": f"{v_bol:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{v_bol:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{v_bol:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Impacto / Análisis": "Honorarios técnicos de boletín"
                     }
@@ -4596,7 +4880,7 @@ def app():
                     filas_comp_tab.append({
                         "Concepto Económico": "➕ Partidas Adicionales y Extras",
                         "🏢 Modelo Empresa": f"{v_part:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{v_part:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{v_part:,.2f} €",
                         "Diferencia (€)": "0,00 €",
                         "Impacto / Análisis": "Trabajos adicionales valorados"
                     })
@@ -4605,42 +4889,42 @@ def app():
                     {
                         "Concepto Económico": "🏁 BASE IMPONIBLE TOTAL (S/IVA)",
                         "🏢 Modelo Empresa": f"{base_calc:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{base_calc_auto:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{base_calc_auto:,.2f} €",
                         "Diferencia (€)": f"-{dif_base:,.2f} €",
                         "Impacto / Análisis": f"Descuento comercial de -{(dif_base / base_calc * 100) if base_calc > 0 else 0:.1f}%"
                     },
                     {
                         "Concepto Económico": f"🏛️ Cuota IVA Oficial ({iva_sel}%)",
                         "🏢 Modelo Empresa": f"{cuota_iva_calc:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{cuota_iva_auto:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{cuota_iva_auto:,.2f} €",
                         "Diferencia (€)": f"-{cuota_iva_calc - cuota_iva_auto:,.2f} €",
                         "Impacto / Análisis": "Menos impuestos a pagar por cliente"
                     },
                     {
                         "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
                         "🏢 Modelo Empresa": f"{total_calc:,.2f} €",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{total_calc_auto:,.2f} €",
+                        "🧑‍🔧 Modo Autónomo": f"{total_calc_auto:,.2f} €",
                         "Diferencia (€)": f"-{dif_total:,.2f} €",
                         "Impacto / Análisis": f"Ahorro total para el cliente (-{(dif_total / total_calc * 100) if total_calc > 0 else 0:.1f}%)"
                     },
                     {
                         "Concepto Económico": "🔌 Punto Instalado en Pared (S/IVA)",
                         "🏢 Modelo Empresa": f"{precio_pto_pared_siva:,.2f} €/pto",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{precio_pto_pared_siva_auto:,.2f} €/pto",
+                        "🧑‍🔧 Modo Autónomo": f"{precio_pto_pared_siva_auto:,.2f} €/pto",
                         "Diferencia (€)": f"-{delta_pto_pared:,.2f} €/pto",
                         "Impacto / Análisis": "Tarifa real por mecanismo en pared (tubo+cable+mecanismo)"
                     },
                     {
                         "Concepto Económico": "📊 Ratio Medio Global Llave en Mano (C/IVA)",
                         "🏢 Modelo Empresa": f"{precio_medio_por_punto:,.2f} €/pto",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{precio_pto_total_auto:,.2f} €/pto",
+                        "🧑‍🔧 Modo Autónomo": f"{precio_pto_total_auto:,.2f} €/pto",
                         "Diferencia (€)": f"-{delta_pto:,.2f} €/pto",
                         "Impacto / Análisis": "Ratio de la obra completa (con CGMP 11.5kW y CIE)"
                     },
                     {
                         "Concepto Económico": "💰 Ingreso Real en el Bolsillo del Instalador",
                         "🏢 Modelo Empresa": f"{benef_total_empresa:,.2f} € (Solo beneficio)",
-                        "🧑‍🔧 Modo Autónomo (Tutor)": f"{ingreso_real_autonomo:,.2f} € (Sueldo + Beneficios)",
+                        "🧑‍🔧 Modo Autónomo": f"{ingreso_real_autonomo:,.2f} € (Sueldo + Beneficios)",
                         "Diferencia (€)": f"+{ingreso_real_autonomo - benef_total_empresa:,.2f} €",
                         "Impacto / Análisis": "El autónomo cobra su sueldo directo íntegro"
                     }
@@ -4731,7 +5015,7 @@ def app():
                     m_28 = (b_28 / 28.0 * 100.0) if 28.0 > 0 else 0.0
                     col_28 = "#16a34a" if m_28 >= 25 else ("#ca8a04" if m_28 >= 10 else "#dc2626")
                     with col_tpto2:
-                        st.markdown("**A 28.00 € / punto** *(Estándar Tutor)*")
+                        st.markdown("**A 28.00 € / punto** *(Tarifa Autónomo)*")
                         st.markdown(f"• Total Puntos: `{28.0 * total_puntos_mecanismos:,.2f} €`")
                         st.markdown(f"• Beneficio Neto: `{b_28:+.2f} €/pto`")
                         st.markdown(f"<span style='color:{col_28}; font-weight:bold;'>Margen: {m_28:.1f}%</span>", unsafe_allow_html=True)
@@ -4787,10 +5071,10 @@ def app():
                 benef_total_empresa = round(m_seg + u_mat + g_mo + v_bol + v_part, 2)
                 costes_directos_tot = round(c_mat + c_mo, 2)
                 
-                # Render con pestañas comparativas: Empresa vs Autónomo Tutor
+                # Render con pestañas comparativas: Empresa vs Autónomo
                 tab_mod_empresa, tab_mod_autonomo, tab_mod_comparativa = st.tabs([
                     "🏢 1. Modelo Empresa (Con Margen MO G_mo)",
-                    "👤 2. Simulador Autónomo / Tutor (Sin Margen MO)",
+                    "👤 2. Simulador Autónomo (Sin Margen MO)",
                     "⚖️ 3. Comparativa Empresa vs Autónomo"
                 ])
 
@@ -4923,10 +5207,10 @@ def app():
                         st.caption("Beneficio / Coste Real")
 
                 # =====================================================================
-                # SUB-PESTAÑA 2: SIMULADOR AUTÓNOMO / TUTOR (SIN MARGEN MO O AJUSTABLE)
+                # SUB-PESTAÑA 2: SIMULADOR AUTÓNOMO (SIN MARGEN MO O AJUSTABLE)
                 # =====================================================================
                 with tab_mod_autonomo:
-                    st.markdown("##### 👤 Simulador para Instalador Autónomo (Modo Tutor de Prácticas)")
+                    st.markdown("##### 👤 Simulador para Instalador Autónomo (Modo Autónomo Directo)")
                     st.info("""
                     💡 **¿Por qué los electricistas autónomos suprimen la ganancia sobre la mano de obra ($G_{mo}$)?**  
                     A diferencia de una constructora o empresa con cuadrillas contratadas, el **instalador autónomo ejecuta la obra personalmente con sus propias manos**.  
@@ -4943,7 +5227,7 @@ def app():
                             step=5.0,
                             format="%.0f%%",
                             key="slider_margen_mo_auto",
-                            help="0% = Modo Tutor Autónomo Puro (Solo cobra sus horas sin recargo comercial adicional)."
+                            help="0% = Modo Autónomo Puro (Solo cobra sus horas sin recargo comercial adicional)."
                         )
                     with col_cauto2:
                         st.markdown(f"""
@@ -5019,7 +5303,7 @@ def app():
                             $$\\underbrace{{{c_mat:,.2f}\text{{ €}}}}_{{C_{{mat}}}} + \\underbrace{{{m_seg:,.2f}\text{{ €}}}}_{{M_{{seg}}}} + \\underbrace{{{u_mat:,.2f}\text{{ €}}}}_{{U_{{mat}}}} + \\underbrace{{{c_mo:,.2f}\text{{ €}}}}_{{C_{{mo}}}} + \\underbrace{{{g_mo_auto:,.2f}\text{{ €}}}}_{{G_{{mo}}^{{\\text{{auto}}}}}}{extra_txt_aeq} = \\mathbf{{{base_calc_auto:,.2f}\text{{ €}}}}$$
                             """)
                             if pct_margen_mo_auto == 0:
-                                st.caption("✅ **Modo Tutor Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
+                                st.caption("✅ **Modo Autónomo Puro (0% sobrecoste MO):** Tu compensación es tu jornal directo ($C_{mo}$) por las horas trabajadas.")
                             else:
                                 st.caption(f"✅ **Margen MO Personalizado ({pct_margen_mo_auto:.0f}%):** Ajuste comercial flexible.")
 
@@ -5268,42 +5552,42 @@ def app():
                         {
                             "Concepto Económico": "📦 Coste Materiales de Compra (C_mat)",
                             "🏢 Modelo Empresa": f"{c_mat:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{c_mat:,.2f} €",
+                            "👤 Modo Autónomo": f"{c_mat:,.2f} €",
                             "Diferencia (€)": "0,00 €",
                             "Impacto / Análisis": "Coste idéntico en almacén"
                         },
                         {
                             "Concepto Económico": "🛡️ Margen Seguridad Materiales (M_seg)",
                             "🏢 Modelo Empresa": f"{m_seg:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{m_seg:,.2f} €",
+                            "👤 Modo Autónomo": f"{m_seg:,.2f} €",
                             "Diferencia (€)": "0,00 €",
                             "Impacto / Análisis": f"Colchón {porc_garantia}% conservado"
                         },
                         {
                             "Concepto Económico": "📈 Beneficio en Materiales (U_mat)",
                             "🏢 Modelo Empresa": f"{u_mat:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{u_mat:,.2f} €",
+                            "👤 Modo Autónomo": f"{u_mat:,.2f} €",
                             "Diferencia (€)": "0,00 €",
                             "Impacto / Análisis": "Ganancia íntegra conservada"
                         },
                         {
                             "Concepto Económico": "⏱️ Jornal / Mano de Obra Directa (C_mo)",
                             "🏢 Modelo Empresa": f"{c_mo:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{c_mo:,.2f} €",
+                            "👤 Modo Autónomo": f"{c_mo:,.2f} €",
                             "Diferencia (€)": "0,00 €",
                             "Impacto / Análisis": f"Sueldo garantizado ({horas_totales_obra:.1f} h)"
                         },
                         {
                             "Concepto Económico": "💼 Ganancia Comercial Mano de Obra (G_mo)",
                             "🏢 Modelo Empresa": f"{g_mo:,.2f} € ({margen_comercial:.0f}%)",
-                            "👤 Modo Autónomo (Tutor)": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
+                            "👤 Modo Autónomo": f"{g_mo_auto:,.2f} € ({pct_margen_mo_auto:.0f}%)",
                             "Diferencia (€)": f"-{g_mo - g_mo_auto:,.2f} €",
                             "Impacto / Análisis": "Sobrecoste retirado por el autónomo"
                         },
                         {
                             "Concepto Económico": "📋 Ensayos ITC-BT-05 y CIE DGEAIM",
                             "🏢 Modelo Empresa": f"{v_bol:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{v_bol:,.2f} €",
+                            "👤 Modo Autónomo": f"{v_bol:,.2f} €",
                             "Diferencia (€)": "0,00 €",
                             "Impacto / Análisis": "Honorarios técnicos de boletín"
                         }
@@ -5313,7 +5597,7 @@ def app():
                         filas_comp.append({
                             "Concepto Económico": "➕ Partidas Adicionales y Extras",
                             "🏢 Modelo Empresa": f"{v_part:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{v_part:,.2f} €",
+                            "👤 Modo Autónomo": f"{v_part:,.2f} €",
                             "Diferencia (€)": "0,00 €",
                             "Impacto / Análisis": "Trabajos adicionales valorados"
                         })
@@ -5322,42 +5606,42 @@ def app():
                         {
                             "Concepto Económico": "🏁 BASE IMPONIBLE TOTAL (S/IVA)",
                             "🏢 Modelo Empresa": f"{base_calc:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{base_calc_auto:,.2f} €",
+                            "👤 Modo Autónomo": f"{base_calc_auto:,.2f} €",
                             "Diferencia (€)": f"-{dif_base:,.2f} €",
                             "Impacto / Análisis": f"Descuento comercial de -{(dif_base / base_calc * 100) if base_calc > 0 else 0:.1f}%"
                         },
                         {
                             "Concepto Económico": f"🏛️ Cuota IVA Oficial ({iva_sel}%)",
                             "🏢 Modelo Empresa": f"{cuota_iva_calc:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{cuota_iva_auto:,.2f} €",
+                            "👤 Modo Autónomo": f"{cuota_iva_auto:,.2f} €",
                             "Diferencia (€)": f"-{cuota_iva_calc - cuota_iva_auto:,.2f} €",
                             "Impacto / Análisis": "Menos impuestos a pagar por cliente"
                         },
                         {
                             "Concepto Económico": "🏆 TOTAL A COBRAR AL CLIENTE (CON IVA)",
                             "🏢 Modelo Empresa": f"{total_calc:,.2f} €",
-                            "👤 Modo Autónomo (Tutor)": f"{total_calc_auto:,.2f} €",
+                            "👤 Modo Autónomo": f"{total_calc_auto:,.2f} €",
                             "Diferencia (€)": f"-{dif_total:,.2f} €",
                             "Impacto / Análisis": f"Ahorro total para el cliente (-{(dif_total / total_calc * 100) if total_calc > 0 else 0:.1f}%)"
                         },
                         {
                             "Concepto Económico": "🔌 Punto Instalado en Pared (S/IVA)",
                             "🏢 Modelo Empresa": f"{precio_pto_pared_siva:,.2f} €/pto",
-                            "👤 Modo Autónomo (Tutor)": f"{precio_pto_pared_siva_auto:,.2f} €/pto",
+                            "👤 Modo Autónomo": f"{precio_pto_pared_siva_auto:,.2f} €/pto",
                             "Diferencia (€)": f"-{delta_pto_pared:,.2f} €/pto",
                             "Impacto / Análisis": "Tarifa real por mecanismo en pared (tubo+cable+mecanismo)"
                         },
                         {
                             "Concepto Económico": "📊 Ratio Medio Global Llave en Mano (C/IVA)",
                             "🏢 Modelo Empresa": f"{precio_medio_por_punto:,.2f} €/pto",
-                            "👤 Modo Autónomo (Tutor)": f"{precio_pto_total_auto:,.2f} €/pto",
+                            "👤 Modo Autónomo": f"{precio_pto_total_auto:,.2f} €/pto",
                             "Diferencia (€)": f"-{delta_pto:,.2f} €/pto",
                             "Impacto / Análisis": "Ratio de la obra completa (con CGMP 11.5kW y CIE)"
                         },
                         {
                             "Concepto Económico": "💰 Ingreso Real en el Bolsillo del Instalador",
                             "🏢 Modelo Empresa": f"{benef_total_empresa:,.2f} € (Solo beneficio)",
-                            "👤 Modo Autónomo (Tutor)": f"{ingreso_real_autonomo:,.2f} € (Sueldo + Beneficios)",
+                            "👤 Modo Autónomo": f"{ingreso_real_autonomo:,.2f} € (Sueldo + Beneficios)",
                             "Diferencia (€)": f"+{ingreso_real_autonomo - benef_total_empresa:,.2f} €",
                             "Impacto / Análisis": "El autónomo cobra su sueldo directo íntegro"
                         }

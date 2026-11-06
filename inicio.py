@@ -2042,7 +2042,7 @@ with st.sidebar:
                 ("👥 Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
                 ("🏛️ Memoria Técnica & Planos (MTD)", "🏛️ Memoria Técnica (MTD 30)"),
                 ("🏡 Presupuesto Vivienda", "🏡 Presupuesto Vivienda"),
-                ("🧑‍🔧 Presupuesto Autónomo (Tutor)", "🧑‍🔧 Presupuesto Autónomo (Tutor)"),
+                ("🧑‍🔧 Presupuesto Autónomo", "🧑‍🔧 Presupuesto Autónomo"),
             ]
         },
         {
