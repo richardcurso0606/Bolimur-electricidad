@@ -16,6 +16,7 @@ import json
 import datetime
 import urllib.parse
 from typing import Dict, Any, List, Optional
+import pandas as pd
 import streamlit as st
 
 try:
@@ -569,10 +570,181 @@ def render_panel_herramientas_presupuesto(
     st.caption("Herramienta de control financiero para el instalador de calle: ajusta tus márgenes, compara tarifas Empresa vs. Autónomo y audita ofertas del cliente.")
 
     # ---------------------------------------------------------------------
-    # AJUSTES INTERACTIVOS DE MÁRGENES Y MANO DE OBRA (ESTILO VIVIENDA)
+    # 1. LISTA DE MATERIALES EDITABLE (DESMARCAR YA EN OBRA / YA CANALIZADO)
     # ---------------------------------------------------------------------
-    with st.expander("⚙️ Ajustar Márgenes Comerciales y Mano de Obra en Tiempo Real", expanded=True):
-        st.markdown("<div style='font-size:13.5px; color:#475569; margin-bottom:10px;'>Ajusta libremente tus márgenes y tu tarifa horaria para ver el impacto inmediato en el presupuesto, tus beneficios limpios y el semáforo comercial:</div>", unsafe_allow_html=True)
+    with st.expander("📦 1. Lista de Materiales de la Instalación (Modificar Precios, Cantidades o Desmarcar lo ya existente)", expanded=True):
+        st.markdown(
+            "<div style='font-size:13.5px; color:#1e293b; margin-bottom:8px;'>"
+            "<b>💡 ¿El cliente ya tiene algún material o la obra ya está canalizada?</b> Desmarca la casilla <b>'Comprar'</b> de esa partida o ajusta sus metros/precio. "
+            "El sistema lo excluirá del coste de compra en almacén y recalculará el presupuesto al instante cobrando solo lo que realmente vas a suministrar.</div>",
+            unsafe_allow_html=True
+        )
+
+        lista_vinculada = vincular_materiales_con_bd(filas_materiales) if filas_materiales else []
+        datos_tabla_mat = []
+        if lista_vinculada:
+            for idx, m in enumerate(lista_vinculada):
+                datos_tabla_mat.append({
+                    "incluir": True,
+                    "material": str(m.get("mat") or m.get("concepto") or f"Material {idx+1}"),
+                    "cant": float(m.get("cant", 1.0)),
+                    "unid": str(m.get("unid", "ud")),
+                    "precio_unit": float(m.get("p_u", 0.0)),
+                    "proveedor": str(m.get("proveedor", "Obramat")),
+                    "sku": str(m.get("sku", "S/Ref"))
+                })
+        else:
+            datos_tabla_mat.append({
+                "incluir": True,
+                "material": f"Materiales normalizados de {modulo_nombre}",
+                "cant": 1.0,
+                "unid": "partida",
+                "precio_unit": coste_mat_orig,
+                "proveedor": "Obramat / Almacén",
+                "sku": "GEN-01"
+            })
+
+        df_mat_init = pd.DataFrame(datos_tabla_mat)
+
+        df_mat_editado = st.data_editor(
+            df_mat_init,
+            key=f"{key_prefix}_editor_materiales_interactivo",
+            column_config={
+                "incluir": st.column_config.CheckboxColumn(
+                    "Comprar",
+                    help="Marca para comprar en almacén. Desmarca si el cliente ya lo tiene o ya está canalizado en la finca.",
+                    default=True
+                ),
+                "material": st.column_config.TextColumn("Denominación del Material / Especificación Técnica", width="large", required=True),
+                "cant": st.column_config.NumberColumn("Cantidad", min_value=0.0, step=0.5, format="%.1f"),
+                "unid": st.column_config.TextColumn("Unidad", width="small"),
+                "precio_unit": st.column_config.NumberColumn("P. Unit Coste (€)", min_value=0.0, step=0.1, format="%.2f €"),
+                "proveedor": st.column_config.TextColumn("Dónde Comprar (Tienda)", width="medium"),
+                "sku": st.column_config.TextColumn("Ref. SKU", width="small")
+            },
+            use_container_width=True,
+            num_rows="dynamic"
+        )
+
+        filas_mat_activas = []
+        filas_mat_en_obra = []
+        coste_mat_calculado = 0.0
+        coste_mat_en_obra = 0.0
+
+        for _, r in df_mat_editado.iterrows():
+            c_nom = str(r["material"])
+            c_cant = float(r["cant"]) if pd.notnull(r["cant"]) else 0.0
+            c_unid = str(r["unid"]) if pd.notnull(r["unid"]) else "ud"
+            c_pu = float(r["precio_unit"]) if pd.notnull(r["precio_unit"]) else 0.0
+            c_sub = round(c_cant * c_pu, 2)
+            c_prov = str(r["proveedor"]) if pd.notnull(r["proveedor"]) else "Obramat"
+            c_sku = str(r["sku"]) if pd.notnull(r["sku"]) else "S/Ref"
+            c_inc = bool(r["incluir"]) if pd.notnull(r["incluir"]) else True
+
+            item_dict = {
+                "mat": c_nom,
+                "cant": c_cant,
+                "unid": c_unid,
+                "p_u": c_pu,
+                "subtotal": c_sub,
+                "proveedor": c_prov,
+                "sku": c_sku,
+                "incluir": c_inc,
+                "en_bd": ("Tarifa Web" not in c_prov and "Pendiente" not in c_prov)
+            }
+
+            if c_inc and c_cant > 0:
+                coste_mat_calculado += c_sub
+                filas_mat_activas.append(item_dict)
+            else:
+                coste_mat_en_obra += c_sub
+                item_dict["motivo"] = "Aportado por cliente / Ya instalado en obra"
+                filas_mat_en_obra.append(item_dict)
+
+        coste_mat = round(coste_mat_calculado, 2)
+
+        col_mres1, col_mres2 = st.columns(2)
+        with col_mres1:
+            st.success(f"🛒 **Materiales a Comprar en Almacén:** {coste_mat:,.2f} € ({len(filas_mat_activas)} partidas a suministrar)")
+        with col_mres2:
+            if filas_mat_en_obra:
+                st.info(f"🏠 **En Obra / Aportado por Cliente (0 € coste):** {coste_mat_en_obra:,.2f} € ({len(filas_mat_en_obra)} partidas)")
+            else:
+                st.caption("ℹ️ Todos los materiales seleccionados para compra.")
+
+    # ---------------------------------------------------------------------
+    # 2. MODIFICAR PARTIDAS COMERCIALES (DESPLAZAMIENTO, SIEM Y MANO DE OBRA)
+    # ---------------------------------------------------------------------
+    with st.expander("⚙️ 2. Modificar Partidas Comerciales: Desplazamiento, SIEM / Boletín y Mano de Obra", expanded=True):
+        st.markdown("<div style='font-size:13.5px; color:#475569; margin-bottom:10px;'>Ajusta las partidas de desplazamiento, tramitación de boletín y tus tarifas. Al aumentar el desplazamiento o el SIEM, el importe se actualiza directamente en ambos modos (Empresa y Autónomo):</div>", unsafe_allow_html=True)
+
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            inc_desp = st.checkbox(
+                "🚗 Incluir Desplazamiento y Portes de Obra",
+                value=(desplazamiento > 0),
+                key=f"{key_prefix}_chk_desp",
+                help="Marca para repercutir kilometraje, furgoneta o dietas de desplazamiento."
+            )
+            if inc_desp:
+                val_desp_base = st.number_input(
+                    "🚗 Importe Desplazamiento (€) [Aumenta en ambos: Empresa y Autónomo]:",
+                    min_value=0.0,
+                    max_value=3000.0,
+                    value=float(desplazamiento) if desplazamiento > 0 else 30.0,
+                    step=5.0,
+                    key=f"{key_prefix}_num_desp_base",
+                    help="Al modificar este importe se incrementa directamente en la columna de Empresa y en la de Autónomo."
+                )
+                dif_desp = st.checkbox("Diferenciar tarifa de desplazamiento para Empresa", value=False, key=f"{key_prefix}_chk_dif_desp")
+                if dif_desp:
+                    col_dd1, col_dd2 = st.columns(2)
+                    with col_dd1:
+                        desplazamiento_emp = st.number_input("🏢 Desplazamiento Empresa (€):", min_value=0.0, value=float(val_desp_base * 1.3), step=5.0, key=f"{key_prefix}_num_desp_emp")
+                    with col_dd2:
+                        desplazamiento_auto = st.number_input("🧑‍🔧 Desplazamiento Autónomo (€):", min_value=0.0, value=float(val_desp_base), step=5.0, key=f"{key_prefix}_num_desp_auto")
+                else:
+                    desplazamiento_emp = val_desp_base
+                    desplazamiento_auto = val_desp_base
+            else:
+                desplazamiento_emp = 0.0
+                desplazamiento_auto = 0.0
+                st.caption("ℹ️ *Partida de desplazamiento desactivada (0,00 € en ambos).*")
+
+        with col_d2:
+            inc_cie = st.checkbox(
+                "📋 Incluir Tramitación CIE / Boletín / SIEM",
+                value=(coste_tramitacion > 0),
+                key=f"{key_prefix}_chk_inc_cie",
+                help="Desmarca si el cliente ya dispone de boletín o si no te vas a encargar de tramitarlo ante Industria / SIEM."
+            )
+            if inc_cie:
+                val_cie_base = st.number_input(
+                    "📋 Importe Tramitación SIEM / CIE (€) [Aplica en ambos: Empresa y Autónomo]:",
+                    min_value=0.0,
+                    max_value=3000.0,
+                    value=float(coste_tramitacion) if coste_tramitacion > 0 else 120.0,
+                    step=10.0,
+                    key=f"{key_prefix}_num_cie_base",
+                    help="Honorarios de visado y presentación oficial ante Industria / SIEM."
+                )
+                dif_cie = st.checkbox("Diferenciar tarifa de tramitación para Empresa", value=False, key=f"{key_prefix}_chk_dif_cie")
+                if dif_cie:
+                    col_cc1, col_cc2 = st.columns(2)
+                    with col_cc1:
+                        coste_tramitacion_emp = st.number_input("🏢 SIEM Empresa (€):", min_value=0.0, value=float(val_cie_base * 1.25), step=10.0, key=f"{key_prefix}_num_cie_emp")
+                    with col_cc2:
+                        coste_tramitacion_auto = st.number_input("🧑‍🔧 SIEM Autónomo (€):", min_value=0.0, value=float(val_cie_base), step=10.0, key=f"{key_prefix}_num_cie_auto")
+                else:
+                    coste_tramitacion_emp = val_cie_base
+                    coste_tramitacion_auto = val_cie_base
+            else:
+                coste_tramitacion_emp = 0.0
+                coste_tramitacion_auto = 0.0
+                st.caption("ℹ️ *Partida de Boletín/SIEM desactivada (0,00 € en ambos).*")
+
+        st.markdown("---")
+        st.markdown("##### ⏱️ Ajustar Mano de Obra, Horas y Márgenes:")
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
         with col_m1:
             margen_mat_pct = st.slider(
@@ -588,7 +760,7 @@ def render_panel_herramientas_presupuesto(
             precio_h_coste = st.number_input(
                 "🔨 Tu Sueldo / Hora (€/h)",
                 min_value=15.0,
-                max_value=120.0,
+                max_value=150.0,
                 value=float(precio_h_coste_def),
                 step=2.5,
                 key=f"{key_prefix}_num_precio_hora",
@@ -629,60 +801,11 @@ def render_panel_herramientas_presupuesto(
         with col_sub2:
             st.markdown(f"""
             <div style="background-color:#f8fafc; border-left:3px solid #0284c7; padding:8px 12px; border-radius:4px; font-size:12.5px; color:#334155; margin-top:14px;">
-                <b>💡 Estrategia Modo Autónomo:</b> Al mantener el recargo MO en <b>{margen_mo_auto_pct:.0f}%</b>, garantizas cobrar el 100% de tus horas (<b>{horas_mo * precio_h_coste:,.2f} €</b>) y tu ganancia de materiales (<b>{coste_mat_orig * (margen_mat_pct / 100.0):,.2f} €</b>), ofreciendo un precio de calle que las constructoras no pueden igualar.
+                <b>💡 Estrategia Modo Autónomo:</b> Al mantener el recargo MO en <b>{margen_mo_auto_pct:.0f}%</b>, garantizas cobrar el 100% de tus horas (<b>{horas_mo * precio_h_coste:,.2f} €</b>) y tu ganancia de materiales (<b>{coste_mat * (margen_mat_pct / 100.0):,.2f} €</b>), ofreciendo un precio de calle que las constructoras no pueden igualar.
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.markdown("##### ✏️ Personalizar y Modificar Partidas de Obra (Boletín CIE / SIEM y Desplazamiento)")
-        col_part1, col_part2 = st.columns(2)
-        with col_part1:
-            inc_tramitacion = st.checkbox(
-                "📋 Incluir Tramitación CIE / Boletín / SIEM",
-                value=(coste_tramitacion > 0),
-                key=f"{key_prefix}_chk_inc_cie",
-                help="Desmarca si el cliente ya dispone de boletín o si no te vas a encargar de tramitarlo ante Industria / SIEM."
-            )
-            if inc_tramitacion:
-                coste_tramitacion_real = st.number_input(
-                    "Importe Tramitación / SIEM (€):",
-                    min_value=0.0,
-                    max_value=3000.0,
-                    value=float(coste_tramitacion) if coste_tramitacion > 0 else 120.0,
-                    step=10.0,
-                    key=f"{key_prefix}_num_cie_val",
-                    help="Honorarios profesionales y tasas de visado / Industria por expedir el CIE."
-                )
-            else:
-                coste_tramitacion_real = 0.0
-                st.caption("ℹ️ *Partida de Boletín/SIEM desactivada (0,00 €). No se facturará al cliente.*")
-
-        with col_part2:
-            inc_desplazamiento = st.checkbox(
-                "🚗 Incluir Desplazamiento y Dietas de Obra",
-                value=(desplazamiento > 0),
-                key=f"{key_prefix}_chk_inc_desp",
-                help="Marca para repercutir kilometraje, furgoneta o dietas de desplazamiento."
-            )
-            if inc_desplazamiento:
-                desplazamiento_real = st.number_input(
-                    "Importe Desplazamiento / Portes (€):",
-                    min_value=0.0,
-                    max_value=2000.0,
-                    value=float(desplazamiento) if desplazamiento > 0 else 30.0,
-                    step=5.0,
-                    key=f"{key_prefix}_num_desp_val",
-                    help="Coste de combustible, furgoneta de taller y dietas."
-                )
-            else:
-                desplazamiento_real = 0.0
-                st.caption("ℹ️ *Partida de desplazamiento desactivada (0,00 €).*")
-
-        coste_tramitacion = coste_tramitacion_real
-        desplazamiento = desplazamiento_real
-
     # Recálculo dinámico con los parámetros interactivos
-    coste_mat = coste_mat_orig
     benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
     pvp_mat = round(coste_mat + benef_mat, 2)
 
@@ -691,17 +814,17 @@ def render_panel_herramientas_presupuesto(
     g_mo_autonomo = round(coste_mo_directo * (margen_mo_auto_pct / 100.0), 2)
 
     # Totales Modo Empresa
-    base_empresa = round(pvp_mat + coste_mo_directo + g_mo_empresa + coste_tramitacion + desplazamiento, 2)
+    base_empresa = round(pvp_mat + coste_mo_directo + g_mo_empresa + coste_tramitacion_emp + desplazamiento_emp, 2)
     iva_empresa = round(base_empresa * (iva_pct / 100.0), 2)
     total_empresa = round(base_empresa + iva_empresa, 2)
 
     # Totales Modo Autónomo (g_mo ajustable)
-    base_autonomo = round(pvp_mat + coste_mo_directo + g_mo_autonomo + coste_tramitacion + desplazamiento, 2)
+    base_autonomo = round(pvp_mat + coste_mo_directo + g_mo_autonomo + coste_tramitacion_auto + desplazamiento_auto, 2)
     iva_autonomo = round(base_autonomo * (iva_pct / 100.0), 2)
     total_autonomo = round(base_autonomo + iva_autonomo, 2)
 
     diferencia_ahorro = round(total_empresa - total_autonomo, 2)
-    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion, 2)
+    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion_auto, 2)
 
     anticipo_mat = round(coste_mat * (1.0 + iva_pct / 100.0), 2)
     pct_anticipo_rec = round((coste_mat / base_autonomo * 100), 0) if base_autonomo > 0 else 40.0
@@ -747,20 +870,25 @@ def render_panel_herramientas_presupuesto(
         # Tabla de desglose transparente interna
         st.markdown("##### 🔍 Desglose Partida a Partida (¿A dónde va cada euro?)")
         filas_balance = [
-            {"Concepto Económico": "📦 1. Compra Materiales (Almacén)", "🏢 Empresa": f"{coste_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Salida de caja a Obramat/Leroy"},
+            {"Concepto Económico": f"📦 1. Compra Materiales ({len(filas_mat_activas)} partidas a comprar)", "🏢 Empresa": f"{coste_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Salida de caja a Obramat/Leroy"},
             {"Concepto Económico": f"📈 2. Beneficio s/ Materiales ({margen_mat_pct:.0f}%)", "🏢 Empresa": f"{benef_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{benef_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Ganancia limpia por suministrar material"},
             {"Concepto Económico": f"🔨 3. Tu Jornal Directo ({horas_mo:.1f}h x {precio_h_coste:.0f}€)", "🏢 Empresa": f"{coste_mo_directo:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mo_directo:,.2f} €", "Diferencia": "0,00 €", "Destino": "Tu sueldo profesional por trabajar"},
             {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}% vs {margen_mo_auto_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "🧑‍🔧 Autónomo": f"{g_mo_autonomo:,.2f} €", "Diferencia": f"-{g_mo_empresa - g_mo_autonomo:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
+            {
+                "Concepto Económico": "📋 5. Tramitación CIE / Boletín / SIEM",
+                "🏢 Empresa": f"{coste_tramitacion_emp:,.2f} €" if coste_tramitacion_emp > 0 else "0,00 € (Omitida)",
+                "🧑‍🔧 Autónomo": f"{coste_tramitacion_auto:,.2f} €" if coste_tramitacion_auto > 0 else "0,00 € (Omitida)",
+                "Diferencia": f"{coste_tramitacion_emp - coste_tramitacion_auto:,.2f} €",
+                "Destino": "Honorarios técnicos de legalización"
+            },
+            {
+                "Concepto Económico": "🚗 6. Desplazamiento y Dietas",
+                "🏢 Empresa": f"{desplazamiento_emp:,.2f} €" if desplazamiento_emp > 0 else "0,00 € (Omitido)",
+                "🧑‍🔧 Autónomo": f"{desplazamiento_auto:,.2f} €" if desplazamiento_auto > 0 else "0,00 € (Omitido)",
+                "Diferencia": f"{desplazamiento_emp - desplazamiento_auto:,.2f} €",
+                "Destino": "Combustible y furgoneta"
+            }
         ]
-        if coste_tramitacion > 0:
-            filas_balance.append({"Concepto Económico": "📋 5. Tramitación CIE / Boletín / SIEM", "🏢 Empresa": f"{coste_tramitacion:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_tramitacion:,.2f} €", "Diferencia": "0,00 €", "Destino": "Honorarios técnicos de legalización"})
-        else:
-            filas_balance.append({"Concepto Económico": "📋 5. Tramitación CIE / SIEM", "🏢 Empresa": "0,00 € (Omitida)", "🧑‍🔧 Autónomo": "0,00 € (Omitida)", "Diferencia": "0,00 €", "Destino": "No requerida / Omitida"})
-
-        if desplazamiento > 0:
-            filas_balance.append({"Concepto Económico": "🚗 6. Desplazamiento y Dietas", "🏢 Empresa": f"{desplazamiento:,.2f} €", "🧑‍🔧 Autónomo": f"{desplazamiento:,.2f} €", "Diferencia": "0,00 €", "Destino": "Combustible y vehículo"})
-        else:
-            filas_balance.append({"Concepto Económico": "🚗 6. Desplazamiento y Dietas", "🏢 Empresa": "0,00 € (Omitido)", "🧑‍🔧 Autónomo": "0,00 € (Omitido)", "Diferencia": "0,00 €", "Destino": "No repercutido al cliente"})
 
         # FILAS DE TOTALES CLAVE AL FINAL DE LA TABLA (PARA VER CON TOTAL CLARIDAD EL TOTAL DE CADA COLUMNA):
         diferencia_base = round(base_empresa - base_autonomo, 2)
@@ -896,6 +1024,12 @@ def render_panel_herramientas_presupuesto(
             "fecha": datetime.date.today().strftime("%d/%m/%Y")
         }
 
+        # Detalle de materiales para el PDF
+        noms_mat_act = [m['mat'] for m in filas_mat_activas[:3]]
+        txt_det_mat = ", ".join(noms_mat_act) if noms_mat_act else "Materiales homologados REBT según memoria técnica"
+        if filas_mat_en_obra:
+            txt_det_mat += " (Canalización y elementos preexistentes en obra aportados por el cliente)"
+
         # Preparar datos específicos para Modo Autónomo
         presupuesto_data_auto = {
             "base_imponible": base_autonomo,
@@ -906,9 +1040,9 @@ def render_panel_herramientas_presupuesto(
             "coste_materiales_venta": round(coste_mat + benef_mat, 2),
             "horas_mo": horas_mo,
             "coste_mo_venta": round(coste_mo_directo + g_mo_autonomo, 2),
-            "coste_tramitacion": coste_tramitacion,
-            "desplazamiento": desplazamiento,
-            "detalle_materiales": "Materiales homologados REBT según especificación técnica"
+            "coste_tramitacion": coste_tramitacion_auto,
+            "desplazamiento": desplazamiento_auto,
+            "detalle_materiales": txt_det_mat
         }
 
         # Preparar datos específicos para Modo Empresa
@@ -921,9 +1055,9 @@ def render_panel_herramientas_presupuesto(
             "coste_materiales_venta": round(coste_mat + benef_mat, 2),
             "horas_mo": horas_mo,
             "coste_mo_venta": round(coste_mo_directo + g_mo_empresa, 2),
-            "coste_tramitacion": coste_tramitacion,
-            "desplazamiento": desplazamiento,
-            "detalle_materiales": "Materiales homologados REBT según especificación técnica"
+            "coste_tramitacion": coste_tramitacion_emp,
+            "desplazamiento": desplazamiento_emp,
+            "detalle_materiales": txt_det_mat
         }
 
         try:
@@ -1070,19 +1204,18 @@ def render_panel_herramientas_presupuesto(
     # TAB 3: LISTA DE COMPRA PARA ALMACÉN Y CALCULADORA DE ANTICIPO
     # ---------------------------------------------------------------------
     with tab_acopio:
-        filas_mat_vinculadas = vincular_materiales_con_bd(filas_materiales) if filas_materiales else []
-        items_en_bd = [m for m in filas_mat_vinculadas if m.get("en_bd")]
-        items_web = [m for m in filas_mat_vinculadas if not m.get("en_bd")]
+        items_en_bd = [m for m in filas_mat_activas if m.get("en_bd")]
+        items_web = [m for m in filas_mat_activas if not m.get("en_bd")]
 
         col_ac1, col_ac2 = st.columns([1.9, 1.1])
         with col_ac1:
             st.markdown("##### 🛒 Lista de Compra de Materiales para el Mostrador y Almacén")
-            st.caption("Partidas cruzadas automáticamente con la base de datos oficial (Obramat / Leroy Merlin / Sumidelec) y tarifas web:")
+            st.caption("Solo incluye las partidas seleccionadas para compra (excluye canalizaciones o materiales ya existentes en obra):")
 
             # Banners informativos de procedencia
             col_sbd1, col_sbd2 = st.columns(2)
             with col_sbd1:
-                st.success(f"✅ **{len(items_en_bd)} de {len(filas_mat_vinculadas)} artículos en BD Oficial** (Obramat / Leroy)")
+                st.success(f"✅ **{len(items_en_bd)} de {len(filas_mat_activas)} artículos en BD Oficial** (Obramat / Leroy)")
             with col_sbd2:
                 if items_web:
                     st.warning(f"🌐 **{len(items_web)} artículos con Tarifa Web** (Enlaces directos abajo)")
@@ -1090,9 +1223,9 @@ def render_panel_herramientas_presupuesto(
                     st.info("🎯 **100% de materiales catalogados en almacén oficial**")
 
             # Tabla interactiva con Dónde Comprar, Ref SKU y Estado
-            if filas_mat_vinculadas:
+            if filas_mat_activas:
                 filas_display = []
-                for m in filas_mat_vinculadas:
+                for m in filas_mat_activas:
                     c_nom = m.get("mat") or m.get("concepto") or m.get("nombre") or ""
                     c_cant = m.get("cant") or 1.0
                     c_unid = m.get("unid") or "ud"
@@ -1114,7 +1247,16 @@ def render_panel_herramientas_presupuesto(
                     })
                 st.dataframe(filas_display, use_container_width=True, hide_index=True)
             else:
-                st.info(f"Materiales normalizados generales de {modulo_nombre}: {coste_mat:,.2f} €")
+                st.info("ℹ️ No hay materiales seleccionados para compra (todo aportado por cliente o preexistente en obra).")
+
+            # Mostrar aviso de materiales en obra si los hay
+            if filas_mat_en_obra:
+                st.markdown(f"""
+                <div style="background-color:#f8fafc; border-left:4px solid #0284c7; padding:10px 14px; border-radius:4px; margin-top:8px; font-size:12.5px; color:#1e293b;">
+                    <b>🏠 Materiales ya en obra o canalizados (NO comprar en almacén):</b><br/>
+                    {' • '.join([f"<b>{m['mat']}</b> ({m['cant']} {m['unid']})" for m in filas_mat_en_obra])}
+                </div>
+                """, unsafe_allow_html=True)
 
             # Investigar en la Web y Guardar en BD para los artículos no registrados
             if items_web:
@@ -1149,7 +1291,7 @@ def render_panel_herramientas_presupuesto(
 
             # Resumen de texto para WhatsApp
             lineas_texto_compra = []
-            lista_para_pdf = filas_mat_vinculadas if filas_mat_vinculadas else (filas_materiales if filas_materiales else [{"mat": f"Materiales normalizados de {modulo_nombre}", "cant": 1, "unid": "partida", "p_u": coste_mat, "proveedor": "Obramat"}])
+            lista_para_pdf = filas_mat_activas if filas_mat_activas else [{"mat": f"Materiales normalizados de {modulo_nombre}", "cant": 1, "unid": "partida", "p_u": coste_mat, "proveedor": "Obramat"}]
             for idx, m in enumerate(lista_para_pdf):
                 c_nom = m.get("mat") or m.get("concepto") or m.get("nombre") or f"Partida {idx+1}"
                 c_cant = m.get("cant") or m.get("cantidad") or 1.0
@@ -1158,6 +1300,11 @@ def render_panel_herramientas_presupuesto(
                 c_sub = float(c_cant) * float(c_pu)
                 c_prv = m.get("proveedor", "Almacén")
                 lineas_texto_compra.append(f"• {c_cant} {c_unid} - {c_nom} [{c_prv}] (Aprox: {c_sub:,.2f} €)")
+
+            if filas_mat_en_obra:
+                lineas_texto_compra.append("\n[MATERIALES YA EXISTENTES EN OBRA / CANALIZADOS - NO COMPRAR]:")
+                for m in filas_mat_en_obra:
+                    lineas_texto_compra.append(f"• {m['cant']} {m['unid']} - {m['mat']} (En obra)")
 
             txt_lista_mostrador = "📦 *LISTA DE ACOPIO DE MATERIALES - BOLIMUR*\n" + f"Trabajo: {nom_obra_def}\n" + "---------------------------------------\n" + "\n".join(lineas_texto_compra) + f"\n---------------------------------------\nCoste Total Materiales Estimado: {coste_mat:,.2f} € (S/IVA)"
             with st.expander("📲 Ver Lista en Formato Texto para WhatsApp / Mostrador", expanded=False):
