@@ -962,6 +962,19 @@ def render_panel_herramientas_presupuesto(
                                 del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
                             st.rerun()
 
+        # -----------------------------------------------------------------
+        # 1.1 CONCILIACIÓN IA DE COMPRAS DE ALMACÉN & ANÁLISIS DE DESVIACIÓN
+        # -----------------------------------------------------------------
+        try:
+            from modulos.conciliacion_materiales import render_conciliacion_materiales_ui
+            render_conciliacion_materiales_ui(
+                key_prefix=key_prefix,
+                mats_presupuesto=st.session_state.get(key_lista_mat, []),
+                p_activo=p_cargado
+            )
+        except Exception as e_concil:
+            pass
+
     # ---------------------------------------------------------------------
     # 2. MODIFICAR PARTIDAS COMERCIALES (DESPLAZAMIENTO, SIEM Y MANO DE OBRA)
     # ---------------------------------------------------------------------
@@ -2283,6 +2296,8 @@ def render_panel_herramientas_presupuesto(
                 "fecha_ejecucion": in_fecha_ejec,
                 "asignado_a": in_cuadrilla_plan
             })
+            if f"{key_prefix}_datos_conciliacion_ticket" in st.session_state:
+                datos_guardar["conciliacion_albaran"] = st.session_state[f"{key_prefix}_datos_conciliacion_ticket"]
 
             if p_activo:
                 if st.button(f"🔄 Actualizar Presupuesto #{p_activo['id']} con Gastos y Partidas", type="primary", use_container_width=True, key=f"{key_prefix}_btn_act_p_bd"):
@@ -2407,6 +2422,8 @@ def render_panel_herramientas_presupuesto(
                                 st.session_state[f"{key_prefix}_in_nom_pres"] = p_rec["nombre_presupuesto"]
                             if p_rec.get("nombre_cliente"):
                                 st.session_state[f"{key_prefix}_in_cli_pres"] = p_rec["nombre_cliente"]
+                            if "conciliacion_albaran" in d_rec:
+                                st.session_state[f"{key_prefix}_datos_conciliacion_ticket"] = d_rec["conciliacion_albaran"]
                             st.success(f"Presupuesto #{id_elegido} cargado con éxito. Se han recuperado todos los materiales, gastos y configuración de cuadrilla.")
                             st.rerun()
                 with col_b_rec2:

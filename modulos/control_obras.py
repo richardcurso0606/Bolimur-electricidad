@@ -251,12 +251,30 @@ def renderizar():
                 else:
                     reparto_txt = f"Aprox. <b>{benef_limpio:,.2f} €</b> íntegros para ti"
 
+                # Desviación de materiales de almacén si existe albarán conciliado
+                aud_desv = datos_int.get("conciliacion_albaran", {}).get("auditoria_desviacion") or datos_int.get("desviacion_materiales")
+                badge_desv = ""
+                desv_txt = ""
+                if aud_desv:
+                    d_eur = float(aud_desv.get("desv_neta_eur", 0.0))
+                    if d_eur < -0.05:
+                        badge_desv = f"<span style='background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:12px; font-weight:700; font-size:12px;'>🟢 Ahorro Mat: {d_eur:,.2f} €</span>"
+                        desv_txt = f"<div style='font-size:12px; color:#16a34a;'>Ahorro compras: <b>{d_eur:,.2f} €</b></div>"
+                    elif d_eur > 0.05:
+                        badge_desv = f"<span style='background:#fee2e2; color:#b91c1c; padding:3px 8px; border-radius:12px; font-weight:700; font-size:12px;'>🔴 Sobrecoste Mat: +{d_eur:,.2f} €</span>"
+                        desv_txt = f"<div style='font-size:12px; color:#dc2626;'>Sobrecoste compras: <b>+{d_eur:,.2f} €</b></div>"
+                    else:
+                        badge_desv = "<span style='background:#f1f5f9; color:#475569; padding:3px 8px; border-radius:12px; font-size:12px;'>⚪ Mat. Exacto</span>"
+
                 with st.container(border=True):
                     col_c1, col_c2, col_c3, col_c4 = st.columns([3.2, 1.8, 1.8, 1.8])
                     with col_c1:
                         st.markdown(f"#### ⚡ #{oid} - {nom_p}")
                         st.markdown(f"👤 Cliente: **{cli}** | Especialidad: `{mod_orig}`")
-                        st.markdown(f"{badge_est} &nbsp; {badge_cuad} &nbsp; {badge_fecha}", unsafe_allow_html=True)
+                        badges_linea = f"{badge_est} &nbsp; {badge_cuad} &nbsp; {badge_fecha}"
+                        if badge_desv:
+                            badges_linea += f" &nbsp; {badge_desv}"
+                        st.markdown(badges_linea, unsafe_allow_html=True)
                         if notas_p:
                             st.caption(f"📝 *Nota:* {notas_p}")
                     with col_c2:
@@ -266,6 +284,8 @@ def renderizar():
                     with col_c3:
                         st.markdown(f"**Gastos & Reparto:**")
                         st.markdown(f"<div style='font-size:14px; color:#dc2626;'>Tickets deducidos: <b>{tot_tks:,.2f} €</b> ({len(tks_lista)} gastos)</div>", unsafe_allow_html=True)
+                        if desv_txt:
+                            st.markdown(desv_txt, unsafe_allow_html=True)
                         st.caption(reparto_txt, unsafe_allow_html=True)
                     with col_c4:
                         # Botones de acción rápida
@@ -346,6 +366,23 @@ def renderizar():
                                     actualizar_presupuesto(oid, {"datos": d_tk_up})
                                     st.success(f"✅ Gasto de {tk_imp_rap:,.2f} € añadido a la obra.")
                                     st.rerun()
+
+                        if aud_desv:
+                            with st.popover("📊 Desvío"):
+                                st.markdown(f"###### ⚖️ Auditoría de Materiales #{oid}")
+                                st.caption(f"Previsto: {aud_desv.get('tot_previsto', 0):,.2f} € | Real Facturado: {aud_desv.get('tot_real', 0):,.2f} €")
+                                d_e = float(aud_desv.get("desv_neta_eur", 0))
+                                if d_e < 0:
+                                    st.markdown(f"<b style='color:#16a34a;'>Ahorro compras: {d_e:,.2f} € ({aud_desv.get('desv_neta_pct', 0):.1f}%)</b>", unsafe_allow_html=True)
+                                elif d_e > 0:
+                                    st.markdown(f"<b style='color:#dc2626;'>Sobrecoste compras: +{d_e:,.2f} € (+{aud_desv.get('desv_neta_pct', 0):.1f}%)</b>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown("<b>Materiales clavados: 0,00 €</b>", unsafe_allow_html=True)
+                                st.markdown("---")
+                                for p in aud_desv.get("partidas", [])[:6]:
+                                    dif_p = p.get('dif_eur', 0)
+                                    col_sign = '#16a34a' if dif_p < 0 else ('#dc2626' if dif_p > 0 else '#64748b')
+                                    st.caption(f"• **{p['partida'][:32]}**: <span style='color:{col_sign}; font-weight:700;'>{dif_p:+,.2f} €</span>", unsafe_allow_html=True)
 
                         # Botón borrar
                         if st.button("🗑️", key=f"btn_co_del_{oid}", help="Eliminar obra"):
