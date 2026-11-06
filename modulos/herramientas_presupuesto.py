@@ -13,6 +13,7 @@ Proporciona:
 import os
 import re
 import json
+import uuid
 import datetime
 import urllib.parse
 from typing import Dict, Any, List, Optional
@@ -570,59 +571,69 @@ def render_panel_herramientas_presupuesto(
     st.caption("Herramienta de control financiero para el instalador de calle: ajusta tus márgenes, compara tarifas Empresa vs. Autónomo y audita ofertas del cliente.")
 
     # ---------------------------------------------------------------------
-    # 1. LISTA DE MATERIALES EDITABLE (DESMARCAR YA EN OBRA / YA CANALIZADO)
+    # 1. LISTA DE MATERIALES EDITABLE Y REORDENABLE (ADELANTE, EN MEDIO O AL FINAL)
     # ---------------------------------------------------------------------
-    key_extra_mat = f"{key_prefix}_lista_extra_materiales"
-    if key_extra_mat not in st.session_state:
-        st.session_state[key_extra_mat] = []
+    key_lista_mat = f"{key_prefix}_lista_materiales_maestra"
+    key_mat_hash = f"{key_prefix}_mat_hash_check"
+    curr_mat_hash = f"{modulo_nombre}_{coste_mat_orig}_{len(filas_materiales)}"
 
-    key_extra_part = f"{key_prefix}_lista_extra_partidas"
-    if key_extra_part not in st.session_state:
-        st.session_state[key_extra_part] = []
-
-    with st.expander("📦 1. Lista de Materiales de la Instalación (Modificar Precios, Cantidades, Añadir Nuevos o Desmarcar lo ya existente)", expanded=True):
-        st.markdown(
-            "<div style='font-size:13.5px; color:#1e293b; margin-bottom:8px;'>"
-            "<b>💡 ¿El cliente ya tiene algún material o la derivación ya está canalizada?</b> Desmarca la casilla <b>'Comprar'</b> de esa partida o ajusta sus metros/precio. "
-            "El sistema lo excluirá del coste de compra en almacén y recalculará el presupuesto al instante cobrando solo lo que realmente vas a suministrar. "
-            "También puedes <b>añadir cualquier material nuevo</b> que no estuviera en la lista inicial con el botón inferior.</div>",
-            unsafe_allow_html=True
-        )
-
+    if key_lista_mat not in st.session_state or st.session_state.get(key_mat_hash) != curr_mat_hash:
         lista_vinculada = vincular_materiales_con_bd(filas_materiales) if filas_materiales else []
-        datos_tabla_mat = []
+        init_mats = []
         if lista_vinculada:
-            for idx, m in enumerate(lista_vinculada):
-                datos_tabla_mat.append({
+            for idx, m in enumerate(lista_vinculada, start=1):
+                init_mats.append({
+                    "orden": idx,
                     "incluir": True,
-                    "material": str(m.get("mat") or m.get("concepto") or f"Material {idx+1}"),
+                    "material": str(m.get("mat") or m.get("concepto") or f"Material {idx}"),
                     "cant": float(m.get("cant", 1.0)),
                     "unid": str(m.get("unid", "ud")),
                     "precio_unit": float(m.get("p_u", 0.0)),
                     "proveedor": str(m.get("proveedor", "Obramat")),
-                    "sku": str(m.get("sku", "S/Ref"))
+                    "sku": str(m.get("sku", "S/Ref")),
+                    "en_bd": ("Tarifa Web" not in str(m.get("proveedor", "")) and "Pendiente" not in str(m.get("proveedor", "")))
                 })
         else:
-            datos_tabla_mat.append({
+            init_mats.append({
+                "orden": 1,
                 "incluir": True,
                 "material": f"Materiales normalizados de {modulo_nombre}",
                 "cant": 1.0,
                 "unid": "partida",
                 "precio_unit": coste_mat_orig,
                 "proveedor": "Obramat / Almacén",
-                "sku": "GEN-01"
+                "sku": "GEN-01",
+                "en_bd": True
             })
+        st.session_state[key_lista_mat] = init_mats
+        st.session_state[key_mat_hash] = curr_mat_hash
+        if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+            del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
 
-        # Incorporar materiales extras personalizados añadidos por el usuario
-        for em in st.session_state[key_extra_mat]:
-            datos_tabla_mat.append(em)
+    with st.expander("📦 1. Lista de Materiales de la Instalación (Modificar Precios, Cantidades, Reordenar y Añadir Nuevos)", expanded=True):
+        st.markdown(
+            "<div style='font-size:13.5px; color:#1e293b; margin-bottom:8px;'>"
+            "<b>💡 ¿El cliente ya tiene algún material o la obra ya está canalizada?</b> Desmarca la casilla <b>'Comprar'</b> o ajusta sus metros/precio. "
+            "Puedes <b>colocar cualquier material nuevo adelante, en medio o al final</b>, o reordenar la lista a tu gusto con los botones o editando la columna <b>Nº Orden</b>.</div>",
+            unsafe_allow_html=True
+        )
 
-        df_mat_init = pd.DataFrame(datos_tabla_mat)
+        df_mat_init = pd.DataFrame(st.session_state[key_lista_mat])
+        if "orden" not in df_mat_init.columns:
+            df_mat_init.insert(0, "orden", range(1, len(df_mat_init) + 1))
 
         df_mat_editado = st.data_editor(
             df_mat_init,
             key=f"{key_prefix}_editor_materiales_interactivo",
             column_config={
+                "orden": st.column_config.NumberColumn(
+                    "Nº Orden",
+                    min_value=1,
+                    step=1,
+                    format="%d",
+                    help="Cambia el número de orden para colocar el material arriba, en medio o abajo.",
+                    width="small"
+                ),
                 "incluir": st.column_config.CheckboxColumn(
                     "Comprar",
                     help="Marca para comprar en almacén. Desmarca si el cliente ya lo tiene o ya está canalizado en la finca.",
@@ -639,13 +650,20 @@ def render_panel_herramientas_presupuesto(
             num_rows="dynamic"
         )
 
+        # Si el usuario modificó datos o el orden en la tabla
+        if "orden" in df_mat_editado.columns:
+            df_mat_editado = df_mat_editado.sort_values(by="orden").reset_index(drop=True)
+
         filas_mat_activas = []
         filas_mat_en_obra = []
         coste_mat_calculado = 0.0
         coste_mat_en_obra = 0.0
+        lista_actualizada = []
 
-        for _, r in df_mat_editado.iterrows():
-            c_nom = str(r["material"])
+        for idx_row, r in df_mat_editado.iterrows():
+            c_nom = str(r["material"]) if pd.notnull(r["material"]) else ""
+            if not c_nom.strip():
+                continue
             c_cant = float(r["cant"]) if pd.notnull(r["cant"]) else 0.0
             c_unid = str(r["unid"]) if pd.notnull(r["unid"]) else "ud"
             c_pu = float(r["precio_unit"]) if pd.notnull(r["precio_unit"]) else 0.0
@@ -653,18 +671,23 @@ def render_panel_herramientas_presupuesto(
             c_prov = str(r["proveedor"]) if pd.notnull(r["proveedor"]) else "Obramat"
             c_sku = str(r["sku"]) if pd.notnull(r["sku"]) else "S/Ref"
             c_inc = bool(r["incluir"]) if pd.notnull(r["incluir"]) else True
+            c_ord = idx_row + 1
 
             item_dict = {
+                "orden": c_ord,
                 "mat": c_nom,
+                "material": c_nom,
                 "cant": c_cant,
                 "unid": c_unid,
                 "p_u": c_pu,
+                "precio_unit": c_pu,
                 "subtotal": c_sub,
                 "proveedor": c_prov,
                 "sku": c_sku,
                 "incluir": c_inc,
                 "en_bd": ("Tarifa Web" not in c_prov and "Pendiente" not in c_prov)
             }
+            lista_actualizada.append(item_dict)
 
             if c_inc and c_cant > 0:
                 coste_mat_calculado += c_sub
@@ -674,20 +697,21 @@ def render_panel_herramientas_presupuesto(
                 item_dict["motivo"] = "Aportado por cliente / Ya instalado en obra"
                 filas_mat_en_obra.append(item_dict)
 
+        st.session_state[key_lista_mat] = lista_actualizada
         coste_mat = round(coste_mat_calculado, 2)
 
-        col_mres1, col_mres2, col_mres3 = st.columns([1.6, 1.4, 1.0])
+        col_mres1, col_mres2, col_mres3, col_mres4 = st.columns([1.5, 1.3, 1.1, 1.1])
         with col_mres1:
-            st.success(f"🛒 **Materiales a Comprar en Almacén:** {coste_mat:,.2f} € ({len(filas_mat_activas)} partidas a suministrar)")
+            st.success(f"🛒 **Materiales a Comprar:** {coste_mat:,.2f} € ({len(filas_mat_activas)} partidas)")
         with col_mres2:
             if filas_mat_en_obra:
-                st.info(f"🏠 **En Obra / Ya Canalizado (0 € coste):** {coste_mat_en_obra:,.2f} € ({len(filas_mat_en_obra)} partidas)")
+                st.info(f"🏠 **En Obra / Canalizado (0 €):** {coste_mat_en_obra:,.2f} € ({len(filas_mat_en_obra)} partidas)")
             else:
                 st.caption("ℹ️ Todos los materiales seleccionados para compra.")
         with col_mres3:
-            with st.popover("➕ Añadir Otro Material"):
+            with st.popover("➕ Añadir Material"):
                 st.markdown("##### 📝 Añadir Material a la Lista")
-                st.caption("Introduce cualquier material adicional que no esté en la plantilla inicial:")
+                st.caption("Introduce un nuevo material e indica en qué posición colocarlo:")
                 with st.form(f"{key_prefix}_form_add_extra_mat", clear_on_submit=True):
                     in_mat_nom = st.text_input("Denominación / Especificación:", placeholder="Ej: Piqueta de tierra cobreada 2m con grapa")
                     c_em1, c_em2 = st.columns(2)
@@ -698,20 +722,50 @@ def render_panel_herramientas_presupuesto(
                         in_mat_unid = st.selectbox("Unidad:", ["ud", "m", "rollo", "partida", "kit", "caja"], index=0)
                         in_mat_prov = st.text_input("Dónde Comprar:", value="Obramat / Distribuidor")
                     in_mat_sku = st.text_input("Ref. SKU (opcional):", placeholder="Ej: REF-00123")
+
+                    n_items_actual = len(st.session_state[key_lista_mat])
+                    sel_pos_tipo = st.selectbox(
+                        "📍 ¿Dónde deseas colocar este material en la lista?",
+                        [
+                            "🔚 Al final de la lista (abajo del todo)",
+                            "🔝 Al principio de la lista (arriba del todo)",
+                            "🎯 En una posición específica (en medio)"
+                        ],
+                        index=0
+                    )
+                    pos_especifica = 1
+                    if "específica" in sel_pos_tipo:
+                        pos_especifica = st.number_input("Nº de posición donde insertarlo:", min_value=1, max_value=n_items_actual + 1, value=min(2, n_items_actual + 1), step=1)
+
                     in_mat_save_bd = st.checkbox("💾 Guardar también en mi Base de Datos para futuros presupuestos", value=True)
-                    btn_add_mat = st.form_submit_button("➕ Añadir Material", type="primary", use_container_width=True)
+                    btn_add_mat = st.form_submit_button("➕ Añadir Material a la Lista", type="primary", use_container_width=True)
                     if btn_add_mat:
                         if in_mat_nom.strip():
                             nuevo_item = {
+                                "orden": 1,
                                 "incluir": True,
                                 "material": in_mat_nom.strip(),
+                                "mat": in_mat_nom.strip(),
                                 "cant": float(in_mat_cant),
                                 "unid": str(in_mat_unid),
                                 "precio_unit": float(in_mat_pu),
+                                "p_u": float(in_mat_pu),
+                                "subtotal": round(float(in_mat_cant) * float(in_mat_pu), 2),
                                 "proveedor": in_mat_prov.strip() if in_mat_prov.strip() else "Obramat",
-                                "sku": in_mat_sku.strip() if in_mat_sku.strip() else "MANUAL"
+                                "sku": in_mat_sku.strip() if in_mat_sku.strip() else "MANUAL",
+                                "en_bd": True
                             }
-                            st.session_state[key_extra_mat].append(nuevo_item)
+                            if "principio" in sel_pos_tipo:
+                                st.session_state[key_lista_mat].insert(0, nuevo_item)
+                            elif "específica" in sel_pos_tipo:
+                                idx_ins = max(0, min(len(st.session_state[key_lista_mat]), int(pos_especifica) - 1))
+                                st.session_state[key_lista_mat].insert(idx_ins, nuevo_item)
+                            else:
+                                st.session_state[key_lista_mat].append(nuevo_item)
+
+                            for i, it in enumerate(st.session_state[key_lista_mat], start=1):
+                                it["orden"] = i
+
                             if in_mat_save_bd:
                                 try:
                                     guardar_material_personalizado(
@@ -728,16 +782,44 @@ def render_panel_herramientas_presupuesto(
                                 del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
                             st.rerun()
 
-        if st.session_state[key_extra_mat]:
-            col_exm1, col_exm2 = st.columns([3, 1])
-            with col_exm1:
-                st.caption(f"ℹ️ Has añadido {len(st.session_state[key_extra_mat])} material(es) adicional(es) manualmente.")
-            with col_exm2:
-                if st.button("🗑️ Limpiar materiales añadidos", key=f"{key_prefix}_btn_clear_ext_mats"):
-                    st.session_state[key_extra_mat] = []
-                    if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
-                        del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
-                    st.rerun()
+        with col_mres4:
+            with st.popover("↕️ Reordenar"):
+                st.markdown("##### ↕️ Cambiar Posición de Materiales")
+                st.caption("Selecciona un material y muévelo arriba, abajo, al principio o al final:")
+                mats_noms = [f"{m.get('orden', i+1)}. {m.get('material', 'Material')[:35]}" for i, m in enumerate(st.session_state[key_lista_mat])]
+                if mats_noms:
+                    idx_sel_reord = st.selectbox("Material a desplazar:", range(len(mats_noms)), format_func=lambda x: mats_noms[x], key=f"{key_prefix}_sel_reord_mat")
+                    c_b_top, c_b_up, c_b_dn, c_b_end = st.columns(4)
+                    with c_b_top:
+                        if st.button("🔝 Inicio", key=f"{key_prefix}_btn_top_m", disabled=(idx_sel_reord == 0)):
+                            item = st.session_state[key_lista_mat].pop(idx_sel_reord)
+                            st.session_state[key_lista_mat].insert(0, item)
+                            for i, it in enumerate(st.session_state[key_lista_mat], start=1): it["orden"] = i
+                            if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                                del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                            st.rerun()
+                    with c_b_up:
+                        if st.button("⬆️ Subir", key=f"{key_prefix}_btn_up_m", disabled=(idx_sel_reord == 0)):
+                            st.session_state[key_lista_mat][idx_sel_reord], st.session_state[key_lista_mat][idx_sel_reord - 1] = st.session_state[key_lista_mat][idx_sel_reord - 1], st.session_state[key_lista_mat][idx_sel_reord]
+                            for i, it in enumerate(st.session_state[key_lista_mat], start=1): it["orden"] = i
+                            if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                                del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                            st.rerun()
+                    with c_b_dn:
+                        if st.button("⬇️ Bajar", key=f"{key_prefix}_btn_dn_m", disabled=(idx_sel_reord >= len(st.session_state[key_lista_mat]) - 1)):
+                            st.session_state[key_lista_mat][idx_sel_reord], st.session_state[key_lista_mat][idx_sel_reord + 1] = st.session_state[key_lista_mat][idx_sel_reord + 1], st.session_state[key_lista_mat][idx_sel_reord]
+                            for i, it in enumerate(st.session_state[key_lista_mat], start=1): it["orden"] = i
+                            if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                                del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                            st.rerun()
+                    with c_b_end:
+                        if st.button("🔚 Final", key=f"{key_prefix}_btn_end_m", disabled=(idx_sel_reord >= len(st.session_state[key_lista_mat]) - 1)):
+                            item = st.session_state[key_lista_mat].pop(idx_sel_reord)
+                            st.session_state[key_lista_mat].append(item)
+                            for i, it in enumerate(st.session_state[key_lista_mat], start=1): it["orden"] = i
+                            if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                                del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                            st.rerun()
 
     # ---------------------------------------------------------------------
     # 2. MODIFICAR PARTIDAS COMERCIALES (DESPLAZAMIENTO, SIEM Y MANO DE OBRA)
@@ -811,76 +893,8 @@ def render_panel_herramientas_presupuesto(
                 st.caption("ℹ️ *Partida de Boletín/SIEM desactivada (0,00 € en ambos).*")
 
         # -----------------------------------------------------------------
-        # PARTIDAS ADICIONALES DE OBRA O SERVICIOS (ROZAS, ALBAÑILERÍA, ETC.)
+        # AJUSTES DE MANO DE OBRA, HORAS Y MÁRGENES
         # -----------------------------------------------------------------
-        st.markdown("---")
-        st.markdown("##### 🛠️ Añadir Partidas Adicionales de Obra o Servicios (Rozas, Albañilería, Andamios, etc.)")
-        st.caption("Si la obra requiere trabajos extras no contemplados inicialmente (ej: apertura y sellado de rozas, remates de albañilería, alquiler de andamio, licencias...), puedes añadirlos aquí para que figuren como partidas oficiales en el presupuesto:")
-
-        if st.session_state[key_extra_part]:
-            for idx_p, part in enumerate(st.session_state[key_extra_part]):
-                col_pa1, col_pa2, col_pa3, col_pa4 = st.columns([2.5, 3.5, 1.5, 0.5])
-                with col_pa1:
-                    st.markdown(f"**🛠️ {part['concepto']}**")
-                with col_pa2:
-                    st.caption(part.get('descripcion', 'Partida complementaria de obra'))
-                with col_pa3:
-                    imp_a = float(part.get('importe_auto', part.get('importe', 0.0)))
-                    imp_e = float(part.get('importe_emp', part.get('importe', 0.0)))
-                    if imp_a == imp_e:
-                        st.markdown(f"**{imp_a:,.2f} €**")
-                    else:
-                        st.markdown(f"Aut: **{imp_a:,.2f} €** | Emp: **{imp_e:,.2f} €**")
-                with col_pa4:
-                    if st.button("🗑️", key=f"{key_prefix}_del_part_{idx_p}", help="Eliminar esta partida adicional"):
-                        st.session_state[key_extra_part].pop(idx_p)
-                        st.rerun()
-
-        with st.popover("➕ Añadir Nueva Partida de Obra o Servicio"):
-            st.markdown("##### 🛠️ Nueva Partida Complementaria")
-            with st.form(f"{key_prefix}_form_nueva_partida", clear_on_submit=True):
-                nuevo_part_concepto = st.text_input(
-                    "Concepto / Título de la partida:",
-                    placeholder="Ej: Apertura y sellado de rozas por albañilería"
-                )
-                nuevo_part_desc = st.text_area(
-                    "Descripción técnica detallada (aparecerá en el PDF del cliente):",
-                    placeholder="Ej: Apertura de rozas en tabiquería para paso de tubos corrugados y posterior sellado con yeso y pasta de agarre...",
-                    height=70
-                )
-                col_npi1, col_npi2 = st.columns(2)
-                with col_npi1:
-                    nuevo_part_imp = st.number_input(
-                        "Importe Base (€) [Aplica a Empresa y Autónomo]:",
-                        min_value=0.0,
-                        value=150.0,
-                        step=10.0
-                    )
-                with col_npi2:
-                    dif_part_precio = st.checkbox("Diferenciar precio para Empresa", value=False)
-
-                nuevo_part_imp_emp = nuevo_part_imp
-                if dif_part_precio:
-                    nuevo_part_imp_emp = st.number_input(
-                        "Importe Empresa (€):",
-                        min_value=0.0,
-                        value=float(nuevo_part_imp * 1.25),
-                        step=10.0
-                    )
-
-                btn_crear_part = st.form_submit_button("➕ Añadir Partida al Presupuesto", type="primary", use_container_width=True)
-                if btn_crear_part:
-                    if nuevo_part_concepto.strip():
-                        st.session_state[key_extra_part].append({
-                            "concepto": nuevo_part_concepto.strip(),
-                            "descripcion": nuevo_part_desc.strip() if nuevo_part_desc.strip() else f"Trabajos auxiliares de {nuevo_part_concepto.strip()}",
-                            "importe": float(nuevo_part_imp),
-                            "importe_auto": float(nuevo_part_imp),
-                            "importe_emp": float(nuevo_part_imp_emp)
-                        })
-                        st.success(f"Partida '{nuevo_part_concepto}' añadida al presupuesto.")
-                        st.rerun()
-
         st.markdown("---")
         st.markdown("##### ⏱️ Ajustar Mano de Obra, Horas y Márgenes:")
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -943,30 +957,229 @@ def render_panel_herramientas_presupuesto(
             </div>
             """, unsafe_allow_html=True)
 
-    # Cálculo de partidas extras añadidas
-    total_partidas_extras_emp = sum(float(p.get("importe_emp", p.get("importe", 0.0))) for p in st.session_state.get(key_extra_part, []))
-    total_partidas_extras_auto = sum(float(p.get("importe_auto", p.get("importe", 0.0))) for p in st.session_state.get(key_extra_part, []))
+        # Cálculos económicos base
+        benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
+        pvp_mat = round(coste_mat + benef_mat, 2)
+        coste_mo_directo = round(horas_mo * precio_h_coste, 2)
+        g_mo_empresa = round(coste_mo_directo * (recargo_empresa_pct / 100.0), 2)
+        g_mo_autonomo = round(coste_mo_directo * (margen_mo_auto_pct / 100.0), 2)
 
-    # Recálculo dinámico con los parámetros interactivos
-    benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
-    pvp_mat = round(coste_mat + benef_mat, 2)
+        # -----------------------------------------------------------------
+        # GESTIÓN Y ORDEN DE PARTIDAS (ADELANTE, EN MEDIO O AL FINAL)
+        # -----------------------------------------------------------------
+        key_sec_part = f"{key_prefix}_secuencia_partidas"
+        key_dict_extra = f"{key_prefix}_dict_partidas_extras"
 
-    coste_mo_directo = round(horas_mo * precio_h_coste, 2)
-    g_mo_empresa = round(coste_mo_directo * (recargo_empresa_pct / 100.0), 2)
-    g_mo_autonomo = round(coste_mo_directo * (margen_mo_auto_pct / 100.0), 2)
+        if key_dict_extra not in st.session_state:
+            st.session_state[key_dict_extra] = {}
+
+        if key_sec_part not in st.session_state:
+            st.session_state[key_sec_part] = ["mat", "mo", "cie", "desp"]
+
+        # Detalle de materiales para el texto descriptivo
+        noms_mat_act_txt = [m['mat'] for m in filas_mat_activas[:3]]
+        txt_resumen_mat = ", ".join(noms_mat_act_txt) if noms_mat_act_txt else "Materiales normalizados según memoria técnica REBT"
+        if filas_mat_en_obra:
+            txt_resumen_mat += " (Canalización/elementos en obra aportados por el cliente)"
+
+        def _get_partida_info(pid):
+            if pid == "mat":
+                return {
+                    "id": "mat",
+                    "tipo": "sistema",
+                    "concepto": "Materiales Normalizados y Canalización",
+                    "icono": "📦",
+                    "desc": f"Suministro de materiales homologados conforme a REBT ({txt_resumen_mat}).",
+                    "importe_auto": pvp_mat,
+                    "importe_emp": pvp_mat,
+                    "activo": (pvp_mat > 0)
+                }
+            elif pid == "mo":
+                return {
+                    "id": "mo",
+                    "tipo": "sistema",
+                    "concepto": "Mano de Obra Especializada y Montaje",
+                    "icono": "🔨",
+                    "desc": f"Tendido, fijación y conexionado profesional ({horas_mo:.1f} horas estimadas de instalador cualificado).",
+                    "importe_auto": round(coste_mo_directo + g_mo_autonomo, 2),
+                    "importe_emp": round(coste_mo_directo + g_mo_empresa, 2),
+                    "activo": (coste_mo_directo > 0)
+                }
+            elif pid == "cie":
+                return {
+                    "id": "cie",
+                    "tipo": "sistema",
+                    "concepto": "Ensayos ITC-BT-05 y Certificado CIE / SIEM",
+                    "icono": "📋",
+                    "desc": "Medidas de aislamiento con megóhmetro, continuidad, disparo diferencial y tramitación oficial de boletín eléctrico ante Industria / SIEM.",
+                    "importe_auto": coste_tramitacion_auto,
+                    "importe_emp": coste_tramitacion_emp,
+                    "activo": (inc_cie and (coste_tramitacion_auto > 0 or coste_tramitacion_emp > 0))
+                }
+            elif pid == "desp":
+                return {
+                    "id": "desp",
+                    "tipo": "sistema",
+                    "concepto": "Desplazamiento y Medios Auxiliares",
+                    "icono": "🚗",
+                    "desc": "Vehículo de taller, acopio y portes al centro de trabajo.",
+                    "importe_auto": desplazamiento_auto,
+                    "importe_emp": desplazamiento_emp,
+                    "activo": (inc_desp and (desplazamiento_auto > 0 or desplazamiento_emp > 0))
+                }
+            elif pid in st.session_state[key_dict_extra]:
+                ex = st.session_state[key_dict_extra][pid]
+                return {
+                    "id": pid,
+                    "tipo": "personalizada",
+                    "concepto": ex.get("concepto", "Partida de Obra"),
+                    "icono": "🛠️",
+                    "desc": ex.get("descripcion", "Partida complementaria acordada con el cliente."),
+                    "importe_auto": float(ex.get("importe_auto", ex.get("importe", 0.0))),
+                    "importe_emp": float(ex.get("importe_emp", ex.get("importe", 0.0))),
+                    "activo": True
+                }
+            return None
+
+        # Obtener lista activa y ordenada
+        partidas_activas_ordenadas = []
+        for pid in st.session_state[key_sec_part]:
+            dp = _get_partida_info(pid)
+            if dp and dp.get("activo"):
+                partidas_activas_ordenadas.append(dp)
+
+        st.markdown("---")
+        st.markdown("##### 🛠️ Organización y Orden de Partidas del Presupuesto")
+        st.caption("Reordena cualquier partida con los botones ⬆️ / ⬇️ para colocarla **adelante, en medio o al final**, o añade nuevas partidas de obra:")
+
+        for idx_po, part in enumerate(partidas_activas_ordenadas, start=1):
+            col_po1, col_po2, col_po3, col_po4 = st.columns([2.8, 3.4, 1.6, 1.2])
+            with col_po1:
+                st.markdown(f"**PART. {idx_po:02d}: {part['icono']} {part['concepto']}**")
+            with col_po2:
+                st.caption(part['desc'][:65] + ("..." if len(part['desc']) > 65 else ""))
+            with col_po3:
+                imp_a = part['importe_auto']
+                imp_e = part['importe_emp']
+                if imp_a == imp_e:
+                    st.markdown(f"**{imp_a:,.2f} €**")
+                else:
+                    st.markdown(f"Aut: **{imp_a:,.2f} €** | Emp: **{imp_e:,.2f} €**")
+            with col_po4:
+                col_sub_u, col_sub_d, col_sub_del = st.columns(3)
+                with col_sub_u:
+                    if st.button("⬆️", key=f"{key_prefix}_btn_up_part_{part['id']}", disabled=(idx_po == 1), help="Subir una posición hacia adelante"):
+                        curr_sec = st.session_state[key_sec_part]
+                        idx_in_sec = curr_sec.index(part['id'])
+                        prev_pid = partidas_activas_ordenadas[idx_po - 2]['id']
+                        prev_in_sec = curr_sec.index(prev_pid)
+                        curr_sec[idx_in_sec], curr_sec[prev_in_sec] = curr_sec[prev_in_sec], curr_sec[idx_in_sec]
+                        st.rerun()
+                with col_sub_d:
+                    if st.button("⬇️", key=f"{key_prefix}_btn_dn_part_{part['id']}", disabled=(idx_po == len(partidas_activas_ordenadas)), help="Bajar una posición hacia atrás"):
+                        curr_sec = st.session_state[key_sec_part]
+                        idx_in_sec = curr_sec.index(part['id'])
+                        next_pid = partidas_activas_ordenadas[idx_po]['id']
+                        next_in_sec = curr_sec.index(next_pid)
+                        curr_sec[idx_in_sec], curr_sec[next_in_sec] = curr_sec[next_in_sec], curr_sec[idx_in_sec]
+                        st.rerun()
+                with col_sub_del:
+                    if part['tipo'] == "personalizada":
+                        if st.button("🗑️", key=f"{key_prefix}_btn_del_part_{part['id']}", help="Eliminar esta partida"):
+                            st.session_state[key_sec_part].remove(part['id'])
+                            if part['id'] in st.session_state[key_dict_extra]:
+                                del st.session_state[key_dict_extra][part['id']]
+                            st.rerun()
+
+        with st.popover("➕ Añadir Nueva Partida de Obra o Servicio"):
+            st.markdown("##### 🛠️ Nueva Partida Complementaria")
+            with st.form(f"{key_prefix}_form_nueva_partida", clear_on_submit=True):
+                nuevo_part_concepto = st.text_input(
+                    "Concepto / Título de la partida:",
+                    placeholder="Ej: Apertura y sellado de rozas por albañilería / Andamio homologado"
+                )
+                nuevo_part_desc = st.text_area(
+                    "Descripción técnica detallada (aparecerá en el PDF del cliente):",
+                    placeholder="Ej: Apertura de rozas en tabiquería para paso de tubos corrugados y posterior sellado con yeso y pasta de agarre...",
+                    height=70
+                )
+                col_npi1, col_npi2 = st.columns(2)
+                with col_npi1:
+                    nuevo_part_imp = st.number_input(
+                        "Importe Base (€) [Aplica a Empresa y Autónomo]:",
+                        min_value=0.0,
+                        value=150.0,
+                        step=10.0
+                    )
+                with col_npi2:
+                    dif_part_precio = st.checkbox("Diferenciar precio para Empresa", value=False)
+
+                nuevo_part_imp_emp = nuevo_part_imp
+                if dif_part_precio:
+                    nuevo_part_imp_emp = st.number_input(
+                        "Importe Empresa (€):",
+                        min_value=0.0,
+                        value=float(nuevo_part_imp * 1.25),
+                        step=10.0
+                    )
+
+                n_part_actual = len(partidas_activas_ordenadas)
+                sel_pos_part = st.selectbox(
+                    "📍 ¿Dónde deseas colocar esta nueva partida en el presupuesto?",
+                    [
+                        "🔝 Al principio de todo (1ª posición - antes de los materiales)",
+                        "🔚 Al final de todo (última posición)",
+                        "🎯 En una posición específica (en medio)"
+                    ],
+                    index=1
+                )
+                pos_especifica_part = 1
+                if "específica" in sel_pos_part:
+                    pos_especifica_part = st.number_input("Nº de posición donde insertarla:", min_value=1, max_value=n_part_actual + 1, value=min(2, n_part_actual + 1), step=1)
+
+                btn_crear_part = st.form_submit_button("➕ Añadir Partida al Presupuesto", type="primary", use_container_width=True)
+                if btn_crear_part:
+                    if nuevo_part_concepto.strip():
+                        nueva_clave = f"extra_{uuid.uuid4().hex[:6]}"
+                        st.session_state[key_dict_extra][nueva_clave] = {
+                            "concepto": nuevo_part_concepto.strip(),
+                            "descripcion": nuevo_part_desc.strip() if nuevo_part_desc.strip() else f"Trabajos auxiliares de {nuevo_part_concepto.strip()}",
+                            "importe": float(nuevo_part_imp),
+                            "importe_auto": float(nuevo_part_imp),
+                            "importe_emp": float(nuevo_part_imp_emp)
+                        }
+
+                        if "principio" in sel_pos_part:
+                            st.session_state[key_sec_part].insert(0, nueva_clave)
+                        elif "específica" in sel_pos_part:
+                            idx_ins_part = max(0, min(len(st.session_state[key_sec_part]), int(pos_especifica_part) - 1))
+                            st.session_state[key_sec_part].insert(idx_ins_part, nueva_clave)
+                        else:
+                            st.session_state[key_sec_part].append(nueva_clave)
+
+                        st.success(f"Partida '{nuevo_part_concepto}' añadida al presupuesto.")
+                        st.rerun()
+
+    # Recalcular partidas activas ordenadas para totales y balance
+    partidas_activas_ordenadas = []
+    for pid in st.session_state[key_sec_part]:
+        dp = _get_partida_info(pid)
+        if dp and dp.get("activo"):
+            partidas_activas_ordenadas.append(dp)
 
     # Totales Modo Empresa
-    base_empresa = round(pvp_mat + coste_mo_directo + g_mo_empresa + coste_tramitacion_emp + desplazamiento_emp + total_partidas_extras_emp, 2)
+    base_empresa = round(sum(p["importe_emp"] for p in partidas_activas_ordenadas), 2)
     iva_empresa = round(base_empresa * (iva_pct / 100.0), 2)
     total_empresa = round(base_empresa + iva_empresa, 2)
 
-    # Totales Modo Autónomo (g_mo ajustable)
-    base_autonomo = round(pvp_mat + coste_mo_directo + g_mo_autonomo + coste_tramitacion_auto + desplazamiento_auto + total_partidas_extras_auto, 2)
+    # Totales Modo Autónomo
+    base_autonomo = round(sum(p["importe_auto"] for p in partidas_activas_ordenadas), 2)
     iva_autonomo = round(base_autonomo * (iva_pct / 100.0), 2)
     total_autonomo = round(base_autonomo + iva_autonomo, 2)
 
     diferencia_ahorro = round(total_empresa - total_autonomo, 2)
-    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion_auto + total_partidas_extras_auto, 2)
+    total_extras_auto = sum(p["importe_auto"] for p in partidas_activas_ordenadas if p["tipo"] == "personalizada")
+    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion_auto + total_extras_auto, 2)
 
     anticipo_mat = round(coste_mat * (1.0 + iva_pct / 100.0), 2)
     pct_anticipo_rec = round((coste_mat / base_autonomo * 100), 0) if base_autonomo > 0 else 40.0
@@ -1009,40 +1222,20 @@ def render_panel_herramientas_presupuesto(
             )
             st.caption(f"Ganas: {horas_mo:.1f}h x {precio_h_coste:.0f}€ + {benef_mat:.2f}€ mat.")
 
-        # Tabla de desglose transparente interna
+        # Tabla de desglose transparente interna en el orden exacto configurado por el usuario
         st.markdown("##### 🔍 Desglose Partida a Partida (¿A dónde va cada euro?)")
-        filas_balance = [
-            {"Concepto Económico": f"📦 1. Compra Materiales ({len(filas_mat_activas)} partidas a comprar)", "🏢 Empresa": f"{coste_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Salida de caja a Obramat/Leroy"},
-            {"Concepto Económico": f"📈 2. Beneficio s/ Materiales ({margen_mat_pct:.0f}%)", "🏢 Empresa": f"{benef_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{benef_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Ganancia limpia por suministrar material"},
-            {"Concepto Económico": f"🔨 3. Tu Jornal Directo ({horas_mo:.1f}h x {precio_h_coste:.0f}€)", "🏢 Empresa": f"{coste_mo_directo:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mo_directo:,.2f} €", "Diferencia": "0,00 €", "Destino": "Tu sueldo profesional por trabajar"},
-            {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}% vs {margen_mo_auto_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "🧑‍🔧 Autónomo": f"{g_mo_autonomo:,.2f} €", "Diferencia": f"-{g_mo_empresa - g_mo_autonomo:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
-            {
-                "Concepto Económico": "📋 5. Tramitación CIE / Boletín / SIEM",
-                "🏢 Empresa": f"{coste_tramitacion_emp:,.2f} €" if coste_tramitacion_emp > 0 else "0,00 € (Omitida)",
-                "🧑‍🔧 Autónomo": f"{coste_tramitacion_auto:,.2f} €" if coste_tramitacion_auto > 0 else "0,00 € (Omitida)",
-                "Diferencia": f"{coste_tramitacion_emp - coste_tramitacion_auto:,.2f} €",
-                "Destino": "Honorarios técnicos de legalización"
-            },
-            {
-                "Concepto Económico": "🚗 6. Desplazamiento y Dietas",
-                "🏢 Empresa": f"{desplazamiento_emp:,.2f} €" if desplazamiento_emp > 0 else "0,00 € (Omitido)",
-                "🧑‍🔧 Autónomo": f"{desplazamiento_auto:,.2f} €" if desplazamiento_auto > 0 else "0,00 € (Omitido)",
-                "Diferencia": f"{desplazamiento_emp - desplazamiento_auto:,.2f} €",
-                "Destino": "Combustible y furgoneta"
-            }
-        ]
-
-        # Añadir partidas extras de obra a la tabla de balance
-        for idx_ep, ep in enumerate(st.session_state.get(key_extra_part, []), start=7):
-            imp_emp = float(ep.get("importe_emp", ep.get("importe", 0.0)))
-            imp_auto = float(ep.get("importe_auto", ep.get("importe", 0.0)))
-            dif_ep = round(imp_emp - imp_auto, 2)
+        filas_balance = []
+        for idx_b, part_b in enumerate(partidas_activas_ordenadas, start=1):
+            imp_e = part_b["importe_emp"]
+            imp_a = part_b["importe_auto"]
+            dif_p = round(imp_e - imp_a, 2)
+            dest_txt = part_b["desc"][:48] + ("..." if len(part_b["desc"]) > 48 else "")
             filas_balance.append({
-                "Concepto Económico": f"🛠️ {idx_ep}. {ep['concepto']}",
-                "🏢 Empresa": f"{imp_emp:,.2f} €",
-                "🧑‍🔧 Autónomo": f"{imp_auto:,.2f} €",
-                "Diferencia": f"-{dif_ep:,.2f} €" if dif_ep > 0 else "0,00 €",
-                "Destino": "Partida complementaria de obra"
+                "Concepto Económico": f"{part_b['icono']} {idx_b}. {part_b['concepto']}",
+                "🏢 Empresa": f"{imp_e:,.2f} €",
+                "🧑‍🔧 Autónomo": f"{imp_a:,.2f} €",
+                "Diferencia": f"-{dif_p:,.2f} €" if dif_p > 0 else "0,00 €",
+                "Destino": dest_txt
             })
 
         # FILAS DE TOTALES CLAVE AL FINAL DE LA TABLA (PARA VER CON TOTAL CLARIDAD EL TOTAL DE CADA COLUMNA):
@@ -1185,22 +1378,24 @@ def render_panel_herramientas_presupuesto(
         if filas_mat_en_obra:
             txt_det_mat += " (Canalización y elementos preexistentes en obra aportados por el cliente)"
 
-        # Preparar partidas adicionales para el PDF del cliente
+        # Preparar todas las partidas ordenadas para el PDF del cliente
         partidas_pdf_auto = [
             {
+                "num": f"PART. {idx:02d}",
                 "titulo": p["concepto"],
-                "desc": p.get("descripcion", ""),
-                "importe": float(p.get("importe_auto", p.get("importe", 0.0)))
+                "desc": p["desc"],
+                "importe": p["importe_auto"]
             }
-            for p in st.session_state.get(key_extra_part, [])
+            for idx, p in enumerate(partidas_activas_ordenadas, start=1)
         ]
         partidas_pdf_emp = [
             {
+                "num": f"PART. {idx:02d}",
                 "titulo": p["concepto"],
-                "desc": p.get("descripcion", ""),
-                "importe": float(p.get("importe_emp", p.get("importe", 0.0)))
+                "desc": p["desc"],
+                "importe": p["importe_emp"]
             }
-            for p in st.session_state.get(key_extra_part, [])
+            for idx, p in enumerate(partidas_activas_ordenadas, start=1)
         ]
 
         # Preparar datos específicos para Modo Autónomo
@@ -1216,7 +1411,7 @@ def render_panel_herramientas_presupuesto(
             "coste_tramitacion": coste_tramitacion_auto,
             "desplazamiento": desplazamiento_auto,
             "detalle_materiales": txt_det_mat,
-            "partidas_adicionales": partidas_pdf_auto
+            "partidas": partidas_pdf_auto
         }
 
         # Preparar datos específicos para Modo Empresa
@@ -1232,7 +1427,7 @@ def render_panel_herramientas_presupuesto(
             "coste_tramitacion": coste_tramitacion_emp,
             "desplazamiento": desplazamiento_emp,
             "detalle_materiales": txt_det_mat,
-            "partidas_adicionales": partidas_pdf_emp
+            "partidas": partidas_pdf_emp
         }
 
         try:

@@ -258,8 +258,8 @@ def generar_pdf_oferta_comercial(proyecto_info: dict, presupuesto_data: dict, mo
                 })
                 part_idx += 1
 
-    for p in items_presupuesto:
-        num_str = p.get("num") or p.get("cap") or "PART."
+    for idx_item, p in enumerate(items_presupuesto, start=1):
+        num_str = p.get("num") or p.get("cap") or f"PART. {idx_item:02d}"
         tit_str = _limpiar_texto(p.get("titulo") or p.get("concepto") or "")
         desc_str = _limpiar_texto(p.get("desc") or p.get("descripcion") or "")
         imp_val = float(p.get("importe", 0.0))
