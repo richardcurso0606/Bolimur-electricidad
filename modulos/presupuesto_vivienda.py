@@ -1148,7 +1148,7 @@ def app():
 
     # ==========================================
     # Definir clase auxiliar de contexto nulo para cuando se seleccione Vista Continua
-        tab_sec1, tab_sec2, tab_sec3, tab_sec4, tab_sec_teleco, tab_sec5, tab_sec6 = st.tabs([
+    tab_sec1, tab_sec2, tab_sec3, tab_sec4, tab_sec_teleco, tab_sec5, tab_sec6 = st.tabs([
             "⚡ 1. Potencia & IGA",
             "🔲 2. Mecanismos & Series",
             "⏱️ 3. Mano de Obra & Techos",
@@ -1156,7 +1156,7 @@ def app():
             "📡 5. Telecomunicaciones (ICT-2 RTR)",
             "🛡️ 6. Inspector IA REBT & ICT",
             "🖨️ 7. Documentos & Presupuesto"
-        ])
+    ])
 
     # ==========================================
     # SECCIÓN 1: PARÁMETROS DE POTENCIA REBT E IGA OFICIAL
