@@ -49,36 +49,12 @@ def renderizar():
     except Exception:
         pass
 
-    class _NullContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
-    with col_nav_info:
-        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
-    with col_nav_mode:
-        modo_vista_di = st.radio(
-            "Modo de Navegación:",
-            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="modo_vista_di"
-        )
-
-    if modo_vista_di.startswith("📑"):
-        tab_di1, tab_di2, tab_di3, tab_di4 = st.tabs([
-            "🔌 1. Parámetros DI",
-            "📋 2. Memoria & Sección Óptima",
-            "💰 3. Presupuesto & Negociación",
-            "🖨️ 4. Reporte PDF Oficial"
-        ])
-    else:
-        tab_di1 = _NullContext()
-        tab_di2 = _NullContext()
-        tab_di3 = _NullContext()
-        tab_di4 = _NullContext()
+    tab_di1, tab_di2, tab_di3, tab_di4 = st.tabs([
+        "🔌 1. Parámetros DI",
+        "📋 2. Memoria & Sección Óptima",
+        "💰 3. Presupuesto & Negociación",
+        "🖨️ 4. Reporte PDF Oficial"
+    ])
 
     with tab_di1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Diseño de la Derivación Individual (ITC-BT-15)</h4></div>', unsafe_allow_html=True)
