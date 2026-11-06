@@ -564,6 +564,9 @@ def render_panel_herramientas_presupuesto(
     filas_materiales = datos_presupuesto.get("filas_materiales", [])
     nom_cliente_def = datos_presupuesto.get("cliente", "Cliente Particular")
     nom_obra_def = datos_presupuesto.get("concepto", f"Presupuesto de {modulo_nombre}")
+    obra_longitud = float(datos_presupuesto.get("longitud", 0.0))
+    obra_seccion = float(datos_presupuesto.get("seccion", 0.0))
+    obra_trifasico = bool(datos_presupuesto.get("es_trifasico", False))
 
     # Contenedor visual del panel comercial
     st.markdown("---")
@@ -975,6 +978,72 @@ def render_panel_herramientas_presupuesto(
         g_mo_autonomo = round(coste_mo_directo * (margen_mo_auto_pct / 100.0), 2)
 
         # -----------------------------------------------------------------
+        # PLANIFICACIÓN DE TIEMPOS, CUADRILLA (1 O 2 PERSONAS) Y REPARTO
+        # -----------------------------------------------------------------
+        st.markdown("---")
+        st.markdown("##### 👥 Planificación de Tiempos y Cuadrilla de Instaladores:")
+
+        es_cable_pesado = (obra_seccion >= 16.0 or obra_longitud >= 15.0 or obra_trifasico)
+        es_roza_obra = any("roza" in str(m.get("mat", "")).lower() for m in filas_materiales)
+        if es_cable_pesado:
+            rec_cuadrilla_idx = 1
+            badge_rec_html = f"""<div style="background-color:#fef2f2; border:1.5px solid #dc2626; border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+                <span style="font-weight:700; color:#b91c1c;">🔴 RECOMENDACIÓN TÉCNICA: Se requiere Cuadrilla de 2 personas obligatoriamente</span><br/>
+                <span style="font-size:12.5px; color:#475569;">Tirada de cable con longitud de <b>{obra_longitud:.0f} m</b> y sección de <b>{obra_seccion:.0f} mm²</b>: es indispensable un instalador en cuadro/contadores guiando y aplicando gel tiracables y otro tirando de la guía en vivienda para evitar rotura de guía, rozaduras o atascos.</span>
+            </div>"""
+        elif es_roza_obra or horas_mo >= 7.0:
+            rec_cuadrilla_idx = 1
+            badge_rec_html = """<div style="background-color:#fffbeb; border:1.5px solid #f59e0b; border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+                <span style="font-weight:700; color:#b45309;">🟡 RECOMENDACIÓN TÉCNICA: Cuadrilla de 2 personas muy aconsejable</span><br/>
+                <span style="font-size:12.5px; color:#475569;">Trabajos de canalización/rozas o jornada extensa: mientras uno pica y aspira, el otro coloca tubo y yeso rápido, finalizando el tajo en la mitad de tiempo sin fatiga física.</span>
+            </div>"""
+        else:
+            rec_cuadrilla_idx = 0
+            badge_rec_html = """<div style="background-color:#f0fdf4; border:1.5px solid #16a34a; border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+                <span style="font-weight:700; color:#15803d;">🟢 RECOMENDACIÓN TÉCNICA: Viable para 1 instalador solo</span><br/>
+                <span style="font-size:12.5px; color:#475569;">Tirada accesible y volumen de trabajo manejable para ejecutar de forma autónoma con total seguridad y buen rendimiento.</span>
+            </div>"""
+
+        st.markdown(badge_rec_html, unsafe_allow_html=True)
+
+        col_cuad1, col_cuad2 = st.columns([1.8, 2.2])
+        with col_cuad1:
+            sel_cuadrilla = st.radio(
+                "👥 ¿Cómo ejecutaréis esta obra?",
+                ["👤 1 Instalador Solo", "👥 Cuadrilla de 2 Personas (Tú y tu Compañero)"],
+                index=rec_cuadrilla_idx,
+                horizontal=True,
+                key=f"{key_prefix}_sel_cuadrilla"
+            )
+            es_cuadrilla_2 = ("2 Personas" in sel_cuadrilla)
+
+        with col_cuad2:
+            if es_cuadrilla_2:
+                sel_modo_reparto = st.radio(
+                    "🤝 Modalidad de Reparto de Beneficios:",
+                    ["⚖️ A Medias (50% / 50% Socios - Deduciendo Gastos)", "🧑‍🔧 Oficial + Ayudante / Tarifa por horas"],
+                    horizontal=True,
+                    key=f"{key_prefix}_sel_modo_reparto"
+                )
+            else:
+                sel_modo_reparto = "1_solo"
+
+        if es_cuadrilla_2:
+            h_reloj_obra = round(horas_mo / 2.0, 1)
+            jornadas_txt = f"**{h_reloj_obra:.1f} horas de reloj** (¡Media jornada de mañana, termináis antes de comer!)" if h_reloj_obra <= 4.5 else f"**{h_reloj_obra:.1f} horas de reloj** (1 jornada completa entre los 2)"
+            if "A Medias" in sel_modo_reparto:
+                st.info(f"⏱️ **Tiempo de presencia en la obra:** {jornadas_txt}. Se deducen todos los gastos reales de la obra (materiales de almacén, gasolina/portes y tasas de boletín) y el **beneficio neto limpio restante se divide al 50% exacto para cada uno**.")
+            else:
+                col_ay1, col_ay2 = st.columns([1.5, 2.5])
+                with col_ay1:
+                    p_hora_comp = st.number_input("Precio/Hora Compañero (€/h):", min_value=12.0, max_value=80.0, value=20.0, step=1.0, key=f"{key_prefix}_p_hora_comp")
+                with col_ay2:
+                    st.caption(f"⏱️ **Tiempo de presencia:** {jornadas_txt}. Tu compañero cobrará **{h_reloj_obra * p_hora_comp:,.2f} €** ({h_reloj_obra:.1f}h a {p_hora_comp:.0f}€/h) y tú como instalador titular asumes tus horas y el beneficio de materiales y gestión.")
+        else:
+            es_cuadrilla_2 = False
+            h_reloj_obra = float(horas_mo)
+
+        # -----------------------------------------------------------------
         # GESTIÓN Y ORDEN DE PARTIDAS (ADELANTE, EN MEDIO O AL FINAL)
         # -----------------------------------------------------------------
         key_sec_part = f"{key_prefix}_secuencia_partidas"
@@ -1242,6 +1311,54 @@ def render_panel_herramientas_presupuesto(
                 help="Lo que te queda neto en el bolsillo: Tu sueldo de horas + margen de materiales + honorarios boletín."
             )
             st.caption(f"Ganas: {horas_mo:.1f}h x {precio_h_coste:.0f}€ + {benef_mat:.2f}€ mat.")
+
+        # Si está activada la cuadrilla de 2 personas, mostrar el desglose de reparto y deducción de gastos
+        if es_cuadrilla_2:
+            st.markdown("---")
+            st.markdown("##### 🤝 Reparto Económico y Rentabilidad de la Cuadrilla (Deduciendo Gastos)")
+
+            # Gastos duros de la obra
+            gastos_duros_obra = round(coste_mat + desplazamiento_auto + coste_tramitacion_auto, 2)
+            # Bote limpio a repartir tras pagar materiales, gasolina y tasas
+            bote_limpio_obra = round(base_autonomo - gastos_duros_obra, 2)
+
+            h_reloj = round(horas_mo / 2.0, 1)
+
+            if "A Medias" in sel_modo_reparto:
+                pago_tu = round(bote_limpio_obra / 2.0, 2)
+                pago_comp = round(bote_limpio_obra - pago_tu, 2)
+                modo_rep_txt = "⚖️ 50% / 50% A Medias (Socios)"
+            else:
+                p_hora_comp = float(st.session_state.get(f"{key_prefix}_p_hora_comp", 20.0))
+                pago_comp = round(h_reloj * p_hora_comp, 2)
+                pago_tu = round(bote_limpio_obra - pago_comp, 2)
+                modo_rep_txt = f"🧑‍🔧 Ayudante por horas ({p_hora_comp:.0f} €/h)"
+
+            r_hora_tu = round(pago_tu / h_reloj, 2) if h_reloj > 0 else 0.0
+            r_hora_comp = round(pago_comp / h_reloj, 2) if h_reloj > 0 else 0.0
+
+            with st.container(border=True):
+                st.markdown(f"""
+                <div style="background-color:#f0fdf4; border-left:4px solid #16a34a; padding:10px 14px; border-radius:4px; margin-bottom:12px; font-size:13px; color:#14532d;">
+                    <b>📊 Balance de Obra en Pareja:</b> Para esta obra se facturan <b>{horas_mo:.1f} horas de mano de obra</b> al cliente, pero al ir los 2 se termina en <b>{h_reloj:.1f} horas de reloj</b>. 
+                    Primero se pagan los materiales de almacén (<b>{coste_mat:,.2f} €</b>), combustible/portes (<b>{desplazamiento_auto:,.2f} €</b>) y tasas (<b>{coste_tramitacion_auto:,.2f} €</b>). 
+                    El <b>bote limpio de {bote_limpio_obra:,.2f} €</b> se reparte en modalidad: <b>{modo_rep_txt}</b>.
+                </div>
+                """, unsafe_allow_html=True)
+
+                col_rc1, col_rc2, col_rc3, col_rc4 = st.columns(4)
+                with col_rc1:
+                    st.metric("🧾 Gastos Deducidos", f"{gastos_duros_obra:,.2f} €", help="Materiales de compra + Vehículo/Portes + Tasas")
+                    st.caption(f"Material almacén: {coste_mat:,.2f} €")
+                with col_rc2:
+                    st.metric("💰 Bote Neto Limpio", f"{bote_limpio_obra:,.2f} €", help="Total disponible para repartir entre ambos")
+                    st.caption(f"Tiempo obra: {h_reloj:.1f}h de reloj")
+                with col_rc3:
+                    st.metric("🧑‍🔧 Tu Ganancia Limpia", f"{pago_tu:,.2f} €", delta=f"{r_hora_tu:,.2f} €/h real")
+                    st.caption(f"Por tus {h_reloj:.1f} horas trabajadas")
+                with col_rc4:
+                    st.metric("👥 Ganancia Compañero", f"{pago_comp:,.2f} €", delta=f"{r_hora_comp:,.2f} €/h real")
+                    st.caption(f"Por sus {h_reloj:.1f} horas trabajadas")
 
         # Tabla de desglose transparente interna en el orden exacto configurado por el usuario
         st.markdown("##### 🔍 Desglose Partida a Partida (¿A dónde va cada euro?)")

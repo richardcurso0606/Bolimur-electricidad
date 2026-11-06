@@ -284,6 +284,9 @@ def renderizar():
                         "iva_pct": 21.0,
                         "cliente": "Cliente Derivación Individual",
                         "concepto": f"Sustitución e Instalación de Derivación Individual DI {s_final_di} mm² (ITC-BT-15)",
+                        "longitud": float(di_long),
+                        "seccion": float(s_final_di),
+                        "es_trifasico": es_trifasico,
                         "filas_materiales": [
                             {"mat": f"Cable unipolar Cu libre de halógenos H07Z1-K {s_final_di} mm² (Fases+N+PE)", "cant": float(di_long) * (5.0 if es_trifasico else 3.0), "unid": "m", "p_u": round(c_di['coste_materiales'] * 0.65 / max(float(di_long) * (5.0 if es_trifasico else 3.0), 1.0), 2)},
                             {"mat": f"Tubo protector libre de halógenos M{tubo_diam_di} IK08", "cant": float(di_long), "unid": "m", "p_u": 2.20},
