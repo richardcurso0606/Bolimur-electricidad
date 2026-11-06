@@ -635,8 +635,8 @@ def render_panel_herramientas_presupuesto(
                     width="small"
                 ),
                 "incluir": st.column_config.CheckboxColumn(
-                    "Comprar",
-                    help="Marca para comprar en almacén. Desmarca si el cliente ya lo tiene o ya está canalizado en la finca.",
+                    "Comprar [X]",
+                    help="Marca con una X para comprar en almacén. Desmarca la X si el cliente ya lo tiene o ya está canalizado para que NO se cobre (0,00 €).",
                     default=True
                 ),
                 "material": st.column_config.TextColumn("Denominación del Material / Especificación Técnica", width="large", required=True),
@@ -834,10 +834,10 @@ def render_panel_herramientas_presupuesto(
         col_d1, col_d2 = st.columns(2)
         with col_d1:
             inc_desp = st.checkbox(
-                "🚗 Incluir Desplazamiento y Portes de Obra",
+                "🚗 [X] Incluir Desplazamiento y Portes (Desmarca la X para que NO salga en el presupuesto)",
                 value=(desplazamiento > 0),
                 key=f"{key_prefix}_chk_desp",
-                help="Marca para repercutir kilometraje, furgoneta o dietas de desplazamiento."
+                help="Desmarca esta casilla con la X para que no figure desplazamiento ni se cobre al cliente."
             )
             if inc_desp:
                 val_desp_base = st.number_input(
@@ -862,14 +862,14 @@ def render_panel_herramientas_presupuesto(
             else:
                 desplazamiento_emp = 0.0
                 desplazamiento_auto = 0.0
-                st.caption("ℹ️ *Partida de desplazamiento desactivada (0,00 € en ambos).*")
+                st.caption("ℹ️ *Partida de desplazamiento DESMARCADA (0,00 € - NO saldrá en el presupuesto ni en el PDF).*")
 
         with col_d2:
             inc_cie = st.checkbox(
-                "📋 Incluir Tramitación CIE / Boletín / SIEM",
+                "📋 [X] Incluir Tramitación CIE / Boletín / SIEM (Desmarca la X para que NO salga en el presupuesto)",
                 value=(coste_tramitacion > 0),
                 key=f"{key_prefix}_chk_inc_cie",
-                help="Desmarca si el cliente ya dispone de boletín o si no te vas a encargar de tramitarlo ante Industria / SIEM."
+                help="Desmarca esta casilla con la X si el cliente ya dispone de boletín o si no te vas a encargar de tramitarlo ante Industria / SIEM."
             )
             if inc_cie:
                 val_cie_base = st.number_input(
@@ -894,7 +894,7 @@ def render_panel_herramientas_presupuesto(
             else:
                 coste_tramitacion_emp = 0.0
                 coste_tramitacion_auto = 0.0
-                st.caption("ℹ️ *Partida de Boletín/SIEM desactivada (0,00 € en ambos).*")
+                st.caption("ℹ️ *Partida de Boletín/SIEM DESMARCADA (0,00 € - NO saldrá en el presupuesto ni en el PDF).*")
 
         # -----------------------------------------------------------------
         # AJUSTES DE MANO DE OBRA, HORAS Y MÁRGENES
@@ -1323,13 +1323,13 @@ def render_panel_herramientas_presupuesto(
             "✏️ Personalizada (Escribir manualmente)": ""
         }
 
-        col_cfg_pdf1, col_cfg_pdf2 = st.columns([1.6, 1.4])
+        col_cfg_pdf1, col_cfg_pdf2 = st.columns([1.7, 1.3])
         with col_cfg_pdf1:
             mostrar_forma_pago = st.checkbox(
-                "💳 Incluir Forma de Pago en el Presupuesto (PDF)",
+                "💳 [X] Incluir Forma de Pago en el Presupuesto (Desmarca la X para que NO salga escrita en el PDF)",
                 value=True,
                 key=f"{key_prefix}_chk_ver_fpago",
-                help="Desmarca esta casilla si prefieres ocultar por completo la forma de pago en la oferta que entregas al cliente."
+                help="Si desmarcas esta casilla con una X, la forma de pago quedará 100% oculta y no figurará en el presupuesto que entregues al cliente."
             )
         with col_cfg_pdf2:
             with st.popover("⚙️ Configurar Datos del Cliente y Condiciones"):
@@ -1360,7 +1360,7 @@ def render_panel_herramientas_presupuesto(
                 )
         else:
             cli_forma_pago = ""
-            st.caption("🙈 *Forma de pago OCULTA: No aparecerá ninguna mención en el presupuesto ni en el PDF del cliente.*")
+            st.info("🙈 **Forma de pago OCULTA:** Has desmarcado la casilla con la X. NO aparecerá ninguna condición de pago en el presupuesto ni en el PDF del cliente.")
 
         proyecto_info_pdf = {
             "cliente": cli_nombre_pdf if 'cli_nombre_pdf' in locals() else nom_cliente_def,
