@@ -658,6 +658,12 @@ def render_panel_herramientas_presupuesto(
     """
     # Extracción de parámetros con valores por defecto seguros
     p_cargado = st.session_state.get(f"presupuesto_cargado_{key_prefix}")
+    if p_cargado:
+        db_check = cargar_presupuesto_por_id(p_cargado.get("id", 0))
+        if not db_check:
+            if f"presupuesto_cargado_{key_prefix}" in st.session_state:
+                del st.session_state[f"presupuesto_cargado_{key_prefix}"]
+            p_cargado = None
     coste_mat_orig = float(datos_presupuesto.get("coste_materiales", 0.0))
     margen_mat_def = float(datos_presupuesto.get("margen_materiales_pct", 25.0))
     horas_mo_def = float(datos_presupuesto.get("horas_mano_obra", 8.0))
