@@ -685,7 +685,9 @@ def render_panel_herramientas_presupuesto(
                 "proveedor": c_prov,
                 "sku": c_sku,
                 "incluir": c_inc,
-                "en_bd": ("Tarifa Web" not in c_prov and "Pendiente" not in c_prov)
+                "en_bd": ("Tarifa Web" not in c_prov and "Pendiente" not in c_prov),
+                "url_obramat": f"https://www.obramat.es/catalogsearch/result/?q={urllib.parse.quote_plus(c_nom)}",
+                "url_google": f"https://www.google.com/search?q={urllib.parse.quote_plus('comprar ' + c_nom)}"
             }
             lista_actualizada.append(item_dict)
 
@@ -753,7 +755,9 @@ def render_panel_herramientas_presupuesto(
                                 "subtotal": round(float(in_mat_cant) * float(in_mat_pu), 2),
                                 "proveedor": in_mat_prov.strip() if in_mat_prov.strip() else "Obramat",
                                 "sku": in_mat_sku.strip() if in_mat_sku.strip() else "MANUAL",
-                                "en_bd": True
+                                "en_bd": True,
+                                "url_obramat": f"https://www.obramat.es/catalogsearch/result/?q={urllib.parse.quote_plus(in_mat_nom.strip())}",
+                                "url_google": f"https://www.google.com/search?q={urllib.parse.quote_plus('comprar ' + in_mat_nom.strip())}"
                             }
                             if "principio" in sel_pos_tipo:
                                 st.session_state[key_lista_mat].insert(0, nuevo_item)
@@ -1634,27 +1638,32 @@ def render_panel_herramientas_presupuesto(
                     st.markdown("<div style='font-size:12.5px; color:#475569;'>Haz clic en las tiendas para comprobar el precio real online y regístralo con 1 clic para que ya quede guardado en tu base de datos:</div>", unsafe_allow_html=True)
                     for idx_w, iw in enumerate(items_web):
                         col_iw1, col_iw2, col_iw3 = st.columns([2.5, 1.2, 1.3])
-                        w_nom = iw.get("mat") or iw.get("concepto") or iw.get("nombre") or ""
+                        w_nom = iw.get("mat") or iw.get("material") or iw.get("concepto") or iw.get("nombre") or f"Artículo {idx_w+1}"
+                        url_obr = iw.get("url_obramat") or f"https://www.obramat.es/catalogsearch/result/?q={urllib.parse.quote_plus(w_nom)}"
+                        url_goo = iw.get("url_google") or f"https://www.google.com/search?q={urllib.parse.quote_plus('comprar material electrico ' + w_nom)}"
                         with col_iw1:
                             st.markdown(f"**{w_nom}**")
                         with col_iw2:
-                            st.markdown(f"[🏪 Buscar en Obramat]({iw['url_obramat']})")
+                            st.markdown(f"[🏪 Buscar en Obramat]({url_obr})")
                         with col_iw3:
-                            st.markdown(f"[🔍 Buscar en Google]({iw['url_google']})")
+                            st.markdown(f"[🔍 Buscar en Google]({url_goo})")
 
                     st.markdown("---")
                     st.markdown("###### ➕ Registrar Precio Real en tu Base de Datos Local:")
                     col_reg1, col_reg2, col_reg3, col_reg4 = st.columns([2.2, 1.0, 1.4, 0.9])
                     with col_reg1:
-                        reg_nom = st.text_input("Artículo:", value=items_web[0].get("mat", ""), key=f"{key_prefix}_in_reg_mat_nom")
+                        def_nom_w = items_web[0].get("mat") or items_web[0].get("material") or ""
+                        reg_nom = st.text_input("Artículo:", value=def_nom_w, key=f"{key_prefix}_in_reg_mat_nom")
                     with col_reg2:
-                        reg_pu = st.number_input("Precio (€):", min_value=0.01, value=float(items_web[0].get("p_u", 10.0)), step=0.5, key=f"{key_prefix}_in_reg_mat_pu")
+                        def_pu_w = float(items_web[0].get("p_u") or items_web[0].get("precio_unit") or 10.0)
+                        reg_pu = st.number_input("Precio (€):", min_value=0.01, value=def_pu_w, step=0.5, key=f"{key_prefix}_in_reg_mat_pu")
                     with col_reg3:
                         reg_prov = st.selectbox("Tienda / Almacén:", ["Obramat", "Leroy Merlin", "Sumidelec", "Saltoki", "Electro Stocks", "Otro Almacén"], key=f"{key_prefix}_sel_reg_mat_prov")
                     with col_reg4:
                         st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
                         if st.button("💾 Guardar", key=f"{key_prefix}_btn_save_mat_bd"):
-                            ok_g = guardar_material_personalizado(reg_nom, reg_pu, unidad=items_web[0].get("unid", "ud"), proveedor=reg_prov)
+                            def_unid_w = items_web[0].get("unid") or "ud"
+                            ok_g = guardar_material_personalizado(reg_nom, reg_pu, unidad=def_unid_w, proveedor=reg_prov)
                             if ok_g:
                                 st.success(f"¡'{reg_nom}' guardado en tu base de datos!")
                                 st.rerun()
