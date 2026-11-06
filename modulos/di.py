@@ -251,7 +251,7 @@ def renderizar():
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">💰 SECCIÓN 3: Presupuesto y Auditor Comercial de la Derivación Individual</h4></div>', unsafe_allow_html=True)
         with st.container(border=True):
                 st.markdown("""
-                **Valoración económica conforme a precios reales de mercado y tutor de prácticas:**  
+                **Valoración económica conforme a precios reales de mercado e instalador de calle:**  
                 Calcula el precio de venta sugerido (200 - 250 € base hasta 20 m sin rozas, suplemento si exige 16 mm², metros extra y obra) y audita tus costes y beneficio neto.
                 """)
                 
@@ -307,11 +307,12 @@ def renderizar():
                         "desplazamiento": 25.0,
                         "iva_pct": 21.0,
                         "cliente": "Cliente Derivación Individual",
-                        "concepto": f"Sustitución e Instalación de Derivación Individual DI (ITC-BT-15)",
+                        "concepto": f"Sustitución e Instalación de Derivación Individual DI {s_final_di} mm² (ITC-BT-15)",
                         "filas_materiales": [
-                            {"mat": f"Cable unipolar Cu libre de halógenos H07Z1-K (Fases+N+PE)", "cant": float(di_long), "unid": "m", "p_u": round(c_di['coste_materiales']*0.6/max(float(di_long),1.0), 2)},
-                            {"mat": "Tubo protector libre de halógenos M32/M40 IK08", "cant": float(di_long), "unid": "m", "p_u": 2.10},
-                            {"mat": "Hilo de mando rojo 1.5 mm² para telegestión de contador", "cant": float(di_long), "unid": "m", "p_u": 0.28}
+                            {"mat": f"Cable unipolar Cu libre de halógenos H07Z1-K {s_final_di} mm² (Fases+N+PE)", "cant": float(di_long) * (5.0 if es_trifasico else 3.0), "unid": "m", "p_u": round(c_di['coste_materiales'] * 0.65 / max(float(di_long) * (5.0 if es_trifasico else 3.0), 1.0), 2)},
+                            {"mat": f"Tubo protector libre de halógenos M{tubo_diam_di} IK08", "cant": float(di_long), "unid": "m", "p_u": 2.20},
+                            {"mat": "Hilo de mando rojo 1.5 mm² para telegestión de contador", "cant": float(di_long), "unid": "m", "p_u": 0.28},
+                            {"mat": "Material auxiliar de fijación, grapas y accesorios", "cant": 1.0, "unid": "partida", "p_u": 25.0}
                         ]
                     }
                     herramientas_presupuesto.render_panel_herramientas_presupuesto(datos_obra_di, modulo_nombre="Derivación Individual (DI)", key_prefix="di_hp")

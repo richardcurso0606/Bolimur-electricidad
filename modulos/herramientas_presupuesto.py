@@ -21,6 +21,11 @@ try:
 except ImportError:
     import db_manager
 
+try:
+    from modulos import pdf_comercial_cliente
+except ImportError:
+    import pdf_comercial_cliente
+
 
 # =========================================================================
 # 1. GESTIÓN DE MATERIALES PERSONALIZADOS EN BD
@@ -535,6 +540,11 @@ def render_panel_herramientas_presupuesto(
     diferencia_ahorro = round(total_empresa - total_autonomo, 2)
     sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion, 2)
 
+    anticipo_mat = round(coste_mat * (1.0 + iva_pct / 100.0), 2)
+    pct_anticipo_rec = round((coste_mat / base_autonomo * 100), 0) if base_autonomo > 0 else 40.0
+    pct_anticipo_rec = max(35.0, min(50.0, pct_anticipo_rec))
+    anticipo_recomendado = round(total_autonomo * (pct_anticipo_rec / 100.0), 2)
+
     tab_bal, tab_audit, tab_acopio, tab_guardar = st.tabs([
         "⚖️ Balance Económico (Empresa vs Autónomo)",
         "🛡️ Semáforo & Auditor de Contraofertas",
@@ -574,16 +584,151 @@ def render_panel_herramientas_presupuesto(
         # Tabla de desglose transparente interna
         st.markdown("##### 🔍 Desglose Partida a Partida (¿A dónde va cada euro?)")
         filas_balance = [
-            {"Concepto Económico": "📦 1. Compra Materiales (Almacén)", "🏢 Empresa": f"{coste_mat:,.2f} €", "👤 Autónomo": f"{coste_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Salida de caja a Obramat/Leroy"},
-            {"Concepto Económico": f"📈 2. Beneficio s/ Materiales ({margen_mat_pct:.0f}%)", "🏢 Empresa": f"{benef_mat:,.2f} €", "👤 Autónomo": f"{benef_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Ganancia limpia por suministrar material"},
-            {"Concepto Económico": f"🔨 3. Tu Jornal Directo ({horas_mo:.1f}h x {precio_h_coste:.0f}€)", "🏢 Empresa": f"{coste_mo_directo:,.2f} €", "👤 Autónomo": f"{coste_mo_directo:,.2f} €", "Diferencia": "0,00 €", "Destino": "Tu sueldo profesional por trabajar"},
-            {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}% vs {margen_mo_auto_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "👤 Autónomo": f"{g_mo_autonomo:,.2f} €", "Diferencia": f"-{g_mo_empresa - g_mo_autonomo:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
-            {"Concepto Económico": "📋 5. Tramitación CIE / Boletín", "🏢 Empresa": f"{coste_tramitacion:,.2f} €", "👤 Autónomo": f"{coste_tramitacion:,.2f} €", "Diferencia": "0,00 €", "Destino": "Honorarios técnicos de legalización"},
+            {"Concepto Económico": "📦 1. Compra Materiales (Almacén)", "🏢 Empresa": f"{coste_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Salida de caja a Obramat/Leroy"},
+            {"Concepto Económico": f"📈 2. Beneficio s/ Materiales ({margen_mat_pct:.0f}%)", "🏢 Empresa": f"{benef_mat:,.2f} €", "🧑‍🔧 Autónomo": f"{benef_mat:,.2f} €", "Diferencia": "0,00 €", "Destino": "Ganancia limpia por suministrar material"},
+            {"Concepto Económico": f"🔨 3. Tu Jornal Directo ({horas_mo:.1f}h x {precio_h_coste:.0f}€)", "🏢 Empresa": f"{coste_mo_directo:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_mo_directo:,.2f} €", "Diferencia": "0,00 €", "Destino": "Tu sueldo profesional por trabajar"},
+            {"Concepto Económico": f"🏢 4. Recargo Oficina Empresa ({recargo_empresa_pct:.0f}% vs {margen_mo_auto_pct:.0f}%)", "🏢 Empresa": f"{g_mo_empresa:,.2f} €", "🧑‍🔧 Autónomo": f"{g_mo_autonomo:,.2f} €", "Diferencia": f"-{g_mo_empresa - g_mo_autonomo:,.2f} €", "Destino": "Sobrecoste retirado para ganar al cliente"},
+            {"Concepto Económico": "📋 5. Tramitación CIE / Boletín", "🏢 Empresa": f"{coste_tramitacion:,.2f} €", "🧑‍🔧 Autónomo": f"{coste_tramitacion:,.2f} €", "Diferencia": "0,00 €", "Destino": "Honorarios técnicos de legalización"},
         ]
         if desplazamiento > 0:
-            filas_balance.append({"Concepto Económico": "🚗 6. Desplazamiento y Dietas", "🏢 Empresa": f"{desplazamiento:,.2f} €", "👤 Autónomo": f"{desplazamiento:,.2f} €", "Diferencia": "0,00 €", "Destino": "Combustible y vehículo"})
+            filas_balance.append({"Concepto Económico": "🚗 6. Desplazamiento y Dietas", "🏢 Empresa": f"{desplazamiento:,.2f} €", "🧑‍🔧 Autónomo": f"{desplazamiento:,.2f} €", "Diferencia": "0,00 €", "Destino": "Combustible y vehículo"})
+
+        # FILAS DE TOTALES CLAVE AL FINAL DE LA TABLA (PARA VER CON TOTAL CLARIDAD EL TOTAL DE CADA COLUMNA):
+        diferencia_base = round(base_empresa - base_autonomo, 2)
+        diferencia_iva = round(iva_empresa - iva_autonomo, 2)
+
+        filas_balance.extend([
+            {
+                "Concepto Económico": "🏁 TOTAL BASE IMPONIBLE (S/IVA)",
+                "🏢 Empresa": f"{base_empresa:,.2f} €",
+                "🧑‍🔧 Autónomo": f"{base_autonomo:,.2f} €",
+                "Diferencia": f"-{diferencia_base:,.2f} €",
+                "Destino": f"Ahorro neto de {(diferencia_base / base_empresa * 100) if base_empresa > 0 else 0:.1f}% para el cliente"
+            },
+            {
+                "Concepto Económico": f"🏛️ IVA Oficial ({iva_pct:.0f}%)",
+                "🏢 Empresa": f"{iva_empresa:,.2f} €",
+                "🧑‍🔧 Autónomo": f"{iva_autonomo:,.2f} €",
+                "Diferencia": f"-{diferencia_iva:,.2f} €",
+                "Destino": "Cuota de impuestos para Hacienda"
+            },
+            {
+                "Concepto Económico": "🏆 TOTAL FINAL FACTURA CLIENTE (CON IVA)",
+                "🏢 Empresa": f"{total_empresa:,.2f} €",
+                "🧑‍🔧 Autónomo": f"{total_autonomo:,.2f} €",
+                "Diferencia": f"-{diferencia_ahorro:,.2f} €",
+                "Destino": f"Ahorro total final de {diferencia_ahorro:,.2f} € para cerrar la obra"
+            },
+            {
+                "Concepto Económico": "💰 DINERO LIMPIO EN TU BOLSILLO",
+                "🏢 Empresa": f"{sueldo_limpio_autonomo:,.2f} €",
+                "🧑‍🔧 Autónomo": f"{sueldo_limpio_autonomo:,.2f} €",
+                "Diferencia": "0,00 €",
+                "Destino": "Cobras íntegros tus horas y el beneficio de materiales"
+            }
+        ])
 
         st.dataframe(filas_balance, use_container_width=True, hide_index=True)
+
+        # Tarjetas de Totales de Columna destacados
+        col_res_tot1, col_res_tot2, col_res_tot3 = st.columns(3)
+        with col_res_tot1:
+            st.success(f"🏢 **TOTAL COLUMNA EMPRESA:**  \n**{total_empresa:,.2f} €**  \n*Base: {base_empresa:,.2f} € + IVA: {iva_empresa:,.2f} €*")
+        with col_res_tot2:
+            st.info(f"🧑‍🔧 **TOTAL COLUMNA AUTÓNOMO:**  \n**{total_autonomo:,.2f} €**  \n*Base: {base_autonomo:,.2f} € + IVA: {iva_autonomo:,.2f} €*")
+        with col_res_tot3:
+            st.warning(f"🎯 **DIFERENCIA / AHORRO CLIENTE:**  \n**-{diferencia_ahorro:,.2f} €**  \n*Rebaja comercial del {(diferencia_ahorro / total_empresa * 100) if total_empresa > 0 else 0:.1f}%*")
+
+        # -------------------------------------------------------------
+        # GENERADOR DE PRESUPUESTO OFICIAL EN PDF PARA EL CLIENTE
+        # -------------------------------------------------------------
+        st.markdown("---")
+        st.markdown("##### 📄 Presupuesto Oficial para Enviar al Cliente (PDF Imprimible)")
+        st.caption("Genera y descarga un presupuesto comercial formal listo para imprimir o enviar por WhatsApp al cliente:")
+
+        col_pdf_mod1, col_pdf_mod2 = st.columns([1.6, 2.4])
+        with col_pdf_mod1:
+            modo_emision_sel = st.radio(
+                "¿En qué modalidad deseas emitir la oferta al cliente?",
+                [
+                    f"🧑‍🔧 Modo Autónomo ({total_autonomo:,.2f} € C/IVA)",
+                    f"🏢 Modo Empresa ({total_empresa:,.2f} € C/IVA)"
+                ],
+                index=0,
+                key=f"{key_prefix}_rad_modo_pdf_cliente"
+            )
+            es_modo_empresa_emision = "Empresa" in modo_emision_sel
+            modo_clave_pdf = "empresa" if es_modo_empresa_emision else "autonomo"
+
+        with col_pdf_mod2:
+            with st.popover("⚙️ Configurar Datos del Cliente y Condiciones para el PDF"):
+                cli_nombre_pdf = st.text_input("Nombre del Cliente / Destinatario:", value=nom_cliente_def, key=f"{key_prefix}_in_clipdf_nom")
+                cli_dir_pdf = st.text_input("Dirección de la Obra:", value="Calle Mayor nº 45", key=f"{key_prefix}_in_clipdf_dir")
+                cli_tel_pdf = st.text_input("Teléfono del Cliente:", value="+34 600 000 000", key=f"{key_prefix}_in_clipdf_tel")
+                cli_validez_pdf = st.text_input("Validez del Presupuesto:", value="30 días naturales", key=f"{key_prefix}_in_clipdf_val")
+                cli_plazo_pdf = st.text_input("Plazo Estimado de Ejecución:", value="1-2 días laborables", key=f"{key_prefix}_in_clipdf_plz")
+                cli_forma_pago = st.text_input("Condiciones de Pago:", value=f"Anticipo materiales ({pct_anticipo_rec:.0f}% = {anticipo_recomendado:,.2f} €) y resto al finalizar", key=f"{key_prefix}_in_clipdf_fpago")
+
+        base_sel_pdf = base_empresa if es_modo_empresa_emision else base_autonomo
+        iva_sel_pdf = iva_empresa if es_modo_empresa_emision else iva_autonomo
+        total_sel_pdf = total_empresa if es_modo_empresa_emision else total_autonomo
+        g_mo_sel_pdf = g_mo_empresa if es_modo_empresa_emision else g_mo_autonomo
+
+        proyecto_info_pdf = {
+            "cliente": cli_nombre_pdf if 'cli_nombre_pdf' in locals() else nom_cliente_def,
+            "direccion": cli_dir_pdf if 'cli_dir_pdf' in locals() else "Calle Mayor nº 45",
+            "telefono": cli_tel_pdf if 'cli_tel_pdf' in locals() else "+34 600 000 000",
+            "validez": cli_validez_pdf if 'cli_validez_pdf' in locals() else "30 días naturales",
+            "plazo": cli_plazo_pdf if 'cli_plazo_pdf' in locals() else "1-2 días laborables",
+            "forma_pago": cli_forma_pago if 'cli_forma_pago' in locals() else f"Anticipo materiales ({anticipo_recomendado:,.2f} €) y resto al terminar",
+            "concepto": nom_obra_def,
+            "empresa": "BOLIMUR ELECTRICIDAD",
+            "licencia": "Instalador Autorizado REBT (DGEAIM Murcia)",
+            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+        }
+        presupuesto_data_pdf = {
+            "base_imponible": base_sel_pdf,
+            "iva_pct": iva_pct,
+            "cuota_iva": iva_sel_pdf,
+            "total_cliente": total_sel_pdf,
+            "coste_materiales": coste_mat,
+            "coste_materiales_venta": round(coste_mat + benef_mat, 2),
+            "horas_mo": horas_mo,
+            "coste_mo_venta": round(coste_mo_directo + g_mo_sel_pdf, 2),
+            "coste_tramitacion": coste_tramitacion,
+            "desplazamiento": desplazamiento,
+            "detalle_materiales": "Materiales homologados REBT según especificación técnica"
+        }
+
+        try:
+            pdf_bytes_cliente = pdf_comercial_cliente.generar_pdf_oferta_comercial(
+                proyecto_info_pdf, presupuesto_data_pdf, modo=modo_clave_pdf
+            )
+            col_bpdf1, col_bpdf2 = st.columns([2, 1])
+            with col_bpdf1:
+                st.download_button(
+                    label=f"📄 🖨️ Descargar Presupuesto PDF para el Cliente ({'Modo Empresa' if es_modo_empresa_emision else 'Modo Autónomo'})",
+                    data=pdf_bytes_cliente,
+                    file_name=f"Presupuesto_{nom_obra_def.replace(' ', '_')}_{modo_clave_pdf.capitalize()}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    key=f"{key_prefix}_btn_descarga_pdf_cli",
+                    use_container_width=True
+                )
+            with col_bpdf2:
+                with st.popover("👁️ Vista Previa PDF"):
+                    try:
+                        import pymupdf
+                        doc_prev = pymupdf.open(stream=pdf_bytes_cliente, filetype="pdf")
+                        for pag_num, pag in enumerate(doc_prev, start=1):
+                            pix = pag.get_pixmap(dpi=130)
+                            st.image(pix.tobytes("png"), caption=f"Página {pag_num}", use_container_width=True)
+                    except Exception:
+                        import base64
+                        b64 = base64.b64encode(pdf_bytes_cliente).decode('utf-8')
+                        st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="500"></iframe>', unsafe_allow_html=True)
+        except Exception as e_pdf_cli:
+            st.warning(f"Generador PDF disponible: {e_pdf_cli}")
 
     # ---------------------------------------------------------------------
     # TAB 2: SEMÁFORO DE NEGOCIACIÓN Y AUDITOR DE CONTRAOFERTAS
@@ -699,6 +844,26 @@ def render_panel_herramientas_presupuesto(
 
             txt_lista_mostrador = "📦 *LISTA DE ACOPIO DE MATERIALES - BOLIMUR*\n" + f"Trabajo: {nom_obra_def}\n" + "---------------------------------------\n" + "\n".join(lineas_texto_compra) + f"\n---------------------------------------\nCoste Total Materiales Estimado: {coste_mat:,.2f} € (S/IVA)"
             st.text_area("Lista de Materiales:", value=txt_lista_mostrador, height=220, key=f"{key_prefix}_txt_lista_compra")
+
+            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+            try:
+                filas_mat_acopio = filas_materiales if filas_materiales else [{"mat": f"Materiales normalizados de {modulo_nombre}", "cant": 1, "unid": "partida", "p_u": coste_mat}]
+                pdf_bytes_acopio = pdf_comercial_cliente.generar_pdf_lista_materiales_almacen(
+                    proyecto_info={"concepto": nom_obra_def, "instalador": "Instalador Autorizado REBT", "fecha": datetime.date.today().strftime("%d/%m/%Y")},
+                    filas_materiales=filas_mat_acopio,
+                    coste_total_neto=coste_mat,
+                    iva_pct=iva_pct
+                )
+                st.download_button(
+                    label="📦 🖨️ Descargar Lista de Materiales en PDF (Imprimir para Almacén / Acopio)",
+                    data=pdf_bytes_acopio,
+                    file_name=f"Lista_Materiales_{nom_obra_def.replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                    key=f"{key_prefix}_btn_descarga_pdf_acopio",
+                    use_container_width=True
+                )
+            except Exception as e_pdf_mat:
+                st.info(f"PDF de acopio disponible: {e_pdf_mat}")
 
         with col_ac2:
             st.markdown("##### 💵 Calculadora de Anticipo Seguro")
