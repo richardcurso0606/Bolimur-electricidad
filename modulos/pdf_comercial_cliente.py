@@ -245,6 +245,19 @@ def generar_pdf_oferta_comercial(proyecto_info: dict, presupuesto_data: dict, mo
             })
             part_idx += 1
 
+        for pa in presupuesto_data.get("partidas_adicionales", []):
+            pa_tit = pa.get("titulo") or pa.get("concepto") or "Trabajos Adicionales"
+            pa_desc = pa.get("desc") or pa.get("descripcion") or "Partida adicional de obra acordada con el cliente."
+            pa_imp = float(pa.get("importe", 0.0))
+            if pa_imp > 0:
+                items_presupuesto.append({
+                    "num": f"PART. {part_idx:02d}",
+                    "titulo": pa_tit,
+                    "desc": pa_desc,
+                    "importe": pa_imp
+                })
+                part_idx += 1
+
     for p in items_presupuesto:
         num_str = p.get("num") or p.get("cap") or "PART."
         tit_str = _limpiar_texto(p.get("titulo") or p.get("concepto") or "")

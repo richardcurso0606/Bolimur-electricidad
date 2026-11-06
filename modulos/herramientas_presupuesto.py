@@ -572,11 +572,20 @@ def render_panel_herramientas_presupuesto(
     # ---------------------------------------------------------------------
     # 1. LISTA DE MATERIALES EDITABLE (DESMARCAR YA EN OBRA / YA CANALIZADO)
     # ---------------------------------------------------------------------
-    with st.expander("📦 1. Lista de Materiales de la Instalación (Modificar Precios, Cantidades o Desmarcar lo ya existente)", expanded=True):
+    key_extra_mat = f"{key_prefix}_lista_extra_materiales"
+    if key_extra_mat not in st.session_state:
+        st.session_state[key_extra_mat] = []
+
+    key_extra_part = f"{key_prefix}_lista_extra_partidas"
+    if key_extra_part not in st.session_state:
+        st.session_state[key_extra_part] = []
+
+    with st.expander("📦 1. Lista de Materiales de la Instalación (Modificar Precios, Cantidades, Añadir Nuevos o Desmarcar lo ya existente)", expanded=True):
         st.markdown(
             "<div style='font-size:13.5px; color:#1e293b; margin-bottom:8px;'>"
-            "<b>💡 ¿El cliente ya tiene algún material o la obra ya está canalizada?</b> Desmarca la casilla <b>'Comprar'</b> de esa partida o ajusta sus metros/precio. "
-            "El sistema lo excluirá del coste de compra en almacén y recalculará el presupuesto al instante cobrando solo lo que realmente vas a suministrar.</div>",
+            "<b>💡 ¿El cliente ya tiene algún material o la derivación ya está canalizada?</b> Desmarca la casilla <b>'Comprar'</b> de esa partida o ajusta sus metros/precio. "
+            "El sistema lo excluirá del coste de compra en almacén y recalculará el presupuesto al instante cobrando solo lo que realmente vas a suministrar. "
+            "También puedes <b>añadir cualquier material nuevo</b> que no estuviera en la lista inicial con el botón inferior.</div>",
             unsafe_allow_html=True
         )
 
@@ -603,6 +612,10 @@ def render_panel_herramientas_presupuesto(
                 "proveedor": "Obramat / Almacén",
                 "sku": "GEN-01"
             })
+
+        # Incorporar materiales extras personalizados añadidos por el usuario
+        for em in st.session_state[key_extra_mat]:
+            datos_tabla_mat.append(em)
 
         df_mat_init = pd.DataFrame(datos_tabla_mat)
 
@@ -663,14 +676,68 @@ def render_panel_herramientas_presupuesto(
 
         coste_mat = round(coste_mat_calculado, 2)
 
-        col_mres1, col_mres2 = st.columns(2)
+        col_mres1, col_mres2, col_mres3 = st.columns([1.6, 1.4, 1.0])
         with col_mres1:
             st.success(f"🛒 **Materiales a Comprar en Almacén:** {coste_mat:,.2f} € ({len(filas_mat_activas)} partidas a suministrar)")
         with col_mres2:
             if filas_mat_en_obra:
-                st.info(f"🏠 **En Obra / Aportado por Cliente (0 € coste):** {coste_mat_en_obra:,.2f} € ({len(filas_mat_en_obra)} partidas)")
+                st.info(f"🏠 **En Obra / Ya Canalizado (0 € coste):** {coste_mat_en_obra:,.2f} € ({len(filas_mat_en_obra)} partidas)")
             else:
                 st.caption("ℹ️ Todos los materiales seleccionados para compra.")
+        with col_mres3:
+            with st.popover("➕ Añadir Otro Material"):
+                st.markdown("##### 📝 Añadir Material a la Lista")
+                st.caption("Introduce cualquier material adicional que no esté en la plantilla inicial:")
+                with st.form(f"{key_prefix}_form_add_extra_mat", clear_on_submit=True):
+                    in_mat_nom = st.text_input("Denominación / Especificación:", placeholder="Ej: Piqueta de tierra cobreada 2m con grapa")
+                    c_em1, c_em2 = st.columns(2)
+                    with c_em1:
+                        in_mat_cant = st.number_input("Cantidad:", min_value=0.1, value=1.0, step=0.5)
+                        in_mat_pu = st.number_input("Precio Coste Unitario (€):", min_value=0.0, value=15.0, step=1.0)
+                    with c_em2:
+                        in_mat_unid = st.selectbox("Unidad:", ["ud", "m", "rollo", "partida", "kit", "caja"], index=0)
+                        in_mat_prov = st.text_input("Dónde Comprar:", value="Obramat / Distribuidor")
+                    in_mat_sku = st.text_input("Ref. SKU (opcional):", placeholder="Ej: REF-00123")
+                    in_mat_save_bd = st.checkbox("💾 Guardar también en mi Base de Datos para futuros presupuestos", value=True)
+                    btn_add_mat = st.form_submit_button("➕ Añadir Material", type="primary", use_container_width=True)
+                    if btn_add_mat:
+                        if in_mat_nom.strip():
+                            nuevo_item = {
+                                "incluir": True,
+                                "material": in_mat_nom.strip(),
+                                "cant": float(in_mat_cant),
+                                "unid": str(in_mat_unid),
+                                "precio_unit": float(in_mat_pu),
+                                "proveedor": in_mat_prov.strip() if in_mat_prov.strip() else "Obramat",
+                                "sku": in_mat_sku.strip() if in_mat_sku.strip() else "MANUAL"
+                            }
+                            st.session_state[key_extra_mat].append(nuevo_item)
+                            if in_mat_save_bd:
+                                try:
+                                    guardar_material_personalizado(
+                                        nombre=in_mat_nom.strip(),
+                                        precio_coste=float(in_mat_pu),
+                                        unidad=str(in_mat_unid),
+                                        categoria="Personalizado",
+                                        proveedor=in_mat_prov.strip() if in_mat_prov.strip() else "Obramat",
+                                        sku=nuevo_item["sku"]
+                                    )
+                                except Exception:
+                                    pass
+                            if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                                del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                            st.rerun()
+
+        if st.session_state[key_extra_mat]:
+            col_exm1, col_exm2 = st.columns([3, 1])
+            with col_exm1:
+                st.caption(f"ℹ️ Has añadido {len(st.session_state[key_extra_mat])} material(es) adicional(es) manualmente.")
+            with col_exm2:
+                if st.button("🗑️ Limpiar materiales añadidos", key=f"{key_prefix}_btn_clear_ext_mats"):
+                    st.session_state[key_extra_mat] = []
+                    if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                        del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                    st.rerun()
 
     # ---------------------------------------------------------------------
     # 2. MODIFICAR PARTIDAS COMERCIALES (DESPLAZAMIENTO, SIEM Y MANO DE OBRA)
@@ -743,6 +810,77 @@ def render_panel_herramientas_presupuesto(
                 coste_tramitacion_auto = 0.0
                 st.caption("ℹ️ *Partida de Boletín/SIEM desactivada (0,00 € en ambos).*")
 
+        # -----------------------------------------------------------------
+        # PARTIDAS ADICIONALES DE OBRA O SERVICIOS (ROZAS, ALBAÑILERÍA, ETC.)
+        # -----------------------------------------------------------------
+        st.markdown("---")
+        st.markdown("##### 🛠️ Añadir Partidas Adicionales de Obra o Servicios (Rozas, Albañilería, Andamios, etc.)")
+        st.caption("Si la obra requiere trabajos extras no contemplados inicialmente (ej: apertura y sellado de rozas, remates de albañilería, alquiler de andamio, licencias...), puedes añadirlos aquí para que figuren como partidas oficiales en el presupuesto:")
+
+        if st.session_state[key_extra_part]:
+            for idx_p, part in enumerate(st.session_state[key_extra_part]):
+                col_pa1, col_pa2, col_pa3, col_pa4 = st.columns([2.5, 3.5, 1.5, 0.5])
+                with col_pa1:
+                    st.markdown(f"**🛠️ {part['concepto']}**")
+                with col_pa2:
+                    st.caption(part.get('descripcion', 'Partida complementaria de obra'))
+                with col_pa3:
+                    imp_a = float(part.get('importe_auto', part.get('importe', 0.0)))
+                    imp_e = float(part.get('importe_emp', part.get('importe', 0.0)))
+                    if imp_a == imp_e:
+                        st.markdown(f"**{imp_a:,.2f} €**")
+                    else:
+                        st.markdown(f"Aut: **{imp_a:,.2f} €** | Emp: **{imp_e:,.2f} €**")
+                with col_pa4:
+                    if st.button("🗑️", key=f"{key_prefix}_del_part_{idx_p}", help="Eliminar esta partida adicional"):
+                        st.session_state[key_extra_part].pop(idx_p)
+                        st.rerun()
+
+        with st.popover("➕ Añadir Nueva Partida de Obra o Servicio"):
+            st.markdown("##### 🛠️ Nueva Partida Complementaria")
+            with st.form(f"{key_prefix}_form_nueva_partida", clear_on_submit=True):
+                nuevo_part_concepto = st.text_input(
+                    "Concepto / Título de la partida:",
+                    placeholder="Ej: Apertura y sellado de rozas por albañilería"
+                )
+                nuevo_part_desc = st.text_area(
+                    "Descripción técnica detallada (aparecerá en el PDF del cliente):",
+                    placeholder="Ej: Apertura de rozas en tabiquería para paso de tubos corrugados y posterior sellado con yeso y pasta de agarre...",
+                    height=70
+                )
+                col_npi1, col_npi2 = st.columns(2)
+                with col_npi1:
+                    nuevo_part_imp = st.number_input(
+                        "Importe Base (€) [Aplica a Empresa y Autónomo]:",
+                        min_value=0.0,
+                        value=150.0,
+                        step=10.0
+                    )
+                with col_npi2:
+                    dif_part_precio = st.checkbox("Diferenciar precio para Empresa", value=False)
+
+                nuevo_part_imp_emp = nuevo_part_imp
+                if dif_part_precio:
+                    nuevo_part_imp_emp = st.number_input(
+                        "Importe Empresa (€):",
+                        min_value=0.0,
+                        value=float(nuevo_part_imp * 1.25),
+                        step=10.0
+                    )
+
+                btn_crear_part = st.form_submit_button("➕ Añadir Partida al Presupuesto", type="primary", use_container_width=True)
+                if btn_crear_part:
+                    if nuevo_part_concepto.strip():
+                        st.session_state[key_extra_part].append({
+                            "concepto": nuevo_part_concepto.strip(),
+                            "descripcion": nuevo_part_desc.strip() if nuevo_part_desc.strip() else f"Trabajos auxiliares de {nuevo_part_concepto.strip()}",
+                            "importe": float(nuevo_part_imp),
+                            "importe_auto": float(nuevo_part_imp),
+                            "importe_emp": float(nuevo_part_imp_emp)
+                        })
+                        st.success(f"Partida '{nuevo_part_concepto}' añadida al presupuesto.")
+                        st.rerun()
+
         st.markdown("---")
         st.markdown("##### ⏱️ Ajustar Mano de Obra, Horas y Márgenes:")
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -805,6 +943,10 @@ def render_panel_herramientas_presupuesto(
             </div>
             """, unsafe_allow_html=True)
 
+    # Cálculo de partidas extras añadidas
+    total_partidas_extras_emp = sum(float(p.get("importe_emp", p.get("importe", 0.0))) for p in st.session_state.get(key_extra_part, []))
+    total_partidas_extras_auto = sum(float(p.get("importe_auto", p.get("importe", 0.0))) for p in st.session_state.get(key_extra_part, []))
+
     # Recálculo dinámico con los parámetros interactivos
     benef_mat = round(coste_mat * (margen_mat_pct / 100.0), 2)
     pvp_mat = round(coste_mat + benef_mat, 2)
@@ -814,17 +956,17 @@ def render_panel_herramientas_presupuesto(
     g_mo_autonomo = round(coste_mo_directo * (margen_mo_auto_pct / 100.0), 2)
 
     # Totales Modo Empresa
-    base_empresa = round(pvp_mat + coste_mo_directo + g_mo_empresa + coste_tramitacion_emp + desplazamiento_emp, 2)
+    base_empresa = round(pvp_mat + coste_mo_directo + g_mo_empresa + coste_tramitacion_emp + desplazamiento_emp + total_partidas_extras_emp, 2)
     iva_empresa = round(base_empresa * (iva_pct / 100.0), 2)
     total_empresa = round(base_empresa + iva_empresa, 2)
 
     # Totales Modo Autónomo (g_mo ajustable)
-    base_autonomo = round(pvp_mat + coste_mo_directo + g_mo_autonomo + coste_tramitacion_auto + desplazamiento_auto, 2)
+    base_autonomo = round(pvp_mat + coste_mo_directo + g_mo_autonomo + coste_tramitacion_auto + desplazamiento_auto + total_partidas_extras_auto, 2)
     iva_autonomo = round(base_autonomo * (iva_pct / 100.0), 2)
     total_autonomo = round(base_autonomo + iva_autonomo, 2)
 
     diferencia_ahorro = round(total_empresa - total_autonomo, 2)
-    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion_auto, 2)
+    sueldo_limpio_autonomo = round(coste_mo_directo + g_mo_autonomo + benef_mat + coste_tramitacion_auto + total_partidas_extras_auto, 2)
 
     anticipo_mat = round(coste_mat * (1.0 + iva_pct / 100.0), 2)
     pct_anticipo_rec = round((coste_mat / base_autonomo * 100), 0) if base_autonomo > 0 else 40.0
@@ -889,6 +1031,19 @@ def render_panel_herramientas_presupuesto(
                 "Destino": "Combustible y furgoneta"
             }
         ]
+
+        # Añadir partidas extras de obra a la tabla de balance
+        for idx_ep, ep in enumerate(st.session_state.get(key_extra_part, []), start=7):
+            imp_emp = float(ep.get("importe_emp", ep.get("importe", 0.0)))
+            imp_auto = float(ep.get("importe_auto", ep.get("importe", 0.0)))
+            dif_ep = round(imp_emp - imp_auto, 2)
+            filas_balance.append({
+                "Concepto Económico": f"🛠️ {idx_ep}. {ep['concepto']}",
+                "🏢 Empresa": f"{imp_emp:,.2f} €",
+                "🧑‍🔧 Autónomo": f"{imp_auto:,.2f} €",
+                "Diferencia": f"-{dif_ep:,.2f} €" if dif_ep > 0 else "0,00 €",
+                "Destino": "Partida complementaria de obra"
+            })
 
         # FILAS DE TOTALES CLAVE AL FINAL DE LA TABLA (PARA VER CON TOTAL CLARIDAD EL TOTAL DE CADA COLUMNA):
         diferencia_base = round(base_empresa - base_autonomo, 2)
@@ -1030,6 +1185,24 @@ def render_panel_herramientas_presupuesto(
         if filas_mat_en_obra:
             txt_det_mat += " (Canalización y elementos preexistentes en obra aportados por el cliente)"
 
+        # Preparar partidas adicionales para el PDF del cliente
+        partidas_pdf_auto = [
+            {
+                "titulo": p["concepto"],
+                "desc": p.get("descripcion", ""),
+                "importe": float(p.get("importe_auto", p.get("importe", 0.0)))
+            }
+            for p in st.session_state.get(key_extra_part, [])
+        ]
+        partidas_pdf_emp = [
+            {
+                "titulo": p["concepto"],
+                "desc": p.get("descripcion", ""),
+                "importe": float(p.get("importe_emp", p.get("importe", 0.0)))
+            }
+            for p in st.session_state.get(key_extra_part, [])
+        ]
+
         # Preparar datos específicos para Modo Autónomo
         presupuesto_data_auto = {
             "base_imponible": base_autonomo,
@@ -1042,7 +1215,8 @@ def render_panel_herramientas_presupuesto(
             "coste_mo_venta": round(coste_mo_directo + g_mo_autonomo, 2),
             "coste_tramitacion": coste_tramitacion_auto,
             "desplazamiento": desplazamiento_auto,
-            "detalle_materiales": txt_det_mat
+            "detalle_materiales": txt_det_mat,
+            "partidas_adicionales": partidas_pdf_auto
         }
 
         # Preparar datos específicos para Modo Empresa
@@ -1057,7 +1231,8 @@ def render_panel_herramientas_presupuesto(
             "coste_mo_venta": round(coste_mo_directo + g_mo_empresa, 2),
             "coste_tramitacion": coste_tramitacion_emp,
             "desplazamiento": desplazamiento_emp,
-            "detalle_materiales": txt_det_mat
+            "detalle_materiales": txt_det_mat,
+            "partidas_adicionales": partidas_pdf_emp
         }
 
         try:
