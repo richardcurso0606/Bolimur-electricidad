@@ -1044,6 +1044,89 @@ def render_panel_herramientas_presupuesto(
             h_reloj_obra = float(horas_mo)
 
         # -----------------------------------------------------------------
+        # GASTOS OPERATIVOS Y TICKETS DE OBRA (GASOIL, DIETAS, COMIDAS, PARKING, ETC.)
+        # -----------------------------------------------------------------
+        key_tickets_obra = f"{key_prefix}_lista_tickets_obra"
+        if key_tickets_obra not in st.session_state:
+            st.session_state[key_tickets_obra] = []
+
+        with st.expander("🧾 Tickets y Gastos Operativos de Obra (Gasoil, Dietas, Comidas, Parking, etc.)", expanded=bool(st.session_state[key_tickets_obra])):
+            st.caption("Apunta los gastos reales de la jornada (gasoil, menús, parking, consumibles de ferretería...). Se deducirán del dinero cobrado antes del reparto entre vosotros:")
+
+            # Lista de tickets registrados
+            if st.session_state[key_tickets_obra]:
+                for idx_tk, tk in enumerate(st.session_state[key_tickets_obra]):
+                    col_tk1, col_tk2, col_tk3, col_tk4, col_tk5 = st.columns([2.5, 1.2, 1.5, 1.2, 0.6])
+                    with col_tk1:
+                        st.markdown(f"**{tk.get('icono', '🧾')} {tk.get('concepto', 'Gasto')}**")
+                        if tk.get('fecha'):
+                            st.caption(f"Fecha: {tk['fecha']}")
+                    with col_tk2:
+                        st.markdown(f"**{float(tk.get('importe', 0.0)):,.2f} €**")
+                    with col_tk3:
+                        pagador_str = tk.get('pagador', 'Bote Común')
+                        st.caption(f"Pagó: **{pagador_str}**")
+                    with col_tk4:
+                        if tk.get('foto_b64'):
+                            with st.popover("📷 Ver Ticket"):
+                                st.image(f"data:image/jpeg;base64,{tk['foto_b64']}", caption=tk.get('concepto', 'Ticket'))
+                        else:
+                            st.caption("Sin foto")
+                    with col_tk5:
+                        if st.button("🗑️", key=f"{key_prefix}_btn_del_tk_{idx_tk}", help="Eliminar este ticket"):
+                            st.session_state[key_tickets_obra].pop(idx_tk)
+                            st.rerun()
+
+            # Formulario para añadir nuevo ticket
+            with st.form(f"{key_prefix}_form_nuevo_ticket", clear_on_submit=True):
+                st.markdown("###### ➕ Registrar Ticket o Gasto Incurrido")
+                col_ntk1, col_ntk2 = st.columns([2.2, 1.0])
+                with col_ntk1:
+                    tk_concepto = st.text_input("Concepto / Motivo del gasto:", placeholder="Ej: Gasoil furgoneta Repsol / Menús 2 personas / Parking ORA / Broca SDS hormigón")
+                with col_ntk2:
+                    tk_importe = st.number_input("Importe (€):", min_value=0.0, value=25.0, step=5.0)
+
+                col_ntk3, col_ntk4 = st.columns(2)
+                with col_ntk3:
+                    tk_pagador = st.selectbox(
+                        "¿Quién adelantó el dinero?",
+                        ["💳 Bote Común de la Obra", "🧑‍🔧 Yo (Titular)", "👥 Mi Compañero"],
+                        help="Si lo adelantó uno de los dos de su bolsillo, el balance le devolverá ese importe exacto antes de repartir el beneficio."
+                    )
+                with col_ntk4:
+                    tk_foto = st.file_uploader("Foto del Ticket / Factura (opcional):", type=["jpg", "jpeg", "png"], key=f"{key_prefix}_upload_ticket")
+
+                btn_add_tk = st.form_submit_button("➕ Añadir Gasto a la Obra", type="primary", use_container_width=True)
+                if btn_add_tk:
+                    if tk_concepto.strip() and tk_importe > 0:
+                        foto_b64 = None
+                        if tk_foto is not None:
+                            try:
+                                foto_b64 = base64.b64encode(tk_foto.read()).decode("utf-8")
+                            except Exception:
+                                pass
+
+                        icono_g = "⛽" if any(k in tk_concepto.lower() for k in ["gasoil", "gasolina", "combustible"]) else (
+                            "🍽️" if any(k in tk_concepto.lower() for k in ["comida", "menu", "almuerzo", "cena", "bocadillo"]) else (
+                                "🅿️" if any(k in tk_concepto.lower() for k in ["parking", "aparcamiento", "ora", "peaje"]) else "🧾"
+                            )
+                        )
+                        st.session_state[key_tickets_obra].append({
+                            "concepto": tk_concepto.strip(),
+                            "importe": float(tk_importe),
+                            "pagador": tk_pagador,
+                            "icono": icono_g,
+                            "foto_b64": foto_b64,
+                            "fecha": datetime.date.today().strftime("%d/%m/%Y")
+                        })
+                        st.success(f"Ticket '{tk_concepto}' añadido correctamente.")
+                        st.rerun()
+
+        total_tickets_obra = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []))
+        total_adelantado_yo = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []) if "Yo" in tk.get("pagador", ""))
+        total_adelantado_comp = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []) if "Compañero" in tk.get("pagador", ""))
+
+        # -----------------------------------------------------------------
         # GESTIÓN Y ORDEN DE PARTIDAS (ADELANTE, EN MEDIO O AL FINAL)
         # -----------------------------------------------------------------
         key_sec_part = f"{key_prefix}_secuencia_partidas"
@@ -1317,48 +1400,52 @@ def render_panel_herramientas_presupuesto(
             st.markdown("---")
             st.markdown("##### 🤝 Reparto Económico y Rentabilidad de la Cuadrilla (Deduciendo Gastos)")
 
-            # Gastos duros de la obra
-            gastos_duros_obra = round(coste_mat + desplazamiento_auto + coste_tramitacion_auto, 2)
-            # Bote limpio a repartir tras pagar materiales, gasolina y tasas
+            # Gastos duros de la obra: Materiales almacén + Portes + Tasas + Tickets Varios
+            gastos_duros_obra = round(coste_mat + desplazamiento_auto + coste_tramitacion_auto + total_tickets_obra, 2)
+            # Bote limpio a repartir tras pagar materiales, gasolina, tasas y tickets
             bote_limpio_obra = round(base_autonomo - gastos_duros_obra, 2)
 
             h_reloj = round(horas_mo / 2.0, 1)
 
             if "A Medias" in sel_modo_reparto:
-                pago_tu = round(bote_limpio_obra / 2.0, 2)
-                pago_comp = round(bote_limpio_obra - pago_tu, 2)
+                beneficio_mitad = round(bote_limpio_obra / 2.0, 2)
+                pago_tu = round(beneficio_mitad + total_adelantado_yo, 2)
+                pago_comp = round((bote_limpio_obra - beneficio_mitad) + total_adelantado_comp, 2)
                 modo_rep_txt = "⚖️ 50% / 50% A Medias (Socios)"
             else:
                 p_hora_comp = float(st.session_state.get(f"{key_prefix}_p_hora_comp", 20.0))
-                pago_comp = round(h_reloj * p_hora_comp, 2)
-                pago_tu = round(bote_limpio_obra - pago_comp, 2)
+                sueldo_comp = round(h_reloj * p_hora_comp, 2)
+                pago_comp = round(sueldo_comp + total_adelantado_comp, 2)
+                pago_tu = round((bote_limpio_obra - sueldo_comp) + total_adelantado_yo, 2)
                 modo_rep_txt = f"🧑‍🔧 Ayudante por horas ({p_hora_comp:.0f} €/h)"
 
-            r_hora_tu = round(pago_tu / h_reloj, 2) if h_reloj > 0 else 0.0
-            r_hora_comp = round(pago_comp / h_reloj, 2) if h_reloj > 0 else 0.0
+            r_hora_tu = round((pago_tu - total_adelantado_yo) / h_reloj, 2) if h_reloj > 0 else 0.0
+            r_hora_comp = round((pago_comp - total_adelantado_comp) / h_reloj, 2) if h_reloj > 0 else 0.0
 
             with st.container(border=True):
                 st.markdown(f"""
                 <div style="background-color:#f0fdf4; border-left:4px solid #16a34a; padding:10px 14px; border-radius:4px; margin-bottom:12px; font-size:13px; color:#14532d;">
-                    <b>📊 Balance de Obra en Pareja:</b> Para esta obra se facturan <b>{horas_mo:.1f} horas de mano de obra</b> al cliente, pero al ir los 2 se termina en <b>{h_reloj:.1f} horas de reloj</b>. 
-                    Primero se pagan los materiales de almacén (<b>{coste_mat:,.2f} €</b>), combustible/portes (<b>{desplazamiento_auto:,.2f} €</b>) y tasas (<b>{coste_tramitacion_auto:,.2f} €</b>). 
-                    El <b>bote limpio de {bote_limpio_obra:,.2f} €</b> se reparte en modalidad: <b>{modo_rep_txt}</b>.
+                    <b>📊 Balance de Obra en Pareja:</b> Para esta obra se facturan <b>{horas_mo:.1f} horas de mano de obra</b> al cliente, pero al ir los 2 se termina en <b>{h_reloj:.1f} horas de reloj</b>.<br/>
+                    <b>Deducción de Gastos ({gastos_duros_obra:,.2f} €):</b> Materiales almacén (<b>{coste_mat:,.2f} €</b>) + Portes (<b>{desplazamiento_auto:,.2f} €</b>) + Tasas (<b>{coste_tramitacion_auto:,.2f} €</b>) + Tickets/Dietas (<b>{total_tickets_obra:,.2f} €</b>).<br/>
+                    El <b>bote limpio de {bote_limpio_obra:,.2f} €</b> se liquida en modalidad: <b>{modo_rep_txt}</b>.
                 </div>
                 """, unsafe_allow_html=True)
 
                 col_rc1, col_rc2, col_rc3, col_rc4 = st.columns(4)
                 with col_rc1:
-                    st.metric("🧾 Gastos Deducidos", f"{gastos_duros_obra:,.2f} €", help="Materiales de compra + Vehículo/Portes + Tasas")
-                    st.caption(f"Material almacén: {coste_mat:,.2f} €")
+                    st.metric("🧾 Gastos Deducidos", f"{gastos_duros_obra:,.2f} €", help="Materiales de compra + Vehículo/Portes + Tasas + Tickets dietas/gasoil")
+                    st.caption(f"Mat: {coste_mat:,.2f}€ | Tickets: {total_tickets_obra:,.2f}€")
                 with col_rc2:
-                    st.metric("💰 Bote Neto Limpio", f"{bote_limpio_obra:,.2f} €", help="Total disponible para repartir entre ambos")
+                    st.metric("💰 Bote Neto Limpio", f"{bote_limpio_obra:,.2f} €", help="Total disponible para repartir entre ambos tras pagar todos los gastos")
                     st.caption(f"Tiempo obra: {h_reloj:.1f}h de reloj")
                 with col_rc3:
-                    st.metric("🧑‍🔧 Tu Ganancia Limpia", f"{pago_tu:,.2f} €", delta=f"{r_hora_tu:,.2f} €/h real")
-                    st.caption(f"Por tus {h_reloj:.1f} horas trabajadas")
+                    txt_det_tu = f"Beneficio: {pago_tu - total_adelantado_yo:,.2f}€" + (f" + {total_adelantado_yo:,.2f}€ ticket" if total_adelantado_yo > 0 else "")
+                    st.metric("🧑‍🔧 Tu Cobro Total", f"{pago_tu:,.2f} €", delta=f"{r_hora_tu:,.2f} €/h real")
+                    st.caption(txt_det_tu)
                 with col_rc4:
-                    st.metric("👥 Ganancia Compañero", f"{pago_comp:,.2f} €", delta=f"{r_hora_comp:,.2f} €/h real")
-                    st.caption(f"Por sus {h_reloj:.1f} horas trabajadas")
+                    txt_det_comp = f"Beneficio: {pago_comp - total_adelantado_comp:,.2f}€" + (f" + {total_adelantado_comp:,.2f}€ ticket" if total_adelantado_comp > 0 else "")
+                    st.metric("👥 Cobro Compañero", f"{pago_comp:,.2f} €", delta=f"{r_hora_comp:,.2f} €/h real")
+                    st.caption(txt_det_comp)
 
         # Tabla de desglose transparente interna en el orden exacto configurado por el usuario
         st.markdown("##### 🔍 Desglose Partida a Partida (¿A dónde va cada euro?)")
