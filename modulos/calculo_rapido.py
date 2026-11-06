@@ -160,35 +160,11 @@ def renderizar():
         selector_cliente_proyecto.renderizar_barra_cliente_proyecto("Cálculo Rápido", datos_cr, "Cálculo Rápido de Sección y Protecciones")
     except Exception:
         pass
-
-    class _NullContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
-    with col_nav_info:
-        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
-    with col_nav_mode:
-        modo_vista_cr = st.radio(
-            "Modo de Navegación:",
-            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="modo_vista_cr"
-        )
-
-    if modo_vista_cr.startswith("📑"):
         tab_cr1, tab_cr2, tab_cr3 = st.tabs([
             "⚡ 1. Parámetros del Circuito",
             "📋 2. Memoria & Resultados REBT",
             "🖨️ 3. Reporte PDF Oficial"
         ])
-    else:
-        tab_cr1 = _NullContext()
-        tab_cr2 = _NullContext()
-        tab_cr3 = _NullContext()
 
     with tab_cr1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros del Circuito y Método de Instalación (ITC-BT-19)</h4></div>', unsafe_allow_html=True)

@@ -103,25 +103,6 @@ def renderizar():
         pass
 
     # --- 1. VIVIENDAS ---
-    class _NullContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
-    with col_nav_info:
-        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
-    with col_nav_mode:
-        modo_vista_pc = st.radio(
-            "Modo de Navegación:",
-            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="modo_vista_pc"
-        )
-
-    if modo_vista_pc.startswith("📑"):
         tab_pc1, tab_pc2, tab_pc3, tab_pc4, tab_pc5, tab_pc6 = st.tabs([
             "🏠 1. Viviendas (P₁)",
             "🏪 2. Locales (P₂)",
@@ -130,13 +111,6 @@ def renderizar():
             "📊 5. Balance Total (Pt)",
             "🖨️ 6. Reporte PDF Oficial"
         ])
-    else:
-        tab_pc1 = _NullContext()
-        tab_pc2 = _NullContext()
-        tab_pc3 = _NullContext()
-        tab_pc4 = _NullContext()
-        tab_pc5 = _NullContext()
-        tab_pc6 = _NullContext()
 
     with tab_pc1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">🏠 SECCIÓN 1: Previsión de Cargas en Viviendas (P₁ - ITC-BT-10)</h4></div>', unsafe_allow_html=True)

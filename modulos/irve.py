@@ -369,25 +369,6 @@ def renderizar():
         pass
 
     # =========================================================================
-    class _NullContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
-    with col_nav_info:
-        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
-    with col_nav_mode:
-        modo_vista_irve = st.radio(
-            "Modo de Navegación:",
-            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="modo_vista_irve"
-        )
-
-    if modo_vista_irve.startswith("📑"):
         tab_irve1, tab_irve2, tab_irve3, tab_irve4, tab_irve5, tab_irve6 = st.tabs([
             "🚗 1. Origen & Cargador",
             "⚡ 2. Memoria & Sección",
@@ -396,13 +377,6 @@ def renderizar():
             "🤖 5. Asistente IA IRVE",
             "🏛️ 6. MTD Industria Murcia"
         ])
-    else:
-        tab_irve1 = _NullContext()
-        tab_irve2 = _NullContext()
-        tab_irve3 = _NullContext()
-        tab_irve4 = _NullContext()
-        tab_irve5 = _NullContext()
-        tab_irve6 = _NullContext()
 
     with tab_irve1:
         # SECCIÓN 1: PARÁMETROS DEL CIRCUITO DE RECARGA Y WALLBOX

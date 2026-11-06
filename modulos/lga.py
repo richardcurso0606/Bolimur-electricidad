@@ -113,37 +113,12 @@ def renderizar():
         selector_cliente_proyecto.renderizar_barra_cliente_proyecto("LGA", datos_lga, "Cálculo de Línea General de Alimentación (LGA)")
     except Exception:
         pass
-
-    class _NullContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
-    with col_nav_info:
-        st.caption("🚀 **Navegación Rápida:** Cambia de sección al instante sin desplazarte por la pantalla.")
-    with col_nav_mode:
-        modo_vista_lga = st.radio(
-            "Modo de Navegación:",
-            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="modo_vista_lga"
-        )
-
-    if modo_vista_lga.startswith("📑"):
         tab_lga1, tab_lga2, tab_lga3, tab_lga4 = st.tabs([
             "⚡ 1. Parámetros & Potencia",
             "📋 2. Memoria & Sección Óptima",
             "💰 3. Presupuesto & Auditor Comercial",
             "🖨️ 4. Reporte PDF Oficial"
         ])
-    else:
-        tab_lga1 = _NullContext()
-        tab_lga2 = _NullContext()
-        tab_lga3 = _NullContext()
-        tab_lga4 = _NullContext()
 
     with tab_lga1:
         st.markdown('<div class="section-header-blue"><h4 style="margin:0; color:#0369a1;">⚡ SECCIÓN 1: Parámetros de Diseño y Potencia Prevista (Pt - ITC-BT-14)</h4></div>', unsafe_allow_html=True)

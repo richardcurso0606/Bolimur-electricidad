@@ -1148,26 +1148,6 @@ def app():
 
     # ==========================================
     # Definir clase auxiliar de contexto nulo para cuando se seleccione Vista Continua
-    class _NullContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-    # Selector de Modo de Navegación Rápida
-    col_nav_info, col_nav_mode = st.columns([2.8, 1.2])
-    with col_nav_info:
-        st.caption("🚀 **Navegación Rápida:** Pasa de una sección a otra con 1 solo clic sin hacer scroll vertical.")
-    with col_nav_mode:
-        modo_vista_secciones = st.radio(
-            "Modo de Navegación:",
-            ["📑 Pestañas Rápidas (Sin scroll)", "📜 Vista Continua (Todo en 1)"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="modo_vista_secciones_presupuesto"
-        )
-
-    if modo_vista_secciones.startswith("📑"):
         tab_sec1, tab_sec2, tab_sec3, tab_sec4, tab_sec_teleco, tab_sec5, tab_sec6 = st.tabs([
             "⚡ 1. Potencia & IGA",
             "🔲 2. Mecanismos & Series",
@@ -1177,14 +1157,6 @@ def app():
             "🛡️ 6. Inspector IA REBT & ICT",
             "🖨️ 7. Documentos & Presupuesto"
         ])
-    else:
-        tab_sec1 = _NullContext()
-        tab_sec2 = _NullContext()
-        tab_sec3 = _NullContext()
-        tab_sec4 = _NullContext()
-        tab_sec_teleco = _NullContext()
-        tab_sec5 = _NullContext()
-        tab_sec6 = _NullContext()
 
     # ==========================================
     # SECCIÓN 1: PARÁMETROS DE POTENCIA REBT E IGA OFICIAL
