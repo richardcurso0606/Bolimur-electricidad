@@ -296,16 +296,23 @@ def generar_pdf_oferta_comercial(proyecto_info: dict, presupuesto_data: dict, mo
 
     # 5. GARANTÍAS Y CONDICIONES
     plazo_txt = _limpiar_texto(proyecto_info.get("plazo", "1-2 dias laborables tras recepcion de materiales"))
-    forma_pago_txt = _limpiar_texto(proyecto_info.get("forma_pago", "Anticipo de compra de materiales (40%) a la aceptacion, resto a la finalizacion y entrega de boletin"))
+    mostrar_fpago = bool(proyecto_info.get("mostrar_forma_pago", True))
+    forma_pago_txt = _limpiar_texto(proyecto_info.get("forma_pago", ""))
     
-    txt_condiciones = f"""
-    <b>CONDICIONES Y GARANTIAS LEGALES:</b><br/>
-    • <b>Garantia de Instalacion:</b> 3 anos de garantia oficial conforme a la Ley de Ordenacion de la Edificacion (LOE) y REBT RD 842/2002.<br/>
-    • <b>Plazo estimado de ejecucion:</b> {plazo_txt}.<br/>
-    • <b>Forma de pago acordada:</b> {forma_pago_txt}.<br/>
-    • <b>Seguro de Responsabilidad Civil:</b> Cobertura profesional de instalador autorizado en vigor.<br/>
-    • <b>Validez de la oferta:</b> {validez}. Pasado este plazo, las tarifas de materiales pueden variar por tarifa de distribuidor.
-    """
+    lineas_cond = [
+        "<b>CONDICIONES Y GARANTIAS LEGALES:</b><br/>",
+        "• <b>Garantia de Instalacion:</b> 3 anos de garantia oficial conforme a la Ley de Ordenacion de la Edificacion (LOE) y REBT RD 842/2002.<br/>",
+        f"• <b>Plazo estimado de ejecucion:</b> {plazo_txt}.<br/>"
+    ]
+    if mostrar_fpago and forma_pago_txt:
+        lineas_cond.append(f"• <b>Forma de pago acordada:</b> {forma_pago_txt}.<br/>")
+
+    lineas_cond.extend([
+        "• <b>Seguro de Responsabilidad Civil:</b> Cobertura profesional de instalador autorizado en vigor.<br/>",
+        f"• <b>Validez de la oferta:</b> {validez}. Pasado este plazo, las tarifas de materiales pueden variar por tarifa de distribuidor."
+    ])
+
+    txt_condiciones = "".join(lineas_cond)
     p_cond = Paragraph(txt_condiciones, desc_style)
     story.append(p_cond)
     story.append(Spacer(1, 0.4*cm))

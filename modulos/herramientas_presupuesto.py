@@ -815,13 +815,72 @@ def render_panel_herramientas_presupuesto(
         st.markdown("##### 📄 Presupuesto Oficial para Enviar al Cliente (PDF Imprimible)")
         st.caption("Emite y descarga la oferta formal para entregar al cliente o mandar por WhatsApp, disponible en Modo Autónomo o Modo Empresa:")
 
-        with st.popover("⚙️ Configurar Datos del Cliente y Condiciones para el Presupuesto (PDF)"):
-            cli_nombre_pdf = st.text_input("Nombre del Cliente / Destinatario:", value=nom_cliente_def, key=f"{key_prefix}_in_clipdf_nom")
-            cli_dir_pdf = st.text_input("Dirección de la Obra:", value="Calle Mayor nº 45", key=f"{key_prefix}_in_clipdf_dir")
-            cli_tel_pdf = st.text_input("Teléfono del Cliente:", value="+34 600 000 000", key=f"{key_prefix}_in_clipdf_tel")
-            cli_validez_pdf = st.text_input("Validez del Presupuesto:", value="30 días naturales", key=f"{key_prefix}_in_clipdf_val")
-            cli_plazo_pdf = st.text_input("Plazo Estimado de Ejecución:", value="1-2 días laborables", key=f"{key_prefix}_in_clipdf_plz")
-            cli_forma_pago = st.text_input("Condiciones de Pago:", value=f"Anticipo materiales ({pct_anticipo_rec:.0f}% = {anticipo_recomendado:,.2f} €) y resto al finalizar", key=f"{key_prefix}_in_clipdf_fpago")
+        # Sugerencias inteligentes de condiciones de pago según el presupuesto
+        resto_autonomo = max(0.0, round(total_autonomo - anticipo_recomendado, 2))
+        p50_autonomo = round(total_autonomo * 0.50, 2)
+        h1_40 = round(total_autonomo * 0.40, 2)
+        h2_30 = round(total_autonomo * 0.30, 2)
+        h3_30 = max(0.0, round(total_autonomo - h1_40 - h2_30, 2))
+
+        sugerencias_fpago = {
+            f"💡 Anticipo Materiales ({pct_anticipo_rec:.0f}%) + Resto al Finalizar": (
+                f"Anticipo para acopio de materiales ({pct_anticipo_rec:.0f}% = {anticipo_recomendado:,.2f} €) a la aceptación, "
+                f"y resto ({resto_autonomo:,.2f} €) a la finalización y entrega de la instalación / boletín"
+            ),
+            "⚖️ 50% al Inicio y 50% a la Entrega": (
+                f"50% al inicio de los trabajos ({p50_autonomo:,.2f} €) y 50% restante ({p50_autonomo:,.2f} €) a la terminación y conformidad"
+            ),
+            "🏗️ Por Hitos de Obra (40% Acopio / 30% Montaje / 30% Fin)": (
+                f"40% al aceptar ({h1_40:,.2f} €) para acopio de material, 30% al finalizar canalizaciones y cableado ({h2_30:,.2f} €), "
+                f"y 30% ({h3_30:,.2f} €) a la prueba de tensión y entrega de boletín"
+            ),
+            "🏁 100% al Finalizar el Trabajo": (
+                f"100% ({total_autonomo:,.2f} €) al finalizar completamente la instalación y entrega de certificación"
+            ),
+            "🏦 Transferencia Bancaria (30 Días)": (
+                "Transferencia bancaria a 30 días tras emisión de factura oficial"
+            ),
+            "✏️ Personalizada (Escribir manualmente)": ""
+        }
+
+        col_cfg_pdf1, col_cfg_pdf2 = st.columns([1.6, 1.4])
+        with col_cfg_pdf1:
+            mostrar_forma_pago = st.checkbox(
+                "💳 Incluir Forma de Pago en el Presupuesto (PDF)",
+                value=True,
+                key=f"{key_prefix}_chk_ver_fpago",
+                help="Desmarca esta casilla si prefieres ocultar por completo la forma de pago en la oferta que entregas al cliente."
+            )
+        with col_cfg_pdf2:
+            with st.popover("⚙️ Configurar Datos del Cliente y Condiciones"):
+                cli_nombre_pdf = st.text_input("Nombre del Cliente / Destinatario:", value=nom_cliente_def, key=f"{key_prefix}_in_clipdf_nom")
+                cli_dir_pdf = st.text_input("Dirección de la Obra:", value="Calle Mayor nº 45", key=f"{key_prefix}_in_clipdf_dir")
+                cli_tel_pdf = st.text_input("Teléfono del Cliente:", value="+34 600 000 000", key=f"{key_prefix}_in_clipdf_tel")
+                cli_validez_pdf = st.text_input("Validez del Presupuesto:", value="30 días naturales", key=f"{key_prefix}_in_clipdf_val")
+                cli_plazo_pdf = st.text_input("Plazo Estimado de Ejecución:", value="1-2 días laborables", key=f"{key_prefix}_in_clipdf_plz")
+
+        if mostrar_forma_pago:
+            col_sug_f1, col_sug_f2 = st.columns([1.5, 2.5])
+            with col_sug_f1:
+                sel_sug_fpago = st.selectbox(
+                    "💡 Sugerencia Forma de Pago:",
+                    list(sugerencias_fpago.keys()),
+                    index=0,
+                    key=f"{key_prefix}_sel_sug_fpago",
+                    help="Elige una modalidad recomendada calculada con los importes de esta obra."
+                )
+                val_sug_txt = sugerencias_fpago[sel_sug_fpago]
+            with col_sug_f2:
+                cli_forma_pago = st.text_area(
+                    "Texto de la Forma de Pago a imprimir (editable):",
+                    value=val_sug_txt,
+                    height=68,
+                    key=f"{key_prefix}_in_clipdf_fpago",
+                    help="Puedes modificar libremente el texto que saldrá impreso en el PDF del cliente."
+                )
+        else:
+            cli_forma_pago = ""
+            st.caption("🙈 *Forma de pago OCULTA: No aparecerá ninguna mención en el presupuesto ni en el PDF del cliente.*")
 
         proyecto_info_pdf = {
             "cliente": cli_nombre_pdf if 'cli_nombre_pdf' in locals() else nom_cliente_def,
@@ -829,7 +888,8 @@ def render_panel_herramientas_presupuesto(
             "telefono": cli_tel_pdf if 'cli_tel_pdf' in locals() else "+34 600 000 000",
             "validez": cli_validez_pdf if 'cli_validez_pdf' in locals() else "30 días naturales",
             "plazo": cli_plazo_pdf if 'cli_plazo_pdf' in locals() else "1-2 días laborables",
-            "forma_pago": cli_forma_pago if 'cli_forma_pago' in locals() else f"Anticipo materiales ({anticipo_recomendado:,.2f} €) y resto al terminar",
+            "mostrar_forma_pago": mostrar_forma_pago,
+            "forma_pago": cli_forma_pago if mostrar_forma_pago else "",
             "concepto": nom_obra_def,
             "empresa": "BOLIMUR ELECTRICIDAD",
             "licencia": "Instalador Autorizado REBT (DGEAIM Murcia)",
