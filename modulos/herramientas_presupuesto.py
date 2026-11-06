@@ -626,6 +626,7 @@ def render_panel_herramientas_presupuesto(
     - Guardar, Recuperar, Editar y Duplicar Presupuesto
     """
     # Extracción de parámetros con valores por defecto seguros
+    p_cargado = st.session_state.get(f"presupuesto_cargado_{key_prefix}")
     coste_mat_orig = float(datos_presupuesto.get("coste_materiales", 0.0))
     margen_mat_def = float(datos_presupuesto.get("margen_materiales_pct", 25.0))
     horas_mo_def = float(datos_presupuesto.get("horas_mano_obra", 8.0))
@@ -641,10 +642,39 @@ def render_panel_herramientas_presupuesto(
     obra_seccion = float(datos_presupuesto.get("seccion", 0.0))
     obra_trifasico = bool(datos_presupuesto.get("es_trifasico", False))
 
+    if p_cargado:
+        d_c = p_cargado.get("datos", {})
+        margen_mat_def = float(d_c.get("margen_materiales_pct", margen_mat_def))
+        horas_mo_def = float(d_c.get("horas_mano_obra", horas_mo_def))
+        precio_h_coste_def = float(d_c.get("precio_hora_coste", precio_h_coste_def))
+        recargo_emp_def = float(d_c.get("recargo_empresa_mo_pct", recargo_emp_def))
+        if "coste_tramitacion" in d_c:
+            coste_tramitacion = float(d_c.get("coste_tramitacion", coste_tramitacion))
+        if "desplazamiento" in d_c:
+            desplazamiento = float(d_c.get("desplazamiento", desplazamiento))
+        nom_cliente_def = p_cargado.get("nombre_cliente", nom_cliente_def)
+        nom_obra_def = p_cargado.get("nombre_presupuesto", nom_obra_def)
+
     # Contenedor visual del panel comercial
     st.markdown("---")
     st.markdown(f"### 💼 Gestión Comercial, Balance y Auditor Financiero ({modulo_nombre})")
     st.caption("Herramienta de control financiero para el instalador de calle: ajusta tus márgenes, compara tarifas Empresa vs. Autónomo y audita ofertas del cliente.")
+
+    if p_cargado:
+        key_tks_check = f"{key_prefix}_lista_tickets_obra"
+        n_tks = len(st.session_state.get(key_tks_check, []))
+        tot_tks = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tks_check, []))
+        with st.container(border=True):
+            col_b_act1, col_b_act2 = st.columns([3.8, 1.2])
+            with col_b_act1:
+                st.markdown(f"📂 **Presupuesto Cargado:** `#{p_cargado['id']}` - **{p_cargado.get('nombre_presupuesto', '')}** | Cliente: **{p_cargado.get('nombre_cliente', '')}** | Estado: **{p_cargado.get('estado', 'Pendiente')}**")
+                st.caption(f"Gastos de obra registrados: **{n_tks} tickets** ({tot_tks:,.2f} €). Puedes añadir más tickets o modificar partidas y guardar los cambios sobre esta misma obra.")
+            with col_b_act2:
+                if st.button("🔄 Cerrar / Nuevo", key=f"{key_prefix}_btn_cerrar_pres_cargado", use_container_width=True, help="Desvincula este presupuesto para empezar un cálculo nuevo"):
+                    if f"presupuesto_cargado_{key_prefix}" in st.session_state:
+                        del st.session_state[f"presupuesto_cargado_{key_prefix}"]
+                    st.session_state[key_tks_check] = []
+                    st.rerun()
 
     # ---------------------------------------------------------------------
     # 1. LISTA DE MATERIALES EDITABLE Y REORDENABLE (ADELANTE, EN MEDIO O AL FINAL)
@@ -1161,6 +1191,22 @@ def render_panel_herramientas_presupuesto(
                             if st.button("🗑️", key=f"{key_prefix}_btn_del_tk_{idx_tk}", help="Eliminar este gasto"):
                                 st.session_state[key_tickets_obra].pop(idx_tk)
                                 st.rerun()
+
+                if p_cargado:
+                    col_sync1, col_sync2 = st.columns([3, 1.8])
+                    with col_sync1:
+                        st.caption(f"💾 Guardado activo en obra: **#{p_cargado['id']}** ({p_cargado.get('nombre_presupuesto')})")
+                    with col_sync2:
+                        if st.button("💾 Sincronizar Gastos en BD", key=f"{key_prefix}_btn_sync_tks_bd", use_container_width=True, help="Guarda los tickets actuales directamente en la base de datos de esta obra"):
+                            d_sync = dict(p_cargado.get("datos", {}))
+                            d_sync["lista_tickets_obra"] = st.session_state.get(key_tickets_obra, [])
+                            d_sync["total_tickets_obra"] = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []))
+                            d_sync["total_adelantado_yo"] = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []) if "Yo" in tk.get("pagador", ""))
+                            d_sync["total_adelantado_comp"] = sum(float(tk.get("importe", 0.0)) for tk in st.session_state.get(key_tickets_obra, []) if "Compañero" in tk.get("pagador", ""))
+                            actualizar_presupuesto(p_cargado["id"], {"datos": d_sync})
+                            p_cargado["datos"] = d_sync
+                            st.session_state[f"presupuesto_cargado_{key_prefix}"] = p_cargado
+                            st.toast(f"✅ ¡{len(st.session_state.get(key_tickets_obra, []))} tickets sincronizados en la base de datos!", icon="💾")
 
             st.markdown("---")
             st.markdown("###### ➕ Registrar Nuevo Ticket o Gasto:")
@@ -2141,10 +2187,16 @@ def render_panel_herramientas_presupuesto(
     # TAB 4: GUARDAR, RECUPERAR, EDITAR Y DUPLICAR PRESUPUESTO
     # ---------------------------------------------------------------------
     with tab_guardar:
+        p_activo = st.session_state.get(f"presupuesto_cargado_{key_prefix}")
         col_g1, col_g2 = st.columns([1.5, 1.5])
 
         with col_g1:
-            st.markdown("##### 💾 Guardar Presupuesto Actual")
+            if p_activo:
+                st.markdown(f"##### 🔄 Obra Activa: Presupuesto #{p_activo['id']}")
+                st.caption(f"Estás trabajando sobre **'{p_activo.get('nombre_presupuesto')}'** de **{p_activo.get('nombre_cliente')}**. Puedes actualizarlo directamente con nuevos gastos o crear una copia.")
+            else:
+                st.markdown("##### 💾 Guardar Presupuesto Actual")
+
             in_nom_pres = st.text_input("Nombre identificativo del Presupuesto:", value=nom_obra_def, key=f"{key_prefix}_in_nom_pres")
             in_cli_pres = st.text_input("Nombre / Teléfono del Cliente:", value=nom_cliente_def, key=f"{key_prefix}_in_cli_pres")
             col_f1, col_f2 = st.columns(2)
@@ -2157,39 +2209,107 @@ def render_panel_herramientas_presupuesto(
             tot_siva_g = base_autonomo if sel_modo_guardar == "Autónomo" else base_empresa
             tot_civa_g = total_autonomo if sel_modo_guardar == "Autónomo" else total_empresa
 
-            if st.button("💾 Guardar en Base de Datos de Bolimur", type="primary", use_container_width=True, key=f"{key_prefix}_btn_guardar_bd"):
-                datos_guardar = dict(datos_presupuesto)
-                datos_guardar.update({
-                    "margen_materiales_pct": margen_mat_pct,
-                    "precio_hora_coste": precio_h_coste,
-                    "horas_mano_obra": horas_mo,
-                    "recargo_empresa_mo_pct": recargo_empresa_pct,
-                    "margen_mo_auto_pct": margen_mo_auto_pct,
-                    "base_empresa": base_empresa,
-                    "total_empresa": total_empresa,
-                    "base_autonomo": base_autonomo,
-                    "total_autonomo": total_autonomo,
-                    "sueldo_limpio_autonomo": sueldo_limpio_autonomo
-                })
-                ok, pid = guardar_presupuesto(
-                    usuario_id=1,
-                    cliente_id=None,
-                    nombre_cliente=in_cli_pres,
-                    nombre_presupuesto=in_nom_pres,
-                    modulo_origen=modulo_nombre,
-                    datos_presupuesto=datos_guardar,
-                    estado="Pendiente",
-                    total_sin_iva=tot_siva_g,
-                    total_con_iva=tot_civa_g,
-                    iva_pct=iva_pct,
-                    modo_tarifa=sel_modo_guardar,
-                    validez_dias=in_validez,
-                    fecha_presupuesto=in_fecha_pres
-                )
-                if ok:
-                    st.success(f"✅ ¡Presupuesto Nº #{pid} guardado con éxito! Ya puedes recuperarlo, editarlo o duplicarlo cuando quieras.")
-                else:
-                    st.error("Error al guardar el presupuesto en la base de datos.")
+            datos_guardar = dict(datos_presupuesto)
+            datos_guardar.update({
+                "margen_materiales_pct": margen_mat_pct,
+                "precio_hora_coste": precio_h_coste,
+                "horas_mano_obra": horas_mo,
+                "recargo_empresa_mo_pct": recargo_empresa_pct,
+                "margen_mo_auto_pct": margen_mo_auto_pct,
+                "base_empresa": base_empresa,
+                "total_empresa": total_empresa,
+                "base_autonomo": base_autonomo,
+                "total_autonomo": total_autonomo,
+                "sueldo_limpio_autonomo": sueldo_limpio_autonomo,
+                "lista_tickets_obra": st.session_state.get(key_tickets_obra, []),
+                "secuencia_partidas": st.session_state.get(key_sec_part, ["mat", "mo", "cie", "desp"]),
+                "dict_partidas_extras": st.session_state.get(key_dict_extra, {}),
+                "lista_materiales": st.session_state.get(key_lista_mat, []),
+                "modo_cuadrilla": st.session_state.get(f"{key_prefix}_sel_cuadrilla", "1 Oficial (Trabajo yo solo)"),
+                "modo_reparto": st.session_state.get(f"{key_prefix}_sel_modo_reparto", "Al 50% Limpio (A medias tras deducir gastos/tickets)"),
+                "p_hora_comp": float(st.session_state.get(f"{key_prefix}_p_hora_comp", 20.0)),
+                "inc_desp": inc_desp,
+                "desplazamiento": float(desplazamiento),
+                "inc_cie": inc_cie,
+                "coste_tramitacion": float(coste_tramitacion),
+                "total_tickets_obra": float(total_tickets_obra),
+                "total_adelantado_yo": float(total_adelantado_yo),
+                "total_adelantado_comp": float(total_adelantado_comp)
+            })
+
+            if p_activo:
+                if st.button(f"🔄 Actualizar Presupuesto #{p_activo['id']} con Gastos y Partidas", type="primary", use_container_width=True, key=f"{key_prefix}_btn_act_p_bd"):
+                    up_ok = actualizar_presupuesto(p_activo["id"], {
+                        "nombre_presupuesto": in_nom_pres,
+                        "nombre_cliente": in_cli_pres,
+                        "fecha_presupuesto": in_fecha_pres,
+                        "validez_dias": in_validez,
+                        "modo_tarifa": sel_modo_guardar,
+                        "total_sin_iva": tot_siva_g,
+                        "total_con_iva": tot_civa_g,
+                        "datos": datos_guardar
+                    })
+                    if up_ok:
+                        p_activo["nombre_presupuesto"] = in_nom_pres
+                        p_activo["nombre_cliente"] = in_cli_pres
+                        p_activo["total_sin_iva"] = tot_siva_g
+                        p_activo["total_con_iva"] = tot_civa_g
+                        p_activo["datos"] = datos_guardar
+                        st.session_state[f"presupuesto_cargado_{key_prefix}"] = p_activo
+                        st.success(f"✅ ¡Presupuesto #{p_activo['id']} actualizado con éxito! Se han guardado todos los gastos ({len(st.session_state.get(key_tickets_obra, []))} tickets) y cambios económicos.")
+                    else:
+                        st.error("Error al actualizar el presupuesto.")
+
+                st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+                if st.button("💾 Guardar como NUEVA Copia / Versión", type="secondary", use_container_width=True, key=f"{key_prefix}_btn_guardar_nuevo_bd"):
+                    ok_g, pid = guardar_presupuesto(
+                        usuario_id=1,
+                        cliente_id=None,
+                        nombre_cliente=in_cli_pres,
+                        nombre_presupuesto=f"{in_nom_pres} (Copia)",
+                        modulo_origen=modulo_nombre,
+                        datos_presupuesto=datos_guardar,
+                        estado="Pendiente",
+                        total_sin_iva=tot_siva_g,
+                        total_con_iva=tot_civa_g,
+                        iva_pct=iva_pct,
+                        modo_tarifa=sel_modo_guardar,
+                        validez_dias=in_validez,
+                        fecha_presupuesto=in_fecha_pres
+                    )
+                    if ok_g:
+                        p_rec_n = cargar_presupuesto_por_id(pid)
+                        if p_rec_n:
+                            st.session_state[f"presupuesto_cargado_{key_prefix}"] = p_rec_n
+                        st.success(f"✅ ¡Guardado como nuevo presupuesto Nº #{pid}!")
+                        st.rerun()
+                    else:
+                        st.error("Error al guardar nueva copia.")
+            else:
+                if st.button("💾 Guardar en Base de Datos de Bolimur", type="primary", use_container_width=True, key=f"{key_prefix}_btn_guardar_bd"):
+                    ok_g, pid = guardar_presupuesto(
+                        usuario_id=1,
+                        cliente_id=None,
+                        nombre_cliente=in_cli_pres,
+                        nombre_presupuesto=in_nom_pres,
+                        modulo_origen=modulo_nombre,
+                        datos_presupuesto=datos_guardar,
+                        estado="Pendiente",
+                        total_sin_iva=tot_siva_g,
+                        total_con_iva=tot_civa_g,
+                        iva_pct=iva_pct,
+                        modo_tarifa=sel_modo_guardar,
+                        validez_dias=in_validez,
+                        fecha_presupuesto=in_fecha_pres
+                    )
+                    if ok_g:
+                        p_rec_n = cargar_presupuesto_por_id(pid)
+                        if p_rec_n:
+                            st.session_state[f"presupuesto_cargado_{key_prefix}"] = p_rec_n
+                        st.success(f"✅ ¡Presupuesto Nº #{pid} guardado con éxito! Ha quedado vinculado para que puedas añadir gastos y tickets en cualquier momento.")
+                        st.rerun()
+                    else:
+                        st.error("Error al guardar el presupuesto en la base de datos.")
 
         with col_g2:
             st.markdown("##### 📂 Presupuestos Guardados en este Módulo")
@@ -2209,7 +2329,37 @@ def render_panel_herramientas_presupuesto(
                         p_rec = cargar_presupuesto_por_id(id_elegido)
                         if p_rec:
                             st.session_state[f"presupuesto_cargado_{key_prefix}"] = p_rec
-                            st.success(f"Presupuesto #{id_elegido} cargado. Revisa los parámetros modificables.")
+                            d_rec = p_rec.get("datos", {})
+                            st.session_state[key_tickets_obra] = list(d_rec.get("lista_tickets_obra", []))
+                            st.session_state[key_sec_part] = list(d_rec.get("secuencia_partidas", ["mat", "mo", "cie", "desp"]))
+                            st.session_state[key_dict_extra] = dict(d_rec.get("dict_partidas_extras", {}))
+                            if d_rec.get("lista_materiales"):
+                                st.session_state[key_lista_mat] = list(d_rec["lista_materiales"])
+                                st.session_state[key_mat_hash] = curr_mat_hash
+                                if f"{key_prefix}_editor_materiales_interactivo" in st.session_state:
+                                    del st.session_state[f"{key_prefix}_editor_materiales_interactivo"]
+                            if "modo_cuadrilla" in d_rec:
+                                st.session_state[f"{key_prefix}_sel_cuadrilla"] = d_rec["modo_cuadrilla"]
+                            if "modo_reparto" in d_rec:
+                                st.session_state[f"{key_prefix}_sel_modo_reparto"] = d_rec["modo_reparto"]
+                            if "p_hora_comp" in d_rec:
+                                st.session_state[f"{key_prefix}_p_hora_comp"] = float(d_rec["p_hora_comp"])
+                            if "margen_materiales_pct" in d_rec:
+                                st.session_state[f"{key_prefix}_slider_margen_mat"] = float(d_rec["margen_materiales_pct"])
+                            if "precio_hora_coste" in d_rec:
+                                st.session_state[f"{key_prefix}_num_precio_hora"] = float(d_rec["precio_hora_coste"])
+                            if "horas_mano_obra" in d_rec:
+                                st.session_state[f"{key_prefix}_num_horas_mo"] = float(d_rec["horas_mano_obra"])
+                            if "recargo_empresa_mo_pct" in d_rec:
+                                st.session_state[f"{key_prefix}_slider_recargo_emp"] = float(d_rec["recargo_empresa_mo_pct"])
+                            if "margen_mo_auto_pct" in d_rec:
+                                st.session_state[f"{key_prefix}_slider_margen_auto"] = float(d_rec["margen_mo_auto_pct"])
+                            if p_rec.get("nombre_presupuesto"):
+                                st.session_state[f"{key_prefix}_in_nom_pres"] = p_rec["nombre_presupuesto"]
+                            if p_rec.get("nombre_cliente"):
+                                st.session_state[f"{key_prefix}_in_cli_pres"] = p_rec["nombre_cliente"]
+                            st.success(f"Presupuesto #{id_elegido} cargado con éxito. Se han recuperado todos los materiales, gastos y configuración de cuadrilla.")
+                            st.rerun()
                 with col_b_rec2:
                     if st.button("📋 Duplicar", use_container_width=True, key=f"{key_prefix}_btn_dup_p"):
                         ok_d, id_d = duplicar_presupuesto(id_elegido, f"{sel_p_recup[:25]} (Copia)", "Nuevo Cliente")
@@ -2219,14 +2369,17 @@ def render_panel_herramientas_presupuesto(
                 with col_b_rec3:
                     if st.button("🗑️ Borrar", use_container_width=True, key=f"{key_prefix}_btn_del_p"):
                         if eliminar_presupuesto(id_elegido):
+                            if p_activo and p_activo.get("id") == id_elegido:
+                                if f"presupuesto_cargado_{key_prefix}" in st.session_state:
+                                    del st.session_state[f"presupuesto_cargado_{key_prefix}"]
+                                st.session_state[key_tickets_obra] = []
                             st.warning(f"Presupuesto #{id_elegido} eliminado.")
                             st.rerun()
 
                 # Si hay uno cargado en sesión, permitir edición de parámetros en vivo
-                p_activo = st.session_state.get(f"presupuesto_cargado_{key_prefix}")
                 if p_activo and p_activo.get("id") == id_elegido:
                     st.markdown("---")
-                    st.markdown(f"###### ✏️ Editar Parámetros del Presupuesto #{p_activo['id']}:")
+                    st.markdown(f"###### ✏️ Editar Estado y Cliente del Presupuesto #{p_activo['id']}:")
                     ed_col1, ed_col2 = st.columns(2)
                     with ed_col1:
                         nuevo_f = st.text_input("Fecha:", value=datetime.date.today().strftime("%d/%m/%Y"), key=f"{key_prefix}_ed_fecha")
@@ -2235,7 +2388,7 @@ def render_panel_herramientas_presupuesto(
                         nuevo_cli = st.text_input("Cliente:", value=p_activo.get("nombre_cliente", ""), key=f"{key_prefix}_ed_cli")
                         nuevo_tot = st.number_input("Total (IVA incl.):", value=float(p_activo.get("total_con_iva", 0.0)), step=50.0, key=f"{key_prefix}_ed_tot")
 
-                    if st.button("💾 Guardar Cambios en este Presupuesto", type="secondary", use_container_width=True, key=f"{key_prefix}_btn_save_ed"):
+                    if st.button("💾 Guardar Cambios Rápidos", type="secondary", use_container_width=True, key=f"{key_prefix}_btn_save_ed"):
                         up_ok = actualizar_presupuesto(id_elegido, {
                             "fecha_presupuesto": nuevo_f,
                             "estado": nuevo_est,
