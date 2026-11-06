@@ -149,6 +149,12 @@ except Exception as e:
     unifilar_foto = None
     errores_import["unifilar_foto"] = traceback.format_exc()
 
+try:
+    from modulos import control_obras
+except Exception as e:
+    control_obras = None
+    errores_import["control_obras"] = traceback.format_exc()
+
 # =========================================================================
 # CONTROL DE SALIDA Y PROTECCIÓN CONTRA CIERRES (TECLA ESCAPE / NAVEGADOR)
 # =========================================================================
@@ -2055,6 +2061,7 @@ with st.sidebar:
             "categoria": "📁 GESTIÓN & EXPEDIENTES",
             "items": [
                 ("🏠 Menú Principal", "🏠 Menú Principal"),
+                ("📅 Control de Obras & Cuadrilla", "📅 Control de Obras & Cuadrilla"),
                 ("🎙️ Presupuesto Rápido IA & Voz", "🎙️ Presupuesto Rápido IA & Voz"),
                 ("📸 Unifilar por Foto (IA)", "📸 Unifilar por Foto (IA)"),
                 ("👥 Gestión de Clientes (CRM)", "👥 Gestión de Clientes (CRM)"),
@@ -2237,6 +2244,18 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             if st.button("🛰️ Abrir Radar BOE", key="btn_home_radar_featured", use_container_width=True):
                 navegar_a_modulo("🛰️ Radar Normativo BOE")
 
+    # BANNER DESTACADO 5: CONTROL DE OBRAS, CALENDARIO & CUADRILLA
+    with st.container(border=True):
+        col_plan_txt, col_plan_btn = st.columns([3, 1])
+        with col_plan_txt:
+            st.markdown("### 📅 Control de Obras, Calendario y Planificación de Cuadrilla")
+            st.write("Seguimiento de **proyectos habilitados y fechas de ejecución programadas**. Especifica qué obras hacéis entre **tú y tu compañero (cuadrilla de 2)** o tú solo, controla los **gastos y tickets deducidos** y visualiza el reparto limpio de beneficios en tiempo real.")
+        with col_plan_btn:
+            st.write("")
+            st.write("")
+            if st.button("📅 Abrir Control de Obras", key="btn_home_control_obras", type="primary", use_container_width=True):
+                navegar_a_modulo("📅 Control de Obras & Cuadrilla")
+
     c1, c2 = st.columns(2)
     with c1:
         with st.container(border=True):
@@ -2293,6 +2312,14 @@ if seleccion_modulo == "🏠 Menú Principal" or seleccion_modulo.startswith("�
             st.write("Configura tus datos fiscales, número de carnet REBT, logotipo corporativo y copias de seguridad en la nube.")
             if st.button("Abrir Perfil del Instalador", key="btn_home_prof", use_container_width=True):
                 navegar_a_modulo("👤 Perfil del Instalador")
+
+elif "Control de Obras" in seleccion_modulo or "Planificación" in seleccion_modulo or "Planificacion" in seleccion_modulo or "📅" in seleccion_modulo or "Cuadrilla" in seleccion_modulo:
+    if control_obras:
+        control_obras.renderizar()
+    else:
+        st.error("Módulo Control de Obras no disponible.")
+        if "control_obras" in errores_import:
+            st.code(errores_import["control_obras"])
 
 elif "Presupuesto Rápido" in seleccion_modulo or "🎙️" in seleccion_modulo or "IA & Voz" in seleccion_modulo or "Rapido" in seleccion_modulo:
     if presupuesto_rapido_ia:

@@ -339,17 +339,23 @@ def guardar_presupuesto(
         cursor = conn.cursor()
         f_pres = fecha_presupuesto or datetime.date.today().strftime("%d/%m/%Y")
         datos_str = json.dumps(datos_presupuesto, ensure_ascii=False)
+        f_ejec = str(datos_presupuesto.get("fecha_ejecucion", ""))
+        asig_a = str(datos_presupuesto.get("asignado_a", datos_presupuesto.get("modo_cuadrilla", "👥 Con Mi Compañero (Cuadrilla de 2)")))
+        notas_p = str(datos_presupuesto.get("notas_planificacion", ""))
+        prio = str(datos_presupuesto.get("prioridad", "Normal"))
 
         cursor.execute("""
             INSERT INTO presupuestos_guardados (
                 usuario_id, cliente_id, nombre_cliente, nombre_presupuesto, modulo_origen,
                 estado, total_sin_iva, total_con_iva, iva_pct, modo_tarifa, datos_json,
-                validez_dias, fecha_presupuesto, fecha_actualizacion
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                validez_dias, fecha_presupuesto, fecha_actualizacion,
+                fecha_ejecucion, asignado_a, notas_planificacion, prioridad
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
         """, (
             usuario_id, cliente_id, nombre_cliente.strip(), nombre_presupuesto.strip(), modulo_origen.strip(),
             estado.strip(), float(total_sin_iva), float(total_con_iva), float(iva_pct), modo_tarifa.strip(),
-            datos_str, int(validez_dias), f_pres
+            datos_str, int(validez_dias), f_pres,
+            f_ejec, asig_a, notas_p, prio
         ))
         pres_id = cursor.lastrowid
         conn.commit()
@@ -368,7 +374,8 @@ def listar_presupuestos(modulo_origen: Optional[str] = None) -> List[Dict[str, A
         if modulo_origen:
             cursor.execute("""
                 SELECT id, nombre_presupuesto, nombre_cliente, modulo_origen, estado,
-                       total_sin_iva, total_con_iva, modo_tarifa, fecha_presupuesto, validez_dias, fecha_creacion
+                       total_sin_iva, total_con_iva, modo_tarifa, fecha_presupuesto, validez_dias, fecha_creacion,
+                       fecha_ejecucion, asignado_a, notas_planificacion, prioridad, datos_json
                 FROM presupuestos_guardados
                 WHERE modulo_origen = ?
                 ORDER BY id DESC
@@ -376,7 +383,8 @@ def listar_presupuestos(modulo_origen: Optional[str] = None) -> List[Dict[str, A
         else:
             cursor.execute("""
                 SELECT id, nombre_presupuesto, nombre_cliente, modulo_origen, estado,
-                       total_sin_iva, total_con_iva, modo_tarifa, fecha_presupuesto, validez_dias, fecha_creacion
+                       total_sin_iva, total_con_iva, modo_tarifa, fecha_presupuesto, validez_dias, fecha_creacion,
+                       fecha_ejecucion, asignado_a, notas_planificacion, prioridad, datos_json
                 FROM presupuestos_guardados
                 ORDER BY id DESC
             """)
@@ -385,6 +393,7 @@ def listar_presupuestos(modulo_origen: Optional[str] = None) -> List[Dict[str, A
 
         lista = []
         for r in filas:
+            datos_obj = json.loads(r[15]) if (len(r) > 15 and r[15]) else {}
             lista.append({
                 "id": r[0],
                 "nombre_presupuesto": r[1],
@@ -396,7 +405,12 @@ def listar_presupuestos(modulo_origen: Optional[str] = None) -> List[Dict[str, A
                 "modo_tarifa": r[7] or "Autónomo",
                 "fecha_presupuesto": r[8] or "",
                 "validez_dias": int(r[9] or 30),
-                "fecha_creacion": str(r[10])[:16]
+                "fecha_creacion": str(r[10])[:16],
+                "fecha_ejecucion": r[11] or datos_obj.get("fecha_ejecucion", ""),
+                "asignado_a": r[12] or datos_obj.get("asignado_a", datos_obj.get("modo_cuadrilla", "👥 Con Mi Compañero (Cuadrilla de 2)")),
+                "notas_planificacion": r[13] or datos_obj.get("notas_planificacion", ""),
+                "prioridad": r[14] or datos_obj.get("prioridad", "Normal"),
+                "datos": datos_obj
             })
         return lista
     except Exception as e:
@@ -412,7 +426,8 @@ def cargar_presupuesto_por_id(presupuesto_id: int) -> Optional[Dict[str, Any]]:
         cursor.execute("""
             SELECT id, usuario_id, cliente_id, nombre_cliente, nombre_presupuesto, modulo_origen,
                    estado, total_sin_iva, total_con_iva, iva_pct, modo_tarifa, datos_json,
-                   validez_dias, fecha_presupuesto, fecha_creacion, fecha_actualizacion
+                   validez_dias, fecha_presupuesto, fecha_creacion, fecha_actualizacion,
+                   fecha_ejecucion, asignado_a, notas_planificacion, prioridad
             FROM presupuestos_guardados
             WHERE id = ?
         """, (presupuesto_id,))
@@ -439,7 +454,11 @@ def cargar_presupuesto_por_id(presupuesto_id: int) -> Optional[Dict[str, Any]]:
             "validez_dias": int(r[12] or 30),
             "fecha_presupuesto": r[13] or "",
             "fecha_creacion": str(r[14]),
-            "fecha_actualizacion": str(r[15])
+            "fecha_actualizacion": str(r[15]),
+            "fecha_ejecucion": r[16] or datos_obj.get("fecha_ejecucion", ""),
+            "asignado_a": r[17] or datos_obj.get("asignado_a", datos_obj.get("modo_cuadrilla", "👥 Con Mi Compañero (Cuadrilla de 2)")),
+            "notas_planificacion": r[18] or datos_obj.get("notas_planificacion", ""),
+            "prioridad": r[19] or datos_obj.get("prioridad", "Normal")
         }
     except Exception as e:
         print(f"Error al cargar presupuesto {presupuesto_id}: {e}")
@@ -479,6 +498,18 @@ def actualizar_presupuesto(presupuesto_id: int, datos_nuevos: Dict[str, Any]) ->
         if "modo_tarifa" in datos_nuevos:
             campos_update.append("modo_tarifa = ?")
             valores.append(datos_nuevos["modo_tarifa"])
+        if "fecha_ejecucion" in datos_nuevos:
+            campos_update.append("fecha_ejecucion = ?")
+            valores.append(datos_nuevos["fecha_ejecucion"])
+        if "asignado_a" in datos_nuevos:
+            campos_update.append("asignado_a = ?")
+            valores.append(datos_nuevos["asignado_a"])
+        if "notas_planificacion" in datos_nuevos:
+            campos_update.append("notas_planificacion = ?")
+            valores.append(datos_nuevos["notas_planificacion"])
+        if "prioridad" in datos_nuevos:
+            campos_update.append("prioridad = ?")
+            valores.append(datos_nuevos["prioridad"])
         if "datos" in datos_nuevos:
             campos_update.append("datos_json = ?")
             valores.append(json.dumps(datos_nuevos["datos"], ensure_ascii=False))
@@ -2201,9 +2232,23 @@ def render_panel_herramientas_presupuesto(
             in_cli_pres = st.text_input("Nombre / Teléfono del Cliente:", value=nom_cliente_def, key=f"{key_prefix}_in_cli_pres")
             col_f1, col_f2 = st.columns(2)
             with col_f1:
-                in_fecha_pres = st.text_input("Fecha:", value=datetime.date.today().strftime("%d/%m/%Y"), key=f"{key_prefix}_in_f_pres")
+                in_fecha_pres = st.text_input("Fecha Creación:", value=datetime.date.today().strftime("%d/%m/%Y"), key=f"{key_prefix}_in_f_pres")
             with col_f2:
                 in_validez = st.number_input("Validez (días):", min_value=7, max_value=120, value=30, step=5, key=f"{key_prefix}_in_validez")
+
+            col_f3, col_f4 = st.columns(2)
+            with col_f3:
+                f_ejec_def = p_activo.get("fecha_ejecucion", "") if p_activo else ""
+                in_fecha_ejec = st.text_input("📅 Fecha Prevista Ejecución:", value=f_ejec_def if f_ejec_def else (datetime.date.today() + datetime.timedelta(days=3)).strftime("%d/%m/%Y"), key=f"{key_prefix}_in_f_ejec", help="Fecha programada para iniciar o ejecutar el trabajo en obra")
+            with col_f4:
+                cuad_actual = p_activo.get("asignado_a", "") if p_activo else st.session_state.get(f"{key_prefix}_sel_cuadrilla", "👥 Con Mi Compañero (Cuadrilla de 2)")
+                opcs_asig = ["👥 Con Mi Compañero (Cuadrilla de 2)", "🧑‍🔧 Solo Yo (1 Oficial)", "🧑‍🔧 Mi Compañero Solo"]
+                def_cuad_i = 0
+                if "Solo Yo" in cuad_actual or "1 Oficial" in cuad_actual:
+                    def_cuad_i = 1
+                elif "Compañero Solo" in cuad_actual:
+                    def_cuad_i = 2
+                in_cuadrilla_plan = st.selectbox("👥 ¿Quién la ejecuta?:", opcs_asig, index=def_cuad_i, key=f"{key_prefix}_in_cuad_plan")
 
             sel_modo_guardar = st.radio("Tarifa a registrar por defecto:", ["Autónomo", "Empresa"], horizontal=True, key=f"{key_prefix}_rad_modo_g")
             tot_siva_g = base_autonomo if sel_modo_guardar == "Autónomo" else base_empresa
@@ -2234,7 +2279,9 @@ def render_panel_herramientas_presupuesto(
                 "coste_tramitacion": float(coste_tramitacion),
                 "total_tickets_obra": float(total_tickets_obra),
                 "total_adelantado_yo": float(total_adelantado_yo),
-                "total_adelantado_comp": float(total_adelantado_comp)
+                "total_adelantado_comp": float(total_adelantado_comp),
+                "fecha_ejecucion": in_fecha_ejec,
+                "asignado_a": in_cuadrilla_plan
             })
 
             if p_activo:
@@ -2247,6 +2294,8 @@ def render_panel_herramientas_presupuesto(
                         "modo_tarifa": sel_modo_guardar,
                         "total_sin_iva": tot_siva_g,
                         "total_con_iva": tot_civa_g,
+                        "fecha_ejecucion": in_fecha_ejec,
+                        "asignado_a": in_cuadrilla_plan,
                         "datos": datos_guardar
                     })
                     if up_ok:
